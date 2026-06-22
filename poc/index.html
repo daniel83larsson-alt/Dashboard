@@ -1,588 +1,496 @@
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>iCore API Control Tower</title>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>iCore API Control Tower</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
+  --accent:#4f8ef7;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --text:#e2e8f0;--muted:#64748b;--sidebar:280px
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;height:100vh;overflow:hidden;font-size:14px}
 
-    :root {
-      --bg:       #0f1117;
-      --surface:  #1a1d27;
-      --border:   #2a2d3e;
-      --accent:   #4f8ef7;
-      --green:    #22c55e;
-      --yellow:   #f59e0b;
-      --red:      #ef4444;
-      --text:     #e2e8f0;
-      --muted:    #64748b;
-      --sidebar-w: 280px;
-    }
+/* SIDEBAR */
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-top{padding:18px 16px 14px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.logo-icon{width:34px;height:34px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:17px;color:#fff;flex-shrink:0}
+.logo-name{font-size:15px;font-weight:700}
+.logo-sub{font-size:10px;color:var(--muted);letter-spacing:.6px;text-transform:uppercase;margin-top:1px}
+.search{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:8px 10px 8px 32px;color:var(--text);font-size:13px;outline:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='m21 21-4.35-4.35'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:10px center}
+.search:focus{border-color:var(--accent)}
+.search::placeholder{color:var(--muted)}
+.section-label{padding:12px 16px 6px;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:var(--muted);font-weight:600}
+.api-list{overflow-y:auto;flex:1}
+.api-item{display:flex;align-items:center;gap:9px;padding:9px 16px;cursor:pointer;border-left:3px solid transparent;transition:background .12s}
+.api-item:hover{background:rgba(79,142,247,.07)}
+.api-item.active{background:rgba(79,142,247,.13);border-left-color:var(--accent)}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dot.g{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot.y{background:var(--yellow);box-shadow:0 0 5px var(--yellow)}
+.dot.r{background:var(--red);box-shadow:0 0 5px var(--red)}
+.api-info{flex:1;min-width:0}
+.api-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.api-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.vbadge{font-size:10px;padding:2px 7px;border-radius:99px;font-weight:600;background:rgba(79,142,247,.15);color:var(--accent);white-space:nowrap}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      height: 100vh;
-      overflow: hidden;
-    }
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{padding:14px 22px;border-bottom:1px solid var(--border);background:var(--surface);display:flex;align-items:center;gap:14px}
+.topbar h1{font-size:17px;font-weight:700;flex:1}
+.stat-pill{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+.stat-num{font-weight:700;font-size:14px}
+.sng{color:var(--green)}.sny{color:var(--yellow)}.snr{color:var(--red)}
 
-    /* ── SIDEBAR ── */
-    .sidebar {
-      width: var(--sidebar-w);
-      background: var(--surface);
-      border-right: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-    }
+/* TABS */
+.tabs{display:flex;gap:2px;padding:12px 22px 0;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab{padding:8px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-    .sidebar-header {
-      padding: 20px 16px 16px;
-      border-bottom: 1px solid var(--border);
-    }
+.content{flex:1;overflow-y:auto;padding:22px}
 
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      margin-bottom: 4px;
-    }
+/* CARDS */
+.cards-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.card-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card-value{font-size:24px;font-weight:700}
+.card-sub{font-size:11px;color:var(--muted);margin-top:3px}
 
-    .logo-icon {
-      width: 32px; height: 32px;
-      background: var(--accent);
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 700; color: #fff;
-    }
+/* SECTION */
+.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
 
-    .logo-text { font-size: 15px; font-weight: 600; }
-    .logo-sub  { font-size: 11px; color: var(--muted); letter-spacing: .5px; text-transform: uppercase; }
+/* ENDPOINTS */
+.ep-list{display:flex;flex-direction:column;gap:6px;margin-bottom:22px}
+.ep{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:11px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:border-color .15s,background .15s}
+.ep:hover{border-color:var(--accent);background:var(--surface2)}
+.ep.expanded{border-color:var(--accent);background:var(--surface2)}
+.meth{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;width:54px;text-align:center;flex-shrink:0}
+.meth.get{background:rgba(34,197,94,.15);color:var(--green)}
+.meth.post{background:rgba(79,142,247,.15);color:var(--accent)}
+.meth.put{background:rgba(245,158,11,.15);color:var(--yellow)}
+.meth.delete{background:rgba(239,68,68,.15);color:var(--red)}
+.ep-path{font-size:13px;font-family:monospace;flex:1}
+.ep-desc{font-size:12px;color:var(--muted)}
+.ep-detail{padding:12px 14px 14px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:10px}
+.ep.expanded .ep-detail{display:flex}
+.ep-row{display:flex;gap:10px;align-items:flex-start}
+.ep-key{font-size:11px;color:var(--muted);width:80px;flex-shrink:0;padding-top:1px}
+.ep-val{font-size:12px;font-family:monospace;background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:6px 10px;flex:1;color:var(--text);outline:none;resize:none}
+.ep-val:focus{border-color:var(--accent)}
+.try-btn{display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;margin-top:4px}
+.try-btn:hover{background:#3d7de6}
+.try-resp{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);white-space:pre;max-height:160px;overflow-y:auto}
 
-    .search {
-      margin-top: 12px;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 7px 10px;
-      color: var(--text);
-      font-size: 13px;
-      width: 100%;
-      outline: none;
-    }
-    .search::placeholder { color: var(--muted); }
-    .search:focus { border-color: var(--accent); }
+/* ENV */
+.env-row{display:flex;gap:10px;margin-bottom:22px}
+.env-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:13px 15px;flex:1;display:flex;align-items:center;gap:10px}
+.env-name{font-size:13px;font-weight:600}
+.env-url{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px}
 
-    .sidebar-section {
-      padding: 12px 16px 4px;
-      font-size: 10px;
-      letter-spacing: 1px;
-      text-transform: uppercase;
-      color: var(--muted);
-      font-weight: 600;
-    }
+/* SWAGGER VIEW */
+.swagger-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.swagger-toolbar{padding:10px 14px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+.sw-title{font-size:13px;font-weight:600;flex:1}
+.sw-btn{background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:11px;padding:5px 12px;cursor:pointer}
+.sw-btn:hover{border-color:var(--accent);color:var(--accent)}
+.swagger-json{padding:16px;font-family:monospace;font-size:11px;line-height:1.6;overflow-x:auto;max-height:420px;overflow-y:auto}
+.jk{color:#7dd3fc}.jv{color:#86efac}.js{color:#fbbf24}.jn{color:#f87171}
 
-    .api-list { overflow-y: auto; flex: 1; }
+/* EDIT TAB */
+.edit-form{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px;display:flex;flex-direction:column;gap:16px}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.field input,.field textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--text);font-size:13px;outline:none;font-family:inherit}
+.field input:focus,.field textarea:focus{border-color:var(--accent)}
+.field textarea{resize:vertical;min-height:80px}
+.save-btn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:10px 22px;font-size:13px;font-weight:600;cursor:pointer;align-self:flex-start}
+.save-btn:hover{background:#3d7de6}
+.tag-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:4px 10px;font-size:12px}
+.tag button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1}
+.tag-input{background:var(--bg);border:1px solid var(--border);border-radius:99px;padding:4px 12px;color:var(--text);font-size:12px;outline:none;width:120px}
+.tag-input:focus{border-color:var(--accent)}
 
-    .api-item {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      padding: 10px 16px;
-      cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background .15s;
-      position: relative;
-    }
-    .api-item:hover { background: rgba(79,142,247,.06); }
-    .api-item.active {
-      background: rgba(79,142,247,.12);
-      border-left-color: var(--accent);
-    }
+/* ALERT */
+.alert{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:12px 16px;margin-bottom:20px;display:flex;align-items:center;gap:10px;font-size:13px}
+.alert-icon{font-size:18px}
 
-    .dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      flex-shrink: 0;
-    }
-    .dot.green  { background: var(--green); box-shadow: 0 0 6px var(--green); }
-    .dot.yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
-    .dot.red    { background: var(--red); box-shadow: 0 0 6px var(--red); }
+/* BADGE */
+.badge{font-size:10px;padding:2px 8px;border-radius:99px;font-weight:600}
+.b-ok{background:rgba(34,197,94,.15);color:var(--green)}
+.b-warn{background:rgba(245,158,11,.15);color:var(--yellow)}
+.b-err{background:rgba(239,68,68,.15);color:var(--red)}
+.b-blue{background:rgba(79,142,247,.15);color:var(--accent)}
 
-    .api-info { flex: 1; min-width: 0; }
-    .api-name  { font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .api-meta  { font-size: 11px; color: var(--muted); margin-top: 2px; }
-
-    .badge {
-      font-size: 10px;
-      padding: 2px 7px;
-      border-radius: 99px;
-      font-weight: 600;
-    }
-    .badge.version { background: rgba(79,142,247,.15); color: var(--accent); }
-    .badge.new     { background: rgba(34,197,94,.15);  color: var(--green); }
-    .badge.warn    { background: rgba(245,158,11,.15); color: var(--yellow); }
-    .badge.err     { background: rgba(239,68,68,.15);  color: var(--red); }
-
-    /* ── MAIN ── */
-    .main {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    .topbar {
-      padding: 16px 24px;
-      border-bottom: 1px solid var(--border);
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      background: var(--surface);
-    }
-
-    .topbar h1 { font-size: 18px; font-weight: 600; flex: 1; }
-
-    .stats {
-      display: flex;
-      gap: 8px;
-    }
-
-    .stat-pill {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 12px;
-      font-size: 12px;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .stat-pill .num { font-weight: 700; font-size: 14px; }
-    .stat-pill .num.g { color: var(--green); }
-    .stat-pill .num.y { color: var(--yellow); }
-    .stat-pill .num.r { color: var(--red); }
-
-    .content { flex: 1; overflow-y: auto; padding: 24px; }
-
-    /* ── DETAIL CARD ── */
-    .detail-header {
-      display: flex;
-      align-items: flex-start;
-      gap: 16px;
-      margin-bottom: 20px;
-    }
-
-    .detail-icon {
-      width: 48px; height: 48px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      flex-shrink: 0;
-    }
-
-    .detail-title { font-size: 22px; font-weight: 700; }
-    .detail-desc  { font-size: 13px; color: var(--muted); margin-top: 4px; }
-    .detail-tags  { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
-
-    .cards-row {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
-      margin-bottom: 24px;
-    }
-
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      padding: 16px;
-    }
-
-    .card-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-bottom: 6px; }
-    .card-value { font-size: 24px; font-weight: 700; }
-    .card-sub   { font-size: 12px; color: var(--muted); margin-top: 4px; }
-
-    .section-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--muted);
-      text-transform: uppercase;
-      letter-spacing: .5px;
-      margin-bottom: 10px;
-    }
-
-    /* ── ENDPOINT LIST ── */
-    .endpoint-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 24px; }
-
-    .endpoint {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 12px 16px;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      cursor: pointer;
-      transition: border-color .15s;
-    }
-    .endpoint:hover { border-color: var(--accent); }
-
-    .method {
-      font-size: 11px;
-      font-weight: 700;
-      padding: 3px 8px;
-      border-radius: 4px;
-      width: 52px;
-      text-align: center;
-      flex-shrink: 0;
-    }
-    .method.get    { background: rgba(34,197,94,.15);  color: var(--green); }
-    .method.post   { background: rgba(79,142,247,.15); color: var(--accent); }
-    .method.put    { background: rgba(245,158,11,.15); color: var(--yellow); }
-    .method.delete { background: rgba(239,68,68,.15);  color: var(--red); }
-
-    .ep-path { font-size: 13px; font-family: monospace; flex: 1; color: var(--text); }
-    .ep-desc { font-size: 12px; color: var(--muted); }
-    .ep-tag  { margin-left: auto; }
-
-    /* ── ENV ROW ── */
-    .env-row {
-      display: flex; gap: 12px; margin-bottom: 24px;
-    }
-
-    .env-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 14px 16px;
-      flex: 1;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .env-name { font-size: 13px; font-weight: 600; }
-    .env-url  { font-size: 11px; color: var(--muted); font-family: monospace; margin-top: 2px; }
-
-    /* ── EMPTY ── */
-    .empty {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      color: var(--muted);
-      gap: 12px;
-    }
-    .empty-icon { font-size: 48px; }
-    .empty h2   { font-size: 18px; font-weight: 600; color: var(--text); }
-    .empty p    { font-size: 14px; text-align: center; max-width: 300px; }
-  </style>
+.detail-header{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px}
+.detail-icon{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
+.detail-title{font-size:21px;font-weight:700}
+.detail-desc{font-size:13px;color:var(--muted);margin-top:4px;max-width:600px}
+.detail-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+</style>
 </head>
 <body>
 
-<!-- SIDEBAR -->
 <aside class="sidebar">
-  <div class="sidebar-header">
+  <div class="sidebar-top">
     <div class="logo">
       <div class="logo-icon">i</div>
-      <div>
-        <div class="logo-text">iCore</div>
-        <div class="logo-sub">API Control Tower</div>
-      </div>
+      <div><div class="logo-name">iCore</div><div class="logo-sub">API Control Tower</div></div>
     </div>
-    <input class="search" id="search" placeholder="Sök API..." oninput="filterApis(this.value)" />
+    <input class="search" id="search" placeholder="Sök API…" oninput="filterApis(this.value)"/>
   </div>
-
-  <div class="sidebar-section">Registrerade API:er</div>
+  <div class="section-label">Registrerade API:er</div>
   <div class="api-list" id="apiList"></div>
 </aside>
 
-<!-- MAIN -->
 <main class="main">
   <header class="topbar">
     <h1 id="topTitle">API Control Tower</h1>
-    <div class="stats">
-      <div class="stat-pill"><span class="num g" id="countOk">0</span> Online</div>
-      <div class="stat-pill"><span class="num y" id="countWarn">0</span> Varning</div>
-      <div class="stat-pill"><span class="num r" id="countErr">0</span> Offline</div>
-    </div>
+    <div class="stat-pill"><span class="stat-num sng" id="cOk">0</span> Online</div>
+    <div class="stat-pill"><span class="stat-num sny" id="cWarn">0</span> Varning</div>
+    <div class="stat-pill"><span class="stat-num snr" id="cErr">0</span> Offline</div>
   </header>
-  <div class="content" id="content">
-    <div class="empty" id="emptyState">
-      <div class="empty-icon">🗼</div>
-      <h2>Välj ett API</h2>
-      <p>Välj ett API i listan till vänster för att se detaljer, endpoints och miljöer.</p>
-    </div>
-    <div id="detail" style="display:none"></div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-tab="overview">Översikt</div>
+    <div class="tab" data-tab="endpoints">Endpoints</div>
+    <div class="tab" data-tab="swagger">Swagger</div>
+    <div class="tab" data-tab="edit">Redigera</div>
   </div>
+
+  <div class="content" id="content"></div>
 </main>
 
 <script>
 const apis = [
   {
-    id: 1,
-    name: "Customer API",
-    description: "Hanterar kunddata, profiler och kontoinformation för alla iCore-kunder.",
-    icon: "👤",
-    iconBg: "#1e3a5f",
-    status: "green",
-    version: "v2.4.1",
-    owner: "Backend Team",
-    lastDeploy: "idag 08:42",
-    uptime: "99.98%",
-    callsToday: "14 820",
-    avgLatency: "42 ms",
-    openIssues: "0",
-    envs: [
-      { name: "Produktion", url: "https://api.icore.se/customer", status: "green" },
-      { name: "Test", url: "https://test-api.icore.se/customer", status: "green" },
-      { name: "Lokal", url: "http://localhost:5001/customer", status: "yellow" }
+    id:1, name:"Customer API", desc:"Hanterar kunddata, profiler och kontoinformation.",
+    icon:"👤", iconBg:"#1e3a5f", status:"green", version:"v2.4.1",
+    owner:"Backend Team", lastDeploy:"idag 08:42", uptime:"99.98%",
+    calls:"14 820", latency:"42 ms", issues:0,
+    tags:["kunder","CRM","core"],
+    envs:[
+      {name:"Produktion",url:"https://api.icore.se/customer",s:"green"},
+      {name:"Test",url:"https://test-api.icore.se/customer",s:"green"},
+      {name:"Lokal",url:"http://localhost:5001/customer",s:"yellow"}
     ],
-    endpoints: [
-      { method: "GET",    path: "/api/customers",         desc: "Lista alla kunder" },
-      { method: "GET",    path: "/api/customers/{id}",    desc: "Hämta specifik kund" },
-      { method: "POST",   path: "/api/customers",         desc: "Skapa ny kund" },
-      { method: "PUT",    path: "/api/customers/{id}",    desc: "Uppdatera kund" },
-      { method: "DELETE", path: "/api/customers/{id}",    desc: "Ta bort kund" },
-      { method: "GET",    path: "/api/customers/search",  desc: "Sök kunder" }
+    endpoints:[
+      {m:"GET",p:"/api/customers",d:"Lista alla kunder",params:"?page=1&limit=50",resp:'{"data":[{"id":"c1","name":"Acme AB","email":"info@acme.se"}],"total":142}'},
+      {m:"GET",p:"/api/customers/{id}",d:"Hämta specifik kund",params:"{id}: string",resp:'{"id":"c1","name":"Acme AB","email":"info@acme.se","createdAt":"2024-01-15"}'},
+      {m:"POST",p:"/api/customers",d:"Skapa ny kund",params:'{"name":"string","email":"string"}',resp:'{"id":"c99","name":"Ny Kund","email":"ny@kund.se"}'},
+      {m:"PUT",p:"/api/customers/{id}",d:"Uppdatera kund",params:'{id} + body',resp:'{"success":true}'},
+      {m:"DELETE",p:"/api/customers/{id}",d:"Ta bort kund",params:"{id}: string",resp:'{"deleted":true}'},
+      {m:"GET",p:"/api/customers/search",d:"Sök kunder",params:"?q=acme",resp:'{"results":[{"id":"c1","name":"Acme AB"}]}'}
     ]
   },
   {
-    id: 2,
-    name: "Order API",
-    description: "Orderhantering, statusuppdateringar och orderhistorik.",
-    icon: "📦",
-    iconBg: "#1a3a2a",
-    status: "green",
-    version: "v3.1.0",
-    owner: "Order Team",
-    lastDeploy: "igår 14:15",
-    uptime: "99.95%",
-    callsToday: "28 440",
-    avgLatency: "67 ms",
-    openIssues: "1",
-    envs: [
-      { name: "Produktion", url: "https://api.icore.se/order", status: "green" },
-      { name: "Test", url: "https://test-api.icore.se/order", status: "green" }
+    id:2, name:"Order API", desc:"Orderhantering, statusuppdateringar och orderhistorik.",
+    icon:"📦", iconBg:"#1a3a2a", status:"green", version:"v3.1.0",
+    owner:"Order Team", lastDeploy:"igår 14:15", uptime:"99.95%",
+    calls:"28 440", latency:"67 ms", issues:1,
+    tags:["order","e-handel","kritisk"],
+    envs:[
+      {name:"Produktion",url:"https://api.icore.se/order",s:"green"},
+      {name:"Test",url:"https://test-api.icore.se/order",s:"green"}
     ],
-    endpoints: [
-      { method: "GET",  path: "/api/orders",              desc: "Lista ordrar" },
-      { method: "GET",  path: "/api/orders/{id}",         desc: "Hämta order" },
-      { method: "POST", path: "/api/orders",              desc: "Skapa order" },
-      { method: "PUT",  path: "/api/orders/{id}/status",  desc: "Uppdatera status" },
-      { method: "GET",  path: "/api/orders/{id}/history", desc: "Orderhistorik" }
+    endpoints:[
+      {m:"GET",p:"/api/orders",d:"Lista ordrar",params:"?status=pending",resp:'{"orders":[{"id":"o1","status":"pending","total":1200}]}'},
+      {m:"GET",p:"/api/orders/{id}",d:"Hämta order",params:"{id}: string",resp:'{"id":"o1","customer":"Acme AB","lines":[{"sku":"X1","qty":2}]}'},
+      {m:"POST",p:"/api/orders",d:"Skapa order",params:'{"customerId":"string","lines":[]}',resp:'{"id":"o99","status":"created"}'},
+      {m:"PUT",p:"/api/orders/{id}/status",d:"Uppdatera status",params:'{"status":"shipped"}',resp:'{"success":true}'},
+      {m:"GET",p:"/api/orders/{id}/history",d:"Orderhistorik",params:"{id}: string",resp:'[{"status":"created","at":"2024-06-01"},{"status":"shipped","at":"2024-06-02"}]'}
     ]
   },
   {
-    id: 3,
-    name: "Notification API",
-    description: "Skickar notifieringar via e-post, SMS och push. Hanterar mallar och utskicksloggar.",
-    icon: "🔔",
-    iconBg: "#3a2a0a",
-    status: "yellow",
-    version: "v1.8.3",
-    owner: "Platform Team",
-    lastDeploy: "3 dagar sedan",
-    uptime: "97.20%",
-    callsToday: "6 100",
-    avgLatency: "210 ms",
-    openIssues: "3",
-    envs: [
-      { name: "Produktion", url: "https://api.icore.se/notification", status: "yellow" },
-      { name: "Test", url: "https://test-api.icore.se/notification", status: "green" }
+    id:3, name:"Notification API", desc:"Skickar notifieringar via e-post, SMS och push. Hanterar mallar.",
+    icon:"🔔", iconBg:"#3a2a0a", status:"yellow", version:"v1.8.3",
+    owner:"Platform Team", lastDeploy:"3 dagar sedan", uptime:"97.20%",
+    calls:"6 100", latency:"210 ms", issues:3,
+    tags:["notis","e-post","SMS"],
+    envs:[
+      {name:"Produktion",url:"https://api.icore.se/notification",s:"yellow"},
+      {name:"Test",url:"https://test-api.icore.se/notification",s:"green"}
     ],
-    endpoints: [
-      { method: "POST", path: "/api/notifications/email", desc: "Skicka e-post" },
-      { method: "POST", path: "/api/notifications/sms",   desc: "Skicka SMS" },
-      { method: "GET",  path: "/api/notifications/log",   desc: "Utskickslogg" },
-      { method: "GET",  path: "/api/templates",           desc: "Lista mallar" },
-      { method: "POST", path: "/api/templates",           desc: "Skapa mall" }
+    endpoints:[
+      {m:"POST",p:"/api/notifications/email",d:"Skicka e-post",params:'{"to":"string","templateId":"string","data":{}}',resp:'{"queued":true,"messageId":"m123"}'},
+      {m:"POST",p:"/api/notifications/sms",d:"Skicka SMS",params:'{"to":"+46…","body":"string"}',resp:'{"sent":true}'},
+      {m:"GET",p:"/api/notifications/log",d:"Utskickslogg",params:"?limit=100",resp:'[{"id":"n1","type":"email","status":"delivered","at":"2024-06-22"}]'},
+      {m:"GET",p:"/api/templates",d:"Lista mallar",params:"—",resp:'[{"id":"t1","name":"Orderbekräftelse"}]'},
+      {m:"POST",p:"/api/templates",d:"Skapa mall",params:'{"name":"string","html":"string"}',resp:'{"id":"t99"}'}
     ]
   },
   {
-    id: 4,
-    name: "Integration Hub API",
-    description: "Kärnan i iCore. Hanterar kopplingar, dataflöden och transformationer mellan system.",
-    icon: "⚡",
-    iconBg: "#2a1a4a",
-    status: "green",
-    version: "v4.0.2",
-    owner: "Core Team",
-    lastDeploy: "idag 06:00",
-    uptime: "99.99%",
-    callsToday: "91 300",
-    avgLatency: "28 ms",
-    openIssues: "0",
-    envs: [
-      { name: "Produktion", url: "https://api.icore.se/hub", status: "green" },
-      { name: "Test", url: "https://test-api.icore.se/hub", status: "green" },
-      { name: "Staging", url: "https://staging-api.icore.se/hub", status: "green" }
+    id:4, name:"Integration Hub API", desc:"Kärnan i iCore. Kopplingar, dataflöden och transformationer.",
+    icon:"⚡", iconBg:"#2a1a4a", status:"green", version:"v4.0.2",
+    owner:"Core Team", lastDeploy:"idag 06:00", uptime:"99.99%",
+    calls:"91 300", latency:"28 ms", issues:0,
+    tags:["integration","hub","core","kritisk"],
+    envs:[
+      {name:"Produktion",url:"https://api.icore.se/hub",s:"green"},
+      {name:"Test",url:"https://test-api.icore.se/hub",s:"green"},
+      {name:"Staging",url:"https://staging-api.icore.se/hub",s:"green"}
     ],
-    endpoints: [
-      { method: "GET",  path: "/api/connections",               desc: "Lista alla kopplingar" },
-      { method: "POST", path: "/api/connections",               desc: "Skapa koppling" },
-      { method: "GET",  path: "/api/connections/{id}/status",   desc: "Kopplingsstatus" },
-      { method: "POST", path: "/api/flows/{id}/trigger",        desc: "Trigga dataflöde" },
-      { method: "GET",  path: "/api/flows/{id}/log",            desc: "Flödeslogg" },
-      { method: "PUT",  path: "/api/connections/{id}/config",   desc: "Konfigurera koppling" }
+    endpoints:[
+      {m:"GET",p:"/api/connections",d:"Lista alla kopplingar",params:"—",resp:'[{"id":"conn1","name":"ERP Sync","active":true}]'},
+      {m:"POST",p:"/api/connections",d:"Skapa koppling",params:'{"name":"string","type":"erp|crm|custom","config":{}}',resp:'{"id":"conn99","status":"created"}'},
+      {m:"GET",p:"/api/connections/{id}/status",d:"Kopplingsstatus",params:"{id}: string",resp:'{"active":true,"lastSync":"2024-06-22T06:00:00Z","errors":0}'},
+      {m:"POST",p:"/api/flows/{id}/trigger",d:"Trigga dataflöde",params:"{id}: string",resp:'{"jobId":"j1","status":"queued"}'},
+      {m:"GET",p:"/api/flows/{id}/log",d:"Flödeslogg",params:"{id}: string",resp:'[{"at":"06:01","msg":"Sync started"},{"at":"06:04","msg":"142 records synced"}]'},
+      {m:"PUT",p:"/api/connections/{id}/config",d:"Konfigurera koppling",params:'{"schedule":"cron","retries":3}',resp:'{"updated":true}'}
     ]
   },
   {
-    id: 5,
-    name: "Auth API",
-    description: "Autentisering och auktorisering. JWT-tokens, roller och behörigheter.",
-    icon: "🔐",
-    iconBg: "#3a1a1a",
-    status: "red",
-    version: "v2.0.1",
-    owner: "Security Team",
-    lastDeploy: "5 dagar sedan",
-    uptime: "94.10%",
-    callsToday: "—",
-    avgLatency: "—",
-    openIssues: "5",
-    envs: [
-      { name: "Produktion", url: "https://auth.icore.se", status: "red" },
-      { name: "Test", url: "https://test-auth.icore.se", status: "green" }
+    id:5, name:"Auth API", desc:"Autentisering och auktorisering. JWT-tokens, roller och behörigheter.",
+    icon:"🔐", iconBg:"#3a1a1a", status:"red", version:"v2.0.1",
+    owner:"Security Team", lastDeploy:"5 dagar sedan", uptime:"94.10%",
+    calls:"—", latency:"—", issues:5,
+    tags:["auth","säkerhet","JWT"],
+    envs:[
+      {name:"Produktion",url:"https://auth.icore.se",s:"red"},
+      {name:"Test",url:"https://test-auth.icore.se",s:"green"}
     ],
-    endpoints: [
-      { method: "POST", path: "/api/auth/login",      desc: "Logga in, hämta token" },
-      { method: "POST", path: "/api/auth/refresh",    desc: "Förnya token" },
-      { method: "POST", path: "/api/auth/logout",     desc: "Logga ut" },
-      { method: "GET",  path: "/api/users/{id}/roles",desc: "Hämta roller" },
-      { method: "PUT",  path: "/api/users/{id}/roles",desc: "Uppdatera roller" }
+    endpoints:[
+      {m:"POST",p:"/api/auth/login",d:"Logga in, hämta token",params:'{"username":"string","password":"string"}',resp:'{"token":"eyJ…","expiresIn":3600}'},
+      {m:"POST",p:"/api/auth/refresh",d:"Förnya token",params:'{"refreshToken":"string"}',resp:'{"token":"eyJ…"}'},
+      {m:"POST",p:"/api/auth/logout",d:"Logga ut",params:'{"token":"string"}',resp:'{"success":true}'},
+      {m:"GET",p:"/api/users/{id}/roles",d:"Hämta roller",params:"{id}: string",resp:'["admin","editor"]'},
+      {m:"PUT",p:"/api/users/{id}/roles",d:"Uppdatera roller",params:'{"roles":["admin"]}',resp:'{"updated":true}'}
     ]
   }
 ];
 
-let selected = null;
+let sel = 0, activeTab = "overview", expandedEp = null;
 
-function statusColor(s) {
-  return s === "green" ? "green" : s === "yellow" ? "yellow" : "red";
-}
+function dc(s){return s==="green"?"g":s==="yellow"?"y":"r"}
 
-function buildSidebar(list) {
-  const el = document.getElementById("apiList");
-  el.innerHTML = list.map(a => `
-    <div class="api-item ${selected === a.id ? 'active' : ''}" onclick="selectApi(${a.id})">
-      <span class="dot ${statusColor(a.status)}"></span>
+function buildSidebar(list){
+  document.getElementById("apiList").innerHTML=list.map(a=>`
+    <div class="api-item${sel===a.id?" active":""}" onclick="selectApi(${a.id})">
+      <span class="dot ${dc(a.status)}"></span>
       <div class="api-info">
         <div class="api-name">${a.name}</div>
-        <div class="api-meta">${a.owner} · ${a.lastDeploy}</div>
+        <div class="api-meta">${a.owner}</div>
       </div>
-      <span class="badge version">${a.version}</span>
-    </div>
-  `).join("");
+      <span class="vbadge">${a.version}</span>
+    </div>`).join("")
 }
 
-function updateStats() {
-  document.getElementById("countOk").textContent   = apis.filter(a => a.status === "green").length;
-  document.getElementById("countWarn").textContent = apis.filter(a => a.status === "yellow").length;
-  document.getElementById("countErr").textContent  = apis.filter(a => a.status === "red").length;
+function updateStats(){
+  document.getElementById("cOk").textContent=apis.filter(a=>a.status==="green").length;
+  document.getElementById("cWarn").textContent=apis.filter(a=>a.status==="yellow").length;
+  document.getElementById("cErr").textContent=apis.filter(a=>a.status==="red").length;
 }
 
-function methodClass(m) {
-  return m.toLowerCase();
+function statusBadge(a){
+  const map={green:["b-ok","Online"],yellow:["b-warn","Degraderad"],red:["b-err","Offline"]};
+  const [cls,lbl]=map[a.status];
+  return`<span class="badge ${cls}">${lbl}</span>`
 }
 
-function envDot(s) {
-  return `<span class="dot ${statusColor(s)}" style="flex-shrink:0"></span>`;
-}
-
-function selectApi(id) {
-  selected = id;
-  const api = apis.find(a => a.id === id);
-  document.getElementById("topTitle").textContent = api.name;
-  document.getElementById("emptyState").style.display = "none";
-  const detail = document.getElementById("detail");
-  detail.style.display = "block";
-
-  const issuesBadge = api.openIssues === "0"
-    ? `<span class="badge new">Inga issues</span>`
-    : `<span class="badge ${api.openIssues >= 3 ? 'err' : 'warn'}">${api.openIssues} issue${api.openIssues > 1 ? 's' : ''}</span>`;
-
-  detail.innerHTML = `
+function renderOverview(a){
+  const issB=a.issues===0
+    ?`<span class="badge b-ok">Inga issues</span>`
+    :`<span class="badge ${a.issues>=3?"b-err":"b-warn"}">${a.issues} issue${a.issues>1?"s":""}</span>`;
+  const upColor=a.status==="green"?"var(--green)":a.status==="yellow"?"var(--yellow)":"var(--red)";
+  return`
+    ${a.status==="red"?`<div class="alert"><span class="alert-icon">⚠️</span><div><strong>API Offline</strong> – ${a.issues} aktiva issues. Kontakta ${a.owner}.</div></div>`:""}
     <div class="detail-header">
-      <div class="detail-icon" style="background:${api.iconBg}">${api.icon}</div>
+      <div class="detail-icon" style="background:${a.iconBg}">${a.icon}</div>
       <div>
-        <div class="detail-title">${api.name}</div>
-        <div class="detail-desc">${api.description}</div>
+        <div class="detail-title">${a.name}</div>
+        <div class="detail-desc">${a.desc}</div>
         <div class="detail-tags">
-          <span class="badge version">${api.version}</span>
-          ${issuesBadge}
-          <span class="badge ${api.status === 'green' ? 'new' : api.status === 'yellow' ? 'warn' : 'err'}">
-            ${api.status === 'green' ? 'Online' : api.status === 'yellow' ? 'Degraderad' : 'Offline'}
-          </span>
+          <span class="badge b-blue">${a.version}</span>
+          ${statusBadge(a)}${issB}
+          ${a.tags.map(t=>`<span class="badge" style="background:rgba(100,116,139,.15);color:var(--muted)">${t}</span>`).join("")}
         </div>
       </div>
     </div>
-
     <div class="cards-row">
-      <div class="card">
-        <div class="card-label">Uptime</div>
-        <div class="card-value" style="color:${api.status === 'red' ? 'var(--red)' : api.status === 'yellow' ? 'var(--yellow)' : 'var(--green)'}">${api.uptime}</div>
-        <div class="card-sub">senaste 30 dagarna</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Anrop idag</div>
-        <div class="card-value">${api.callsToday}</div>
-        <div class="card-sub">requests</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Svarstid</div>
-        <div class="card-value">${api.avgLatency}</div>
-        <div class="card-sub">genomsnitt</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Senaste deploy</div>
-        <div class="card-value" style="font-size:16px;padding-top:4px">${api.lastDeploy}</div>
-        <div class="card-sub">${api.owner}</div>
-      </div>
+      <div class="card"><div class="card-label">Uptime</div><div class="card-value" style="color:${upColor}">${a.uptime}</div><div class="card-sub">senaste 30 dagarna</div></div>
+      <div class="card"><div class="card-label">Anrop idag</div><div class="card-value">${a.calls}</div><div class="card-sub">requests</div></div>
+      <div class="card"><div class="card-label">Svarstid</div><div class="card-value">${a.latency}</div><div class="card-sub">genomsnitt</div></div>
+      <div class="card"><div class="card-label">Senaste deploy</div><div class="card-value" style="font-size:15px;padding-top:6px">${a.lastDeploy}</div><div class="card-sub">${a.owner}</div></div>
     </div>
-
-    <div class="section-title">Miljöer</div>
-    <div class="env-row">
-      ${api.envs.map(e => `
-        <div class="env-card">
-          ${envDot(e.status)}
-          <div>
-            <div class="env-name">${e.name}</div>
-            <div class="env-url">${e.url}</div>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-
-    <div class="section-title">Endpoints (${api.endpoints.length})</div>
-    <div class="endpoint-list">
-      ${api.endpoints.map(e => `
-        <div class="endpoint">
-          <span class="method ${methodClass(e.method)}">${e.method}</span>
-          <span class="ep-path">${e.path}</span>
-          <span class="ep-desc">${e.desc}</span>
-        </div>
-      `).join("")}
-    </div>
-  `;
-
-  buildSidebar(apis);
+    <div class="stitle">Miljöer</div>
+    <div class="env-row">${a.envs.map(e=>`
+      <div class="env-card">
+        <span class="dot ${dc(e.s)}"></span>
+        <div><div class="env-name">${e.name}</div><div class="env-url">${e.url}</div></div>
+      </div>`).join("")}
+    </div>`;
 }
 
-function filterApis(q) {
-  const filtered = apis.filter(a =>
-    a.name.toLowerCase().includes(q.toLowerCase()) ||
-    a.description.toLowerCase().includes(q.toLowerCase())
+function renderEndpoints(a){
+  return`
+    <div class="stitle">Endpoints (${a.endpoints.length}) – klicka för att expandera och testa</div>
+    <div class="ep-list">${a.endpoints.map((e,i)=>`
+      <div class="ep" id="ep${i}" onclick="toggleEp(${i},event)">
+        <span class="meth ${e.m.toLowerCase()}">${e.m}</span>
+        <span class="ep-path">${e.p}</span>
+        <span class="ep-desc">${e.d}</span>
+        <div class="ep-detail">
+          <div class="ep-row"><span class="ep-key">Parametrar</span><code class="ep-val">${e.params||"—"}</code></div>
+          <div class="ep-row"><span class="ep-key">Exempelsvar</span><textarea class="ep-val" rows="3" onclick="event.stopPropagation()">${e.resp}</textarea></div>
+          <button class="try-btn" onclick="tryEndpoint(${a.id},${i},event)">▶ Testa anrop</button>
+          <div class="try-resp" id="resp${a.id}_${i}" style="display:none"></div>
+        </div>
+      </div>`).join("")}
+    </div>`;
+}
+
+function renderSwagger(a){
+  const sw={
+    openapi:"3.0.0",
+    info:{title:a.name,version:a.version,description:a.desc,contact:{name:a.owner}},
+    servers:a.envs.map(e=>({url:e.url,description:e.name})),
+    paths:{}
+  };
+  a.endpoints.forEach(e=>{
+    if(!sw.paths[e.p])sw.paths[e.p]={};
+    sw.paths[e.p][e.m.toLowerCase()]={summary:e.d,tags:a.tags,responses:{"200":{description:"OK"}}};
+  });
+  const pretty=JSON.stringify(sw,null,2)
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"([^"]+)":/g,'<span class="jk">"$1"</span>:')
+    .replace(/: "([^"]*)"/g,': <span class="js">"$1"</span>')
+    .replace(/: (\d+\.?\d*)/g,': <span class="jn">$1</span>')
+    .replace(/: (true|false|null)/g,': <span class="jn">$1</span>');
+  return`
+    <div class="swagger-wrap">
+      <div class="swagger-toolbar">
+        <span class="sw-title">swagger.json – ${a.name} ${a.version}</span>
+        <button class="sw-btn" onclick="copySwagger(${a.id})">📋 Kopiera</button>
+        <button class="sw-btn" onclick="downloadSwagger(${a.id})">⬇ Ladda ner</button>
+      </div>
+      <div class="swagger-json" id="swjson${a.id}">${pretty}</div>
+    </div>`;
+}
+
+function renderEdit(a){
+  return`
+    <div class="edit-form">
+      <div class="field"><label>API-namn</label><input id="edit-name" value="${a.name}"/></div>
+      <div class="field"><label>Beskrivning</label><textarea id="edit-desc">${a.desc}</textarea></div>
+      <div class="field"><label>Ansvarig team</label><input id="edit-owner" value="${a.owner}"/></div>
+      <div class="field"><label>Version</label><input id="edit-ver" value="${a.version}"/></div>
+      <div class="field">
+        <label>Taggar</label>
+        <div class="tag-row" id="tag-row">
+          ${a.tags.map((t,i)=>`<span class="tag">${t}<button onclick="removeTag(${a.id},${i})">×</button></span>`).join("")}
+          <input class="tag-input" placeholder="+ Lägg till…" onkeydown="addTag(event,${a.id})"/>
+        </div>
+      </div>
+      <button class="save-btn" onclick="saveEdit(${a.id})">💾 Spara ändringar</button>
+    </div>`;
+}
+
+function render(){
+  const a=apis.find(x=>x.id===sel);
+  if(!a)return;
+  document.getElementById("topTitle").textContent=a.name;
+  const map={overview:renderOverview,endpoints:renderEndpoints,swagger:renderSwagger,edit:renderEdit};
+  document.getElementById("content").innerHTML=(map[activeTab]||renderOverview)(a);
+}
+
+function selectApi(id){
+  sel=id; expandedEp=null;
+  buildSidebar(apis);
+  setTab(activeTab);
+}
+
+function setTab(tab){
+  activeTab=tab;
+  document.querySelectorAll(".tab").forEach(t=>{
+    t.classList.toggle("active",t.dataset.tab===tab);
+  });
+  render();
+}
+
+document.getElementById("tabs").addEventListener("click",e=>{
+  if(e.target.dataset.tab)setTab(e.target.dataset.tab);
+});
+
+function toggleEp(i,e){
+  e.stopPropagation();
+  const el=document.getElementById("ep"+i);
+  el.classList.toggle("expanded");
+}
+
+function tryEndpoint(apiId,epIdx,e){
+  e.stopPropagation();
+  const ep=apis.find(a=>a.id===apiId).endpoints[epIdx];
+  const box=document.getElementById(`resp${apiId}_${epIdx}`);
+  box.style.display="block";
+  box.textContent="⏳ Anropar…";
+  setTimeout(()=>{box.textContent="✅ 200 OK\n\n"+ep.resp},800);
+}
+
+function copySwagger(apiId){
+  const a=apis.find(x=>x.id===apiId);
+  const sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};
+  a.endpoints.forEach(e=>{
+    if(!sw.paths[e.p])sw.paths[e.p]={};
+    sw.paths[e.p][e.m.toLowerCase()]={summary:e.d};
+  });
+  navigator.clipboard.writeText(JSON.stringify(sw,null,2))
+    .then(()=>alert("Kopierat till urklipp!"));
+}
+
+function downloadSwagger(apiId){
+  const a=apis.find(x=>x.id===apiId);
+  const sw={openapi:"3.0.0",info:{title:a.name,version:a.version,description:a.desc},servers:a.envs.map(e=>({url:e.url,description:e.name})),paths:{}};
+  a.endpoints.forEach(e=>{
+    if(!sw.paths[e.p])sw.paths[e.p]={};
+    sw.paths[e.p][e.m.toLowerCase()]={summary:e.d,tags:a.tags};
+  });
+  const blob=new Blob([JSON.stringify(sw,null,2)],{type:"application/json"});
+  const url=URL.createObjectURL(blob);
+  const link=document.createElement("a");
+  link.href=url;link.download=`${a.name.toLowerCase().replace(/ /g,"-")}-swagger.json`;
+  link.click();URL.revokeObjectURL(url);
+}
+
+function removeTag(apiId,idx){
+  const a=apis.find(x=>x.id===apiId);
+  a.tags.splice(idx,1);
+  render();
+}
+
+function addTag(e,apiId){
+  if(e.key!=="Enter")return;
+  const val=e.target.value.trim();
+  if(!val)return;
+  apis.find(x=>x.id===apiId).tags.push(val);
+  e.target.value="";
+  render();
+}
+
+function saveEdit(apiId){
+  const a=apis.find(x=>x.id===apiId);
+  a.name=document.getElementById("edit-name").value;
+  a.desc=document.getElementById("edit-desc").value;
+  a.owner=document.getElementById("edit-owner").value;
+  a.version=document.getElementById("edit-ver").value;
+  buildSidebar(apis);
+  alert("Sparat! (Simulering – i produkt sparas detta till databasen)");
+}
+
+function filterApis(q){
+  const filtered=apis.filter(a=>
+    a.name.toLowerCase().includes(q.toLowerCase())||
+    a.desc.toLowerCase().includes(q.toLowerCase())||
+    a.tags.some(t=>t.toLowerCase().includes(q.toLowerCase()))
   );
   buildSidebar(filtered);
 }
 
-buildSidebar(apis);
+// Init – visa första API direkt
 updateStats();
+selectApi(1);
 </script>
 </body>
 </html>
