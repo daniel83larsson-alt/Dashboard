@@ -8,17 +8,11 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
-  --accent:#4f8ef7;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
+  --accent:#4f8ef7;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--purple:#a855f7;
   --text:#e2e8f0;--muted:#64748b;--sidebar:300px;
 }
 html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
-
-/* ═══════════════════════════════
-   DESKTOP LAYOUT (default)
-═══════════════════════════════ */
 .app{display:flex;flex-direction:column;height:100vh}
-
-/* Top bar */
 .topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0}
 .tb-logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
 .tb-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
@@ -26,13 +20,8 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .stat-pill{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
 .sn{font-weight:800;font-size:15px}
 .sg{color:var(--green)}.sy{color:var(--yellow)}.sr{color:var(--red)}
-/* mobile back button – hidden on desktop */
 .back-btn{display:none;width:34px;height:34px;border-radius:50%;background:var(--bg);border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text);flex-shrink:0;-webkit-tap-highlight-color:transparent}
-
-/* Body split */
 .body{display:flex;flex:1;overflow:hidden}
-
-/* Sidebar */
 .sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
 .sidebar-inner{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
 .search-wrap{position:relative}
@@ -56,69 +45,95 @@ html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFo
 .vbadge{font-size:9px;padding:2px 7px;border-radius:99px;font-weight:700;background:rgba(79,142,247,.15);color:var(--accent);white-space:nowrap}
 .add-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:4px;-webkit-tap-highlight-color:transparent}
 .add-btn:hover{background:#3d7de6}
-.add-btn:active{background:#3068d4}
-
-/* Main content */
 .main{flex:1;display:flex;flex-direction:column;overflow:hidden}
 .tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
-.tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;white-space:nowrap}
+.tab{padding:14px 14px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;white-space:nowrap}
 .tab:hover{color:var(--text)}
 .tab.on{color:var(--accent);border-bottom-color:var(--accent)}
 .content{flex:1;overflow-y:auto;padding:24px}
-
-/* Empty state */
 .empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;color:var(--muted);text-align:center}
 .empty-state .ei{font-size:52px}
 .empty-state h2{font-size:18px;font-weight:700;color:var(--text)}
 .empty-state p{font-size:14px;max-width:300px;line-height:1.6}
 
-/* ═══════════════════════════════
-   SHARED COMPONENTS
-═══════════════════════════════ */
+/* ── SHARED ── */
 .badge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:700}
 .bok{background:rgba(34,197,94,.15);color:var(--green)}
 .bwarn{background:rgba(245,158,11,.15);color:var(--yellow)}
 .berr{background:rgba(239,68,68,.15);color:var(--red)}
 .bblue{background:rgba(79,142,247,.15);color:var(--accent)}
 .bgray{background:rgba(100,116,139,.12);color:var(--muted)}
+.bpurple{background:rgba(168,85,247,.15);color:var(--purple)}
 .alert{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:13px 14px;display:flex;align-items:flex-start;gap:10px;font-size:13px;margin-bottom:20px;line-height:1.5}
-
-/* Hero */
 .hero{display:flex;align-items:flex-start;gap:16px;margin-bottom:22px}
 .hero-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
 .hero-name{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:4px}
 .hero-desc{font-size:13px;color:var(--muted);line-height:1.5;max-width:600px}
 .tag-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+.section{margin-bottom:24px}
 
-/* Metric cards */
+/* ── METRIC CARDS ── */
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.cards-3{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:22px}
+.cards-2{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:22px}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
 .c-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
 .c-val{font-size:22px;font-weight:800}
 .c-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.c-trend{font-size:11px;margin-top:4px}
+.c-up{color:var(--green)}.c-down{color:var(--red)}
 
-/* Section */
-.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+/* ── STATUS CODE BAR ── */
+.sc-wrap{margin-bottom:22px}
+.sc-bar{height:10px;border-radius:99px;overflow:hidden;display:flex;gap:2px;margin-bottom:8px}
+.sc-seg{height:100%;border-radius:99px;transition:width .5s}
+.sc-legend{display:flex;gap:16px}
+.sc-ll{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.sc-dot{width:8px;height:8px;border-radius:50%}
 
-/* Environments */
+/* ── APDEX ── */
+.apdex-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;display:flex;align-items:center;gap:14px}
+.apdex-score{font-size:32px;font-weight:800}
+.apdex-desc{font-size:12px;color:var(--muted);margin-top:3px;line-height:1.4}
+
+/* ── ENVIRONMENTS ── */
 .env-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:22px}
 .env-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px 14px;display:flex;align-items:center;gap:11px}
 .env-name{font-size:13px;font-weight:600}
 .env-url{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;word-break:break-all}
 
-/* Load chart */
-.load-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px}
+/* ── TOP ENDPOINTS TABLE ── */
+.top-table{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:22px}
+.tt-row{display:grid;grid-template-columns:1fr 90px 80px;align-items:center;padding:10px 14px;border-bottom:1px solid var(--border);font-size:12px}
+.tt-row:last-child{border-bottom:none}
+.tt-row.hdr{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600;background:rgba(255,255,255,.02)}
+.tt-path{font-family:monospace;color:var(--text);display:flex;align-items:center;gap:8px;overflow:hidden}
+.tt-path span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tt-right{text-align:right;color:var(--muted)}
+.tt-calls{text-align:right;font-weight:600;color:var(--text)}
+
+/* ── CHARTS ── */
+.load-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:16px}
 .load-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .load-title{font-size:13px;font-weight:600}
 .live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-canvas{width:100%;height:90px;display:block}
-.chart-legend{display:flex;gap:14px;margin-top:10px}
+canvas{width:100%;display:block}
+.chart-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
 .ll{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
 .ll-dot{width:8px;height:8px;border-radius:50%}
 
-/* Endpoints */
+/* ── LATENCY BARS ── */
+.lat-bars{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+.lat-row{display:grid;grid-template-columns:50px 1fr 60px;align-items:center;gap:10px;font-size:12px}
+.lat-lbl{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.4px}
+.lat-track{background:var(--bg);border-radius:99px;height:8px;overflow:hidden}
+.lat-fill{height:100%;border-radius:99px}
+.lat-val{text-align:right;font-weight:600}
+
+/* ── ENDPOINTS ── */
 .ep-list{display:flex;flex-direction:column;gap:6px}
 .ep{background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden}
 .ep-head{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;transition:background .12s}
@@ -128,7 +143,7 @@ canvas{width:100%;height:90px;display:block}
 .post{background:rgba(79,142,247,.15);color:var(--accent)}
 .put{background:rgba(245,158,11,.15);color:var(--yellow)}
 .delete{background:rgba(239,68,68,.15);color:var(--red)}
-.patch{background:rgba(168,85,247,.15);color:#a855f7}
+.patch{background:rgba(168,85,247,.15);color:var(--purple)}
 .ep-path{font-size:13px;font-family:monospace;flex:1}
 .ep-desc-short{font-size:12px;color:var(--muted);text-align:right}
 .chev{color:var(--muted);font-size:17px;transition:transform .2s;flex-shrink:0}
@@ -142,7 +157,7 @@ canvas{width:100%;height:90px;display:block}
 .try-btn:hover{background:#3d7de6}
 .try-resp{background:var(--bg);border:1px solid var(--green);border-radius:7px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);white-space:pre-wrap;word-break:break-all;display:none;margin-top:4px}
 
-/* Swagger */
+/* ── SWAGGER ── */
 .sw-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
 .sw-bar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
 .sw-title{font-size:13px;font-weight:600;flex:1}
@@ -151,9 +166,45 @@ canvas{width:100%;height:90px;display:block}
 .sw-json{padding:16px;font-family:monospace;font-size:11px;line-height:1.7;max-height:460px;overflow-y:auto;word-break:break-all}
 .jk{color:#7dd3fc}.js{color:#86efac}.jn{color:#f87171}
 
-/* ═══════════════════════════════
-   MODAL
-═══════════════════════════════ */
+/* ── MCP ── */
+.mcp-intro{background:linear-gradient(135deg,rgba(168,85,247,.1),rgba(79,142,247,.1));border:1px solid rgba(168,85,247,.25);border-radius:12px;padding:18px 20px;margin-bottom:22px}
+.mcp-intro-title{font-size:15px;font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.mcp-intro-desc{font-size:13px;color:var(--muted);line-height:1.6}
+.mcp-tools{display:flex;flex-direction:column;gap:8px;margin-bottom:22px}
+.mcp-tool{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.mcp-tool-head{display:flex;align-items:center;gap:12px;padding:13px 14px;cursor:pointer}
+.mcp-tool-head:hover{background:var(--surface2)}
+.mcp-tool-icon{width:34px;height:34px;background:rgba(168,85,247,.15);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.mcp-tool-info{flex:1}
+.mcp-tool-name{font-size:13px;font-weight:700;font-family:monospace;color:var(--accent)}
+.mcp-tool-desc{font-size:11px;color:var(--muted);margin-top:2px}
+.mcp-tool-body{display:none;border-top:1px solid var(--border);padding:14px}
+.mcp-tool.open .mcp-tool-body{display:block}
+.mcp-tool.open .chev{transform:rotate(90deg)}
+.mcp-schema{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;line-height:1.7;white-space:pre-wrap;word-break:break-all;color:var(--text);max-height:200px;overflow-y:auto}
+
+/* ── MCP CONVERSATION ── */
+.mcp-convo-wrap{background:var(--surface);border:1px solid rgba(168,85,247,.3);border-radius:12px;overflow:hidden;margin-bottom:22px}
+.mcp-convo-hdr{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.mcp-convo-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+.mc-user{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.2);border-radius:10px 10px 2px 10px;padding:11px 14px;font-size:13px;line-height:1.5;align-self:flex-end;max-width:85%}
+.mc-steps{background:rgba(168,85,247,.06);border:1px solid rgba(168,85,247,.15);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.mc-steps-lbl{font-size:10px;color:var(--purple);text-transform:uppercase;letter-spacing:.5px;font-weight:600;margin-bottom:4px}
+.mc-step{display:flex;align-items:flex-start;gap:10px;font-size:12px}
+.mc-step-icon{font-size:14px;flex-shrink:0;margin-top:1px}
+.mc-step-name{font-family:monospace;color:var(--accent);font-weight:700}
+.mc-step-result{color:var(--muted);margin-top:2px;line-height:1.4}
+.mc-answer{background:rgba(34,197,94,.06);border:1px solid rgba(34,197,94,.2);border-radius:2px 10px 10px 10px;padding:11px 14px;font-size:13px;line-height:1.6;max-width:90%}
+
+/* ── MCP EXPORT ── */
+.mcp-export{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.mcp-export-info{flex:1}
+.mcp-export-title{font-size:14px;font-weight:700;margin-bottom:3px}
+.mcp-export-desc{font-size:12px;color:var(--muted)}
+.mcp-export-btn{background:var(--purple);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap;flex-shrink:0}
+.mcp-export-btn:hover{background:#9333ea}
+
+/* ── MODAL ── */
 .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
 .modal-bg.show{opacity:1;pointer-events:all}
 .modal{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:scale(.96);transition:transform .22s}
@@ -181,75 +232,51 @@ canvas{width:100%;height:90px;display:block}
 .m-btn-pri{background:var(--accent);border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;color:#fff;cursor:pointer}
 .m-btn-pri:hover{background:#3d7de6}
 
-/* ═══════════════════════════════
-   MOBILE OVERRIDES  (≤ 767px)
-═══════════════════════════════ */
+/* ── MOBILE (≤ 767px) ── */
 @media(max-width:767px){
   .app{position:fixed;inset:0;overflow:hidden}
-
-  /* hide desktop sidebar/tabs */
   .sidebar,.tabs{display:none}
-
-  /* topbar back button */
   .back-btn{display:flex}
   .stat-pills{display:none}
-
-  /* screens slide */
   .main{position:fixed;inset:0;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
   .main.visible{transform:translateX(0)}
-
-  /* list screen */
   .list-screen{position:fixed;inset:0;display:flex;flex-direction:column}
   .list-screen .topbar{padding:0 14px}
   .list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;display:flex;flex-direction:column;gap:8px;padding-bottom:20px}
-
-  /* stat row on list */
   .mob-stats{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8px}
   .mob-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
   .mob-stat .sn{font-size:28px;font-weight:800;display:block;line-height:1}
   .mob-stat .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-top:4px}
-
-  /* API cards on mobile */
   .api-item{border-radius:13px;padding:13px 14px}
   .ai-icon{width:42px;height:42px;border-radius:10px;font-size:20px}
   .ai-name{font-size:14px}
-
   .add-btn{border-radius:12px;padding:14px;font-size:15px}
-
-  /* content */
-  .content{padding:16px;padding-bottom:20px}
-
-  /* cards 2 columns on mobile */
+  .content{padding:16px;padding-bottom:72px}
   .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .cards-3{grid-template-columns:repeat(2,1fr)}
   .c-val{font-size:20px}
   .hero{flex-direction:row}
   .hero-name{font-size:18px}
-
-  /* env grid 1 col */
   .env-grid{grid-template-columns:1fr}
-
-  /* bottom nav */
-  .bnav{display:flex!important;height:60px;background:var(--surface);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:10}
-  .ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500;-webkit-tap-highlight-color:transparent}
+  .tt-row{grid-template-columns:1fr 70px}
+  .tt-row .tt-right:last-child{display:none}
+  .bnav{display:flex!important;height:56px;background:var(--surface);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:10}
+  .ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--muted);font-size:9px;font-weight:500;-webkit-tap-highlight-color:transparent;padding:2px 0}
   .ni.on{color:var(--accent)}
-  .ni-icon{font-size:20px;line-height:1}
-  .content{padding-bottom:72px}
-
-  /* modal bottom sheet on mobile */
+  .ni-icon{font-size:18px;line-height:1}
   .modal-bg{align-items:flex-end}
   .modal{border-radius:20px 20px 0 0;max-width:100%;padding:20px 16px 32px;transform:translateY(100%)}
   .modal-bg.show .modal{transform:translateY(0)}
   .m-row{justify-content:stretch}
   .m-btn-sec,.m-btn-pri{flex:1;padding:13px}
+  .mcp-export{flex-direction:column;align-items:flex-start}
+  .mcp-export-btn{width:100%}
 }
-/* hide mobile-only elements on desktop */
 .list-screen,.mob-stats,.bnav{display:none}
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- ── TOP BAR ── -->
   <div class="topbar" id="topbar">
     <button class="back-btn" id="backBtn" onclick="goBack()">←</button>
     <div class="tb-logo">
@@ -263,10 +290,7 @@ canvas{width:100%;height:90px;display:block}
       <div class="stat-pill"><span class="sn sr" id="cErr">0</span> Offline</div>
     </div>
   </div>
-
   <div class="body">
-
-    <!-- ── SIDEBAR (desktop) ── -->
     <aside class="sidebar">
       <div class="sidebar-inner">
         <div class="search-wrap">
@@ -278,15 +302,13 @@ canvas{width:100%;height:90px;display:block}
         <button class="add-btn" onclick="showModal()">＋ Importera API</button>
       </div>
     </aside>
-
-    <!-- ── MAIN (desktop detail / mobile container) ── -->
     <div class="main" id="mainPanel">
-      <!-- Desktop tabs -->
       <div class="tabs" id="tabsEl">
         <div class="tab on" data-t="overview" onclick="setTab('overview')">📊 Översikt</div>
-        <div class="tab" data-t="load" onclick="setTab('load')">📈 Last</div>
+        <div class="tab" data-t="metrics" onclick="setTab('metrics')">📈 Metrics</div>
         <div class="tab" data-t="endpoints" onclick="setTab('endpoints')">⚡ Endpoints</div>
         <div class="tab" data-t="swagger" onclick="setTab('swagger')">📄 Swagger</div>
+        <div class="tab" data-t="mcp" onclick="setTab('mcp')">🤖 MCP</div>
       </div>
       <div class="content" id="content">
         <div class="empty-state">
@@ -295,18 +317,17 @@ canvas{width:100%;height:90px;display:block}
           <p>Välj ett API i listan till vänster, eller importera ett nytt via Swagger.</p>
         </div>
       </div>
-      <!-- Mobile bottom nav -->
       <div class="bnav">
         <div class="ni on" data-t="overview" onclick="setTab('overview')"><div class="ni-icon">📊</div>Översikt</div>
-        <div class="ni" data-t="load" onclick="setTab('load')"><div class="ni-icon">📈</div>Last</div>
+        <div class="ni" data-t="metrics" onclick="setTab('metrics')"><div class="ni-icon">📈</div>Metrics</div>
         <div class="ni" data-t="endpoints" onclick="setTab('endpoints')"><div class="ni-icon">⚡</div>Endpoints</div>
         <div class="ni" data-t="swagger" onclick="setTab('swagger')"><div class="ni-icon">📄</div>Swagger</div>
+        <div class="ni" data-t="mcp" onclick="setTab('mcp')"><div class="ni-icon">🤖</div>MCP</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ── MOBILE LIST SCREEN ── -->
 <div class="list-screen" id="listScreen">
   <div class="topbar" style="padding:0 14px">
     <div class="tb-logo"><div class="tb-icon">i</div><span>API Control Tower</span></div>
@@ -327,14 +348,13 @@ canvas{width:100%;height:90px;display:block}
   </div>
 </div>
 
-<!-- ── IMPORT MODAL ── -->
 <div class="modal-bg" id="modalBg" onclick="hideModalBg(event)">
   <div class="modal">
     <div class="modal-title">Importera API</div>
     <div class="modal-sub">Hämta från URL eller klistra in swagger.json.</div>
     <label class="m-lbl">Swagger URL</label>
     <input class="m-input" id="swUrl" placeholder="http://[server]/swagger/v1/swagger.json" type="url"/>
-    <div class="m-tip">💡 Kräver att API:et och dashboarden körs på samma nätverk, eller att CORS är aktiverat på API:et.</div>
+    <div class="m-tip">💡 Kräver att API:et och dashboarden körs på samma nätverk, eller att CORS är aktiverat.</div>
     <button class="m-fetch" onclick="fetchUrl()">⬇ Hämta från URL</button>
     <div class="divider"><span>eller klistra in JSON</span></div>
     <label class="m-lbl">Swagger JSON</label>
@@ -349,25 +369,87 @@ canvas{width:100%;height:90px;display:block}
 </div>
 
 <script>
-// ── DATA ──
 let apis=[
-  {id:1,name:"Customer API",desc:"Hanterar kunddata, profiler och kontoinformation.",icon:"👤",ibg:"#1e3a5f",status:"green",version:"v2.4.1",owner:"Backend Team",deploy:"idag 08:42",uptime:"99.98%",calls:"14 820",latency:"42 ms",issues:0,tags:["kunder","CRM"],imported:false,
-   envs:[{n:"Produktion",u:"https://api.icore.se/customer",s:"g"},{n:"Test",u:"https://test-api.icore.se/customer",s:"g"}],
-   eps:[{m:"GET",p:"/api/customers",d:"Lista alla kunder",par:"?page=1&limit=50",res:'{"data":[{"id":"c1","name":"Acme AB"}],"total":142}'},{m:"POST",p:"/api/customers",d:"Skapa ny kund",par:'{"name":"string","email":"string"}',res:'{"id":"c99","name":"Ny Kund"}'},{m:"DELETE",p:"/api/customers/{id}",d:"Ta bort kund",par:"{id}: string",res:'{"deleted":true}'}],
-   load:[420,380,510,490,440,610,580,520,490,600,640,580]},
-  {id:2,name:"Integration Hub",desc:"Kärnan i iCore. Kopplingar, dataflöden och transformationer.",icon:"⚡",ibg:"#2a1a4a",status:"green",version:"v4.0.2",owner:"Core Team",deploy:"idag 06:00",uptime:"99.99%",calls:"91 300",latency:"28 ms",issues:0,tags:["integration","hub"],imported:false,
-   envs:[{n:"Produktion",u:"https://api.icore.se/hub",s:"g"},{n:"Test",u:"https://test-api.icore.se/hub",s:"g"}],
-   eps:[{m:"GET",p:"/api/connections",d:"Lista alla kopplingar",par:"—",res:'[{"id":"conn1","name":"ERP Sync","active":true}]'},{m:"POST",p:"/api/connections",d:"Skapa koppling",par:'{"name":"string","type":"erp|crm"}',res:'{"id":"conn99"}'},{m:"POST",p:"/api/flows/{id}/trigger",d:"Trigga dataflöde",par:"{id}: string",res:'{"jobId":"j1","status":"queued"}'}],
-   load:[2800,3100,2950,3400,3200,3600,3100,2900,3300,3500,3200,3400]},
-  {id:3,name:"Auth API",desc:"Autentisering och auktorisering. JWT-tokens och roller.",icon:"🔐",ibg:"#3a1a1a",status:"red",version:"v2.0.1",owner:"Security Team",deploy:"5 dagar sedan",uptime:"94.10%",calls:"—",latency:"—",issues:5,tags:["auth","säkerhet"],imported:false,
-   envs:[{n:"Produktion",u:"https://auth.icore.se",s:"r"},{n:"Test",u:"https://test-auth.icore.se",s:"g"}],
-   eps:[{m:"POST",p:"/api/auth/login",d:"Logga in",par:'{"username":"string","password":"string"}',res:'{"token":"eyJ…","expiresIn":3600}'},{m:"POST",p:"/api/auth/refresh",d:"Förnya token",par:'{"refreshToken":"string"}',res:'{"token":"eyJ…"}'}],
-   load:[0,0,0,0,0,0,0,0,0,0,0,0]}
+  {
+    id:1,name:"Integration Hub",desc:"Kärnan i iCore. Kopplingar, dataflöden och transformationer mellan system.",
+    icon:"⚡",ibg:"#2a1a4a",status:"green",version:"v4.0.2",owner:"Core Team",deploy:"idag 06:00",
+    uptime:"99.94%",calls:"91 300",callsYesterday:"85 200",latency:"28 ms",issues:0,
+    tags:["integration","hub","core"],imported:false,
+    p50:"24 ms",p95:"68 ms",p99:"142 ms",
+    errorRate:"0.3%",apdex:0.96,
+    statusCodes:{ok:88500,warn:1800,err:1000},
+    topEps:[
+      {m:"POST",p:"/api/flows/{id}/trigger",calls:"42 100",lat:"31 ms"},
+      {m:"GET",p:"/api/connections",calls:"28 400",lat:"18 ms"},
+      {m:"GET",p:"/api/messages",calls:"15 200",lat:"44 ms"},
+      {m:"POST",p:"/api/connections",calls:"5 600",lat:"88 ms"}
+    ],
+    envs:[
+      {n:"Produktion",u:"https://api.icore.se/hub",s:"g"},
+      {n:"Test",u:"https://test-api.icore.se/hub",s:"g"},
+      {n:"Staging",u:"https://staging-api.icore.se/hub",s:"y"}
+    ],
+    eps:[
+      {m:"GET",p:"/api/connections",d:"Lista alla kopplingar",par:"—",res:'[{"id":"conn1","name":"ERP Sync","active":true,"lastPing":"2min ago"}]'},
+      {m:"POST",p:"/api/connections",d:"Skapa ny koppling",par:'{"name":"string","type":"erp|crm|custom","target":"string"}',res:'{"id":"conn99","status":"created"}'},
+      {m:"DELETE",p:"/api/connections/{id}",d:"Ta bort koppling",par:"{id}: string",res:'{"deleted":true}'},
+      {m:"GET",p:"/api/messages",d:"Lista meddelanden",par:"?status=pending&limit=100",res:'[{"id":"m1","status":"delivered","size":2048}]'},
+      {m:"POST",p:"/api/flows/{id}/trigger",d:"Trigga dataflöde",par:"{id}: string + body: {payload}",res:'{"jobId":"j1","status":"queued","eta":"~3s"}'},
+      {m:"GET",p:"/api/flows/{id}/status",d:"Kontrollera flödesstatus",par:"{id}: string",res:'{"jobId":"j1","status":"completed","duration":"2.4s"}'}
+    ],
+    load:[2800,3100,2950,3400,3200,3600,3100,2900,3300,3500,3200,3400],
+    loadErr:[84,93,89,102,96,108,93,87,99,105,96,102]
+  },
+  {
+    id:2,name:"Customer API",desc:"Hanterar kunddata, profiler och kontoinformation för iCores kunder.",
+    icon:"👤",ibg:"#1e3a5f",status:"green",version:"v2.4.1",owner:"Backend Team",deploy:"idag 08:42",
+    uptime:"99.98%",calls:"14 820",callsYesterday:"13 400",latency:"42 ms",issues:0,
+    tags:["kunder","CRM"],imported:false,
+    p50:"38 ms",p95:"95 ms",p99:"210 ms",
+    errorRate:"0.1%",apdex:0.98,
+    statusCodes:{ok:14700,warn:90,err:30},
+    topEps:[
+      {m:"GET",p:"/api/customers",calls:"8 400",lat:"38 ms"},
+      {m:"GET",p:"/api/customers/{id}",calls:"4 200",lat:"22 ms"},
+      {m:"POST",p:"/api/customers",calls:"2 220",lat:"88 ms"}
+    ],
+    envs:[
+      {n:"Produktion",u:"https://api.icore.se/customer",s:"g"},
+      {n:"Test",u:"https://test-api.icore.se/customer",s:"g"}
+    ],
+    eps:[
+      {m:"GET",p:"/api/customers",d:"Lista alla kunder",par:"?page=1&limit=50&search=string",res:'{"data":[{"id":"c1","name":"Acme AB"}],"total":142,"page":1}'},
+      {m:"POST",p:"/api/customers",d:"Skapa ny kund",par:'{"name":"string","email":"string","orgNr":"string"}',res:'{"id":"c99","name":"Ny Kund"}'},
+      {m:"GET",p:"/api/customers/{id}",d:"Hämta kund",par:"{id}: string",res:'{"id":"c1","name":"Acme AB","email":"info@acme.se","created":"2024-01-15"}'},
+      {m:"PUT",p:"/api/customers/{id}",d:"Uppdatera kund",par:"{id}: string + body",res:'{"updated":true}'},
+      {m:"DELETE",p:"/api/customers/{id}",d:"Ta bort kund",par:"{id}: string",res:'{"deleted":true}'}
+    ],
+    load:[420,380,510,490,440,610,580,520,490,600,640,580],
+    loadErr:[4,3,5,5,4,6,6,5,5,6,6,6]
+  },
+  {
+    id:3,name:"Auth API",desc:"Autentisering och auktorisering. JWT-tokens, roller och sessionshantering.",
+    icon:"🔐",ibg:"#3a1a1a",status:"red",version:"v2.0.1",owner:"Security Team",deploy:"5 dagar sedan",
+    uptime:"94.10%",calls:"—",callsYesterday:"—",latency:"—",issues:5,
+    tags:["auth","säkerhet"],imported:false,
+    p50:"—",p95:"—",p99:"—",errorRate:"—",apdex:null,
+    statusCodes:{ok:0,warn:0,err:0},topEps:[],
+    envs:[
+      {n:"Produktion",u:"https://auth.icore.se",s:"r"},
+      {n:"Test",u:"https://test-auth.icore.se",s:"g"}
+    ],
+    eps:[
+      {m:"POST",p:"/api/auth/login",d:"Logga in",par:'{"username":"string","password":"string"}',res:'{"token":"eyJ…","expiresIn":3600,"refreshToken":"eyJ…"}'},
+      {m:"POST",p:"/api/auth/refresh",d:"Förnya token",par:'{"refreshToken":"string"}',res:'{"token":"eyJ…","expiresIn":3600}'},
+      {m:"POST",p:"/api/auth/logout",d:"Logga ut",par:'{"refreshToken":"string"}',res:'{"loggedOut":true}'}
+    ],
+    load:[0,0,0,0,0,0,0,0,0,0,0,0],
+    loadErr:[0,0,0,0,0,0,0,0,0,0,0,0]
+  }
 ];
 let nextId=10,selId=null,activeTab="overview";
 const isMobile=()=>window.innerWidth<768;
 
-// ── ICONS ──
 function pickIcon(name){
   const n=name.toLowerCase();
   if(n.includes("auth")||n.includes("login"))return{i:"🔐",bg:"#3a1a1a"};
@@ -381,7 +463,6 @@ function pickIcon(name){
   return{i:"🔌",bg:"#252538"};
 }
 
-// ── PARSE SWAGGER ──
 function parseSwagger(json,url){
   const info=json.info||{};
   const title=info.title||"Okänt API";
@@ -398,12 +479,15 @@ function parseSwagger(json,url){
     });
   });
   const{i,bg}=pickIcon(title);
-  return{id:nextId++,name:title,desc:info.description||`Importerad via Swagger`,icon:i,ibg:bg,status:"green",version:info.version||"v1",owner:info.contact?.name||"Importerad",deploy:"just nu",uptime:"—",calls:"—",latency:"—",issues:0,tags:["importerad"],imported:true,envs:servers,eps,load:Array(12).fill(0)};
+  return{id:nextId++,name:title,desc:info.description||"Importerad via Swagger",icon:i,ibg:bg,
+    status:"green",version:info.version||"v1",owner:info.contact?.name||"Importerad",deploy:"just nu",
+    uptime:"—",calls:"—",callsYesterday:"—",latency:"—",issues:0,tags:["importerad"],imported:true,
+    p50:"—",p95:"—",p99:"—",errorRate:"—",apdex:null,statusCodes:{ok:0,warn:0,err:0},topEps:[],
+    envs:servers,eps,load:Array(12).fill(0),loadErr:Array(12).fill(0)};
 }
 
-// ── RENDER LIST ──
-function renderApiItem(a,onclick){
-  return`<div class="api-item${selId===a.id?" active":""}" onclick="${onclick}(${a.id})">
+function renderApiItem(a,fn){
+  return`<div class="api-item${selId===a.id?" active":""}" onclick="${fn}(${a.id})">
     <div class="ai-icon" style="background:${a.ibg}">${a.icon}</div>
     <div class="ai-info"><div class="ai-name">${a.name}</div><div class="ai-sub">${a.owner} · ${a.deploy}</div></div>
     <div class="ai-right"><span class="dot d${a.status==="green"?"g":a.status==="yellow"?"y":"r"}"></span><span class="vbadge">${a.version}</span></div>
@@ -421,36 +505,23 @@ function updateStats(){
   const ok=apis.filter(a=>a.status==="green").length;
   const warn=apis.filter(a=>a.status==="yellow").length;
   const err=apis.filter(a=>a.status==="red").length;
-  document.getElementById("cOk").textContent=ok;
-  document.getElementById("cWarn").textContent=warn;
-  document.getElementById("cErr").textContent=err;
-  document.getElementById("mOk").textContent=ok;
-  document.getElementById("mWarn").textContent=warn;
-  document.getElementById("mErr").textContent=err;
+  ["cOk","mOk"].forEach(id=>document.getElementById(id).textContent=ok);
+  ["cWarn","mWarn"].forEach(id=>document.getElementById(id).textContent=warn);
+  ["cErr","mErr"].forEach(id=>document.getElementById(id).textContent=err);
 }
 
 function filterApis(q){const f=q.toLowerCase().trim();renderLists(f?apis.filter(a=>a.name.toLowerCase().includes(f)||a.owner.toLowerCase().includes(f)||a.tags.some(t=>t.includes(f))):null)}
 function filterMobile(q){filterApis(q)}
 
-// ── NAVIGATION ──
-function selectApi(id){
-  selId=id;
-  renderLists();
-  const a=apis.find(x=>x.id===id);
-  document.getElementById("tbTitle").textContent=a.name;
-  setTab(activeTab);
-}
-
+function selectApi(id){selId=id;renderLists();const a=apis.find(x=>x.id===id);document.getElementById("tbTitle").textContent=a.name;setTab(activeTab)}
 function openMobile(id){
-  selId=id;
-  const a=apis.find(x=>x.id===id);
+  selId=id;const a=apis.find(x=>x.id===id);
   document.getElementById("tbTitle").textContent=a.name;
   document.getElementById("backBtn").style.display="flex";
   document.getElementById("listScreen").style.display="none";
   document.getElementById("mainPanel").classList.add("visible");
   setTab("overview");
 }
-
 function goBack(){
   document.getElementById("listScreen").style.display="flex";
   document.getElementById("mainPanel").classList.remove("visible");
@@ -464,73 +535,244 @@ function setTab(t){
   document.querySelectorAll(".tab,.ni").forEach(el=>el.classList.toggle("on",el.dataset.t===t));
   if(!selId){document.getElementById("content").innerHTML=`<div class="empty-state"><div class="ei">⚡</div><h2>Välj ett API</h2><p>Välj ett API i listan till vänster, eller importera ett nytt.</p></div>`;return}
   const a=apis.find(x=>x.id===selId);
-  const map={overview:renderOverview,load:renderLoad,endpoints:renderEndpoints,swagger:renderSwagger};
+  const map={overview:renderOverview,metrics:renderMetrics,endpoints:renderEndpoints,swagger:renderSwagger,mcp:renderMcp};
   document.getElementById("content").innerHTML=(map[t]||renderOverview)(a);
   document.getElementById("content").scrollTop=0;
-  if(t==="load")drawChart(a);
+  if(t==="metrics")drawCharts(a);
 }
 
-// ── RENDER TABS ──
+// ── ÖVERSIKT ──
 function renderOverview(a){
+  const sc=a.statusCodes||{ok:0,warn:0,err:0};
+  const total=sc.ok+sc.warn+sc.err||1;
+  const okPct=(sc.ok/total*100).toFixed(1);
+  const warnPct=(sc.warn/total*100).toFixed(1);
+  const errPct=(sc.err/total*100).toFixed(1);
   const uc=a.status==="green"?"var(--green)":a.status==="yellow"?"var(--yellow)":"var(--red)";
   const ib=a.issues===0?`<span class="badge bok">Inga issues</span>`:`<span class="badge ${a.issues>=3?"berr":"bwarn"}">${a.issues} issues</span>`;
-  return`${a.status==="red"?`<div class="alert">⚠️<div><strong>${a.name} är offline</strong> – ${a.issues} aktiva issues. Kontakta ${a.owner}.</div></div>`:""}
+  const apdexColor=a.apdex>=0.95?"var(--green)":a.apdex>=0.85?"var(--yellow)":a.apdex?"var(--red)":"var(--muted)";
+  const apdexLabel=a.apdex>=0.95?"Utmärkt":a.apdex>=0.85?"Bra":a.apdex?"Behöver åtgärd":"Ingen data";
+
+  return`
+  ${a.status==="red"?`<div class="alert">⚠️<div><strong>${a.name} är offline</strong> – ${a.issues} aktiva issues. Kontakta ${a.owner}.</div></div>`:""}
   <div class="hero">
     <div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
     <div><div class="hero-name">${a.name}</div><div class="hero-desc">${a.desc}</div>
-    <div class="tag-wrap"><span class="badge ${a.status==="green"?"bok":a.status==="yellow"?"bwarn":"berr"}">${a.status==="green"?"Online":a.status==="yellow"?"Degraderad":"Offline"}</span>${ib}${a.imported?'<span class="badge bblue">Importerad</span>':""}${a.tags.map(t=>`<span class="badge bgray">${t}</span>`).join("")}</div></div>
+    <div class="tag-wrap">
+      <span class="badge ${a.status==="green"?"bok":a.status==="yellow"?"bwarn":"berr"}">${a.status==="green"?"● Online":a.status==="yellow"?"● Degraderad":"● Offline"}</span>
+      ${ib}${a.imported?'<span class="badge bblue">Importerad</span>':""}
+      ${a.tags.map(t=>`<span class="badge bgray">${t}</span>`).join("")}
+    </div></div>
   </div>
+
   <div class="cards">
-    <div class="card"><div class="c-lbl">Uptime</div><div class="c-val" style="color:${uc}">${a.uptime}</div><div class="c-sub">senaste 30 dagarna</div></div>
-    <div class="card"><div class="c-lbl">Anrop idag</div><div class="c-val">${a.calls}</div><div class="c-sub">requests</div></div>
-    <div class="card"><div class="c-lbl">Svarstid</div><div class="c-val">${a.latency}</div><div class="c-sub">genomsnitt</div></div>
-    <div class="card"><div class="c-lbl">Senaste deploy</div><div class="c-val" style="font-size:15px;padding-top:5px">${a.deploy}</div><div class="c-sub">${a.owner}</div></div>
+    <div class="card">
+      <div class="c-lbl">Uptime (30 dagar)</div>
+      <div class="c-val" style="color:${uc}">${a.uptime}</div>
+      <div class="c-sub">SLA-mål: 99.9%</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Anrop idag</div>
+      <div class="c-val">${a.calls}</div>
+      <div class="c-sub c-trend">
+        ${a.callsYesterday!=="—"?`<span class="c-up">↑ vs igår: ${a.callsYesterday}</span>`:"Ingen historik"}
+      </div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Svarstid (median)</div>
+      <div class="c-val">${a.latency}</div>
+      <div class="c-sub">p95: ${a.p95||"—"} · p99: ${a.p99||"—"}</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Felrate</div>
+      <div class="c-val" style="color:${a.errorRate==="—"?"var(--muted)":parseFloat(a.errorRate)>1?"var(--red)":"var(--green)"}">${a.errorRate}</div>
+      <div class="c-sub">av alla requests</div>
+    </div>
   </div>
-  <div class="stitle">Miljöer</div>
-  <div class="env-grid">${a.envs.map(e=>`<div class="env-card"><span class="dot d${e.s==="g"?"g":e.s==="y"?"y":"r"}"></span><div><div class="env-name">${e.n}</div><div class="env-url">${e.u}</div></div></div>`).join("")}</div>`;
+
+  ${a.apdex!==null?`
+  <div class="section">
+    <div class="stitle">Apdex – Användarnöjdhet</div>
+    <div class="apdex-card">
+      <div class="apdex-score" style="color:${apdexColor}">${a.apdex?.toFixed(2)||"—"}</div>
+      <div>
+        <div style="font-weight:700;margin-bottom:3px">${apdexLabel}</div>
+        <div class="apdex-desc">Apdex mäter hur nöjda användare är med svarstider.<br>1.0 = perfekt · 0.85+ = bra · under 0.7 = problem</div>
+      </div>
+    </div>
+  </div>`:""}
+
+  ${total>1?`
+  <div class="section">
+    <div class="stitle">HTTP-statuskoder idag</div>
+    <div class="sc-wrap">
+      <div class="sc-bar">
+        <div class="sc-seg" style="width:${okPct}%;background:var(--green)"></div>
+        <div class="sc-seg" style="width:${warnPct}%;background:var(--yellow)"></div>
+        <div class="sc-seg" style="width:${errPct}%;background:var(--red)"></div>
+      </div>
+      <div class="sc-legend">
+        <div class="sc-ll"><div class="sc-dot" style="background:var(--green)"></div>2xx OK: ${sc.ok.toLocaleString()} (${okPct}%)</div>
+        <div class="sc-ll"><div class="sc-dot" style="background:var(--yellow)"></div>4xx Klient: ${sc.warn.toLocaleString()} (${warnPct}%)</div>
+        <div class="sc-ll"><div class="sc-dot" style="background:var(--red)"></div>5xx Server: ${sc.err.toLocaleString()} (${errPct}%)</div>
+      </div>
+    </div>
+  </div>`:""}
+
+  ${a.topEps?.length?`
+  <div class="section">
+    <div class="stitle">Mest trafikerade endpoints</div>
+    <div class="top-table">
+      <div class="tt-row hdr"><span>Endpoint</span><span class="tt-calls">Anrop</span><span class="tt-right">Svarstid</span></div>
+      ${a.topEps.map(e=>`
+      <div class="tt-row">
+        <div class="tt-path"><span class="meth ${e.m.toLowerCase()}" style="font-size:9px;padding:2px 5px">${e.m}</span><span>${e.p}</span></div>
+        <span class="tt-calls">${e.calls}</span>
+        <span class="tt-right">${e.lat}</span>
+      </div>`).join("")}
+    </div>
+  </div>`:""}
+
+  <div class="section">
+    <div class="stitle">Miljöer (${a.envs.length})</div>
+    <div class="env-grid">${a.envs.map(e=>`
+      <div class="env-card"><span class="dot d${e.s==="g"?"g":e.s==="y"?"y":"r"}"></span>
+      <div><div class="env-name">${e.n}</div><div class="env-url">${e.u}</div></div></div>`).join("")}
+    </div>
+  </div>`;
 }
 
-function renderLoad(a){
+// ── METRICS ──
+function renderMetrics(a){
   const peak=Math.max(...a.load,0),avg=Math.round(a.load.reduce((s,v)=>s+v,0)/Math.max(a.load.length,1));
   const noData=peak===0;
-  return`<div class="hero"><div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
-    <div><div class="hero-name">${a.name}</div><div class="hero-desc">${noData?"Ingen lastdata tillgänglig ännu.":"Lastutveckling senaste 6h"}</div></div></div>
-  ${noData?`<div style="padding:40px;text-align:center;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:10px">
-    📈 Lastdata visas när dashboarden ansluter till Kestrel <code>/metrics</code>.<br><br>Sam förklarar hur du aktiverar det med 2 rader i Program.cs.
+  const maxLat=a.p99!=="—"?parseInt(a.p99):null;
+
+  return`
+  <div class="hero">
+    <div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
+    <div><div class="hero-name">${a.name}</div>
+    <div class="hero-desc">${noData?"Metrics-data visas här när /metrics-endpointen är aktiverad på API:et.":"Realtidsöverblick – senaste 6 timmar (simulerad data)"}</div></div>
+  </div>
+
+  ${noData?`
+  <div style="padding:32px;text-align:center;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:12px;line-height:1.8">
+    📈 <strong style="color:var(--text)">Aktivera metrics på API:et</strong><br>
+    Lägg till 2 rader i <code>Program.cs</code>:<br><br>
+    <code style="background:var(--bg);padding:8px 14px;border-radius:6px;font-size:12px;display:inline-block">app.UseHttpMetrics();<br>app.UseMetricServer();</code><br><br>
+    Sedan hämtar dashboarden allt automatiskt från <code>/metrics</code>.
   </div>`:`
-  <div class="cards" style="grid-template-columns:1fr 1fr">
-    <div class="card"><div class="c-lbl">Toppbelastning</div><div class="c-val" style="color:var(--accent)">${peak.toLocaleString()}</div><div class="c-sub">req/min</div></div>
+
+  <div class="cards-2">
+    <div class="card"><div class="c-lbl">Toppbelastning</div><div class="c-val" style="color:var(--accent)">${peak.toLocaleString()}</div><div class="c-sub">req/min (senaste 6h)</div></div>
     <div class="card"><div class="c-lbl">Genomsnitt</div><div class="c-val">${avg.toLocaleString()}</div><div class="c-sub">req/min</div></div>
   </div>
+
   <div class="load-card">
-    <div class="load-hdr"><div class="load-title">Requests / minut</div><div class="live"><span class="live-dot"></span>Simulerad data</div></div>
-    <canvas id="chart"></canvas>
-    <div class="chart-legend"><div class="ll"><div class="ll-dot" style="background:var(--accent)"></div>Requests/min</div><div class="ll"><div class="ll-dot" style="background:var(--red)"></div>Felrate (~5%)</div></div>
-  </div>`}
-  <div style="margin-top:16px"><div class="stitle">Svarstider</div>
-  <div class="env-grid">
-    <div class="env-card"><span class="dot dg"></span><div><div class="env-name">Median (p50)</div><div class="env-url">${a.latency!=="—"?a.latency:"—"}</div></div></div>
-    <div class="env-card"><span class="dot dy"></span><div><div class="env-name">p95</div><div class="env-url">${a.latency!=="—"?parseInt(a.latency)*3+" ms":"—"}</div></div></div>
-    <div class="env-card"><span class="dot dr"></span><div><div class="env-name">p99</div><div class="env-url">${a.latency!=="—"?parseInt(a.latency)*6+" ms":"—"}</div></div></div>
-  </div></div>`;
+    <div class="load-hdr"><div class="load-title">Requests per minut</div><div class="live"><span class="live-dot"></span>Simulerad data</div></div>
+    <canvas id="chartReq" height="80"></canvas>
+    <div class="chart-legend">
+      <div class="ll"><div class="ll-dot" style="background:var(--accent)"></div>Requests/min</div>
+      <div class="ll"><div class="ll-dot" style="background:var(--red)"></div>Fel (~${a.errorRate})</div>
+    </div>
+  </div>
+
+  <div class="load-card">
+    <div class="load-hdr"><div class="load-title">Svarstider (ms)</div><div class="live"><span class="live-dot"></span>Simulerad data</div></div>
+    <canvas id="chartLat" height="80"></canvas>
+    <div class="chart-legend">
+      <div class="ll"><div class="ll-dot" style="background:var(--green)"></div>p50 (median)</div>
+      <div class="ll"><div class="ll-dot" style="background:var(--yellow)"></div>p95</div>
+      <div class="ll"><div class="ll-dot" style="background:var(--red)"></div>p99</div>
+    </div>
+  </div>
+
+  ${a.p50!=="—"?`
+  <div class="section">
+    <div class="stitle">Svarstidsfördelning</div>
+    <div class="lat-bars">
+      <div class="lat-row">
+        <span class="lat-lbl">p50</span>
+        <div class="lat-track"><div class="lat-fill" style="width:${Math.min(parseInt(a.p50)/parseInt(a.p99)*100,100)}%;background:var(--green)"></div></div>
+        <span class="lat-val" style="color:var(--green)">${a.p50}</span>
+      </div>
+      <div class="lat-row">
+        <span class="lat-lbl">p95</span>
+        <div class="lat-track"><div class="lat-fill" style="width:${Math.min(parseInt(a.p95)/parseInt(a.p99)*100,100)}%;background:var(--yellow)"></div></div>
+        <span class="lat-val" style="color:var(--yellow)">${a.p95}</span>
+      </div>
+      <div class="lat-row">
+        <span class="lat-lbl">p99</span>
+        <div class="lat-track"><div class="lat-fill" style="width:100%;background:var(--red)"></div></div>
+        <span class="lat-val" style="color:var(--red)">${a.p99}</span>
+      </div>
+    </div>
+  </div>`:""}
+
+  ${a.topEps?.length?`
+  <div class="section">
+    <div class="stitle">Endpoints – belastning</div>
+    <div class="top-table">
+      <div class="tt-row hdr"><span>Endpoint</span><span class="tt-calls">Anrop</span><span class="tt-right">Median</span></div>
+      ${a.topEps.map(e=>`<div class="tt-row">
+        <div class="tt-path"><span class="meth ${e.m.toLowerCase()}" style="font-size:9px;padding:2px 5px">${e.m}</span><span>${e.p}</span></div>
+        <span class="tt-calls">${e.calls}</span><span class="tt-right">${e.lat}</span>
+      </div>`).join("")}
+    </div>
+  </div>`:""}
+
+  <div class="section">
+    <div class="stitle">Vill du ha riktiga siffror?</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;color:var(--muted);line-height:1.7">
+      Aktivera <code>/metrics</code> på iCore-API:et (2 rader i Program.cs) så hämtas all data ovan automatiskt.
+      Alternativt: sätt en proxy (YARP/nginx) framför som mäter utan att röra iCore-koden.
+    </div>
+  </div>`}`;
 }
 
-function drawChart(a){
-  const c=document.getElementById("chart");if(!c)return;
-  const dpr=window.devicePixelRatio||1,W=c.offsetWidth||600,H=90;
+function drawCharts(a){
+  drawSingleChart("chartReq",a.load,a.loadErr,"#4f8ef7","#ef4444");
+  const p50=parseInt(a.p50)||0,p95=parseInt(a.p95)||0,p99=parseInt(a.p99)||0;
+  if(p50>0){
+    const latData=a.load.map((_,i)=>p50+Math.sin(i*0.8)*p50*0.2);
+    const p95Data=a.load.map((_,i)=>p95+Math.sin(i*0.6)*p95*0.15);
+    const p99Data=a.load.map(()=>p99);
+    drawMultiChart("chartLat",latData,p95Data,p99Data);
+  }
+}
+
+function drawSingleChart(id,data,errData,color,errColor){
+  const c=document.getElementById(id);if(!c)return;
+  const dpr=window.devicePixelRatio||1,W=c.offsetWidth||600,H=80;
   c.width=W*dpr;c.height=H*dpr;const ctx=c.getContext("2d");ctx.scale(dpr,dpr);
-  const data=a.load,max=Math.max(...data,1),pts=data.length,pad=8;
-  const gx=x=>(x/(pts-1))*(W-pad*2)+pad,gy=y=>H-pad-(y/max)*(H-pad*2);
-  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(79,142,247,.3)");g.addColorStop(1,"rgba(79,142,247,0)");
-  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
-  ctx.lineTo(gx(pts-1),H);ctx.lineTo(gx(0),H);ctx.closePath();ctx.fillStyle=g;ctx.fill();
-  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
+  const max=Math.max(...data,1),pts=data.length,pad=6;
+  const gx=x=>(x/(pts-1))*(W-pad*2)+pad,gy=(y,mx)=>H-pad-(y/mx)*(H-pad*2);
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,color.replace(")",",0.3)").replace("rgb","rgba"));g.addColorStop(1,color.replace(")",",0)").replace("rgb","rgba"));
+  // Fallback gradient
+  const g2=ctx.createLinearGradient(0,0,0,H);g2.addColorStop(0,"rgba(79,142,247,.3)");g2.addColorStop(1,"rgba(79,142,247,0)");
+  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0],max));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v,max))});
+  ctx.lineTo(gx(pts-1),H);ctx.lineTo(gx(0),H);ctx.closePath();ctx.fillStyle=g2;ctx.fill();
+  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0],max));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v,max))});
   ctx.strokeStyle="#4f8ef7";ctx.lineWidth=2;ctx.stroke();
-  const errs=data.map(v=>Math.round(v*0.05));
-  ctx.beginPath();ctx.moveTo(gx(0),gy(errs[0]));errs.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
-  ctx.strokeStyle="#ef4444";ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+  if(errData){
+    ctx.beginPath();ctx.moveTo(gx(0),gy(errData[0],max));errData.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v,max))});
+    ctx.strokeStyle="#ef4444";ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
+  }
 }
 
+function drawMultiChart(id,d1,d2,d3){
+  const c=document.getElementById(id);if(!c)return;
+  const dpr=window.devicePixelRatio||1,W=c.offsetWidth||600,H=80;
+  c.width=W*dpr;c.height=H*dpr;const ctx=c.getContext("2d");ctx.scale(dpr,dpr);
+  const max=Math.max(...d3,1),pts=d1.length,pad=6;
+  const gx=x=>(x/(pts-1))*(W-pad*2)+pad,gy=y=>H-pad-(y/max)*(H-pad*2);
+  [[d1,"#22c55e",2,[]],[d2,"#f59e0b",1.5,[3,3]],[d3,"#ef4444",1,[5,4]]].forEach(([data,color,lw,dash])=>{
+    ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
+    ctx.strokeStyle=color;ctx.lineWidth=lw;ctx.setLineDash(dash);ctx.stroke();ctx.setLineDash([]);
+  });
+}
+
+// ── ENDPOINTS ──
 function renderEndpoints(a){
   if(!a.eps?.length)return`<div style="padding:40px;text-align:center;color:var(--muted)">Inga endpoints hittades.</div>`;
   return`<div class="stitle">Endpoints (${a.eps.length})</div>
@@ -558,6 +800,7 @@ function tryEp(aid,idx){
   setTimeout(()=>{box.textContent="✅ 200 OK\n\n"+ep.res},900);
 }
 
+// ── SWAGGER ──
 function renderSwagger(a){
   const sw={openapi:"3.0.0",info:{title:a.name,version:a.version,description:a.desc},servers:a.envs.map(e=>({url:e.u,description:e.n})),paths:{}};
   a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d,tags:a.tags}});
@@ -575,12 +818,128 @@ function renderSwagger(a){
 function cpSw(id){const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d}});navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(sw,null,2)).then(()=>alert("Kopierat!"))}
 function dlSw(id){const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d}});const b=new Blob([JSON.stringify(sw,null,2)],{type:"application/json"});const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=a.name.toLowerCase().replace(/ /g,"-")+"-swagger.json";l.click()}
 
+// ── MCP ──
+function toMcpName(method,path){
+  return(method.toLowerCase()+"_"+path.replace(/^\/api\//,"").replace(/\//g,"_").replace(/[{}]/g,"").replace(/-/g,"_")).replace(/__+/g,"_");
+}
+
+function renderMcp(a){
+  const mcpTools=a.eps.map(e=>({
+    name:toMcpName(e.m,e.p),
+    description:e.d||e.p,
+    method:e.m,path:e.p,
+    inputSchema:{type:"object",properties:e.par!=="—"?Object.fromEntries(e.par.split(",").map(p=>[p.trim().split(" ")[0],{type:"string",description:p.trim()}])):{},required:[]}
+  }));
+
+  const exampleTool=mcpTools[0];
+  const exampleJson=JSON.stringify({name:exampleTool?.name,description:exampleTool?.description,input_schema:exampleTool?.inputSchema},null,2);
+
+  // Mock conversation beroende på API
+  const isHub=a.name.toLowerCase().includes("hub")||a.name.toLowerCase().includes("integration");
+  const convo=isHub?{
+    user:"Visa alla kopplingar som inte svarat senaste timmen och starta om dem.",
+    steps:[
+      {icon:"🔧",name:"list_connections",result:"→ 12 kopplingar hittade. 2 har inte svarat: ERP Sync (73 min), CRM Bridge (91 min)"},
+      {icon:"🔧",name:`get_connections_erp_sync`,result:"→ Status: timeout. Senaste ping: 73 min sedan. Orsak: nätverksproblem"},
+      {icon:"🔧",name:"trigger_flows_restart_trigger",result:"→ Job job_8821 startat. ERP Sync beräknas uppe om 30s"},
+      {icon:"🔧",name:"trigger_flows_restart_trigger",result:"→ Job job_8822 startat. CRM Bridge beräknas uppe om 45s"}
+    ],
+    answer:"✅ Jag hittade 2 kopplingar som inte svarat och har startat om dem. ERP Sync och CRM Bridge bör vara aktiva igen inom en minut. Vill du att jag sätter upp ett larm om det händer igen?"
+  }:{
+    user:`Hämta alla ${a.name.replace(" API","")}er och skapa en sammanfattning.`,
+    steps:[
+      {icon:"🔧",name:mcpTools[0]?.name||"list_items",result:`→ Hämtade data framgångsrikt`},
+      {icon:"🔧",name:mcpTools[1]?.name||"get_item",result:"→ Analyserar innehåll…"}
+    ],
+    answer:`✅ Jag har hämtat och analyserat datan från ${a.name}. Vill du att jag gör något specifikt med resultatet?`
+  };
+
+  return`
+  <div class="mcp-intro">
+    <div class="mcp-intro-title">🤖 Model Context Protocol (MCP)</div>
+    <div class="mcp-intro-desc">
+      MCP låter AI-assistenter som Claude anropa dina API:er direkt i ett samtal.
+      Varje endpoint blir ett "tool" som AI:n kan använda för att hämta data,
+      trigga flöden och agera autonomt – utan att du skriver ett enda extra skript.
+    </div>
+  </div>
+
+  <div class="mcp-export">
+    <div class="mcp-export-info">
+      <div class="mcp-export-title">Exportera ${a.name} som MCP-server</div>
+      <div class="mcp-export-desc">${mcpTools.length} endpoints → ${mcpTools.length} MCP-tools. Klar att koppla till Claude Desktop, Cursor eller egna AI-agenter.</div>
+    </div>
+    <button class="mcp-export-btn" onclick="exportMcp(${a.id})">⬇ Exportera MCP-config</button>
+  </div>
+
+  <div class="section">
+    <div class="stitle">MCP Tools genererade från ${a.name}</div>
+    <div class="mcp-tools">
+      ${mcpTools.map((t,i)=>`
+      <div class="mcp-tool" id="mt${i}">
+        <div class="mcp-tool-head" onclick="document.getElementById('mt${i}').classList.toggle('open')">
+          <div class="mcp-tool-icon">🔧</div>
+          <div class="mcp-tool-info">
+            <div class="mcp-tool-name">${t.name}</div>
+            <div class="mcp-tool-desc">${t.description} <span class="badge ${t.method==="GET"?"bok":t.method==="POST"?"bblue":t.method==="DELETE"?"berr":"bwarn"}" style="margin-left:4px">${t.method} ${t.path}</span></div>
+          </div>
+          <span class="chev">›</span>
+        </div>
+        <div class="mcp-tool-body">
+          <div class="stitle" style="margin-bottom:8px">Tool definition (JSON Schema)</div>
+          <pre class="mcp-schema">${JSON.stringify({name:t.name,description:t.description,input_schema:t.inputSchema},null,2)}</pre>
+        </div>
+      </div>`).join("")}
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="stitle">Så här ser det ut i praktiken – AI-agent i aktion</div>
+    <div class="mcp-convo-wrap">
+      <div class="mcp-convo-hdr">
+        <span>🤖</span> Claude använder ${a.name} via MCP
+        <span class="badge bpurple" style="margin-left:auto">MOCK</span>
+      </div>
+      <div class="mcp-convo-body">
+        <div class="mc-user">${convo.user}</div>
+        <div class="mc-steps">
+          <div class="mc-steps-lbl">Anropar API:et…</div>
+          ${convo.steps.map(s=>`
+          <div class="mc-step">
+            <span class="mc-step-icon">${s.icon}</span>
+            <div><div class="mc-step-name">${s.name}()</div><div class="mc-step-result">${s.result}</div></div>
+          </div>`).join("")}
+        </div>
+        <div class="mc-answer">${convo.answer}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="stitle">Nästa steg för att aktivera MCP</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;font-size:13px;color:var(--muted);line-height:1.8">
+      1. <strong style="color:var(--text)">Exportera config</strong> via knappen ovan<br>
+      2. <strong style="color:var(--text)">Lägg till i Claude Desktop</strong> → Settings → MCP Servers<br>
+      3. <strong style="color:var(--text)">Starta ett samtal</strong> – Claude ser direkt att ${a.name} finns tillgängligt<br><br>
+      <span class="badge bpurple">Sam</span> kan designa en komplett MCP-server för iCore om ni vill gå vidare med detta.
+    </div>
+  </div>`;
+}
+
+function exportMcp(id){
+  const a=apis.find(x=>x.id===id);
+  const config={mcpServers:{[a.name.toLowerCase().replace(/ /g,"-")]:{command:"node",args:["./mcp-server.js"],env:{API_BASE_URL:a.envs[0]?.u||""}}}};
+  const tools=a.eps.map(e=>({name:toMcpName(e.m,e.p),description:e.d,method:e.m,path:e.p}));
+  const out={_comment:`MCP-konfiguration för ${a.name} – genererad av iCore API Control Tower`,claude_desktop_config:config,tools};
+  const b=new Blob([JSON.stringify(out,null,2)],{type:"application/json"});
+  const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=a.name.toLowerCase().replace(/ /g,"-")+"-mcp.json";l.click();
+}
+
 // ── MODAL ──
 function showModal(){document.getElementById("modalBg").classList.add("show")}
 function hideModal(){document.getElementById("modalBg").classList.remove("show");document.getElementById("swUrl").value="";document.getElementById("swJson").value="";setMsg("","")}
 function hideModalBg(e){if(e.target===document.getElementById("modalBg"))hideModal()}
 function setMsg(type,text){const err=document.getElementById("mErrBox"),ok=document.getElementById("mOkBox");err.style.display="none";ok.style.display="none";if(type==="err"){err.textContent=text;err.style.display="block"}if(type==="ok"){ok.textContent=text;ok.style.display="block"}}
-
 async function fetchUrl(){
   const url=document.getElementById("swUrl").value.trim();
   if(!url){setMsg("err","Ange en URL.");return}
@@ -588,7 +947,6 @@ async function fetchUrl(){
   try{const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);const j=await r.json();document.getElementById("swJson").value=JSON.stringify(j,null,2);setMsg("ok","✅ Hämtad! Tryck Importera.")}
   catch(e){setMsg("err",`Kunde inte hämta: ${e.message}. Klistra in JSON manuellt.`)}
 }
-
 function importApi(){
   const raw=document.getElementById("swJson").value.trim();
   if(!raw){setMsg("err","Klistra in swagger.json eller hämta från URL.");return}
@@ -603,7 +961,6 @@ function importApi(){
 // ── INIT ──
 renderLists();
 updateStats();
-// Auto-select first on desktop
 if(!isMobile())selectApi(1);
 </script>
 </body>
