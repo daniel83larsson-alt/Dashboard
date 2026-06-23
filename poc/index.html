@@ -9,208 +9,338 @@
 :root{
   --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
   --accent:#4f8ef7;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;
-  --text:#e2e8f0;--muted:#64748b;--nav-h:64px;--top-h:56px;
+  --text:#e2e8f0;--muted:#64748b;--sidebar:300px;
 }
-html,body{height:100%;overflow:hidden}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
-.screen{position:fixed;inset:0;display:flex;flex-direction:column;transition:transform .28s cubic-bezier(.4,0,.2,1)}
-.screen.off{transform:translateX(100%)}
-.topbar{height:var(--top-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;padding:0 16px;flex-shrink:0}
-.back{width:36px;height:36px;border-radius:50%;background:var(--bg);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:20px;flex-shrink:0;color:var(--text);-webkit-tap-highlight-color:transparent}
-.top-title{font-size:16px;font-weight:700;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.vbadge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:700;background:rgba(79,142,247,.18);color:var(--accent);white-space:nowrap}
-.list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;display:flex;flex-direction:column;gap:8px;padding-bottom:20px}
-.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
-.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 8px;text-align:center}
-.stat-num{font-size:30px;font-weight:800;line-height:1}
-.stat-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-top:4px}
+html,body{height:100%;overflow:hidden;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+
+/* ═══════════════════════════════
+   DESKTOP LAYOUT (default)
+═══════════════════════════════ */
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* Top bar */
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:16px;padding:0 20px;flex-shrink:0}
+.tb-logo{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:700}
+.tb-icon{width:30px;height:30px;background:var(--accent);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;color:#fff;flex-shrink:0}
+.tb-spacer{flex:1}
+.stat-pill{background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:5px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+.sn{font-weight:800;font-size:15px}
 .sg{color:var(--green)}.sy{color:var(--yellow)}.sr{color:var(--red)}
+/* mobile back button – hidden on desktop */
+.back-btn{display:none;width:34px;height:34px;border-radius:50%;background:var(--bg);border:1px solid var(--border);align-items:center;justify-content:center;cursor:pointer;font-size:18px;color:var(--text);flex-shrink:0;-webkit-tap-highlight-color:transparent}
+
+/* Body split */
+.body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:var(--sidebar);background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-inner{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
 .search-wrap{position:relative}
-.search-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;font-size:15px}
-.search{width:100%;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px 12px 12px 38px;color:var(--text);font-size:15px;outline:none;-webkit-appearance:none}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:14px;pointer-events:none}
+.search{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 9px 9px 34px;color:var(--text);font-size:13px;outline:none}
 .search:focus{border-color:var(--accent)}
 .search::placeholder{color:var(--muted)}
-.sec-lbl{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;padding:4px 4px 2px}
-.api-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:15px 16px;cursor:pointer;display:flex;align-items:center;gap:13px;-webkit-tap-highlight-color:transparent}
-.api-card:active{background:var(--surface2)}
-.api-icon{width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0}
-.api-info{flex:1;min-width:0}
-.api-name{font-size:15px;font-weight:600}
-.api-sub{font-size:12px;color:var(--muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.api-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex-shrink:0}
-.dot{width:9px;height:9px;border-radius:50%}
-.dg{background:var(--green);box-shadow:0 0 6px var(--green)}
-.dy{background:var(--yellow);box-shadow:0 0 6px var(--yellow)}
-.dr{background:var(--red);box-shadow:0 0 6px var(--red)}
+.sec-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;font-weight:600;padding:4px 2px 2px}
+.api-item{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:11px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .15s,background .15s}
+.api-item:hover{background:var(--surface2);border-color:var(--accent)}
+.api-item.active{background:rgba(79,142,247,.12);border-color:var(--accent)}
+.ai-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.ai-info{flex:1;min-width:0}
+.ai-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-sub{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ai-right{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.dg{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dy{background:var(--yellow);box-shadow:0 0 5px var(--yellow)}
+.dr{background:var(--red);box-shadow:0 0 5px var(--red)}
+.vbadge{font-size:9px;padding:2px 7px;border-radius:99px;font-weight:700;background:rgba(79,142,247,.15);color:var(--accent);white-space:nowrap}
+.add-btn{background:var(--accent);color:#fff;border:none;border-radius:9px;padding:11px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin-top:4px;-webkit-tap-highlight-color:transparent}
+.add-btn:hover{background:#3d7de6}
+.add-btn:active{background:#3068d4}
 
-/* ADD BUTTON */
-.add-btn{background:var(--accent);color:#fff;border:none;border-radius:12px;padding:14px;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;-webkit-tap-highlight-color:transparent;width:100%}
-.add-btn:active{background:#3d7de6}
+/* Main content */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0}
+.tab{padding:14px 16px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;white-space:nowrap}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.content{flex:1;overflow-y:auto;padding:24px}
 
-/* MODAL */
-.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .25s}
-.modal-bg.show{opacity:1;pointer-events:all}
-.modal{background:var(--surface);border-radius:20px 20px 0 0;padding:20px 16px 32px;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
-.modal-bg.show .modal{transform:translateY(0)}
-.modal-handle{width:36px;height:4px;background:var(--border);border-radius:99px;margin:0 auto 20px}
-.modal-title{font-size:18px;font-weight:800;margin-bottom:4px}
-.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
-.m-field{margin-bottom:14px}
-.m-label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;font-weight:600}
-.m-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:13px 14px;color:var(--text);font-size:15px;outline:none;-webkit-appearance:none;font-family:inherit}
-.m-input:focus{border-color:var(--accent)}
-.m-input::placeholder{color:var(--muted)}
-.m-textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:13px 14px;color:var(--text);font-size:12px;outline:none;-webkit-appearance:none;font-family:monospace;resize:none;min-height:120px;line-height:1.5}
-.m-textarea:focus{border-color:var(--accent)}
-.m-textarea::placeholder{color:var(--muted)}
-.divider{display:flex;align-items:center;gap:10px;margin:6px 0 14px}
-.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
-.divider span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-.m-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
-.m-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
-.m-row{display:flex;gap:10px}
-.m-btn-sec{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:13px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;-webkit-tap-highlight-color:transparent}
-.m-btn-pri{flex:2;background:var(--accent);border:none;border-radius:10px;padding:13px;font-size:14px;font-weight:700;color:#fff;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.m-btn-pri:active{background:#3d7de6}
-.m-tip{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;padding:10px 12px;background:rgba(79,142,247,.06);border-radius:8px;border:1px solid rgba(79,142,247,.15)}
+/* Empty state */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:14px;color:var(--muted);text-align:center}
+.empty-state .ei{font-size:52px}
+.empty-state h2{font-size:18px;font-weight:700;color:var(--text)}
+.empty-state p{font-size:14px;max-width:300px;line-height:1.6}
 
-/* BOTTOM NAV */
-.bnav{height:var(--nav-h);background:var(--surface);border-top:1px solid var(--border);display:flex;position:absolute;bottom:0;left:0;right:0}
-.ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500;padding-bottom:4px;-webkit-tap-highlight-color:transparent}
-.ni.on{color:var(--accent)}
-.ni-icon{font-size:21px;line-height:1}
-.detail-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(var(--nav-h) + 12px)}
-
-/* HERO */
-.hero{padding:18px 16px 0}
-.hero-top{display:flex;gap:14px;align-items:flex-start;margin-bottom:12px}
-.hero-icon{width:52px;height:52px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
-.hero-name{font-size:20px;font-weight:800;line-height:1.2;margin-bottom:3px}
-.hero-desc{font-size:13px;color:var(--muted);line-height:1.5}
-.tag-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+/* ═══════════════════════════════
+   SHARED COMPONENTS
+═══════════════════════════════ */
 .badge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:700}
 .bok{background:rgba(34,197,94,.15);color:var(--green)}
 .bwarn{background:rgba(245,158,11,.15);color:var(--yellow)}
 .berr{background:rgba(239,68,68,.15);color:var(--red)}
 .bblue{background:rgba(79,142,247,.15);color:var(--accent)}
 .bgray{background:rgba(100,116,139,.12);color:var(--muted)}
+.alert{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:13px 14px;display:flex;align-items:flex-start;gap:10px;font-size:13px;margin-bottom:20px;line-height:1.5}
 
-.alert{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:10px;padding:13px 14px;display:flex;align-items:flex-start;gap:10px;font-size:13px;margin:16px 16px 0;line-height:1.5}
-.metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px}
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:15px}
-.m-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.m-val{font-size:23px;font-weight:800}
-.m-sub{font-size:11px;color:var(--muted);margin-top:4px}
-.load-section{padding:0 16px 16px}
-.load-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
-.load-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+/* Hero */
+.hero{display:flex;align-items:flex-start;gap:16px;margin-bottom:22px}
+.hero-icon{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0}
+.hero-name{font-size:22px;font-weight:800;line-height:1.2;margin-bottom:4px}
+.hero-desc{font-size:13px;color:var(--muted);line-height:1.5;max-width:600px}
+.tag-wrap{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+
+/* Metric cards */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.c-lbl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.c-val{font-size:22px;font-weight:800}
+.c-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* Section */
+.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
+
+/* Environments */
+.env-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;margin-bottom:22px}
+.env-card{background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:13px 14px;display:flex;align-items:center;gap:11px}
+.env-name{font-size:13px;font-weight:600}
+.env-url{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;word-break:break-all}
+
+/* Load chart */
+.load-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px;margin-bottom:20px}
+.load-hdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .load-title{font-size:13px;font-weight:600}
-.load-live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green)}
+.live{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--green)}
 .live-dot{width:7px;height:7px;border-radius:50%;background:var(--green);animation:pulse 1.5s infinite}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
-canvas{width:100%;height:80px;display:block}
-.load-legend{display:flex;gap:14px;margin-top:10px}
+canvas{width:100%;height:90px;display:block}
+.chart-legend{display:flex;gap:14px;margin-top:10px}
 .ll{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
 .ll-dot{width:8px;height:8px;border-radius:50%}
-.section{padding:0 16px 16px}
-.stitle{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px}
-.env-list{display:flex;flex-direction:column;gap:8px}
-.env-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:13px 14px;display:flex;align-items:center;gap:12px}
-.env-name{font-size:14px;font-weight:600}
-.env-url{font-size:11px;color:var(--muted);font-family:monospace;margin-top:2px;word-break:break-all}
-.ep-list{display:flex;flex-direction:column;gap:8px}
-.ep{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.ep-head{display:flex;align-items:center;gap:10px;padding:13px 14px;cursor:pointer;-webkit-tap-highlight-color:transparent}
-.meth{font-size:10px;font-weight:700;padding:4px 8px;border-radius:5px;width:56px;text-align:center;flex-shrink:0}
+
+/* Endpoints */
+.ep-list{display:flex;flex-direction:column;gap:6px}
+.ep{background:var(--surface);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.ep-head{display:flex;align-items:center;gap:11px;padding:12px 14px;cursor:pointer;transition:background .12s}
+.ep-head:hover{background:var(--surface2)}
+.meth{font-size:10px;font-weight:700;padding:3px 8px;border-radius:4px;width:56px;text-align:center;flex-shrink:0}
 .get{background:rgba(34,197,94,.15);color:var(--green)}
 .post{background:rgba(79,142,247,.15);color:var(--accent)}
 .put{background:rgba(245,158,11,.15);color:var(--yellow)}
 .delete{background:rgba(239,68,68,.15);color:var(--red)}
 .patch{background:rgba(168,85,247,.15);color:#a855f7}
-.ep-path{font-size:13px;font-family:monospace;flex:1;word-break:break-all}
-.chev{color:var(--muted);font-size:18px;transition:transform .2s;flex-shrink:0}
-.ep-body{display:none;border-top:1px solid var(--border);padding:14px;flex-direction:column;gap:10px}
+.ep-path{font-size:13px;font-family:monospace;flex:1}
+.ep-desc-short{font-size:12px;color:var(--muted);text-align:right}
+.chev{color:var(--muted);font-size:17px;transition:transform .2s;flex-shrink:0}
+.ep-body{display:none;border-top:1px solid var(--border);padding:16px;gap:12px;flex-direction:column}
 .ep.open .ep-body{display:flex}
 .ep.open .chev{transform:rotate(90deg)}
-.ep-desc{font-size:13px;color:var(--muted)}
-.ep-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px}
-.ep-pre{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:11px;font-family:monospace;white-space:pre-wrap;word-break:break-all;color:var(--text)}
-.try-btn{width:100%;background:var(--accent);color:#fff;border:none;border-radius:9px;padding:13px;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
-.try-btn:active{background:#3d7de6}
-.try-resp{background:var(--bg);border:1px solid var(--green);border-radius:8px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);white-space:pre-wrap;word-break:break-all;display:none}
-.sw-box{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
-.sw-bar{padding:12px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px}
-.sw-btn{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);font-size:12px;font-weight:600;padding:10px;cursor:pointer}
-.sw-btn:active{border-color:var(--accent);color:var(--accent)}
-.sw-json{padding:14px;font-family:monospace;font-size:11px;line-height:1.7;max-height:360px;overflow-y:auto;word-break:break-all}
+.ep-row{display:grid;grid-template-columns:100px 1fr;gap:10px;align-items:start}
+.ep-key{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;padding-top:2px}
+.ep-pre{background:var(--bg);border:1px solid var(--border);border-radius:7px;padding:10px;font-size:12px;font-family:monospace;white-space:pre-wrap;word-break:break-all;color:var(--text)}
+.try-btn{background:var(--accent);color:#fff;border:none;border-radius:7px;padding:9px 20px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:6px;margin-top:4px}
+.try-btn:hover{background:#3d7de6}
+.try-resp{background:var(--bg);border:1px solid var(--green);border-radius:7px;padding:10px;font-family:monospace;font-size:11px;color:var(--green);white-space:pre-wrap;word-break:break-all;display:none;margin-top:4px}
+
+/* Swagger */
+.sw-box{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+.sw-bar{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.sw-title{font-size:13px;font-weight:600;flex:1}
+.sw-btn{background:var(--bg);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:12px;font-weight:600;padding:7px 14px;cursor:pointer}
+.sw-btn:hover{border-color:var(--accent);color:var(--accent)}
+.sw-json{padding:16px;font-family:monospace;font-size:11px;line-height:1.7;max-height:460px;overflow-y:auto;word-break:break-all}
 .jk{color:#7dd3fc}.js{color:#86efac}.jn{color:#f87171}
-.empty-ep{padding:24px;text-align:center;color:var(--muted);font-size:13px}
+
+/* ═══════════════════════════════
+   MODAL
+═══════════════════════════════ */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:100;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .22s}
+.modal-bg.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:16px;padding:24px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;transform:scale(.96);transition:transform .22s}
+.modal-bg.show .modal{transform:scale(1)}
+.modal-title{font-size:18px;font-weight:800;margin-bottom:4px}
+.modal-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.5}
+.m-lbl{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;font-weight:600}
+.m-input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 12px;color:var(--text);font-size:14px;outline:none;font-family:inherit;margin-bottom:14px}
+.m-input:focus{border-color:var(--accent)}
+.m-input::placeholder{color:var(--muted)}
+.m-textarea{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:11px 12px;color:var(--text);font-size:12px;outline:none;font-family:monospace;resize:none;min-height:130px;line-height:1.5;margin-bottom:14px}
+.m-textarea:focus{border-color:var(--accent)}
+.m-textarea::placeholder{color:var(--muted)}
+.m-tip{font-size:11px;color:var(--muted);line-height:1.5;padding:10px 12px;background:rgba(79,142,247,.06);border-radius:8px;border:1px solid rgba(79,142,247,.15);margin-bottom:12px}
+.m-fetch{width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:11px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer;margin-bottom:16px}
+.m-fetch:hover{border-color:var(--accent)}
+.divider{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+.divider span{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+.m-error{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:7px;padding:10px 12px;font-size:12px;color:var(--red);margin-bottom:12px;display:none}
+.m-success{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-radius:7px;padding:10px 12px;font-size:12px;color:var(--green);margin-bottom:12px;display:none}
+.m-row{display:flex;gap:10px;justify-content:flex-end}
+.m-btn-sec{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 20px;font-size:13px;font-weight:600;color:var(--text);cursor:pointer}
+.m-btn-sec:hover{border-color:var(--accent)}
+.m-btn-pri{background:var(--accent);border:none;border-radius:8px;padding:10px 24px;font-size:13px;font-weight:700;color:#fff;cursor:pointer}
+.m-btn-pri:hover{background:#3d7de6}
+
+/* ═══════════════════════════════
+   MOBILE OVERRIDES  (≤ 767px)
+═══════════════════════════════ */
+@media(max-width:767px){
+  .app{position:fixed;inset:0;overflow:hidden}
+
+  /* hide desktop sidebar/tabs */
+  .sidebar,.tabs{display:none}
+
+  /* topbar back button */
+  .back-btn{display:flex}
+  .stat-pills{display:none}
+
+  /* screens slide */
+  .main{position:fixed;inset:0;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+  .main.visible{transform:translateX(0)}
+
+  /* list screen */
+  .list-screen{position:fixed;inset:0;display:flex;flex-direction:column}
+  .list-screen .topbar{padding:0 14px}
+  .list-body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px;display:flex;flex-direction:column;gap:8px;padding-bottom:20px}
+
+  /* stat row on list */
+  .mob-stats{display:grid!important;grid-template-columns:repeat(3,1fr);gap:8px}
+  .mob-stat{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 8px;text-align:center}
+  .mob-stat .sn{font-size:28px;font-weight:800;display:block;line-height:1}
+  .mob-stat .sl{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;display:block;margin-top:4px}
+
+  /* API cards on mobile */
+  .api-item{border-radius:13px;padding:13px 14px}
+  .ai-icon{width:42px;height:42px;border-radius:10px;font-size:20px}
+  .ai-name{font-size:14px}
+
+  .add-btn{border-radius:12px;padding:14px;font-size:15px}
+
+  /* content */
+  .content{padding:16px;padding-bottom:20px}
+
+  /* cards 2 columns on mobile */
+  .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+  .c-val{font-size:20px}
+  .hero{flex-direction:row}
+  .hero-name{font-size:18px}
+
+  /* env grid 1 col */
+  .env-grid{grid-template-columns:1fr}
+
+  /* bottom nav */
+  .bnav{display:flex!important;height:60px;background:var(--surface);border-top:1px solid var(--border);position:fixed;bottom:0;left:0;right:0;z-index:10}
+  .ni{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--muted);font-size:10px;font-weight:500;-webkit-tap-highlight-color:transparent}
+  .ni.on{color:var(--accent)}
+  .ni-icon{font-size:20px;line-height:1}
+  .content{padding-bottom:72px}
+
+  /* modal bottom sheet on mobile */
+  .modal-bg{align-items:flex-end}
+  .modal{border-radius:20px 20px 0 0;max-width:100%;padding:20px 16px 32px;transform:translateY(100%)}
+  .modal-bg.show .modal{transform:translateY(0)}
+  .m-row{justify-content:stretch}
+  .m-btn-sec,.m-btn-pri{flex:1;padding:13px}
+}
+/* hide mobile-only elements on desktop */
+.list-screen,.mob-stats,.bnav{display:none}
 </style>
 </head>
 <body>
+<div class="app">
 
-<!-- LIST SCREEN -->
-<div class="screen" id="S0">
-  <div class="topbar">
-    <span style="font-size:22px">⚡</span>
-    <div class="top-title">iCore API Control Tower</div>
+  <!-- ── TOP BAR ── -->
+  <div class="topbar" id="topbar">
+    <button class="back-btn" id="backBtn" onclick="goBack()">←</button>
+    <div class="tb-logo">
+      <div class="tb-icon">i</div>
+      <span id="tbTitle">iCore API Control Tower</span>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="stat-pills" style="display:flex;gap:8px">
+      <div class="stat-pill"><span class="sn sg" id="cOk">0</span> Online</div>
+      <div class="stat-pill"><span class="sn sy" id="cWarn">0</span> Varning</div>
+      <div class="stat-pill"><span class="sn sr" id="cErr">0</span> Offline</div>
+    </div>
+  </div>
+
+  <div class="body">
+
+    <!-- ── SIDEBAR (desktop) ── -->
+    <aside class="sidebar">
+      <div class="sidebar-inner">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search" placeholder="Sök API…" oninput="filterApis(this.value)"/>
+        </div>
+        <div class="sec-lbl">Registrerade API:er</div>
+        <div id="apiListDesktop"></div>
+        <button class="add-btn" onclick="showModal()">＋ Importera API</button>
+      </div>
+    </aside>
+
+    <!-- ── MAIN (desktop detail / mobile container) ── -->
+    <div class="main" id="mainPanel">
+      <!-- Desktop tabs -->
+      <div class="tabs" id="tabsEl">
+        <div class="tab on" data-t="overview" onclick="setTab('overview')">📊 Översikt</div>
+        <div class="tab" data-t="load" onclick="setTab('load')">📈 Last</div>
+        <div class="tab" data-t="endpoints" onclick="setTab('endpoints')">⚡ Endpoints</div>
+        <div class="tab" data-t="swagger" onclick="setTab('swagger')">📄 Swagger</div>
+      </div>
+      <div class="content" id="content">
+        <div class="empty-state">
+          <div class="ei">⚡</div>
+          <h2>Välj ett API</h2>
+          <p>Välj ett API i listan till vänster, eller importera ett nytt via Swagger.</p>
+        </div>
+      </div>
+      <!-- Mobile bottom nav -->
+      <div class="bnav">
+        <div class="ni on" data-t="overview" onclick="setTab('overview')"><div class="ni-icon">📊</div>Översikt</div>
+        <div class="ni" data-t="load" onclick="setTab('load')"><div class="ni-icon">📈</div>Last</div>
+        <div class="ni" data-t="endpoints" onclick="setTab('endpoints')"><div class="ni-icon">⚡</div>Endpoints</div>
+        <div class="ni" data-t="swagger" onclick="setTab('swagger')"><div class="ni-icon">📄</div>Swagger</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── MOBILE LIST SCREEN ── -->
+<div class="list-screen" id="listScreen">
+  <div class="topbar" style="padding:0 14px">
+    <div class="tb-logo"><div class="tb-icon">i</div><span>API Control Tower</span></div>
   </div>
   <div class="list-body">
-    <div class="stat-row">
-      <div class="stat-card"><div class="stat-num sg" id="cOk">0</div><div class="stat-lbl">Online</div></div>
-      <div class="stat-card"><div class="stat-num sy" id="cWarn">0</div><div class="stat-lbl">Varning</div></div>
-      <div class="stat-card"><div class="stat-num sr" id="cErr">0</div><div class="stat-lbl">Offline</div></div>
+    <div class="mob-stats">
+      <div class="mob-stat"><span class="sn sg" id="mOk">0</span><span class="sl">Online</span></div>
+      <div class="mob-stat"><span class="sn sy" id="mWarn">0</span><span class="sl">Varning</span></div>
+      <div class="mob-stat"><span class="sn sr" id="mErr">0</span><span class="sl">Offline</span></div>
     </div>
     <div class="search-wrap">
       <span class="search-icon">🔍</span>
-      <input class="search" placeholder="Sök API, team eller tagg…" oninput="filterApis(this.value)"/>
+      <input class="search" placeholder="Sök API…" oninput="filterMobile(this.value)"/>
     </div>
     <div class="sec-lbl">Registrerade API:er</div>
-    <div id="apiList"></div>
+    <div id="apiListMobile"></div>
     <button class="add-btn" onclick="showModal()">＋ Importera API från Swagger</button>
   </div>
 </div>
 
-<!-- DETAIL SCREEN -->
-<div class="screen off" id="S1">
-  <div class="topbar">
-    <button class="back" onclick="goBack()">←</button>
-    <div class="top-title" id="dTitle">—</div>
-    <span class="vbadge" id="dVer">—</span>
-  </div>
-  <div class="detail-body" id="dBody"></div>
-  <div class="bnav">
-    <div class="ni on" data-t="overview" onclick="setTab('overview')"><div class="ni-icon">📊</div>Översikt</div>
-    <div class="ni" data-t="load" onclick="setTab('load')"><div class="ni-icon">📈</div>Last</div>
-    <div class="ni" data-t="endpoints" onclick="setTab('endpoints')"><div class="ni-icon">⚡</div>Endpoints</div>
-    <div class="ni" data-t="swagger" onclick="setTab('swagger')"><div class="ni-icon">📄</div>Swagger</div>
-  </div>
-</div>
-
-<!-- IMPORT MODAL -->
-<div class="modal-bg" id="modalBg" onclick="hideModalIfBg(event)">
+<!-- ── IMPORT MODAL ── -->
+<div class="modal-bg" id="modalBg" onclick="hideModalBg(event)">
   <div class="modal">
-    <div class="modal-handle"></div>
     <div class="modal-title">Importera API</div>
-    <div class="modal-sub">Hämta från URL eller klistra in swagger.json direkt.</div>
-
-    <div class="m-field">
-      <label class="m-label">Swagger URL (valfritt)</label>
-      <input class="m-input" id="swUrl" placeholder="http://localhost:5000/swagger/v1/swagger.json" type="url"/>
-    </div>
-    <div class="m-tip">💡 Kräver att API:et körs på samma nätverk och att CORS är aktiverat. Fungerar alltid om dashboarden körs lokalt.</div>
-    <button style="width:100%;background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;font-weight:600;color:var(--text);cursor:pointer;margin:12px 0" onclick="fetchFromUrl()">⬇ Hämta från URL</button>
-
+    <div class="modal-sub">Hämta från URL eller klistra in swagger.json.</div>
+    <label class="m-lbl">Swagger URL</label>
+    <input class="m-input" id="swUrl" placeholder="http://[server]/swagger/v1/swagger.json" type="url"/>
+    <div class="m-tip">💡 Kräver att API:et och dashboarden körs på samma nätverk, eller att CORS är aktiverat på API:et.</div>
+    <button class="m-fetch" onclick="fetchUrl()">⬇ Hämta från URL</button>
     <div class="divider"><span>eller klistra in JSON</span></div>
-
-    <div class="m-field">
-      <label class="m-label">Swagger JSON</label>
-      <textarea class="m-textarea" id="swJson" placeholder='{"openapi":"3.0.0","info":{"title":"Mitt API","version":"v1"},"paths":{...}}'></textarea>
-    </div>
-
-    <div class="m-error" id="mErr"></div>
-    <div class="m-success" id="mOk"></div>
-
+    <label class="m-lbl">Swagger JSON</label>
+    <textarea class="m-textarea" id="swJson" placeholder="Öppna /swagger/v1/swagger.json i webbläsaren, kopiera allt och klistra in här."></textarea>
+    <div class="m-error" id="mErrBox"></div>
+    <div class="m-success" id="mOkBox"></div>
     <div class="m-row">
       <button class="m-btn-sec" onclick="hideModal()">Avbryt</button>
       <button class="m-btn-pri" onclick="importApi()">Importera</button>
@@ -220,7 +350,7 @@ canvas{width:100%;height:80px;display:block}
 
 <script>
 // ── DATA ──
-let apis = [
+let apis=[
   {id:1,name:"Customer API",desc:"Hanterar kunddata, profiler och kontoinformation.",icon:"👤",ibg:"#1e3a5f",status:"green",version:"v2.4.1",owner:"Backend Team",deploy:"idag 08:42",uptime:"99.98%",calls:"14 820",latency:"42 ms",issues:0,tags:["kunder","CRM"],imported:false,
    envs:[{n:"Produktion",u:"https://api.icore.se/customer",s:"g"},{n:"Test",u:"https://test-api.icore.se/customer",s:"g"}],
    eps:[{m:"GET",p:"/api/customers",d:"Lista alla kunder",par:"?page=1&limit=50",res:'{"data":[{"id":"c1","name":"Acme AB"}],"total":142}'},{m:"POST",p:"/api/customers",d:"Skapa ny kund",par:'{"name":"string","email":"string"}',res:'{"id":"c99","name":"Ny Kund"}'},{m:"DELETE",p:"/api/customers/{id}",d:"Ta bort kund",par:"{id}: string",res:'{"deleted":true}'}],
@@ -234,154 +364,109 @@ let apis = [
    eps:[{m:"POST",p:"/api/auth/login",d:"Logga in",par:'{"username":"string","password":"string"}',res:'{"token":"eyJ…","expiresIn":3600}'},{m:"POST",p:"/api/auth/refresh",d:"Förnya token",par:'{"refreshToken":"string"}',res:'{"token":"eyJ…"}'}],
    load:[0,0,0,0,0,0,0,0,0,0,0,0]}
 ];
-let nextId = 10, selId = null, activeTab = "overview";
+let nextId=10,selId=null,activeTab="overview";
+const isMobile=()=>window.innerWidth<768;
 
 // ── ICONS ──
 function pickIcon(name){
   const n=name.toLowerCase();
-  if(n.includes("auth")||n.includes("login")||n.includes("security"))return{i:"🔐",bg:"#3a1a1a"};
+  if(n.includes("auth")||n.includes("login"))return{i:"🔐",bg:"#3a1a1a"};
   if(n.includes("order"))return{i:"📦",bg:"#1a3a2a"};
   if(n.includes("customer")||n.includes("kund")||n.includes("user"))return{i:"👤",bg:"#1e3a5f"};
   if(n.includes("notif")||n.includes("message")||n.includes("mail"))return{i:"🔔",bg:"#3a2a0a"};
   if(n.includes("hub")||n.includes("integration")||n.includes("connect"))return{i:"⚡",bg:"#2a1a4a"};
-  if(n.includes("product")||n.includes("catalog"))return{i:"🏷️",bg:"#1a3a3a"};
   if(n.includes("payment")||n.includes("invoice"))return{i:"💳",bg:"#1a2a1a"};
   if(n.includes("report")||n.includes("analytics"))return{i:"📊",bg:"#2a2a1a"};
+  if(n.includes("product")||n.includes("catalog"))return{i:"🏷️",bg:"#1a3a3a"};
   return{i:"🔌",bg:"#252538"};
 }
 
 // ── PARSE SWAGGER ──
-function parseSwagger(json, sourceUrl){
-  const info = json.info || {};
-  const title = info.title || "Okänt API";
-  const version = info.version || "v1";
-  const desc = info.description || "";
-  const servers = (json.servers||[]).map(s=>({n:s.description||"Server",u:s.url,s:"g"}));
-  if(sourceUrl && !servers.find(s=>s.u===sourceUrl)){
-    const base = sourceUrl.replace(/\/swagger.*$/,"");
-    servers.unshift({n:"Källa",u:base,s:"g"});
-  }
-  if(!servers.length) servers.push({n:"Okänd",u:"—",s:"y"});
-
-  const eps = [];
-  const paths = json.paths || {};
-  Object.keys(paths).forEach(path=>{
-    const methods = paths[path];
-    Object.keys(methods).forEach(method=>{
+function parseSwagger(json,url){
+  const info=json.info||{};
+  const title=info.title||"Okänt API";
+  const servers=(json.servers||[]).map(s=>({n:s.description||"Server",u:s.url,s:"g"}));
+  if(url){const base=url.replace(/\/swagger.*$/,"");if(!servers.find(s=>s.u===base))servers.unshift({n:"Källa",u:base,s:"g"})}
+  if(!servers.length)servers.push({n:"Okänd",u:"—",s:"y"});
+  const eps=[];
+  Object.entries(json.paths||{}).forEach(([path,methods])=>{
+    Object.entries(methods).forEach(([method,op])=>{
       if(["get","post","put","delete","patch"].includes(method)){
-        const op = methods[method];
-        const params = (op.parameters||[]).map(p=>`${p.name} (${p.in})`).join(", ")||"—";
+        const params=(op.parameters||[]).map(p=>`${p.name} (${p.in})`).join(", ")||"—";
         eps.push({m:method.toUpperCase(),p:path,d:op.summary||op.description||"",par:params,res:"// Se swagger för fullständigt schema"});
       }
     });
   });
-
-  const {i,bg} = pickIcon(title);
-  return {
-    id: nextId++,
-    name: title,
-    desc: desc||`Importerad från ${servers[0]?.u||"swagger.json"}`,
-    icon: i, ibg: bg,
-    status: "green",
-    version: version,
-    owner: info.contact?.name || "Importerad",
-    deploy: "just nu",
-    uptime: "—", calls: "—", latency: "—", issues: 0,
-    tags: ["importerad"],
-    imported: true,
-    envs: servers,
-    eps: eps,
-    load: Array(12).fill(0)
-  };
-}
-
-// ── IMPORT MODAL ──
-function showModal(){document.getElementById("modalBg").classList.add("show")}
-function hideModal(){document.getElementById("modalBg").classList.remove("show");document.getElementById("swUrl").value="";document.getElementById("swJson").value="";setMsg("","","")}
-function hideModalIfBg(e){if(e.target===document.getElementById("modalBg"))hideModal()}
-
-function setMsg(type,text){
-  const err=document.getElementById("mErr"), ok=document.getElementById("mOk");
-  err.style.display="none"; ok.style.display="none";
-  if(type==="err"){err.textContent=text;err.style.display="block"}
-  if(type==="ok"){ok.textContent=text;ok.style.display="block"}
-}
-
-async function fetchFromUrl(){
-  const url=document.getElementById("swUrl").value.trim();
-  if(!url){setMsg("err","Ange en URL.");return}
-  setMsg("ok","Hämtar…");
-  try{
-    const res=await fetch(url);
-    if(!res.ok)throw new Error(`HTTP ${res.status}`);
-    const json=await res.json();
-    document.getElementById("swJson").value=JSON.stringify(json,null,2);
-    setMsg("ok","✅ Hämtad! Granska och tryck Importera.");
-  }catch(e){
-    setMsg("err",`Kunde inte hämta: ${e.message}. Klistra in JSON manuellt istället.`);
-  }
-}
-
-function importApi(){
-  const raw=document.getElementById("swJson").value.trim();
-  if(!raw){setMsg("err","Klistra in swagger.json eller hämta från URL.");return}
-  let json;
-  try{json=JSON.parse(raw)}catch(e){setMsg("err","Ogiltig JSON. Kontrollera formatet.");return}
-  if(!json.openapi&&!json.swagger){setMsg("err","Verkar inte vara en swagger/OpenAPI-fil.");return}
-  const url=document.getElementById("swUrl").value.trim();
-  const api=parseSwagger(json,url);
-  apis.push(api);
-  renderList();
-  updateStats();
-  setMsg("ok",`✅ "${api.name}" importerad med ${api.eps.length} endpoints!`);
-  setTimeout(()=>{hideModal();openApi(api.id)},1200);
+  const{i,bg}=pickIcon(title);
+  return{id:nextId++,name:title,desc:info.description||`Importerad via Swagger`,icon:i,ibg:bg,status:"green",version:info.version||"v1",owner:info.contact?.name||"Importerad",deploy:"just nu",uptime:"—",calls:"—",latency:"—",issues:0,tags:["importerad"],imported:true,envs:servers,eps,load:Array(12).fill(0)};
 }
 
 // ── RENDER LIST ──
-function renderList(list){
+function renderApiItem(a,onclick){
+  return`<div class="api-item${selId===a.id?" active":""}" onclick="${onclick}(${a.id})">
+    <div class="ai-icon" style="background:${a.ibg}">${a.icon}</div>
+    <div class="ai-info"><div class="ai-name">${a.name}</div><div class="ai-sub">${a.owner} · ${a.deploy}</div></div>
+    <div class="ai-right"><span class="dot d${a.status==="green"?"g":a.status==="yellow"?"y":"r"}"></span><span class="vbadge">${a.version}</span></div>
+  </div>`;
+}
+
+function renderLists(list){
   const l=list||apis;
-  document.getElementById("apiList").innerHTML=l.length===0
-    ?`<div style="text-align:center;color:var(--muted);padding:24px;font-size:13px">Inga API:er ännu.<br>Tryck knappen nedan för att importera.</div>`
-    :l.map(a=>`
-    <div class="api-card" onclick="openApi(${a.id})">
-      <div class="api-icon" style="background:${a.ibg}">${a.icon}${a.imported?'<span style="position:absolute;font-size:8px;background:var(--accent);color:#fff;padding:1px 4px;border-radius:4px;top:-4px;right:-4px">NY</span>':""}</div>
-      <div class="api-info">
-        <div class="api-name">${a.name}</div>
-        <div class="api-sub">${a.owner} · ${a.deploy}${a.imported?" · Importerad":""}</div>
-      </div>
-      <div class="api-right"><span class="dot d${a.status==="green"?"g":a.status==="yellow"?"y":"r"}"></span><span class="vbadge">${a.version}</span></div>
-    </div>`).join("");
+  const empty=`<div style="text-align:center;color:var(--muted);padding:20px;font-size:13px;line-height:1.6">Inga API:er.<br>Importera ett via knappen nedan.</div>`;
+  document.getElementById("apiListDesktop").innerHTML=l.length?l.map(a=>renderApiItem(a,"selectApi")).join(""):empty;
+  document.getElementById("apiListMobile").innerHTML=l.length?l.map(a=>renderApiItem(a,"openMobile")).join(""):empty;
 }
 
 function updateStats(){
-  document.getElementById("cOk").textContent=apis.filter(a=>a.status==="green").length;
-  document.getElementById("cWarn").textContent=apis.filter(a=>a.status==="yellow").length;
-  document.getElementById("cErr").textContent=apis.filter(a=>a.status==="red").length;
+  const ok=apis.filter(a=>a.status==="green").length;
+  const warn=apis.filter(a=>a.status==="yellow").length;
+  const err=apis.filter(a=>a.status==="red").length;
+  document.getElementById("cOk").textContent=ok;
+  document.getElementById("cWarn").textContent=warn;
+  document.getElementById("cErr").textContent=err;
+  document.getElementById("mOk").textContent=ok;
+  document.getElementById("mWarn").textContent=warn;
+  document.getElementById("mErr").textContent=err;
 }
 
-function filterApis(q){
-  const f=q.toLowerCase().trim();
-  renderList(f?apis.filter(a=>a.name.toLowerCase().includes(f)||a.owner.toLowerCase().includes(f)||a.tags.some(t=>t.includes(f))):null);
-}
+function filterApis(q){const f=q.toLowerCase().trim();renderLists(f?apis.filter(a=>a.name.toLowerCase().includes(f)||a.owner.toLowerCase().includes(f)||a.tags.some(t=>t.includes(f))):null)}
+function filterMobile(q){filterApis(q)}
 
 // ── NAVIGATION ──
-function openApi(id){
+function selectApi(id){
+  selId=id;
+  renderLists();
+  const a=apis.find(x=>x.id===id);
+  document.getElementById("tbTitle").textContent=a.name;
+  setTab(activeTab);
+}
+
+function openMobile(id){
   selId=id;
   const a=apis.find(x=>x.id===id);
-  document.getElementById("dTitle").textContent=a.name;
-  document.getElementById("dVer").textContent=a.version;
-  document.getElementById("S0").classList.add("off");
-  document.getElementById("S1").classList.remove("off");
+  document.getElementById("tbTitle").textContent=a.name;
+  document.getElementById("backBtn").style.display="flex";
+  document.getElementById("listScreen").style.display="none";
+  document.getElementById("mainPanel").classList.add("visible");
   setTab("overview");
 }
-function goBack(){document.getElementById("S1").classList.add("off");document.getElementById("S0").classList.remove("off")}
+
+function goBack(){
+  document.getElementById("listScreen").style.display="flex";
+  document.getElementById("mainPanel").classList.remove("visible");
+  document.getElementById("backBtn").style.display="none";
+  document.getElementById("tbTitle").textContent="API Control Tower";
+  selId=null;
+}
+
 function setTab(t){
   activeTab=t;
-  document.querySelectorAll(".ni").forEach(el=>el.classList.toggle("on",el.dataset.t===t));
+  document.querySelectorAll(".tab,.ni").forEach(el=>el.classList.toggle("on",el.dataset.t===t));
+  if(!selId){document.getElementById("content").innerHTML=`<div class="empty-state"><div class="ei">⚡</div><h2>Välj ett API</h2><p>Välj ett API i listan till vänster, eller importera ett nytt.</p></div>`;return}
   const a=apis.find(x=>x.id===selId);
   const map={overview:renderOverview,load:renderLoad,endpoints:renderEndpoints,swagger:renderSwagger};
-  document.getElementById("dBody").innerHTML=(map[t]||renderOverview)(a);
-  document.getElementById("dBody").scrollTop=0;
+  document.getElementById("content").innerHTML=(map[t]||renderOverview)(a);
+  document.getElementById("content").scrollTop=0;
   if(t==="load")drawChart(a);
 }
 
@@ -389,80 +474,81 @@ function setTab(t){
 function renderOverview(a){
   const uc=a.status==="green"?"var(--green)":a.status==="yellow"?"var(--yellow)":"var(--red)";
   const ib=a.issues===0?`<span class="badge bok">Inga issues</span>`:`<span class="badge ${a.issues>=3?"berr":"bwarn"}">${a.issues} issues</span>`;
-  const importedBadge=a.imported?`<span class="badge bblue">Importerad</span>`:"";
-  return`${a.status==="red"?`<div class="alert">⚠️<div><strong>API Offline</strong> – ${a.issues} aktiva issues. Kontakta ${a.owner}.</div></div>`:""}
-  <div class="hero"><div class="hero-top"><div class="hero-icon" style="background:${a.ibg};position:relative">${a.icon}</div>
-  <div><div class="hero-name">${a.name}</div><div class="hero-desc">${a.desc}</div></div></div>
-  <div class="tag-wrap"><span class="badge ${a.status==="green"?"bok":a.status==="yellow"?"bwarn":"berr"}">${a.status==="green"?"Online":a.status==="yellow"?"Degraderad":"Offline"}</span>${ib}${importedBadge}${a.tags.map(t=>`<span class="badge bgray">${t}</span>`).join("")}</div></div>
-  <div class="metrics">
-    <div class="metric"><div class="m-lbl">Uptime</div><div class="m-val" style="color:${uc}">${a.uptime}</div><div class="m-sub">30 dagar</div></div>
-    <div class="metric"><div class="m-lbl">Anrop idag</div><div class="m-val">${a.calls}</div><div class="m-sub">requests</div></div>
-    <div class="metric"><div class="m-lbl">Svarstid</div><div class="m-val">${a.latency}</div><div class="m-sub">genomsnitt</div></div>
-    <div class="metric"><div class="m-lbl">Senaste deploy</div><div class="m-val" style="font-size:15px;padding-top:5px">${a.deploy}</div><div class="m-sub">${a.owner}</div></div>
+  return`${a.status==="red"?`<div class="alert">⚠️<div><strong>${a.name} är offline</strong> – ${a.issues} aktiva issues. Kontakta ${a.owner}.</div></div>`:""}
+  <div class="hero">
+    <div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
+    <div><div class="hero-name">${a.name}</div><div class="hero-desc">${a.desc}</div>
+    <div class="tag-wrap"><span class="badge ${a.status==="green"?"bok":a.status==="yellow"?"bwarn":"berr"}">${a.status==="green"?"Online":a.status==="yellow"?"Degraderad":"Offline"}</span>${ib}${a.imported?'<span class="badge bblue">Importerad</span>':""}${a.tags.map(t=>`<span class="badge bgray">${t}</span>`).join("")}</div></div>
   </div>
-  <div class="section"><div class="stitle">Miljöer (${a.envs.length})</div><div class="env-list">${a.envs.map(e=>`
-    <div class="env-card"><span class="dot d${e.s==="g"?"g":e.s==="y"?"y":"r"}"></span><div><div class="env-name">${e.n}</div><div class="env-url">${e.u}</div></div></div>`).join("")}</div></div>`;
+  <div class="cards">
+    <div class="card"><div class="c-lbl">Uptime</div><div class="c-val" style="color:${uc}">${a.uptime}</div><div class="c-sub">senaste 30 dagarna</div></div>
+    <div class="card"><div class="c-lbl">Anrop idag</div><div class="c-val">${a.calls}</div><div class="c-sub">requests</div></div>
+    <div class="card"><div class="c-lbl">Svarstid</div><div class="c-val">${a.latency}</div><div class="c-sub">genomsnitt</div></div>
+    <div class="card"><div class="c-lbl">Senaste deploy</div><div class="c-val" style="font-size:15px;padding-top:5px">${a.deploy}</div><div class="c-sub">${a.owner}</div></div>
+  </div>
+  <div class="stitle">Miljöer</div>
+  <div class="env-grid">${a.envs.map(e=>`<div class="env-card"><span class="dot d${e.s==="g"?"g":e.s==="y"?"y":"r"}"></span><div><div class="env-name">${e.n}</div><div class="env-url">${e.u}</div></div></div>`).join("")}</div>`;
 }
 
 function renderLoad(a){
-  const peak=Math.max(...a.load,0);
-  const avg=Math.round(a.load.reduce((s,v)=>s+v,0)/Math.max(a.load.length,1));
+  const peak=Math.max(...a.load,0),avg=Math.round(a.load.reduce((s,v)=>s+v,0)/Math.max(a.load.length,1));
   const noData=peak===0;
-  return`<div class="hero" style="padding-bottom:0"><div class="hero-top" style="margin-bottom:0">
-    <div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
-    <div><div class="hero-name">${a.name}</div><div class="hero-desc">${noData?"Ingen lastdata tillgänglig – importerade API:er visar data när de kopplas till riktiga endpoints":"Lastutveckling senaste 6h"}</div></div></div></div>
-  ${noData?`<div style="padding:24px 16px;text-align:center;color:var(--muted);font-size:13px">📈 Lastdata visas när dashboarden ansluter till Kestrel /metrics.<br><br>Sam förklarar hur du aktiverar det med 2 rader kod.</div>`:`
-  <div class="metrics" style="padding-bottom:8px">
-    <div class="metric"><div class="m-lbl">Toppbelastning</div><div class="m-val" style="color:var(--accent)">${peak.toLocaleString()}</div><div class="m-sub">req/min</div></div>
-    <div class="metric"><div class="m-lbl">Genomsnitt</div><div class="m-val">${avg.toLocaleString()}</div><div class="m-sub">req/min</div></div>
+  return`<div class="hero"><div class="hero-icon" style="background:${a.ibg}">${a.icon}</div>
+    <div><div class="hero-name">${a.name}</div><div class="hero-desc">${noData?"Ingen lastdata tillgänglig ännu.":"Lastutveckling senaste 6h"}</div></div></div>
+  ${noData?`<div style="padding:40px;text-align:center;color:var(--muted);background:var(--surface);border:1px solid var(--border);border-radius:10px">
+    📈 Lastdata visas när dashboarden ansluter till Kestrel <code>/metrics</code>.<br><br>Sam förklarar hur du aktiverar det med 2 rader i Program.cs.
+  </div>`:`
+  <div class="cards" style="grid-template-columns:1fr 1fr">
+    <div class="card"><div class="c-lbl">Toppbelastning</div><div class="c-val" style="color:var(--accent)">${peak.toLocaleString()}</div><div class="c-sub">req/min</div></div>
+    <div class="card"><div class="c-lbl">Genomsnitt</div><div class="c-val">${avg.toLocaleString()}</div><div class="c-sub">req/min</div></div>
   </div>
-  <div class="load-section"><div class="load-card">
-    <div class="load-header"><div class="load-title">Requests / minut</div><div class="load-live"><span class="live-dot"></span>Simulerad</div></div>
-    <canvas id="chart" height="80"></canvas>
-    <div class="load-legend"><div class="ll"><div class="ll-dot" style="background:var(--accent)"></div>Requests/min</div><div class="ll"><div class="ll-dot" style="background:var(--red)"></div>Felrate</div></div>
-  </div></div>`}`;
+  <div class="load-card">
+    <div class="load-hdr"><div class="load-title">Requests / minut</div><div class="live"><span class="live-dot"></span>Simulerad data</div></div>
+    <canvas id="chart"></canvas>
+    <div class="chart-legend"><div class="ll"><div class="ll-dot" style="background:var(--accent)"></div>Requests/min</div><div class="ll"><div class="ll-dot" style="background:var(--red)"></div>Felrate (~5%)</div></div>
+  </div>`}
+  <div style="margin-top:16px"><div class="stitle">Svarstider</div>
+  <div class="env-grid">
+    <div class="env-card"><span class="dot dg"></span><div><div class="env-name">Median (p50)</div><div class="env-url">${a.latency!=="—"?a.latency:"—"}</div></div></div>
+    <div class="env-card"><span class="dot dy"></span><div><div class="env-name">p95</div><div class="env-url">${a.latency!=="—"?parseInt(a.latency)*3+" ms":"—"}</div></div></div>
+    <div class="env-card"><span class="dot dr"></span><div><div class="env-name">p99</div><div class="env-url">${a.latency!=="—"?parseInt(a.latency)*6+" ms":"—"}</div></div></div>
+  </div></div>`;
 }
 
 function drawChart(a){
-  const canvas=document.getElementById("chart");if(!canvas)return;
-  const dpr=window.devicePixelRatio||1,W=canvas.offsetWidth||300,H=80;
-  canvas.width=W*dpr;canvas.height=H*dpr;
-  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
-  const data=a.load,max=Math.max(...data,1),pts=data.length,pad=6;
-  const gx=x=>(x/(pts-1))*(W-pad*2)+pad;
-  const gy=y=>H-pad-(y/max)*(H-pad*2);
-  const grad=ctx.createLinearGradient(0,0,0,H);
-  grad.addColorStop(0,"rgba(79,142,247,.35)");grad.addColorStop(1,"rgba(79,142,247,0)");
-  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));
-  data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
-  ctx.lineTo(gx(pts-1),H);ctx.lineTo(gx(0),H);ctx.closePath();
-  ctx.fillStyle=grad;ctx.fill();
-  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));
-  data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
+  const c=document.getElementById("chart");if(!c)return;
+  const dpr=window.devicePixelRatio||1,W=c.offsetWidth||600,H=90;
+  c.width=W*dpr;c.height=H*dpr;const ctx=c.getContext("2d");ctx.scale(dpr,dpr);
+  const data=a.load,max=Math.max(...data,1),pts=data.length,pad=8;
+  const gx=x=>(x/(pts-1))*(W-pad*2)+pad,gy=y=>H-pad-(y/max)*(H-pad*2);
+  const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,"rgba(79,142,247,.3)");g.addColorStop(1,"rgba(79,142,247,0)");
+  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
+  ctx.lineTo(gx(pts-1),H);ctx.lineTo(gx(0),H);ctx.closePath();ctx.fillStyle=g;ctx.fill();
+  ctx.beginPath();ctx.moveTo(gx(0),gy(data[0]));data.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
   ctx.strokeStyle="#4f8ef7";ctx.lineWidth=2;ctx.stroke();
   const errs=data.map(v=>Math.round(v*0.05));
-  ctx.beginPath();ctx.moveTo(gx(0),gy(errs[0]));
-  errs.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
+  ctx.beginPath();ctx.moveTo(gx(0),gy(errs[0]));errs.forEach((v,i)=>{if(i>0)ctx.lineTo(gx(i),gy(v))});
   ctx.strokeStyle="#ef4444";ctx.lineWidth=1.5;ctx.setLineDash([4,4]);ctx.stroke();ctx.setLineDash([]);
 }
 
 function renderEndpoints(a){
-  if(!a.eps||a.eps.length===0)return`<div class="section" style="padding-top:16px"><div class="empty-ep">Inga endpoints hittades i swagger.json.</div></div>`;
-  return`<div class="section" style="padding-top:16px"><div class="stitle">Endpoints (${a.eps.length})</div>
+  if(!a.eps?.length)return`<div style="padding:40px;text-align:center;color:var(--muted)">Inga endpoints hittades.</div>`;
+  return`<div class="stitle">Endpoints (${a.eps.length})</div>
   <div class="ep-list">${a.eps.map((e,i)=>`
     <div class="ep" id="ep${i}">
       <div class="ep-head" onclick="this.parentElement.classList.toggle('open')">
         <span class="meth ${e.m.toLowerCase()}">${e.m}</span>
-        <span class="ep-path">${e.p}</span><span class="chev">›</span>
+        <span class="ep-path">${e.p}</span>
+        <span class="ep-desc-short">${e.d}</span>
+        <span class="chev">›</span>
       </div>
       <div class="ep-body">
-        <div class="ep-desc">${e.d||"Ingen beskrivning"}</div>
-        <div><div class="ep-label">Parametrar</div><pre class="ep-pre">${e.par||"—"}</pre></div>
-        <div><div class="ep-label">Exempelsvar</div><pre class="ep-pre">${e.res||"—"}</pre></div>
-        <button class="try-btn" onclick="tryEp(${a.id},${i})">▶ Testa anrop</button>
+        <div class="ep-row"><span class="ep-key">Parametrar</span><pre class="ep-pre">${e.par||"—"}</pre></div>
+        <div class="ep-row"><span class="ep-key">Exempelsvar</span><pre class="ep-pre">${e.res||"—"}</pre></div>
+        <div><button class="try-btn" onclick="tryEp(${a.id},${i})">▶ Testa anrop</button></div>
         <div class="try-resp" id="r${a.id}_${i}"></div>
       </div>
-    </div>`).join("")}</div></div>`;
+    </div>`).join("")}</div>`;
 }
 
 function tryEp(aid,idx){
@@ -474,33 +560,51 @@ function tryEp(aid,idx){
 
 function renderSwagger(a){
   const sw={openapi:"3.0.0",info:{title:a.name,version:a.version,description:a.desc},servers:a.envs.map(e=>({url:e.u,description:e.n})),paths:{}};
-  a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d,tags:a.tags};});
+  a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d,tags:a.tags}});
   const pretty=JSON.stringify(sw,null,2).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
     .replace(/"([^"]+)":/g,'<span class="jk">"$1"</span>:')
     .replace(/: "([^"]*)"/g,': <span class="js">"$1"</span>')
     .replace(/: (\d+)/g,': <span class="jn">$1</span>');
-  return`<div class="section" style="padding-top:16px"><div class="stitle">Swagger / OpenAPI 3.0</div>
-  <div class="sw-box"><div class="sw-bar">
+  return`<div class="sw-box"><div class="sw-bar">
+    <span class="sw-title">swagger.json – ${a.name} ${a.version}</span>
     <button class="sw-btn" onclick="cpSw(${a.id})">📋 Kopiera</button>
     <button class="sw-btn" onclick="dlSw(${a.id})">⬇ Ladda ner</button>
-  </div><div class="sw-json">${pretty}</div></div></div>`;
+  </div><div class="sw-json">${pretty}</div></div>`;
 }
 
-function cpSw(id){
-  const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};
-  a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d};});
-  navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(sw,null,2)).then(()=>alert("Kopierat!"));
+function cpSw(id){const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d}});navigator.clipboard&&navigator.clipboard.writeText(JSON.stringify(sw,null,2)).then(()=>alert("Kopierat!"))}
+function dlSw(id){const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d}});const b=new Blob([JSON.stringify(sw,null,2)],{type:"application/json"});const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=a.name.toLowerCase().replace(/ /g,"-")+"-swagger.json";l.click()}
+
+// ── MODAL ──
+function showModal(){document.getElementById("modalBg").classList.add("show")}
+function hideModal(){document.getElementById("modalBg").classList.remove("show");document.getElementById("swUrl").value="";document.getElementById("swJson").value="";setMsg("","")}
+function hideModalBg(e){if(e.target===document.getElementById("modalBg"))hideModal()}
+function setMsg(type,text){const err=document.getElementById("mErrBox"),ok=document.getElementById("mOkBox");err.style.display="none";ok.style.display="none";if(type==="err"){err.textContent=text;err.style.display="block"}if(type==="ok"){ok.textContent=text;ok.style.display="block"}}
+
+async function fetchUrl(){
+  const url=document.getElementById("swUrl").value.trim();
+  if(!url){setMsg("err","Ange en URL.");return}
+  setMsg("ok","Hämtar…");
+  try{const r=await fetch(url);if(!r.ok)throw new Error(`HTTP ${r.status}`);const j=await r.json();document.getElementById("swJson").value=JSON.stringify(j,null,2);setMsg("ok","✅ Hämtad! Tryck Importera.")}
+  catch(e){setMsg("err",`Kunde inte hämta: ${e.message}. Klistra in JSON manuellt.`)}
 }
-function dlSw(id){
-  const a=apis.find(x=>x.id===id),sw={openapi:"3.0.0",info:{title:a.name,version:a.version},paths:{}};
-  a.eps.forEach(e=>{if(!sw.paths[e.p])sw.paths[e.p]={};sw.paths[e.p][e.m.toLowerCase()]={summary:e.d};});
-  const b=new Blob([JSON.stringify(sw,null,2)],{type:"application/json"});
-  const l=document.createElement("a");l.href=URL.createObjectURL(b);l.download=a.name.toLowerCase().replace(/ /g,"-")+"-swagger.json";l.click();
+
+function importApi(){
+  const raw=document.getElementById("swJson").value.trim();
+  if(!raw){setMsg("err","Klistra in swagger.json eller hämta från URL.");return}
+  let json;try{json=JSON.parse(raw)}catch{setMsg("err","Ogiltig JSON.");return}
+  if(!json.openapi&&!json.swagger){setMsg("err","Verkar inte vara en swagger/OpenAPI-fil.");return}
+  const api=parseSwagger(json,document.getElementById("swUrl").value.trim());
+  apis.push(api);renderLists();updateStats();
+  setMsg("ok",`✅ "${api.name}" importerad med ${api.eps.length} endpoints!`);
+  setTimeout(()=>{hideModal();if(isMobile())openMobile(api.id);else selectApi(api.id)},1000);
 }
 
 // ── INIT ──
-renderList();
+renderLists();
 updateStats();
+// Auto-select first on desktop
+if(!isMobile())selectApi(1);
 </script>
 </body>
 </html>
