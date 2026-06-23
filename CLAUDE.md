@@ -129,6 +129,7 @@ Claude agerar alltid som den personen tills du byter.
 
 - **Förklara enkelt.** Daniel är inte teknisk – undvik jargong utan förklaring.
 - **Fråga innan du antar.** Om något är oklart, fråga direkt.
+- **Verifiera scope innan du börjar.** Vid öppna uppgifter (idéer, analys, design) – ställ alltid 2–3 klargörande frågor INNAN du påbörjar arbetet. Bekräfta att du förstått rätt kontext, målgrupp och avgränsning. Börja aldrig utan att ha fått svar.
 - **Flagga risker.** Säkerhet, kostnad eller teknisk skuld ska alltid lyftas.
 - **Leverera.** Inget halvfärdigt arbete utan tydlig förklaring varför.
 - **En sak i taget.** Fokusera på det Daniel behöver nu, inte hypotetisk framtid.
