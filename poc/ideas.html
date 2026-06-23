@@ -14,6 +14,7 @@
     --purple: #7c5cbf;
     --orange: #f59e0b;
     --red: #ef4444;
+    --green: #22c55e;
     --white: #ffffff;
     --gray50: #f8fafc;
     --gray100: #f1f5f9;
@@ -25,643 +26,320 @@
     --shadow: 0 4px 24px rgba(0,0,0,0.08);
     --shadow-lg: 0 8px 40px rgba(0,0,0,0.12);
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-    background: var(--gray50);
-    color: var(--gray800);
-    line-height: 1.6;
-  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif; background: var(--gray50); color: var(--gray800); line-height: 1.6; }
 
   /* NAV */
-  .topnav {
-    background: var(--navy);
-    padding: 14px 32px;
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    position: sticky;
-    top: 0;
-    z-index: 100;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
-  .topnav .logo {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--white);
-    letter-spacing: -0.3px;
-  }
+  .topnav { background: var(--navy); padding: 14px 32px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 100; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .topnav .logo { font-size: 15px; font-weight: 700; color: var(--white); letter-spacing: -0.3px; }
   .topnav .logo span { color: var(--blue2); }
-  .topnav .badge {
-    background: rgba(30,111,255,0.2);
-    color: var(--blue2);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 2px 8px;
-    border-radius: 20px;
-    letter-spacing: 0.5px;
-    text-transform: uppercase;
-  }
-  .topnav .nav-links {
-    margin-left: auto;
-    display: flex;
-    gap: 24px;
-  }
-  .topnav .nav-links a {
-    color: var(--gray400);
-    text-decoration: none;
-    font-size: 13px;
-    font-weight: 500;
-    transition: color 0.2s;
-  }
+  .topnav .badge { background: rgba(30,111,255,0.2); color: var(--blue2); font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 20px; letter-spacing: 0.5px; text-transform: uppercase; }
+  .topnav .nav-links { margin-left: auto; display: flex; gap: 24px; flex-wrap: wrap; }
+  .topnav .nav-links a { color: var(--gray400); text-decoration: none; font-size: 13px; font-weight: 500; transition: color 0.2s; }
   .topnav .nav-links a:hover { color: var(--white); }
 
   /* HERO */
-  .hero {
-    background: linear-gradient(135deg, var(--navy) 0%, #0f2744 60%, #0a1a30 100%);
-    padding: 80px 32px 72px;
-    text-align: center;
-    position: relative;
-    overflow: hidden;
-  }
-  .hero::before {
-    content: '';
-    position: absolute;
-    width: 600px; height: 600px;
-    background: radial-gradient(circle, rgba(30,111,255,0.12) 0%, transparent 70%);
-    top: -100px; left: 50%;
-    transform: translateX(-50%);
-    pointer-events: none;
-  }
-  .hero-tag {
-    display: inline-block;
-    background: rgba(0,201,167,0.15);
-    color: var(--teal);
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    padding: 5px 14px;
-    border-radius: 20px;
-    margin-bottom: 20px;
-    border: 1px solid rgba(0,201,167,0.3);
-  }
-  .hero h1 {
-    font-size: clamp(28px, 5vw, 52px);
-    font-weight: 800;
-    color: var(--white);
-    line-height: 1.15;
-    letter-spacing: -1px;
-    max-width: 800px;
-    margin: 0 auto 20px;
-  }
+  .hero { background: linear-gradient(135deg, var(--navy) 0%, #0f2744 60%, #0a1a30 100%); padding: 80px 32px 72px; text-align: center; position: relative; overflow: hidden; }
+  .hero::before { content: ''; position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(30,111,255,0.12) 0%, transparent 70%); top: -100px; left: 50%; transform: translateX(-50%); pointer-events: none; }
+  .hero-tag { display: inline-block; background: rgba(0,201,167,0.15); color: var(--teal); font-size: 12px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; padding: 5px 14px; border-radius: 20px; margin-bottom: 20px; border: 1px solid rgba(0,201,167,0.3); }
+  .hero h1 { font-size: clamp(28px, 5vw, 52px); font-weight: 800; color: var(--white); line-height: 1.15; letter-spacing: -1px; max-width: 800px; margin: 0 auto 20px; }
   .hero h1 span { color: var(--blue2); }
-  .hero .sub {
-    font-size: clamp(15px, 2vw, 18px);
-    color: rgba(255,255,255,0.6);
-    max-width: 580px;
-    margin: 0 auto 40px;
-  }
-  .hero-pills {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 48px;
-  }
-  .hero-pill {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    color: rgba(255,255,255,0.8);
-    padding: 7px 16px;
-    border-radius: 20px;
-    font-size: 13px;
-    font-weight: 500;
-  }
-  .hero-pill .dot {
-    display: inline-block;
-    width: 7px; height: 7px;
-    border-radius: 50%;
-    margin-right: 7px;
-    vertical-align: middle;
-  }
-  .dot-blue { background: var(--blue2); }
-  .dot-teal { background: var(--teal); }
-  .dot-purple { background: var(--purple); }
-  .dot-orange { background: var(--orange); }
-
-  .hero-stats {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: 32px;
-  }
+  .hero .sub { font-size: clamp(15px, 2vw, 18px); color: rgba(255,255,255,0.6); max-width: 580px; margin: 0 auto 40px; }
+  .hero-pills { display: flex; justify-content: center; flex-wrap: wrap; gap: 10px; margin-bottom: 48px; }
+  .hero-pill { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); color: rgba(255,255,255,0.8); padding: 7px 16px; border-radius: 20px; font-size: 13px; font-weight: 500; }
+  .hero-pill .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 7px; vertical-align: middle; }
+  .dot-blue { background: var(--blue2); } .dot-teal { background: var(--teal); } .dot-purple { background: var(--purple); } .dot-orange { background: var(--orange); }
+  .hero-stats { display: flex; justify-content: center; flex-wrap: wrap; gap: 32px; }
   .hero-stat { text-align: center; }
-  .hero-stat .num {
-    font-size: 28px;
-    font-weight: 800;
-    color: var(--white);
-    display: block;
-  }
-  .hero-stat .lbl {
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .hero-stat .num { font-size: 28px; font-weight: 800; color: var(--white); display: block; }
+  .hero-stat .lbl { font-size: 12px; color: rgba(255,255,255,0.45); text-transform: uppercase; letter-spacing: 0.5px; }
 
-  /* SECTION WRAPPER */
+  /* LAYOUT */
   .section { padding: 60px 32px; max-width: 1100px; margin: 0 auto; }
-  .section-sm { padding: 40px 32px; max-width: 1100px; margin: 0 auto; }
-  .section-tag {
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 1.5px;
-    text-transform: uppercase;
-    color: var(--blue);
-    margin-bottom: 8px;
-  }
-  .section-title {
-    font-size: clamp(22px, 3vw, 32px);
-    font-weight: 800;
-    color: var(--navy);
-    letter-spacing: -0.5px;
-    margin-bottom: 10px;
-  }
-  .section-desc {
-    font-size: 15px;
-    color: var(--gray600);
-    max-width: 620px;
-    margin-bottom: 40px;
-  }
+  .section-tag { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--blue); margin-bottom: 8px; }
+  .section-title { font-size: clamp(22px, 3vw, 32px); font-weight: 800; color: var(--navy); letter-spacing: -0.5px; margin-bottom: 10px; }
+  .section-desc { font-size: 15px; color: var(--gray600); max-width: 680px; margin-bottom: 36px; }
+  .white-bg { background: var(--white); border-top: 1px solid var(--gray200); border-bottom: 1px solid var(--gray200); }
+  .divider { height: 1px; background: var(--gray200); max-width: 1100px; margin: 0 auto; }
 
   /* PROBLEM */
-  .problems { background: var(--white); border-top: 1px solid var(--gray200); border-bottom: 1px solid var(--gray200); }
   .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-  .problem-card {
-    border: 1.5px solid var(--gray200);
-    border-radius: var(--radius);
-    padding: 24px;
-    background: var(--gray50);
-  }
-  .problem-icon {
-    font-size: 28px;
-    margin-bottom: 12px;
-    display: block;
-  }
+  .problem-card { border: 1.5px solid var(--gray200); border-radius: var(--radius); padding: 24px; background: var(--gray50); }
+  .problem-icon { font-size: 28px; margin-bottom: 12px; display: block; }
   .problem-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; color: var(--navy); }
   .problem-card p { font-size: 14px; color: var(--gray600); line-height: 1.6; }
 
-  /* MODULE CARDS */
-  .module {
-    background: var(--white);
-    border-radius: 16px;
-    box-shadow: var(--shadow-lg);
-    overflow: hidden;
-    margin-bottom: 32px;
-    border: 1px solid var(--gray200);
-  }
-  .module-header {
-    padding: 28px 32px 24px;
-    display: flex;
-    align-items: flex-start;
-    gap: 20px;
-    border-bottom: 1px solid var(--gray100);
-  }
-  .module-icon {
-    width: 52px; height: 52px;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 22px;
-    flex-shrink: 0;
-  }
-  .icon-blue { background: rgba(30,111,255,0.1); }
-  .icon-teal { background: rgba(0,201,167,0.1); }
-  .icon-purple { background: rgba(124,92,191,0.1); }
-  .icon-orange { background: rgba(245,158,11,0.1); }
+  /* MODULE */
+  .module { background: var(--white); border-radius: 16px; box-shadow: var(--shadow-lg); overflow: hidden; margin-bottom: 40px; border: 1px solid var(--gray200); }
+  .module-header { padding: 28px 32px 24px; display: flex; align-items: flex-start; gap: 20px; border-bottom: 1px solid var(--gray100); }
+  .module-icon { width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .icon-blue { background: rgba(30,111,255,0.1); } .icon-teal { background: rgba(0,201,167,0.1); } .icon-purple { background: rgba(124,92,191,0.1); }
   .module-meta { flex: 1; }
-  .module-num {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    color: var(--gray400);
-    margin-bottom: 4px;
-  }
+  .module-num { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--gray400); margin-bottom: 4px; }
   .module-header h2 { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 6px; }
   .module-header p { font-size: 14px; color: var(--gray600); max-width: 540px; }
-  .module-label {
-    flex-shrink: 0;
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  .module-label { flex-shrink: 0; padding: 5px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
   .label-core { background: rgba(30,111,255,0.1); color: var(--blue); }
   .label-addon { background: rgba(0,201,167,0.1); color: #00a58a; }
   .label-tool { background: rgba(124,92,191,0.1); color: var(--purple); }
-
   .module-body { padding: 28px 32px; }
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px; }
-  .feature {
-    padding: 18px;
-    background: var(--gray50);
-    border-radius: 10px;
-    border: 1px solid var(--gray200);
-  }
+
+  /* FEATURES */
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .feature { padding: 18px; background: var(--gray50); border-radius: 10px; border: 1px solid var(--gray200); }
   .feature .fi { font-size: 20px; margin-bottom: 10px; display: block; }
   .feature h4 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 5px; }
   .feature p { font-size: 13px; color: var(--gray600); line-height: 1.5; }
 
-  .value-box {
-    background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%);
-    border-radius: 10px;
-    padding: 20px 24px;
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    flex-wrap: wrap;
-  }
+  /* VALUE BOX */
+  .value-box { background: linear-gradient(135deg, var(--navy) 0%, var(--navy2) 100%); border-radius: 10px; padding: 20px 24px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 24px; }
   .value-box .vb-icon { font-size: 22px; flex-shrink: 0; }
   .value-box .vb-text { flex: 1; min-width: 200px; }
   .value-box .vb-text strong { color: var(--white); font-size: 14px; font-weight: 700; display: block; margin-bottom: 3px; }
   .value-box .vb-text span { color: rgba(255,255,255,0.6); font-size: 13px; }
-  .value-box .vb-tag {
-    background: rgba(30,111,255,0.25);
-    color: var(--blue2);
-    padding: 5px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 700;
-    white-space: nowrap;
-  }
+  .value-box .vb-tag { background: rgba(30,111,255,0.25); color: var(--blue2); padding: 5px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; white-space: nowrap; }
 
-  /* USER TYPES */
-  .user-types { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
-  .user-type {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--gray50);
-    border: 1px solid var(--gray200);
-    padding: 10px 16px;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    color: var(--gray800);
-  }
-  .user-type .ut-icon { font-size: 18px; }
-  .user-type .ut-sub { font-size: 11px; font-weight: 400; color: var(--gray400); }
-
-  /* SCREENSHOT MOCK */
-  .mock-screen {
-    background: var(--navy);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 1px solid rgba(255,255,255,0.08);
-    margin-bottom: 24px;
-  }
-  .mock-bar {
-    background: var(--navy2);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
-  }
+  /* MOCK SCREEN */
+  .mock-screen { background: var(--navy); border-radius: 10px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 16px; }
+  .mock-bar { background: var(--navy2); padding: 10px 16px; display: flex; align-items: center; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
-  .mock-bar .mock-url {
-    flex: 1;
-    background: rgba(255,255,255,0.06);
-    border-radius: 4px;
-    padding: 4px 10px;
-    font-size: 11px;
-    color: rgba(255,255,255,0.35);
-    font-family: monospace;
-    max-width: 300px;
-    margin: 0 auto;
-  }
-  .mock-content {
-    padding: 20px;
-    display: flex;
-    gap: 16px;
-  }
-  .mock-sidebar {
-    width: 180px;
-    flex-shrink: 0;
-  }
-  .mock-nav-item {
-    padding: 8px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    color: rgba(255,255,255,0.45);
-    margin-bottom: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .mock-nav-item.active {
-    background: rgba(30,111,255,0.2);
-    color: var(--blue2);
-    font-weight: 600;
-  }
-  .mock-main { flex: 1; }
-  .mock-stats { display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
-  .mock-stat {
-    flex: 1;
-    min-width: 80px;
-    background: rgba(255,255,255,0.04);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 8px;
-    padding: 12px;
-  }
-  .mock-stat .ms-num { font-size: 18px; font-weight: 800; color: var(--white); }
+  .mock-bar .mock-url { flex: 1; background: rgba(255,255,255,0.06); border-radius: 4px; padding: 4px 10px; font-size: 11px; color: rgba(255,255,255,0.35); font-family: monospace; max-width: 320px; margin: 0 auto; }
+  .mock-content { padding: 20px; display: flex; gap: 16px; }
+  .mock-sidebar { width: 170px; flex-shrink: 0; }
+  .mock-nav-item { padding: 8px 12px; border-radius: 6px; font-size: 12px; color: rgba(255,255,255,0.45); margin-bottom: 4px; display: flex; align-items: center; gap: 8px; }
+  .mock-nav-item.active { background: rgba(30,111,255,0.2); color: var(--blue2); font-weight: 600; }
+  .mock-main { flex: 1; min-width: 0; }
+  .mock-stats { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .mock-stat { flex: 1; min-width: 70px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px 12px; }
+  .mock-stat .ms-num { font-size: 16px; font-weight: 800; color: var(--white); }
   .mock-stat .ms-lbl { font-size: 10px; color: rgba(255,255,255,0.35); margin-top: 2px; }
-  .mock-chart {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 8px;
-    padding: 14px;
-    margin-bottom: 10px;
-  }
-  .mock-chart-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 10px; }
-  .mock-bars { display: flex; gap: 4px; align-items: flex-end; height: 50px; }
-  .mock-bar-item {
-    flex: 1;
-    border-radius: 3px 3px 0 0;
-    opacity: 0.7;
-  }
-  .mock-row {
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.06);
-    border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .mock-chart { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+  .mock-chart-label { font-size: 11px; color: rgba(255,255,255,0.4); margin-bottom: 8px; }
+  .mock-bars { display: flex; gap: 3px; align-items: flex-end; height: 44px; }
+  .mock-bar-item { flex: 1; border-radius: 2px 2px 0 0; opacity: 0.75; }
+  .mock-row { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 8px 12px; margin-bottom: 5px; display: flex; align-items: center; gap: 10px; }
   .mock-status { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
   .mock-row span { font-size: 11px; color: rgba(255,255,255,0.5); flex: 1; }
-  .mock-row .mock-pill {
-    font-size: 10px;
-    padding: 2px 7px;
-    border-radius: 10px;
-  }
+  .mock-pill { font-size: 10px; padding: 2px 7px; border-radius: 10px; }
   .pill-green { background: rgba(0,201,167,0.2); color: var(--teal); }
   .pill-red { background: rgba(239,68,68,0.2); color: #f87171; }
   .pill-yellow { background: rgba(245,158,11,0.2); color: #fcd34d; }
 
-  /* AI CHAT MOCK */
-  .chat-mock {
-    background: var(--gray50);
-    border: 1px solid var(--gray200);
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 20px;
-  }
-  .chat-msg { display: flex; gap: 10px; margin-bottom: 12px; }
-  .chat-msg.user { flex-direction: row-reverse; }
-  .chat-avatar {
-    width: 28px; height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    flex-shrink: 0;
-  }
-  .av-user { background: var(--blue); }
-  .av-ai { background: var(--teal); }
-  .chat-bubble {
-    max-width: 75%;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    line-height: 1.5;
-  }
-  .chat-msg.user .chat-bubble {
-    background: var(--blue);
-    color: var(--white);
-    border-top-right-radius: 3px;
-  }
-  .chat-msg.ai .chat-bubble {
-    background: var(--white);
-    color: var(--gray800);
-    border: 1px solid var(--gray200);
-    border-top-left-radius: 3px;
-  }
-  .chat-msg.ai .chat-bubble strong { color: var(--navy); }
+  /* SCENARIO CARDS */
+  .scenario-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin: 24px 0; }
+  .scenario-card { border: 1.5px solid var(--gray200); border-radius: 12px; overflow: hidden; background: var(--white); }
+  .scenario-header { padding: 14px 18px; display: flex; align-items: center; gap: 12px; border-bottom: 1px solid var(--gray100); }
+  .scenario-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 17px; flex-shrink: 0; }
+  .av-ceo { background: #dbeafe; }
+  .av-wh { background: #dcfce7; }
+  .av-it { background: #f3e8ff; }
+  .av-con { background: #fef3c7; }
+  .scenario-header h4 { font-size: 13px; font-weight: 700; color: var(--navy); }
+  .scenario-header small { font-size: 11px; color: var(--gray400); display: block; }
+  .scenario-body { padding: 14px 18px; }
+  .scenario-body p { font-size: 13px; color: var(--gray600); line-height: 1.6; margin-bottom: 10px; }
+  .scenario-quote { background: var(--gray50); border-left: 3px solid var(--blue2); padding: 10px 14px; border-radius: 0 8px 8px 0; font-size: 13px; color: var(--navy); font-style: italic; }
 
-  /* MAPPING TOOL MOCK */
-  .mapping-mock {
-    background: var(--gray50);
-    border: 1px solid var(--gray200);
-    border-radius: 10px;
-    padding: 20px;
-    margin-bottom: 20px;
-  }
-  .mapping-cols {
-    display: grid;
-    grid-template-columns: 1fr 40px 1fr;
-    gap: 12px;
-    align-items: center;
-  }
-  .mapping-col h5 {
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--gray400);
-    margin-bottom: 8px;
-  }
-  .map-field {
-    background: var(--white);
-    border: 1px solid var(--gray200);
-    border-radius: 6px;
-    padding: 8px 12px;
-    font-size: 12px;
-    font-family: monospace;
-    color: var(--gray800);
-    margin-bottom: 6px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-  }
-  .map-field .mf-tag {
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    font-family: sans-serif;
-    font-weight: 600;
-  }
+  /* BEFORE / AFTER */
+  .ba-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin: 24px 0; }
+  .ba-card { border-radius: 12px; padding: 20px; }
+  .ba-before { background: #fef2f2; border: 1.5px solid #fecaca; }
+  .ba-after { background: #f0fdf4; border: 1.5px solid #bbf7d0; }
+  .ba-card h4 { font-size: 13px; font-weight: 700; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+  .ba-before h4 { color: var(--red); }
+  .ba-after h4 { color: #16a34a; }
+  .ba-list { list-style: none; }
+  .ba-list li { font-size: 13px; padding: 5px 0; color: var(--gray600); display: flex; gap: 8px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+  .ba-list li:last-child { border: none; }
+  .ba-list li span { flex-shrink: 0; }
+
+  /* CHAT */
+  .chat-mock { background: var(--gray50); border: 1px solid var(--gray200); border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+  .chat-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--gray400); margin-bottom: 12px; }
+  .chat-msg { display: flex; gap: 10px; margin-bottom: 10px; }
+  .chat-msg.user { flex-direction: row-reverse; }
+  .chat-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .av-user { background: var(--blue); } .av-ai { background: var(--teal); }
+  .chat-bubble { max-width: 78%; padding: 10px 14px; border-radius: 10px; font-size: 13px; line-height: 1.5; }
+  .chat-msg.user .chat-bubble { background: var(--blue); color: var(--white); border-top-right-radius: 3px; }
+  .chat-msg.ai .chat-bubble { background: var(--white); color: var(--gray800); border: 1px solid var(--gray200); border-top-left-radius: 3px; }
+  .chat-msg.ai .chat-bubble strong { color: var(--navy); }
+  .chat-msg.ai .chat-bubble code { background: var(--gray100); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+  .chat-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0 12px; }
+  .chat-divider::before, .chat-divider::after { content: ''; flex: 1; height: 1px; background: var(--gray200); }
+  .chat-divider span { font-size: 11px; color: var(--gray400); font-weight: 600; white-space: nowrap; }
+
+  /* TOOLS LIST */
+  .tools-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 20px 0; }
+  .tool-item { background: var(--gray50); border: 1px solid var(--gray200); border-radius: 8px; padding: 12px 14px; display: flex; align-items: center; gap: 10px; }
+  .tool-icon { font-size: 16px; flex-shrink: 0; }
+  .tool-item span { font-size: 12px; color: var(--gray600); }
+  .tool-item strong { font-size: 13px; color: var(--navy); display: block; }
+
+  /* MAPPING */
+  .mapping-mock { background: var(--gray50); border: 1px solid var(--gray200); border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+  .mapping-cols { display: grid; grid-template-columns: 1fr 40px 1fr; gap: 12px; align-items: center; }
+  .mapping-col h5 { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--gray400); margin-bottom: 8px; }
+  .map-field { background: var(--white); border: 1px solid var(--gray200); border-radius: 6px; padding: 8px 12px; font-size: 12px; font-family: monospace; color: var(--gray800); margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .map-field .mf-tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; font-family: sans-serif; font-weight: 600; }
   .mf-auto { background: rgba(0,201,167,0.1); color: #00a58a; }
   .mf-manual { background: rgba(245,158,11,0.1); color: #d97706; }
-  .mapping-arrow { text-align: center; color: var(--blue); font-size: 18px; }
-  .mapping-line {
-    border: none;
-    border-top: 2px dashed var(--gray200);
-    margin: 16px 0;
-  }
-  .mapping-result {
-    background: var(--navy);
-    border-radius: 8px;
-    padding: 14px 16px;
-    font-size: 12px;
-    font-family: monospace;
-    color: rgba(255,255,255,0.7);
-    line-height: 1.8;
-  }
-  .mapping-result .mr-key { color: #7dd3fc; }
-  .mapping-result .mr-val { color: #86efac; }
-  .mapping-result .mr-comment { color: rgba(255,255,255,0.3); }
+  .mapping-arrow { text-align: center; color: var(--blue); font-size: 20px; font-weight: 700; }
+  .mapping-line { border: none; border-top: 2px dashed var(--gray200); margin: 16px 0; }
+  .mapping-result { background: var(--navy); border-radius: 8px; padding: 14px 16px; font-size: 12px; font-family: monospace; color: rgba(255,255,255,0.7); line-height: 1.8; }
+  .mr-key { color: #7dd3fc; } .mr-val { color: #86efac; } .mr-comment { color: rgba(255,255,255,0.3); }
 
-  /* ADD-ONS */
-  .addons-bg { background: var(--white); border-top: 1px solid var(--gray200); border-bottom: 1px solid var(--gray200); }
-  .addon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; }
-  .addon-card {
-    border: 1.5px solid var(--gray200);
-    border-radius: var(--radius);
-    padding: 24px;
-    background: var(--gray50);
-    position: relative;
-    overflow: hidden;
-  }
-  .addon-card::before {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-  }
+  /* WIZARD STEPS */
+  .wizard-steps { display: flex; gap: 0; margin: 20px 0; overflow-x: auto; }
+  .wizard-step { flex: 1; min-width: 120px; text-align: center; position: relative; }
+  .wizard-step:not(:last-child)::after { content: '→'; position: absolute; right: -8px; top: 16px; color: var(--gray400); font-size: 14px; z-index: 1; }
+  .wz-num { width: 34px; height: 34px; background: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; margin: 0 auto 8px; }
+  .wizard-step.done .wz-num { background: var(--teal); }
+  .wz-label { font-size: 11px; font-weight: 600; color: var(--gray600); line-height: 1.3; padding: 0 6px; }
+
+  /* ADDONS */
+  .addon-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
+  .addon-card { border: 1.5px solid var(--gray200); border-radius: var(--radius); padding: 24px; background: var(--gray50); position: relative; overflow: hidden; }
+  .addon-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
   .addon-card.ac-blue::before { background: var(--blue); }
   .addon-card.ac-orange::before { background: var(--orange); }
   .addon-card.ac-teal::before { background: var(--teal); }
+  .addon-card.paused { opacity: 0.55; filter: grayscale(0.4); }
+  .addon-card.paused::before { background: var(--gray400); }
+  .paused-banner { position: absolute; top: 12px; right: 12px; background: var(--gray400); color: var(--white); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 3px 8px; border-radius: 10px; }
+  .addon-icon { font-size: 26px; display: block; margin-bottom: 12px; }
   .addon-card h3 { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
   .addon-card p { font-size: 13px; color: var(--gray600); line-height: 1.6; margin-bottom: 14px; }
-  .addon-card .addon-tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    padding: 3px 10px;
-    border-radius: 20px;
-    background: var(--gray200);
-    color: var(--gray600);
-  }
+  .addon-tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 20px; background: var(--gray200); color: var(--gray600); }
 
-  /* BUSINESS MODEL */
-  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 20px; }
-  .pricing-card {
-    background: var(--white);
-    border: 1.5px solid var(--gray200);
-    border-radius: 16px;
-    padding: 28px;
-    position: relative;
-    transition: box-shadow 0.2s;
-  }
-  .pricing-card:hover { box-shadow: var(--shadow); }
-  .pricing-card.featured {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 1px var(--blue), var(--shadow);
-  }
-  .pricing-card .pc-badge {
-    position: absolute;
-    top: -1px; right: 20px;
-    background: var(--blue);
-    color: var(--white);
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 12px;
-    border-radius: 0 0 8px 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-  .pricing-card .pc-name { font-size: 13px; font-weight: 700; color: var(--gray400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
-  .pricing-card .pc-title { font-size: 20px; font-weight: 800; color: var(--navy); margin-bottom: 16px; }
-  .pricing-card .pc-items { list-style: none; }
-  .pricing-card .pc-items li {
-    font-size: 13px;
-    color: var(--gray600);
-    padding: 7px 0;
-    border-bottom: 1px solid var(--gray100);
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-  .pricing-card .pc-items li:last-child { border-bottom: none; }
+  /* SLA MOCK */
+  .sla-mock { background: var(--white); border: 1px solid var(--gray200); border-radius: 10px; overflow: hidden; margin: 16px 0; }
+  .sla-header { background: var(--navy); padding: 14px 20px; display: flex; justify-content: space-between; align-items: center; }
+  .sla-header span { color: rgba(255,255,255,0.6); font-size: 12px; }
+  .sla-header strong { color: var(--white); font-size: 13px; }
+  .sla-body { padding: 16px 20px; }
+  .sla-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--gray100); font-size: 13px; }
+  .sla-row:last-child { border: none; }
+  .sla-row .sla-label { color: var(--gray600); }
+  .sla-row .sla-val { font-weight: 700; color: var(--navy); }
+  .sla-row .sla-ok { color: #16a34a; }
+  .sla-bar-wrap { margin-top: 14px; }
+  .sla-bar-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--gray400); margin-bottom: 5px; }
+  .sla-bar { height: 8px; background: var(--gray200); border-radius: 4px; overflow: hidden; }
+  .sla-bar-fill { height: 100%; background: var(--teal); border-radius: 4px; }
+
+  /* ALERT MOCK */
+  .alert-mock { background: var(--gray50); border: 1px solid var(--gray200); border-radius: 10px; padding: 16px; margin: 16px 0; }
+  .alert-rule { background: var(--white); border: 1px solid var(--gray200); border-radius: 8px; padding: 12px 16px; margin-bottom: 10px; display: flex; align-items: center; gap: 12px; font-size: 13px; }
+  .alert-rule .ar-icon { font-size: 18px; flex-shrink: 0; }
+  .alert-rule .ar-text { flex: 1; color: var(--gray600); }
+  .alert-rule .ar-text strong { color: var(--navy); display: block; }
+  .alert-rule .ar-badge { font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 10px; flex-shrink: 0; }
+  .ar-sms { background: rgba(30,111,255,0.1); color: var(--blue); }
+  .ar-email { background: rgba(0,201,167,0.1); color: #00a58a; }
+
+  /* CANVAS MOCK */
+  .canvas-mock { background: var(--navy); border-radius: 10px; padding: 20px; margin: 16px 0; min-height: 180px; position: relative; overflow: hidden; }
+  .canvas-node { position: absolute; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); border-radius: 8px; padding: 8px 14px; font-size: 11px; color: rgba(255,255,255,0.8); font-weight: 600; white-space: nowrap; }
+  .canvas-node.active { background: rgba(30,111,255,0.25); border-color: var(--blue2); color: var(--blue2); }
+  .canvas-node.source { background: rgba(0,201,167,0.15); border-color: var(--teal); color: var(--teal); }
+  .canvas-line { position: absolute; background: rgba(255,255,255,0.15); height: 2px; transform-origin: left center; }
+  .canvas-label { position: absolute; font-size: 9px; color: rgba(255,255,255,0.3); background: var(--navy); padding: 2px 5px; border-radius: 3px; }
+
+  /* STYRGRUPP */
+  .styrgrupp-bg { background: linear-gradient(180deg, #0d1b2a 0%, #0f2744 100%); padding: 60px 32px; }
+  .styrgrupp-inner { max-width: 1100px; margin: 0 auto; }
+  .styrgrupp-tag { font-size: 11px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--teal); margin-bottom: 8px; }
+  .styrgrupp-title { font-size: clamp(22px, 3vw, 32px); font-weight: 800; color: var(--white); letter-spacing: -0.5px; margin-bottom: 10px; }
+  .styrgrupp-desc { font-size: 15px; color: rgba(255,255,255,0.55); max-width: 620px; margin-bottom: 40px; }
+
+  .advisor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-bottom: 40px; }
+  .advisor-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; overflow: hidden; }
+  .advisor-top { padding: 20px 24px 16px; display: flex; align-items: center; gap: 16px; border-bottom: 1px solid rgba(255,255,255,0.07); }
+  .advisor-avatar { width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 22px; flex-shrink: 0; }
+  .advisor-meta h4 { font-size: 15px; font-weight: 700; color: var(--white); }
+  .advisor-meta span { font-size: 12px; color: rgba(255,255,255,0.45); }
+  .advisor-body { padding: 18px 24px; }
+  .advisor-verdict { font-size: 13px; color: rgba(255,255,255,0.7); line-height: 1.7; margin-bottom: 14px; }
+  .advisor-points { list-style: none; }
+  .advisor-points li { font-size: 13px; color: rgba(255,255,255,0.55); padding: 5px 0; display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .advisor-points li:last-child { border: none; }
+  .advisor-points .pt { flex-shrink: 0; }
+
+  /* PRICING TABLE */
+  .price-table { width: 100%; border-collapse: collapse; background: rgba(255,255,255,0.04); border-radius: 12px; overflow: hidden; margin-bottom: 32px; }
+  .price-table th { background: rgba(255,255,255,0.08); padding: 13px 18px; font-size: 12px; font-weight: 700; color: rgba(255,255,255,0.6); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .price-table td { padding: 13px 18px; font-size: 13px; color: rgba(255,255,255,0.7); border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .price-table tr:last-child td { border: none; }
+  .price-table .price-name { font-weight: 700; color: var(--white); }
+  .price-table .price-num { font-weight: 800; color: var(--teal); }
+  .price-table .price-model { font-size: 12px; color: rgba(255,255,255,0.4); }
+  .price-table .price-pot { color: var(--orange); font-weight: 600; }
+
+  /* GTM */
+  .gtm-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 32px; }
+  .gtm-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 20px; }
+  .gtm-card .gtm-icon { font-size: 22px; margin-bottom: 10px; display: block; }
+  .gtm-card h4 { font-size: 14px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+  .gtm-card p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+  /* OPEN Q */
+  .open-q { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 24px; }
+  .open-q h4 { font-size: 15px; font-weight: 700; color: var(--white); margin-bottom: 14px; }
+  .open-q ul { list-style: none; }
+  .open-q ul li { font-size: 13px; color: rgba(255,255,255,0.6); padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05); display: flex; gap: 10px; align-items: flex-start; }
+  .open-q ul li:last-child { border: none; }
+  .q-num { color: var(--blue2); font-weight: 700; flex-shrink: 0; }
+
+  /* PRICING CARDS */
+  .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; }
+  .pricing-card { background: var(--white); border: 1.5px solid var(--gray200); border-radius: 16px; padding: 28px; position: relative; }
+  .pricing-card.featured { border-color: var(--blue); box-shadow: 0 0 0 1px var(--blue), var(--shadow); }
+  .pricing-card .pc-badge { position: absolute; top: -1px; right: 20px; background: var(--blue); color: var(--white); font-size: 11px; font-weight: 700; padding: 3px 12px; border-radius: 0 0 8px 8px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pc-name { font-size: 12px; font-weight: 700; color: var(--gray400); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .pc-title { font-size: 18px; font-weight: 800; color: var(--navy); margin-bottom: 4px; }
+  .pc-price { font-size: 13px; color: var(--blue); font-weight: 700; margin-bottom: 16px; }
+  .pc-items { list-style: none; }
+  .pc-items li { font-size: 13px; color: var(--gray600); padding: 6px 0; border-bottom: 1px solid var(--gray100); display: flex; align-items: center; gap: 8px; }
+  .pc-items li:last-child { border: none; }
   .check { color: var(--teal); font-weight: 700; flex-shrink: 0; }
-  .pc-note { font-size: 12px; color: var(--gray400); margin-top: 16px; font-style: italic; }
+  .pc-note { font-size: 11px; color: var(--gray400); margin-top: 14px; font-style: italic; }
 
-  /* NEXT STEPS */
-  .steps { display: flex; flex-direction: column; gap: 16px; }
-  .step {
-    display: flex;
-    gap: 20px;
-    align-items: flex-start;
-    background: var(--white);
-    border: 1px solid var(--gray200);
-    border-radius: 12px;
-    padding: 20px 24px;
-  }
-  .step-num {
-    width: 36px; height: 36px;
-    background: var(--blue);
-    color: var(--white);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 14px;
-    font-weight: 800;
-    flex-shrink: 0;
-  }
-  .step-body h4 { font-size: 15px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+  /* STEPS */
+  .steps { display: flex; flex-direction: column; gap: 14px; }
+  .step { display: flex; gap: 20px; align-items: flex-start; background: var(--white); border: 1px solid var(--gray200); border-radius: 12px; padding: 20px 24px; }
+  .step-num { width: 36px; height: 36px; background: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+  .step-body .step-tag { display: inline-block; font-size: 11px; font-weight: 600; color: var(--blue); background: rgba(30,111,255,0.08); padding: 2px 8px; border-radius: 4px; margin-bottom: 6px; }
+  .step-body h4 { font-size: 14px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
   .step-body p { font-size: 13px; color: var(--gray600); }
-  .step-body .step-tag {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--blue);
-    background: rgba(30,111,255,0.08);
-    padding: 2px 8px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-  }
 
-  /* FOOTER */
-  .footer {
-    background: var(--navy);
-    padding: 32px;
-    text-align: center;
-    color: rgba(255,255,255,0.35);
-    font-size: 13px;
-  }
+  /* USER TYPES */
+  .user-types { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  .user-type { display: flex; align-items: center; gap: 8px; background: var(--gray50); border: 1px solid var(--gray200); padding: 10px 16px; border-radius: 8px; font-size: 13px; font-weight: 600; color: var(--gray800); }
+  .ut-icon { font-size: 18px; }
+  .ut-sub { font-size: 11px; font-weight: 400; color: var(--gray400); }
+
+  /* TEAM NOTE */
+  .team-note { background: rgba(30,111,255,0.05); border: 1px solid rgba(30,111,255,0.15); border-radius: 10px; padding: 16px 20px; margin-bottom: 32px; display: flex; gap: 14px; align-items: flex-start; }
+  .team-note .tn-avatar { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; flex-shrink: 0; }
+  .team-note .tn-name { font-size: 12px; font-weight: 700; color: var(--blue); margin-bottom: 2px; }
+  .team-note .tn-msg { font-size: 13px; color: var(--gray600); line-height: 1.6; }
+
+  .footer { background: var(--navy); padding: 32px; text-align: center; color: rgba(255,255,255,0.35); font-size: 13px; }
   .footer strong { color: rgba(255,255,255,0.7); }
 
-  /* DIVIDER */
-  .divider {
-    height: 1px;
-    background: var(--gray200);
-    max-width: 1100px;
-    margin: 0 auto;
-  }
-
-  /* RESPONSIVE */
   @media (max-width: 640px) {
     .topnav .nav-links { display: none; }
     .mock-content { flex-direction: column; }
     .mock-sidebar { width: 100%; }
     .mapping-cols { grid-template-columns: 1fr; }
     .mapping-arrow { transform: rotate(90deg); }
-    .section, .section-sm { padding: 40px 20px; }
+    .ba-grid { grid-template-columns: 1fr; }
+    .section { padding: 40px 20px; }
     .module-header { flex-direction: column; gap: 14px; }
     .module-body { padding: 20px; }
+    .wizard-steps { gap: 4px; }
+    .styrgrupp-bg { padding: 40px 20px; }
   }
 </style>
 </head>
@@ -672,16 +350,18 @@
   <div class="logo">i<span>Core</span> Portal</div>
   <div class="badge">Business Case</div>
   <div class="nav-links">
-    <a href="#modules">Moduler</a>
+    <a href="#modul1">Modul 1</a>
+    <a href="#modul2">AI</a>
+    <a href="#modul3">Mapping</a>
     <a href="#addons">Tillägg</a>
-    <a href="#business">Affärsmodell</a>
-    <a href="#nextsteps">Nästa steg</a>
+    <a href="#styrgrupp">Styrgrupp</a>
+    <a href="#pris">Prismodell</a>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero">
-  <div class="hero-tag">Produkt &amp; Affärsidé</div>
+  <div class="hero-tag">Produkt &amp; Affärsidé – v2</div>
   <h1>iCore Integration <span>Portal</span></h1>
   <p class="sub">En samlad plattform för att sälja, leverera och förvalta integrationer – byggd runt iCore och kunderna i lager &amp; transport.</p>
   <div class="hero-pills">
@@ -692,44 +372,31 @@
   </div>
   <div class="hero-stats">
     <div class="hero-stat"><span class="num">3</span><span class="lbl">Kärnmoduler</span></div>
-    <div class="hero-stat"><span class="num">4</span><span class="lbl">SaaS-tillägg</span></div>
-    <div class="hero-stat"><span class="num">2</span><span class="lbl">Målgrupper</span></div>
-    <div class="hero-stat"><span class="num">∞</span><span class="lbl">Kunder per portal</span></div>
+    <div class="hero-stat"><span class="num">3</span><span class="lbl">SaaS-tillägg</span></div>
+    <div class="hero-stat"><span class="num">3</span><span class="lbl">Affärsrådgivare</span></div>
+    <div class="hero-stat"><span class="num">∞</span><span class="lbl">Kunder</span></div>
   </div>
 </section>
 
 <!-- PROBLEM -->
-<div class="problems">
+<div class="white-bg">
   <div class="section">
     <div class="section-tag">Problemet idag</div>
     <h2 class="section-title">Tre saker som saknas i varje integrationsleverans</h2>
     <div class="problem-grid">
-      <div class="problem-card">
-        <span class="problem-icon">🔭</span>
-        <h3>Kunden ser ingenting</h3>
-        <p>När integrationen är levererad vet kunden inte om den fungerar, hur mycket som flödar, eller när något gått fel. Allt ansvar hamnar på er att bevaka.</p>
-      </div>
-      <div class="problem-card">
-        <span class="problem-icon">📋</span>
-        <h3>Spec-arbetet tar för lång tid</h3>
-        <p>Mappningsdokument byggs manuellt i Excel eller Word. Samma information skrivs om flera gånger – i spec, i kod, i dokumentation. Tidskrävande och felkänsligt.</p>
-      </div>
-      <div class="problem-card">
-        <span class="problem-icon">📞</span>
-        <h3>Support utan verktyg</h3>
-        <p>Felsökning kräver att teamet loggar in på servrar och gräver i loggar. Kunden ringer och frågar – men det finns ingen dashboard att peka på.</p>
-      </div>
+      <div class="problem-card"><span class="problem-icon">🔭</span><h3>Kunden ser ingenting</h3><p>När integrationen är levererad vet kunden inte om den fungerar, hur mycket som flödar, eller när något gått fel. All kontroll hamnar hos er.</p></div>
+      <div class="problem-card"><span class="problem-icon">📋</span><h3>Spec-arbetet tar för lång tid</h3><p>Mappningsdokument byggs manuellt i Excel. Samma information skrivs om tre gånger – i spec, kod och dokumentation. Tidskrävande och felkänsligt.</p></div>
+      <div class="problem-card"><span class="problem-icon">📞</span><h3>Support utan verktyg</h3><p>Felsökning kräver att teamet gräver i loggar på servern. Kunden ringer och frågar – men det finns ingen dashboard att peka på. Ni tappar tid och förtroende.</p></div>
     </div>
   </div>
 </div>
 
-<div id="modules"></div>
-
-<!-- MODULE 1: DASHBOARD PORTAL -->
+<!-- ========== MODUL 1 ========== -->
+<div id="modul1"></div>
 <div class="section">
   <div class="section-tag">Modul 1 — Kärnprodukt</div>
   <h2 class="section-title">Integration Portal — Dashboard &amp; Kundvy</h2>
-  <p class="section-desc">Fyra idéer samlade i en produkt. En portal som kan säljas per kund med custom-vy, eller erbjudas som standardpaket.</p>
+  <p class="section-desc">Fyra idéer samlade i en produkt. Varje kund får sin egen portal – med sin logga, sina integrationer, sin data. Kan säljas som abonnemang direkt vid leverans.</p>
 
   <div class="module">
     <div class="module-header">
@@ -737,19 +404,15 @@
       <div class="module-meta">
         <div class="module-num">Modul 1 · Ideas #1–4</div>
         <h2>Integration Dashboard &amp; Kundportal</h2>
-        <p>En samlad vy per kund. Realtidstrafik, orderstatus, felhantering och systemöversikt – allt på ett ställe. Säljs som tilläggsprodukt till varje integrationsleverans.</p>
+        <p>Realtidstrafik, orderstatus, felhantering och systemöversikt – allt på ett ställe. Anpassad vy beroende på vem som loggar in.</p>
       </div>
       <div class="module-label label-core">Kärnprodukt</div>
     </div>
     <div class="module-body">
 
-      <!-- User types -->
-      <p style="font-size:13px;font-weight:700;color:var(--gray400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:12px;">Olika vyer för olika användare</p>
-      <div class="user-types" style="margin-bottom:28px;">
-        <div class="user-type"><span class="ut-icon">👔</span><div><div>VD / Logistikchef</div><div class="ut-sub">Översikt & SLA</div></div></div>
-        <div class="user-type"><span class="ut-icon">🏭</span><div><div>Lageransvarig</div><div class="ut-sub">Orderstatus & flöde</div></div></div>
-        <div class="user-type"><span class="ut-icon">🔧</span><div><div>IT-ansvarig</div><div class="ut-sub">Teknisk status & fel</div></div></div>
-        <div class="user-type"><span class="ut-icon">🤝</span><div><div>Er konsult</div><div class="ut-sub">Alla kunder samlat</div></div></div>
+      <div class="team-note">
+        <div class="tn-avatar" style="background:#dbeafe">👩‍💻</div>
+        <div><div class="tn-name">Maya — POC-utvecklare</div><div class="tn-msg">Jag har expanderat varje användarperspektiv med ett verkligt scenario. Det gör det enklare att visa för kunden vad de faktiskt får – inte bara tekniska features.</div></div>
       </div>
 
       <!-- Screen mock -->
@@ -767,15 +430,17 @@
             <div class="mock-nav-item">⚡ <span>Integrationer</span></div>
             <div class="mock-nav-item">🚨 <span>Larm &amp; Fel</span></div>
             <div class="mock-nav-item">📈 <span>Rapporter</span></div>
+            <div class="mock-nav-item">⚙️ <span>Inställningar</span></div>
           </div>
           <div class="mock-main">
             <div class="mock-stats">
               <div class="mock-stat"><div class="ms-num" style="color:var(--teal)">12 847</div><div class="ms-lbl">Meddelanden idag</div></div>
               <div class="mock-stat"><div class="ms-num" style="color:#22c55e">99.7%</div><div class="ms-lbl">Uptime</div></div>
               <div class="mock-stat"><div class="ms-num" style="color:var(--orange)">3</div><div class="ms-lbl">Varningar</div></div>
+              <div class="mock-stat"><div class="ms-num" style="color:var(--blue2)">5</div><div class="ms-lbl">Aktiva flöden</div></div>
             </div>
             <div class="mock-chart">
-              <div class="mock-chart-label">Trafikvolym – senaste 12 timmarna</div>
+              <div class="mock-chart-label">Trafikvolym senaste 12 h — normalläge vs fel</div>
               <div class="mock-bars">
                 <div class="mock-bar-item" style="height:40%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:60%;background:var(--blue2)"></div>
@@ -783,209 +448,265 @@
                 <div class="mock-bar-item" style="height:80%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:90%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:70%;background:var(--blue2)"></div>
-                <div class="mock-bar-item" style="height:55%;background:var(--orange)"></div>
-                <div class="mock-bar-item" style="height:100%;background:var(--blue2)"></div>
+                <div class="mock-bar-item" style="height:20%;background:var(--red)"></div>
+                <div class="mock-bar-item" style="height:15%;background:var(--red)"></div>
                 <div class="mock-bar-item" style="height:85%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:75%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:60%;background:var(--blue2)"></div>
                 <div class="mock-bar-item" style="height:50%;background:var(--blue2)"></div>
               </div>
             </div>
-            <div class="mock-row">
-              <div class="mock-status" style="background:var(--teal)"></div>
-              <span>WMS → iCore → Fortnox</span>
-              <div class="mock-pill pill-green">Aktiv</div>
-            </div>
-            <div class="mock-row">
-              <div class="mock-status" style="background:var(--orange)"></div>
-              <span>Bring API → Lageruppdatering</span>
-              <div class="mock-pill pill-yellow">Varning</div>
-            </div>
-            <div class="mock-row">
-              <div class="mock-status" style="background:var(--teal)"></div>
-              <span>ERP → Transportbokning</span>
-              <div class="mock-pill pill-green">Aktiv</div>
-            </div>
+            <div class="mock-row"><div class="mock-status" style="background:var(--teal)"></div><span>WMS → iCore → Fortnox</span><div class="mock-pill pill-green">Aktiv</div></div>
+            <div class="mock-row"><div class="mock-status" style="background:var(--orange)"></div><span>Bring API → Lageruppdatering</span><div class="mock-pill pill-yellow">Varning</div></div>
+            <div class="mock-row"><div class="mock-status" style="background:var(--teal)"></div><span>ERP → Transportbokning</span><div class="mock-pill pill-green">Aktiv</div></div>
           </div>
         </div>
       </div>
 
-      <!-- Features -->
-      <div class="features-grid">
-        <div class="feature">
-          <span class="fi">⚡</span>
-          <h4>Realtidstrafik</h4>
-          <p>Antal meddelanden, volymer och flöden live. Kunden ser vad som händer just nu.</p>
+      <!-- User scenarios -->
+      <p style="font-size:13px;font-weight:700;color:var(--gray400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Vad ser varje användare?</p>
+      <div class="scenario-grid">
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <div class="scenario-avatar av-ceo">👔</div>
+            <div><h4>VD / Logistikchef</h4><small>Affärsöversikt &amp; SLA</small></div>
+          </div>
+          <div class="scenario-body">
+            <p>Eva, logistikchef på Schenker, loggar in på måndagsmorgon. På 10 sekunder ser hon att allt är grönt, att 12 847 meddelanden gick igenom helgen utan problem, och att upptime var 99.7%. Hon stänger laptopen och fortsätter med sitt möte.</p>
+            <div class="scenario-quote">"Tidigare ringde jag IT varje måndag för att höra att allt är OK. Nu kan jag se det själv."</div>
+          </div>
         </div>
-        <div class="feature">
-          <span class="fi">📦</span>
-          <h4>Order Flow Visualizer</h4>
-          <p>Visar hur en order rör sig från WMS → iCore → ERP → transport. Klicka för att spåra en specifik order.</p>
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <div class="scenario-avatar av-wh">🏭</div>
+            <div><h4>Lageransvarig</h4><small>Orderstatus &amp; flöde</small></div>
+          </div>
+          <div class="scenario-body">
+            <p>Erik på lagret märker att tre order inte dykt upp i plocksystemet. Han söker på ordernumren i portalen och ser direkt att de fastnat i kön sedan 08:15 – Bring hade en störning. Han rapporterar till kund utan att behöva kontakta IT.</p>
+            <div class="scenario-quote">"Jag kan svara kunden direkt i stället för att vänta på svar från IT-supporten."</div>
+          </div>
         </div>
-        <div class="feature">
-          <span class="fi">🚨</span>
-          <h4>Error &amp; Alert Center</h4>
-          <p>Alla fel samlade. Filtrera per integration, tidsperiod, allvarlighetsgrad. Slipper gräva i loggar.</p>
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <div class="scenario-avatar av-it">🔧</div>
+            <div><h4>IT-ansvarig</h4><small>Teknisk status &amp; fel</small></div>
+          </div>
+          <div class="scenario-body">
+            <p>Anders ser ett rött larm kl 14:22 – timeout mot externt API. Han klickar sig in, ser felmeddelandet, stacktrace och hur många meddelanden som påverkades. Fixar problemet och ser att kön tömmer sig i realtid i dashboarden.</p>
+            <div class="scenario-quote">"Jag hittar och åtgärdar felet på 5 minuter i stället för 30."</div>
+          </div>
         </div>
-        <div class="feature">
-          <span class="fi">🎨</span>
-          <h4>Custom per kund</h4>
-          <p>Kundens logga, deras integrationer, deras färger. Eller en default-vy som fungerar direkt.</p>
+        <div class="scenario-card">
+          <div class="scenario-header">
+            <div class="scenario-avatar av-con">🤝</div>
+            <div><h4>Er konsult</h4><small>Alla kunder samlat</small></div>
+          </div>
+          <div class="scenario-body">
+            <p>Du har 8 kundinstanser. I er interna övervakningsvy ser du alla kunder på en skärm – varje kund med sin status. Du ser direkt om en kund har problem och kan proaktivt kontakta dem innan de ens märkt något.</p>
+            <div class="scenario-quote">"Vi går från reaktiv support till proaktiv service. Det är en stor skillnad i kundrelationen."</div>
+          </div>
         </div>
+      </div>
+
+      <!-- Before / After -->
+      <p style="font-size:13px;font-weight:700;color:var(--gray400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;margin-top:28px;">Idag vs Med portalen</p>
+      <div class="ba-grid">
+        <div class="ba-card ba-before">
+          <h4><span>❌</span> Utan portal — idag</h4>
+          <ul class="ba-list">
+            <li><span>📞</span> Kunden ringer er när något verkar fel</li>
+            <li><span>⏳</span> Ni loggar in på servern och gräver i loggfiler</li>
+            <li><span>📧</span> Ni skickar ett mail med förklaring</li>
+            <li><span>🔁</span> Kunden frågar igen nästa dag om status</li>
+            <li><span>📊</span> Ingen historik – ni vet inte hur det sett ut</li>
+          </ul>
+        </div>
+        <div class="ba-card ba-after">
+          <h4><span>✅</span> Med portalen</h4>
+          <ul class="ba-list">
+            <li><span>🔔</span> Kunden får automatiskt larm om något går fel</li>
+            <li><span>🖥️</span> De ser själva vad som hänt och varför</li>
+            <li><span>📈</span> Full historik och trafikstatistik alltid tillgängligt</li>
+            <li><span>📄</span> Månadsrapport genereras automatiskt</li>
+            <li><span>😌</span> Ni slipper supporten – kunden är självförsörjande</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="features-grid" style="margin-top:24px;">
+        <div class="feature"><span class="fi">⚡</span><h4>Realtidstrafik</h4><p>Antal meddelanden, volymer och flöden live. Kunden ser vad som händer just nu.</p></div>
+        <div class="feature"><span class="fi">📦</span><h4>Order Flow Visualizer</h4><p>Visar hur en order rör sig från WMS → iCore → ERP → transport. Klicka för att spåra en order.</p></div>
+        <div class="feature"><span class="fi">🚨</span><h4>Error &amp; Alert Center</h4><p>Alla fel samlade. Filtrera per integration, tidsperiod, allvarlighetsgrad.</p></div>
+        <div class="feature"><span class="fi">🎨</span><h4>Custom per kund</h4><p>Kundens logga, deras integrationer, deras färger. Eller en default-vy som fungerar direkt.</p></div>
       </div>
 
       <div class="value-box">
         <div class="vb-icon">💡</div>
-        <div class="vb-text">
-          <strong>Affärsvärde</strong>
-          <span>Minskar supportärenden. Kunden ser själv om något är fel. Ökar upplevt värde av integrationsleveransen kraftigt.</span>
-        </div>
+        <div class="vb-text"><strong>Affärsvärde</strong><span>Minskar supportärenden drastiskt. Kunden ser själv om något är fel. Ökar upplevt värde av integrationsleveransen markant – och motiverar månadsavgift.</span></div>
         <div class="vb-tag">Recurring revenue</div>
       </div>
     </div>
   </div>
 
-  <!-- MODULE 2: AI ASSISTANT -->
-  <div class="module" id="ai-module">
+  <!-- ========== MODUL 2 ========== -->
+  <div id="modul2"></div>
+  <div class="module">
     <div class="module-header">
       <div class="module-icon icon-teal">🤖</div>
       <div class="module-meta">
         <div class="module-num">Modul 2 · Idé #9</div>
         <h2>AI-assistent via MCP</h2>
-        <p>Exponera iCore-APIs som tools för Claude och andra AI-agenter. Kunden – eller er konsult – ställer frågor på naturligt språk och AI kör rätt API-anrop.</p>
+        <p>iCore-APIs exponeras som tools för Claude och andra AI-agenter. Fråga om integrationsstatus, felsök loggar och kör om felmeddelanden – på naturligt språk.</p>
       </div>
-      <div class="module-label label-addon">Tillägg</div>
+      <div class="module-label label-addon">Premium-tillägg</div>
     </div>
     <div class="module-body">
 
-      <div class="chat-mock">
-        <div class="chat-msg user">
-          <div class="chat-avatar av-user">👤</div>
-          <div class="chat-bubble">Hur många ordrar har misslyckats idag och vad är orsaken?</div>
-        </div>
-        <div class="chat-msg ai">
-          <div class="chat-avatar av-ai">🤖</div>
-          <div class="chat-bubble">
-            <strong>Hittade 14 misslyckade meddelanden idag.</strong><br><br>
-            Vanligaste orsaken: <strong>Timeout mot Bring API</strong> (11 st) — skedde mellan 08:12–09:45. Bring hade en driftstörning.<br><br>
-            Återstående 3 beror på ogiltigt artikelnummer i WMS-exporten. Jag kan visa vilka ordernummer det gäller.
-          </div>
-        </div>
-        <div class="chat-msg user">
-          <div class="chat-avatar av-user">👤</div>
-          <div class="chat-bubble">Visa ordernumren</div>
-        </div>
-        <div class="chat-msg ai">
-          <div class="chat-avatar av-ai">🤖</div>
-          <div class="chat-bubble">
-            Ordrar med ogiltigt artikelnummer: <strong>ORD-4821, ORD-4834, ORD-4849</strong><br>
-            Artikel <code>ART-9912</code> finns inte i ert ERP-system. Behöver skapas eller mappas om.
-          </div>
-        </div>
+      <div class="team-note">
+        <div class="tn-avatar" style="background:#dcfce7">🏗️</div>
+        <div><div class="tn-name">Sam — AI-arkitekt</div><div class="tn-msg">Jag har lagt till tre konkreta scenarion som visar bredden: intern support, proaktiv AI-bevakning och slutkundens IT-ansvarig. MCP-kopplingen är tekniskt rak – Claude behöver bara veta vilka tools som finns.</div></div>
       </div>
 
-      <div class="features-grid">
-        <div class="feature">
-          <span class="fi">🔌</span>
-          <h4>MCP Server</h4>
-          <p>iCore-APIs exponeras som tools. Claude kan kalla dem direkt – hämta loggar, status, köra om felmeddelanden.</p>
-        </div>
-        <div class="feature">
-          <span class="fi">💬</span>
-          <h4>Naturligt språk</h4>
-          <p>Ingen teknisk kunskap krävs. Kunden frågar som de pratar. AI vet vilka API-anrop som behövs.</p>
-        </div>
-        <div class="feature">
-          <span class="fi">⚡</span>
-          <h4>Snabb felsökning</h4>
-          <p>Vad som tidigare tog 30 minuter i loggar tar nu 30 sekunder. Direkt affärsvärde för er support.</p>
-        </div>
+      <!-- Scenario 1: Support -->
+      <div class="chat-mock">
+        <div class="chat-label">Scenario 1 — Intern support felsöker</div>
+        <div class="chat-msg user"><div class="chat-avatar av-user">👤</div><div class="chat-bubble">Hur många ordrar har misslyckats idag och vad är orsaken?</div></div>
+        <div class="chat-msg ai"><div class="chat-avatar av-ai">🤖</div><div class="chat-bubble"><strong>Hittade 14 misslyckade meddelanden idag.</strong><br><br>Vanligaste orsaken: <strong>Timeout mot Bring API</strong> (11 st) — skedde 08:12–09:45. Bring hade bekräftad driftstörning.<br><br>Återstående 3 beror på ogiltigt artikelnummer i WMS-exporten.</div></div>
+        <div class="chat-msg user"><div class="chat-avatar av-user">👤</div><div class="chat-bubble">Kör om de 11 timeout-orderna nu</div></div>
+        <div class="chat-msg ai"><div class="chat-avatar av-ai">🤖</div><div class="chat-bubble">Kört om 11 meddelanden. 10 lyckades direkt, 1 väntar fortfarande. Jag bevakar och meddelar om det fastnar igen.</div></div>
+      </div>
+
+      <!-- Scenario 2: Proaktiv -->
+      <div class="chat-mock">
+        <div class="chat-label">Scenario 2 — AI-bevakning hittar avvikelse proaktivt</div>
+        <div class="chat-msg ai"><div class="chat-avatar av-ai">🤖</div><div class="chat-bubble">⚠️ <strong>Avvikelse upptäckt – Schenker</strong><br><br>Normalt flödar ca 1 200 meddelanden/h på tisdagar kl 10–11. Hittills idag: <strong>43 meddelanden</strong>. Det är 96% under normalvärde.<br><br>Trolig orsak: WMS-exporten verkar inte ha körts sedan midnatt. Ska jag larma ansvarig?</div></div>
+        <div class="chat-msg user"><div class="chat-avatar av-user">👤</div><div class="chat-bubble">Ja, skicka SMS till Erik och starta en incident</div></div>
+        <div class="chat-msg ai"><div class="chat-avatar av-ai">🤖</div><div class="chat-bubble">SMS skickat till Erik (+46 70 xxx xx xx). Incident #INC-0234 skapad och tilldelad. Jag loggar händelserna löpande.</div></div>
+      </div>
+
+      <!-- Scenario 3: Kund IT -->
+      <div class="chat-mock">
+        <div class="chat-label">Scenario 3 — Kundens IT-ansvarig ställer en enkel fråga</div>
+        <div class="chat-msg user"><div class="chat-avatar av-user">👤</div><div class="chat-bubble">Vad gick igenom systemet förra veckan? Jag ska göra en intern rapport</div></div>
+        <div class="chat-msg ai"><div class="chat-avatar av-ai">🤖</div><div class="chat-bubble"><strong>Vecka 25 — sammanfattning</strong><br><br>Totalt: 58 420 meddelanden · Uptime: 99.8%<br>Lyckade: 58 389 (99.9%) · Misslyckade: 31 (0.1%)<br><br>Topp-flöde: WMS → Fortnox (31 200 st)<br>Längsta stillestånd: 4 min lördag 02:18<br><br>Vill du ha rapporten som PDF?</div></div>
+      </div>
+
+      <!-- MCP tools -->
+      <p style="font-size:13px;font-weight:700;color:var(--gray400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;margin-top:8px;">Exponerade MCP-tools (exempel)</p>
+      <div class="tools-grid">
+        <div class="tool-item"><div class="tool-icon">📋</div><div><strong>get_message_log</strong><span>Hämta logg per kund, tid, status</span></div></div>
+        <div class="tool-item"><div class="tool-icon">🔁</div><div><strong>retry_message</strong><span>Kör om specifika meddelanden</span></div></div>
+        <div class="tool-item"><div class="tool-icon">📊</div><div><strong>get_traffic_stats</strong><span>Volymer och trender per tidsperiod</span></div></div>
+        <div class="tool-item"><div class="tool-icon">🔔</div><div><strong>trigger_alert</strong><span>Larma och skapa incident</span></div></div>
+        <div class="tool-item"><div class="tool-icon">⚙️</div><div><strong>get_integration_status</strong><span>Status per integration/kund</span></div></div>
+        <div class="tool-item"><div class="tool-icon">📄</div><div><strong>generate_report</strong><span>Skapa PDF-rapport för period</span></div></div>
       </div>
 
       <div class="value-box">
         <div class="vb-icon">🔌</div>
-        <div class="vb-text">
-          <strong>Ingår i portalen som premium-tillägg</strong>
-          <span>Aktiveras per kund. Kan begränsas till er interna support eller öppnas för kundens IT-ansvarig.</span>
-        </div>
+        <div class="vb-text"><strong>Intern effektivitet + kundvärde</strong><span>Support som tog 30 min tar 30 sek. Kan erbjudas kund-IT som premium eller användas internt för att halvera supporttiden.</span></div>
         <div class="vb-tag">AI Premium</div>
       </div>
     </div>
   </div>
 
-  <!-- MODULE 3: MAPPING TOOL -->
-  <div class="module" id="mapping-module">
+  <!-- ========== MODUL 3 ========== -->
+  <div id="modul3"></div>
+  <div class="module">
     <div class="module-header">
       <div class="module-icon icon-purple">🗺️</div>
       <div class="module-meta">
         <div class="module-num">Modul 3 · Idé #11</div>
         <h2>Mapping Spec Tool</h2>
-        <p>Ladda upp in- och utfil. AI auto-mappar de enkla fälten. Du fyller i resten. Resultatet blir färdig spec, dokumentation och förklaring för kunden – allt i ett.</p>
+        <p>Ladda upp in- och utfil. AI auto-mappar de enkla fälten, du fyller i resten. Resultatet: färdig spec, dokumentation och kundförklaring – allt genererat automatiskt.</p>
       </div>
       <div class="module-label label-tool">Leveransverktyg</div>
     </div>
     <div class="module-body">
 
-      <div class="mapping-mock">
+      <div class="team-note">
+        <div class="tn-avatar" style="background:#f3e8ff">👨‍💻</div>
+        <div><div class="tn-name">Chris — Full-Stack-utvecklare</div><div class="tn-msg">Jag lade till wizard-flödet för att visa hur det fungerar steg för steg, samt en before/after för hur det sparar tid. Det här verktyget sparar oss 1–2 dagar per projekt i kravfasen.</div></div>
+      </div>
+
+      <!-- Wizard steps -->
+      <p style="font-size:13px;font-weight:700;color:var(--gray400);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:14px;">Hur det fungerar – 5 steg</p>
+      <div class="wizard-steps">
+        <div class="wizard-step done"><div class="wz-num">1</div><div class="wz-label">Ladda upp källfil (WMS/ERP)</div></div>
+        <div class="wizard-step done"><div class="wz-num">2</div><div class="wz-label">Ladda upp målstruktur</div></div>
+        <div class="wizard-step done"><div class="wz-num">3</div><div class="wz-label">AI auto-mappar uppenbara fält</div></div>
+        <div class="wizard-step"><div class="wz-num">4</div><div class="wz-label">Du fyller i de manuella</div></div>
+        <div class="wizard-step"><div class="wz-num">5</div><div class="wz-label">Exportera spec &amp; dokumentation</div></div>
+      </div>
+
+      <!-- Mapping mock -->
+      <div class="mapping-mock" style="margin-top:20px;">
         <div class="mapping-cols">
           <div>
-            <h5>Källsystem (WMS)</h5>
+            <div class="mapping-col"><h5>Källsystem (WMS – Astro)</h5></div>
             <div class="map-field">order_id <span class="mf-tag mf-auto">Auto ✓</span></div>
             <div class="map-field">customer_no <span class="mf-tag mf-auto">Auto ✓</span></div>
             <div class="map-field">delivery_date <span class="mf-tag mf-auto">Auto ✓</span></div>
+            <div class="map-field">qty_ordered <span class="mf-tag mf-auto">Auto ✓</span></div>
             <div class="map-field">warehouse_ref <span class="mf-tag mf-manual">Manuell</span></div>
-            <div class="map-field">item_qty_total <span class="mf-tag mf-manual">Manuell</span></div>
+            <div class="map-field">item_code_internal <span class="mf-tag mf-manual">Manuell</span></div>
           </div>
           <div class="mapping-arrow">→</div>
           <div>
-            <h5>Målsystem (ERP)</h5>
+            <div class="mapping-col"><h5>Målsystem (ERP – Fortnox)</h5></div>
             <div class="map-field">OrderNumber</div>
             <div class="map-field">CustomerID</div>
             <div class="map-field">ExpectedDelivery</div>
-            <div class="map-field">ReferenceCode</div>
             <div class="map-field">TotalQuantity</div>
+            <div class="map-field">ExternalReference</div>
+            <div class="map-field">ArticleCode</div>
           </div>
         </div>
         <hr class="mapping-line">
-        <p style="font-size:12px;color:var(--gray400);margin-bottom:8px;font-weight:600;">Genererat underlag:</p>
+        <p style="font-size:12px;color:var(--gray400);margin-bottom:8px;font-weight:600;">Genererat spec-underlag (utdrag):</p>
         <div class="mapping-result">
-          <span class="mr-comment">// Genererad mappning – iCore Spec v1.2</span><br>
-          <span class="mr-key">"order_id"</span> → <span class="mr-val">"OrderNumber"</span> <span class="mr-comment">// Direkt mappning</span><br>
-          <span class="mr-key">"customer_no"</span> → <span class="mr-val">"CustomerID"</span> <span class="mr-comment">// Direkt mappning</span><br>
-          <span class="mr-key">"delivery_date"</span> → <span class="mr-val">"ExpectedDelivery"</span> <span class="mr-comment">// Format: yyyy-MM-dd</span><br>
-          <span class="mr-key">"warehouse_ref"</span> → <span class="mr-val">"ReferenceCode"</span> <span class="mr-comment">// ⚠ Manuell verifiering</span>
+          <span class="mr-comment">// iCore Mappningspec – WMS Astro → ERP Fortnox · v1.0</span><br>
+          <span class="mr-key">"order_id"</span> → <span class="mr-val">"OrderNumber"</span> <span class="mr-comment">// Direkt, typ: string</span><br>
+          <span class="mr-key">"customer_no"</span> → <span class="mr-val">"CustomerID"</span> <span class="mr-comment">// Direkt, typ: int</span><br>
+          <span class="mr-key">"delivery_date"</span> → <span class="mr-val">"ExpectedDelivery"</span> <span class="mr-comment">// Konvertera: dd/MM/yyyy → yyyy-MM-dd</span><br>
+          <span class="mr-key">"warehouse_ref"</span> → <span class="mr-val">"ExternalReference"</span> <span class="mr-comment">// ⚠ Manuell – verifiera format</span>
         </div>
       </div>
 
-      <div class="features-grid">
-        <div class="feature">
-          <span class="fi">📤</span>
-          <h4>Ladda upp in &amp; ut</h4>
-          <p>JSON, XML, CSV eller Excel. Verktyget läser strukturen och föreslår mappningar automatiskt.</p>
+      <!-- Before / After -->
+      <div class="ba-grid">
+        <div class="ba-card ba-before">
+          <h4><span>❌</span> Utan verktyg — idag</h4>
+          <ul class="ba-list">
+            <li><span>📋</span> Kunden skickar Excel med fältlista</li>
+            <li><span>🔍</span> Ni jämför manuellt med målsystemets schema</li>
+            <li><span>⏳</span> 1–2 dagar att skriva mappningsdokumentet</li>
+            <li><span>✏️</span> Uppdateras manuellt vid ändringar</li>
+            <li><span>🗃️</span> Svårt att se vad som faktiskt är mappat</li>
+          </ul>
         </div>
-        <div class="feature">
-          <span class="fi">🧠</span>
-          <h4>AI auto-mappar</h4>
-          <p>"order_id" → "OrderNumber" hittas automatiskt. Oklara fält flaggas för manuell granskning.</p>
+        <div class="ba-card ba-after">
+          <h4><span>✅</span> Med Mapping Tool</h4>
+          <ul class="ba-list">
+            <li><span>📤</span> Ladda upp käll- och målfil – klart på 30 sek</li>
+            <li><span>🧠</span> AI mappar 70–80% av fälten automatiskt</li>
+            <li><span>⚡</span> Färdig spec på timmar, inte dagar</li>
+            <li><span>📄</span> Export som PDF/Word redo att skicka kund</li>
+            <li><span>🗺️</span> Visualiserar mappningen för kunden i mötet</li>
+          </ul>
         </div>
-        <div class="feature">
-          <span class="fi">📄</span>
-          <h4>Spec &amp; dokumentation</h4>
-          <p>Export som PDF, Word eller HTML. Kan direkt skickas till kund för godkännande och signoff.</p>
-        </div>
-        <div class="feature">
-          <span class="fi">🔍</span>
-          <h4>Förklarar för kunden</h4>
-          <p>Kunden kan se exakt hur deras data mappas. Bygger förtroende och minskar missförstånd i kravfasen.</p>
-        </div>
+      </div>
+
+      <div class="features-grid" style="margin-top:20px;">
+        <div class="feature"><span class="fi">📤</span><h4>Ladda upp in &amp; ut</h4><p>JSON, XML, CSV eller Excel. Verktyget läser strukturen och föreslår mappningar automatiskt.</p></div>
+        <div class="feature"><span class="fi">🧠</span><h4>AI auto-mappar</h4><p>"order_id" → "OrderNumber" hittas direkt. Oklara fält flaggas för manuell granskning.</p></div>
+        <div class="feature"><span class="fi">📄</span><h4>Spec &amp; dokumentation</h4><p>Export som PDF, Word eller HTML. Direkt redo att skicka till kund för signoff.</p></div>
+        <div class="feature"><span class="fi">🔍</span><h4>Förklarar för kunden</h4><p>Kunden ser exakt hur deras data mappas. Bygger förtroende och minskar kravmissade.</p></div>
       </div>
 
       <div class="value-box">
         <div class="vb-icon">⏱️</div>
-        <div class="vb-text">
-          <strong>Sparar tid i varje leveransprojekt</strong>
-          <span>Mappningsdokumentation som tog 1–2 dagar tar nu timmar. Kan säljas som fristående verktyg eller ingå i portalen.</span>
-        </div>
+        <div class="vb-text"><strong>Sparar 1–2 dagar per projekt</strong><span>Kan säljas som fristående webbtjänst (per spec) eller ingå i portalen för befintliga kunder. Internt verktyg för teamet men med externt försäljningsvärde.</span></div>
         <div class="vb-tag">Internt &amp; externt</div>
       </div>
 
@@ -993,83 +714,293 @@
   </div>
 </div>
 
-<!-- ADD-ONS -->
-<div class="addons-bg" id="addons">
+<!-- ========== TILLÄGG ========== -->
+<div class="white-bg" id="addons">
   <div class="section">
-    <div class="section-tag">Tillägg — Grupp 4</div>
-    <h2 class="section-title">SaaS-funktioner att lägga på portalen</h2>
-    <p class="section-desc">Dessa kan aktiveras per kund och skapar recurring revenue utan extra leveransarbete.</p>
+    <div class="section-tag">Tillägg — SaaS-funktioner</div>
+    <h2 class="section-title">Aktivera per kund — bygger på portalen</h2>
+    <p class="section-desc">Dessa funktioner läggs ovanpå grundportalen och skapar recurring revenue. Marketplace är pausad – fokus på de tre övriga.</p>
+
+    <div class="team-note">
+      <div class="tn-avatar" style="background:#fef3c7">🛡️</div>
+      <div><div class="tn-name">Riley — QA &amp; Säkerhet</div><div class="tn-msg">Alerting kräver att vi hanterar kunddata rätt – tänk på GDPR när vi skickar SMS/e-post. SLA-rapporter bör granskas innan de skickas automatiskt. Canvas är låg risk men håll isär kunddata noga.</div></div>
+    </div>
+
     <div class="addon-grid">
-      <div class="addon-card ac-blue">
-        <span style="font-size:26px;display:block;margin-bottom:12px">🏪</span>
-        <h3>Integration Marketplace</h3>
-        <p>Katalog med färdiga integrationer att beställa direkt. Kunden väljer "Koppla WMS till Fortnox" – ni levererar. Säljer integration som produkt, inte som projekt.</p>
-        <span class="addon-tag">Ny affärsmodell</span>
-      </div>
+
+      <!-- SLA rapporter -->
       <div class="addon-card ac-orange">
-        <span style="font-size:26px;display:block;margin-bottom:12px">📊</span>
+        <span class="addon-icon">📊</span>
         <h3>Automatiska SLA-rapporter</h3>
-        <p>Varje månad skickas en PDF till kunden: uptime, volymer, lyckade/misslyckade körningar. Visar konkret värdet av integrationen. Enkelt att bygga, högt upplevt värde.</p>
-        <span class="addon-tag">Automated</span>
+        <p>Varje månad skickas automatiskt en rapport till kunden. Visar konkret värdet av integrationen – svart på vitt.</p>
+        <div class="sla-mock">
+          <div class="sla-header"><strong>SLA-rapport — Schenker AB</strong><span>Juni 2026</span></div>
+          <div class="sla-body">
+            <div class="sla-row"><span class="sla-label">Totalt antal meddelanden</span><span class="sla-val">48 203</span></div>
+            <div class="sla-row"><span class="sla-label">Lyckade körningar</span><span class="sla-val sla-ok">48 108 (99.8%)</span></div>
+            <div class="sla-row"><span class="sla-label">Misslyckade</span><span class="sla-val">95 (0.2%)</span></div>
+            <div class="sla-row"><span class="sla-label">Uptime</span><span class="sla-val sla-ok">99.97%</span></div>
+            <div class="sla-bar-wrap">
+              <div class="sla-bar-label"><span>Uptime juni</span><span>99.97%</span></div>
+              <div class="sla-bar"><div class="sla-bar-fill" style="width:99.97%"></div></div>
+            </div>
+          </div>
+        </div>
+        <span class="addon-tag">Automated &amp; PDF</span>
       </div>
+
+      <!-- Alerting -->
       <div class="addon-card ac-teal">
-        <span style="font-size:26px;display:block;margin-bottom:12px">🔔</span>
+        <span class="addon-icon">🔔</span>
         <h3>Alerting &amp; Notifikationer</h3>
-        <p>Kunden sätter egna regler: "Om ingen order kommit in på 2 timmar – skicka SMS till mig". Proaktiv övervakning som kunden konfigurerar själv via portalen.</p>
+        <p>Kunden sätter egna regler i portalen. Proaktiv bevakning utan att ni behöver göra något.</p>
+        <div class="alert-mock">
+          <div class="alert-rule">
+            <div class="ar-icon">⏱️</div>
+            <div class="ar-text"><strong>Inga ordrar på 2 timmar (vardagar)</strong>Skicka SMS till lageransvarig</div>
+            <div class="ar-badge ar-sms">SMS</div>
+          </div>
+          <div class="alert-rule">
+            <div class="ar-icon">❌</div>
+            <div class="ar-text"><strong>Mer än 5 fel på 30 minuter</strong>Skicka e-post till IT-ansvarig + chef</div>
+            <div class="ar-badge ar-email">E-post</div>
+          </div>
+          <div class="alert-rule">
+            <div class="ar-icon">📉</div>
+            <div class="ar-text"><strong>Uptime under 99% denna vecka</strong>Eskalera till er konsult automatiskt</div>
+            <div class="ar-badge ar-sms">SMS</div>
+          </div>
+        </div>
         <span class="addon-tag">Self-service</span>
       </div>
+
+      <!-- Canvas -->
       <div class="addon-card ac-blue">
-        <span style="font-size:26px;display:block;margin-bottom:12px">🗺️</span>
+        <span class="addon-icon">🗺️</span>
         <h3>Integration Canvas</h3>
-        <p>Visuellt diagram: vilka system är kopplade, vad flödar mellan dem. Klicka på en koppling och se detaljer. Används i kundmöten och som säljmaterial för nya kunder.</p>
+        <p>Visuellt diagram av kundens systemlandskap. Klicka på en koppling och se detaljer. Används i kundmöten och som säljmaterial.</p>
+        <div class="canvas-mock" style="height:160px;">
+          <div class="canvas-node source" style="top:30px;left:20px;">WMS (Astro)</div>
+          <div class="canvas-node active" style="top:65px;left:45%;transform:translateX(-50%);">iCore</div>
+          <div class="canvas-node" style="top:15px;right:20px;">Fortnox ERP</div>
+          <div class="canvas-node" style="top:80px;right:20px;">Bring API</div>
+          <div class="canvas-node" style="bottom:20px;right:20px;">TMS</div>
+          <div class="canvas-label" style="top:60px;left:160px;">ordrar</div>
+          <div class="canvas-label" style="top:35px;right:120px;">fakturor</div>
+        </div>
         <span class="addon-tag">Säljverktyg</span>
       </div>
+
+      <!-- Marketplace – PAUSAD -->
+      <div class="addon-card paused">
+        <div class="paused-banner">⏸ Pausad</div>
+        <span class="addon-icon">🏪</span>
+        <h3>Integration Marketplace</h3>
+        <p>Katalog med färdiga integrationer att beställa. Intressant på sikt men kräver mer infrastruktur och ett produktifierat leveranssätt. Avvaktar.</p>
+        <span class="addon-tag">Parkerad – återkommer</span>
+      </div>
+
     </div>
   </div>
 </div>
 
-<!-- BUSINESS MODEL -->
-<div id="business"></div>
-<div class="section">
-  <div class="section-tag">Affärsmodell</div>
-  <h2 class="section-title">Paketerade nivåer – sälj det som passar kunden</h2>
-  <p class="section-desc">Grundpaketet ingår i leveransen. Premium och Enterprise skapar månadsintäkter per kund.</p>
+<!-- ========== STYRGRUPP ========== -->
+<div class="styrgrupp-bg" id="styrgrupp">
+  <div class="styrgrupp-inner">
+    <div class="styrgrupp-tag">Styrgrupp — Affärsbedömning</div>
+    <h2 class="styrgrupp-title">Tre erfarna affärsmän granskar portalen</h2>
+    <p class="styrgrupp-desc">Oberoende bedömning av affärspotential, prissättning och go-to-market för iCore Integration Portal. Varje rådgivare har sin specialitet.</p>
+
+    <div class="advisor-grid">
+
+      <!-- Advisor 1: Affärsutvecklare -->
+      <div class="advisor-card">
+        <div class="advisor-top">
+          <div class="advisor-avatar" style="background:rgba(30,111,255,0.2)">👨‍💼</div>
+          <div class="advisor-meta"><h4>Erik Lindqvist</h4><span>Affärsutvecklare · 20 år i SaaS B2B</span></div>
+        </div>
+        <div class="advisor-body">
+          <p class="advisor-verdict">Det här är en klassisk <strong style="color:var(--white)">"land and expand"</strong>-modell. Ni levererar integrationen – det är ingångsbiljetten. Portalen är det ni tjänar pengar på år efter år. Jag gillar det. Varje ny kund är en ny månadsintäkt som rullar på utan att ni behöver göra mer jobb.</p>
+          <ul class="advisor-points">
+            <li><span class="pt">✅</span> Starkt värdeförslag – kunden ser ROI direkt i dashboarden</li>
+            <li><span class="pt">✅</span> Låg churn – när kunden ser sin data i er portal byter de inte leverantör</li>
+            <li><span class="pt">⚠️</span> Sälj grundportalen tidigt – vänta inte på att produkten är "klar"</li>
+            <li><span class="pt">💡</span> Börja med 2–3 pilotkunder, prissätt generöst i utbyte mot feedback</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Advisor 2: Säljchef -->
+      <div class="advisor-card">
+        <div class="advisor-top">
+          <div class="advisor-avatar" style="background:rgba(0,201,167,0.2)">👩‍💼</div>
+          <div class="advisor-meta"><h4>Maria Holmberg</h4><span>Säljchef B2B · Logistik &amp; SaaS</span></div>
+        </div>
+        <div class="advisor-body">
+          <p class="advisor-verdict">Kunder i lager och transport <strong style="color:var(--white)">köper trygghet, inte teknik</strong>. Sälj det som: "Nu kan ni se att era integrationer fungerar utan att ringa oss." Det är ett emotionellt köp. Dashboarden är lätt att sälja – AI-assistenten säljer ni till IT-chefen, Mapping Tool till projektledaren.</p>
+          <ul class="advisor-points">
+            <li><span class="pt">✅</span> Paketera som "Integration Trygghet" – inte som teknisk produkt</li>
+            <li><span class="pt">✅</span> SLA-rapporten är ett starkt säljargument – visa för CFO</li>
+            <li><span class="pt">⚠️</span> Prissätt inte per feature – det skapar förvirring. Tre tydliga nivåer</li>
+            <li><span class="pt">💡</span> Ta med Canvas till kundmötet och visa deras egna system. Wow-effekt</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Advisor 3: CFO -->
+      <div class="advisor-card">
+        <div class="advisor-top">
+          <div class="advisor-avatar" style="background:rgba(245,158,11,0.2)">🧮</div>
+          <div class="advisor-meta"><h4>Johan Svensson</h4><span>CFO &amp; Ekonomianalytiker · Tech-bolag</span></div>
+        </div>
+        <div class="advisor-body">
+          <p class="advisor-verdict">Räknemässigt är det här <strong style="color:var(--white)">väldigt attraktivt</strong>. Om ni har 20 kunder à 5 000 kr/mån är det 1,2 Mkr/år i recurring revenue med marginalt underhåll. Viktigt: sätt priserna rätt från start – det är svårt att höja senare. Mapping Tool bör prissättas som en engångstjänst per spec, det är tydligare.</p>
+          <ul class="advisor-points">
+            <li><span class="pt">✅</span> MRR (Monthly Recurring Revenue) är rätt modell – förutsägbar intäkt</li>
+            <li><span class="pt">✅</span> Mapping Tool: sälj per spec (25–40 kkr) eller inkludera i premium</li>
+            <li><span class="pt">⚠️</span> Räkna med 20% support-overhead i tidigt skede per kund</li>
+            <li><span class="pt">💡</span> Erbjud årsabonnemang med 10–15% rabatt – förbättrar cashflow</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- PRICING TABLE -->
+    <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">Styrgruppens prisrekommendationer</p>
+    <table class="price-table">
+      <thead>
+        <tr>
+          <th>Produkt / Modul</th>
+          <th>Prismodell</th>
+          <th>Rekommenderat pris</th>
+          <th>Potential 20 kunder</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="price-name">📊 Grundportal (Dashboard + Kundvy)</td>
+          <td><span class="price-model">MRR per kund</span></td>
+          <td class="price-num">3 000–5 000 kr/mån</td>
+          <td class="price-pot">720 000–1,2 Mkr/år</td>
+        </tr>
+        <tr>
+          <td class="price-name">🤖 AI-assistent via MCP</td>
+          <td><span class="price-model">Premium-tillägg MRR</span></td>
+          <td class="price-num">+3 000–8 000 kr/mån</td>
+          <td class="price-pot">Upp till +1,9 Mkr/år</td>
+        </tr>
+        <tr>
+          <td class="price-name">🗺️ Mapping Spec Tool</td>
+          <td><span class="price-model">Per spec eller MRR</span></td>
+          <td class="price-num">25–40 kkr/spec eller +1 500 kr/mån</td>
+          <td class="price-pot">360 000 kr/år (MRR)</td>
+        </tr>
+        <tr>
+          <td class="price-name">📈 SLA-rapporter</td>
+          <td><span class="price-model">Ingår i Premium</span></td>
+          <td class="price-num">Inkluderat</td>
+          <td class="price-pot">Höjer upplevt värde</td>
+        </tr>
+        <tr>
+          <td class="price-name">🔔 Alerting &amp; Notifikationer</td>
+          <td><span class="price-model">MRR-tillägg</span></td>
+          <td class="price-num">+1 000–2 000 kr/mån</td>
+          <td class="price-pot">+480 000 kr/år</td>
+        </tr>
+        <tr>
+          <td class="price-name">🗺️ Integration Canvas</td>
+          <td><span class="price-model">Ingår i Premium</span></td>
+          <td class="price-num">Inkluderat</td>
+          <td class="price-pot">Säljverktyg – ej separat</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- GTM -->
+    <p style="font-size:13px;font-weight:700;color:rgba(255,255,255,0.5);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:16px;">Go-to-market — styrgruppens råd</p>
+    <div class="gtm-grid">
+      <div class="gtm-card">
+        <span class="gtm-icon">🎯</span>
+        <h4>Steg 1: Pilot med 2–3 kunder</h4>
+        <p>Välj befintliga kunder som redan litar på er. Erbjud portalen gratis eller till starkt reducerat pris i 3 månader mot ärlig feedback. Bevisa värdet.</p>
+      </div>
+      <div class="gtm-card">
+        <span class="gtm-icon">💬</span>
+        <h4>Steg 2: Använd Canvas i säljet</h4>
+        <p>Ta med Canvas till varje nytt kundmöte. Visa deras framtida systemkarta. Det skapar wow-effekt och gör portalen konkret – inte abstrakt.</p>
+      </div>
+      <div class="gtm-card">
+        <span class="gtm-icon">📦</span>
+        <h4>Steg 3: Bygg in i standardleveransen</h4>
+        <p>Grundportalen ska ingå i varje ny integrationsleverans. Premium är ett naturligt uppgraderingserbjudande 3 månader efter driftsättning.</p>
+      </div>
+      <div class="gtm-card">
+        <span class="gtm-icon">📈</span>
+        <h4>Steg 4: Upsell befintlig bas</h4>
+        <p>Ni har befintliga kunder utan portal. Det är er snabbaste intäkt. Ring dem med ett konkret erbjudande – de känner er och litar på er redan.</p>
+      </div>
+    </div>
+
+    <!-- Open questions -->
+    <div class="open-q">
+      <h4>❓ Öppna frågor för Daniel att ta ställning till</h4>
+      <ul>
+        <li><span class="q-num">1.</span> Vilket prisintervall känns rimligt för era befintliga kunder? (3 000 eller 5 000 kr/mån är en stor skillnad i säljtröskeln)</li>
+        <li><span class="q-num">2.</span> Ska grundportalen ingå i priset för integrationsleveransen, eller alltid vara ett separat abonnemang?</li>
+        <li><span class="q-num">3.</span> Vilka 2–3 befintliga kunder passar bäst som piloter? (De ska vara öppna för feedback och ha teknisk mognad)</li>
+        <li><span class="q-num">4.</span> Mapping Tool – per spec (projektintäkt) eller abonnemang? Det beror på hur ofta era kunder förändrar sina integrationer.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+<!-- ========== PRISMODELL ========== -->
+<div class="section" id="pris">
+  <div class="section-tag">Prismodell — Paket</div>
+  <h2 class="section-title">Tre tydliga nivåer – som styrgruppen rekommenderar</h2>
+  <p class="section-desc">Enkel att kommunicera till kund. Ingen feature-förvirring. Grundpaketet skapar foten i dörren, Enterprise skapar värde.</p>
   <div class="pricing-grid">
     <div class="pricing-card">
       <div class="pc-name">Grundpaket</div>
       <div class="pc-title">Integration Visibility</div>
+      <div class="pc-price">3 000 kr / mån</div>
       <ul class="pc-items">
         <li><span class="check">✓</span> Dashboard med realtidsstatus</li>
         <li><span class="check">✓</span> Kundportal – "Mina integrationer"</li>
         <li><span class="check">✓</span> Grundläggande felvisning</li>
-        <li><span class="check">✓</span> Default-vy (ej custom)</li>
+        <li><span class="check">✓</span> Default-vy (ej custom branding)</li>
       </ul>
-      <p class="pc-note">Ingår i leveransen eller säljs som basabonnemang</p>
+      <p class="pc-note">Kan ingå i leveransen de första 3 mån – sedan abonnemang</p>
     </div>
     <div class="pricing-card featured">
       <div class="pc-badge">Rekommenderat</div>
       <div class="pc-name">Premium</div>
       <div class="pc-title">Integration Portal</div>
+      <div class="pc-price">5 000–7 000 kr / mån</div>
       <ul class="pc-items">
         <li><span class="check">✓</span> Allt i grundpaketet</li>
         <li><span class="check">✓</span> Order Flow Visualizer</li>
-        <li><span class="check">✓</span> Alert &amp; notifikationer</li>
-        <li><span class="check">✓</span> Automatiska SLA-rapporter</li>
+        <li><span class="check">✓</span> Alerting &amp; notifikationer</li>
+        <li><span class="check">✓</span> Automatiska SLA-rapporter (PDF)</li>
+        <li><span class="check">✓</span> Canvas – systemkarta</li>
         <li><span class="check">✓</span> Custom branding per kund</li>
       </ul>
-      <p class="pc-note">Månadsabonnemang per kund</p>
+      <p class="pc-note">Månadsabonnemang · Årsavtal -10%</p>
     </div>
     <div class="pricing-card">
       <div class="pc-name">Enterprise</div>
       <div class="pc-title">AI-aktiverad Portal</div>
+      <div class="pc-price">10 000–15 000 kr / mån</div>
       <ul class="pc-items">
         <li><span class="check">✓</span> Allt i Premium</li>
         <li><span class="check">✓</span> AI-assistent via MCP</li>
-        <li><span class="check">✓</span> Mapping Spec Tool</li>
-        <li><span class="check">✓</span> Integration Marketplace</li>
-        <li><span class="check">✓</span> Canvas &amp; systemkarta</li>
+        <li><span class="check">✓</span> Mapping Spec Tool (obegränsat)</li>
+        <li><span class="check">✓</span> Intern konsultvy – alla kunder</li>
+        <li><span class="check">✓</span> Prioriterad support</li>
       </ul>
-      <p class="pc-note">Inkl. er konsulttid för setup</p>
+      <p class="pc-note">Inkl. er konsulttid för initial setup</p>
     </div>
   </div>
 </div>
@@ -1077,41 +1008,32 @@
 <div class="divider"></div>
 
 <!-- NEXT STEPS -->
-<div class="section" id="nextsteps">
+<div class="section">
   <div class="section-tag">Nästa steg</div>
-  <h2 class="section-title">Från idé till POC på 3 steg</h2>
-  <p class="section-desc">Teamets förslag på hur vi tar detta vidare.</p>
+  <h2 class="section-title">Från beslut till pilot på 4 veckor</h2>
+  <p class="section-desc">Teamets förslag baserat på styrgruppens råd. Rör oss snabbt – validera tidigt.</p>
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
-      <div class="step-body">
-        <div class="step-tag">Maya · 1–2 dagar</div>
-        <h4>POC: Dashboard &amp; Kundportal (Modul 1)</h4>
-        <p>Bygger en klickbar HTML-prototyp med kundvy, realtidsmock och orderstatus. Kan visas för en riktiga kund för att validera intresset.</p>
-      </div>
+      <div class="step-body"><div class="step-tag">Daniel · Denna vecka</div><h4>Svara på de fyra öppna frågorna från styrgruppen</h4><p>Prisintervall, om grundportalen ingår i leveransen, vilka pilotkunder och om Mapping Tool är per spec eller abonnemang.</p></div>
     </div>
     <div class="step">
       <div class="step-num">2</div>
-      <div class="step-body">
-        <div class="step-tag">Sam + Chris · 1 dag</div>
-        <h4>Koppla mot ett riktigt iCore-API</h4>
-        <p>Ta den befintliga Control Tower-POCen och koppla mot ett av era kunders iCore-instanser. Visa riktig data i dashboarden.</p>
-      </div>
+      <div class="step-body"><div class="step-tag">Maya · 1–3 dagar</div><h4>POC: Kundportal för en specifik kund</h4><p>Bygg en klickbar prototyp baserad på en befintlig kund. Realistiska integrationsnamn och flöden. Redo att visa i möte.</p></div>
     </div>
     <div class="step">
       <div class="step-num">3</div>
-      <div class="step-body">
-        <div class="step-tag">Alex + Daniel · 1 möte</div>
-        <h4>Validera med en kund</h4>
-        <p>Visa POCen för en befintlig kund i lager/transport. Fråga: "Skulle ni vilja ha det här?". Feedback avgör vilken modul vi prioriterar till produkt.</p>
-      </div>
+      <div class="step-body"><div class="step-tag">Daniel + Alex · 1 möte</div><h4>Välj 2 pilotkunder och boka möten</h4><p>Visa Canvas och POCen. Fråga: "Skulle ni betala X kr/mån för det här?" Svaret avgör allt.</p></div>
+    </div>
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body"><div class="step-tag">Chris + Jordan · 2–4 veckor</div><h4>Bygg grundportalen mot ett riktigt iCore-API</h4><p>Koppla mot pilotkundens iCore-instans. Visa riktig data. Sätt upp enkel autentisering. Redo för pilotstart.</p></div>
     </div>
   </div>
 </div>
 
-<!-- FOOTER -->
 <div class="footer">
-  <strong>iCore Integration Portal</strong> — Business Case &amp; Produktidé<br>
+  <strong>iCore Integration Portal</strong> — Business Case v2 · Granskat av Styrgrupp<br>
   Framtaget av Dev-teamet · Daniel Larsson · 2026
 </div>
 
