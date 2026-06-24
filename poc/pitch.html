@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iCore Integration Portal — Pitch Deck</title>
+<style>
+  :root {
+    --navy: #0d1b2a;
+    --navy2: #162032;
+    --navy3: #1e2d42;
+    --blue: #1e6fff;
+    --blue2: #3d8bff;
+    --teal: #00c9a7;
+    --purple: #7c5cbf;
+    --orange: #f59e0b;
+    --red: #ef4444;
+    --green: #22c55e;
+    --white: #ffffff;
+    --gray50: #f8fafc;
+    --gray200: #e2e8f0;
+    --gray400: #94a3b8;
+    --gray600: #475569;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    width: 100%; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    background: #000;
+    overflow: hidden;
+  }
+
+  /* ---- SLIDESHOW ---- */
+  .deck {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--navy);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.35s ease;
+    overflow: hidden;
+  }
+  .slide.active {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  /* ---- NAV ---- */
+  .nav {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    z-index: 100;
+    background: rgba(13,27,42,0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 50px;
+    padding: 8px 20px;
+  }
+  .nav button {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--white);
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    font-size: 16px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .nav button:hover { background: rgba(255,255,255,0.18); }
+  .nav button:disabled { opacity: 0.3; cursor: default; }
+  .counter {
+    font-size: 13px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.55);
+    min-width: 50px;
+    text-align: center;
+    letter-spacing: 0.5px;
+  }
+  .progress {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: rgba(255,255,255,0.06);
+    z-index: 100;
+  }
+  .progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, var(--blue), var(--teal));
+    transition: width 0.35s ease;
+  }
+
+  /* ---- SLIDE LABEL ---- */
+  .slide-label {
+    position: absolute;
+    top: 28px; left: 40px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.25);
+  }
+
+  /* ---- TYPOGRAPHY ---- */
+  .tag {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 16px;
+  }
+  .tag-teal { background: rgba(0,201,167,0.15); color: var(--teal); border: 1px solid rgba(0,201,167,0.3); }
+  .tag-blue { background: rgba(30,111,255,0.15); color: var(--blue2); border: 1px solid rgba(30,111,255,0.3); }
+  .tag-orange { background: rgba(245,158,11,0.15); color: var(--orange); border: 1px solid rgba(245,158,11,0.3); }
+  .tag-purple { background: rgba(124,92,191,0.15); color: #a78bfa; border: 1px solid rgba(124,92,191,0.3); }
+
+  h1.hero { font-size: clamp(32px, 5vw, 64px); font-weight: 900; color: var(--white); line-height: 1.1; letter-spacing: -2px; }
+  h1.hero span { color: var(--blue2); }
+  h2.slide-title { font-size: clamp(22px, 3.5vw, 40px); font-weight: 800; color: var(--white); letter-spacing: -0.8px; line-height: 1.15; margin-bottom: 12px; }
+  h2.slide-title span { color: var(--blue2); }
+  .sub { font-size: clamp(14px, 1.8vw, 18px); color: rgba(255,255,255,0.55); line-height: 1.6; max-width: 620px; }
+
+  /* ---- LAYOUT HELPERS ---- */
+  .slide-inner { flex: 1; padding: 70px 56px 80px; display: flex; flex-direction: column; justify-content: center; }
+  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+  .split-wide { display: grid; grid-template-columns: 1.2fr 1fr; gap: 48px; align-items: center; }
+
+  /* ---- CARDS ---- */
+  .card-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .card-grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+  .card-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+
+  .card {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 14px;
+    padding: 20px 22px;
+  }
+  .card .ci { font-size: 24px; margin-bottom: 10px; display: block; }
+  .card h3 { font-size: 15px; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+  .card p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+  .card.accent-blue { border-color: rgba(30,111,255,0.4); background: rgba(30,111,255,0.08); }
+  .card.accent-teal { border-color: rgba(0,201,167,0.4); background: rgba(0,201,167,0.07); }
+  .card.accent-purple { border-color: rgba(124,92,191,0.4); background: rgba(124,92,191,0.08); }
+  .card.accent-orange { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.07); }
+
+  /* ---- PROBLEM CARDS ---- */
+  .prob-card { background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2); border-radius: 14px; padding: 24px; }
+  .prob-card .pi { font-size: 28px; margin-bottom: 12px; display: block; }
+  .prob-card h3 { font-size: 16px; font-weight: 700; color: var(--white); margin-bottom: 8px; }
+  .prob-card p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+
+  /* ---- MOCK SCREEN ---- */
+  .mock { background: var(--navy2); border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+  .mock-bar { background: rgba(0,0,0,0.3); padding: 10px 14px; display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .mock-dot { width: 9px; height: 9px; border-radius: 50%; }
+  .mock-url { flex: 1; text-align: center; font-size: 10px; font-family: monospace; color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.05); border-radius: 4px; padding: 3px 10px; max-width: 260px; margin: 0 auto; }
+  .mock-body { padding: 14px 16px; }
+  .mock-stats { display: flex; gap: 8px; margin-bottom: 10px; }
+  .mock-stat { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06); border-radius: 8px; padding: 10px; }
+  .ms-n { font-size: 16px; font-weight: 800; color: var(--white); }
+  .ms-l { font-size: 9px; color: rgba(255,255,255,0.3); margin-top: 2px; }
+  .mock-bars { display: flex; gap: 3px; align-items: flex-end; height: 44px; margin-bottom: 10px; }
+  .mb { flex: 1; border-radius: 2px 2px 0 0; opacity: 0.75; }
+  .mock-row { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); border-radius: 6px; padding: 7px 10px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; font-size: 11px; color: rgba(255,255,255,0.45); }
+  .ms-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .mpill { font-size: 9px; padding: 2px 6px; border-radius: 8px; margin-left: auto; }
+  .pg { background: rgba(0,201,167,0.2); color: var(--teal); }
+  .py { background: rgba(245,158,11,0.2); color: var(--orange); }
+  .pr { background: rgba(239,68,68,0.2); color: #f87171; }
+
+  /* ---- CHAT ---- */
+  .chat-wrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px; }
+  .cmsg { display: flex; gap: 8px; margin-bottom: 10px; }
+  .cmsg.user { flex-direction: row-reverse; }
+  .cav { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; }
+  .cav-u { background: var(--blue); }
+  .cav-a { background: var(--teal); }
+  .cbubble { max-width: 80%; padding: 9px 13px; border-radius: 10px; font-size: 12px; line-height: 1.5; }
+  .cmsg.user .cbubble { background: var(--blue); color: var(--white); border-top-right-radius: 3px; }
+  .cmsg.ai .cbubble { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.85); border-top-left-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
+  .cmsg.ai .cbubble strong { color: var(--white); }
+
+  /* ---- MAPPING ---- */
+  .map-cols { display: grid; grid-template-columns: 1fr 30px 1fr; gap: 10px; align-items: center; }
+  .map-col h5 { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.35); margin-bottom: 7px; }
+  .map-f { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 5px; padding: 6px 10px; font-size: 11px; font-family: monospace; color: rgba(255,255,255,0.7); margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; }
+  .mt { font-size: 9px; padding: 1px 5px; border-radius: 4px; font-family: sans-serif; font-weight: 600; }
+  .mt-a { background: rgba(0,201,167,0.2); color: var(--teal); }
+  .mt-m { background: rgba(245,158,11,0.2); color: var(--orange); }
+  .map-arr { text-align: center; color: var(--blue2); font-size: 16px; font-weight: 700; }
+
+  /* ---- BEFORE/AFTER ---- */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .ba-b { background: rgba(239,68,68,0.07); border: 1px solid rgba(239,68,68,0.2); border-radius: 12px; padding: 18px; }
+  .ba-a { background: rgba(34,197,94,0.07); border: 1px solid rgba(34,197,94,0.2); border-radius: 12px; padding: 18px; }
+  .ba-b h4, .ba-a h4 { font-size: 13px; font-weight: 700; margin-bottom: 10px; }
+  .ba-b h4 { color: #f87171; }
+  .ba-a h4 { color: #4ade80; }
+  .ba-list { list-style: none; }
+  .ba-list li { font-size: 12px; color: rgba(255,255,255,0.55); padding: 5px 0; display: flex; gap: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+  .ba-list li:last-child { border: none; }
+
+  /* ---- PRICING ---- */
+  .price-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .price-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 22px; position: relative; }
+  .price-card.feat { border-color: var(--blue2); background: rgba(30,111,255,0.12); box-shadow: 0 0 0 1px var(--blue2); }
+  .price-card .feat-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: var(--blue); color: var(--white); font-size: 10px; font-weight: 700; padding: 3px 12px; border-radius: 10px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px; }
+  .pc-tier { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: rgba(255,255,255,0.4); margin-bottom: 6px; }
+  .pc-name { font-size: 17px; font-weight: 800; color: var(--white); margin-bottom: 4px; }
+  .pc-price { font-size: 13px; color: var(--teal); font-weight: 700; margin-bottom: 14px; }
+  .pc-list { list-style: none; }
+  .pc-list li { font-size: 12px; color: rgba(255,255,255,0.55); padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.06); display: flex; gap: 7px; }
+  .pc-list li:last-child { border: none; }
+  .ck { color: var(--teal); flex-shrink: 0; }
+
+  /* ---- ADVISOR ---- */
+  .advisor-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .adv { background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 14px; padding: 20px; }
+  .adv-top { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .adv-av { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .adv-name { font-size: 14px; font-weight: 700; color: var(--white); }
+  .adv-role { font-size: 11px; color: rgba(255,255,255,0.4); }
+  .adv-quote { font-size: 13px; color: rgba(255,255,255,0.65); line-height: 1.6; font-style: italic; margin-bottom: 12px; border-left: 3px solid var(--blue2); padding-left: 12px; }
+  .adv-key { font-size: 12px; color: rgba(255,255,255,0.45); }
+  .adv-key span { color: var(--teal); font-weight: 700; }
+
+  /* ---- PRICE TABLE ---- */
+  .ptable { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .ptable th { background: rgba(255,255,255,0.07); padding: 11px 16px; font-size: 11px; font-weight: 700; color: rgba(255,255,255,0.45); text-align: left; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .ptable td { padding: 11px 16px; color: rgba(255,255,255,0.65); border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .ptable tr:last-child td { border: none; }
+  .ptable .pn { font-weight: 700; color: var(--white); }
+  .ptable .pp { color: var(--teal); font-weight: 700; }
+  .ptable .pot { color: var(--orange); font-weight: 600; }
+
+  /* ---- STEPS ---- */
+  .step-list { display: flex; flex-direction: column; gap: 12px; }
+  .step-item { display: flex; gap: 16px; align-items: flex-start; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 12px; padding: 16px 20px; }
+  .step-n { width: 32px; height: 32px; background: var(--blue); color: var(--white); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 800; flex-shrink: 0; }
+  .step-b h4 { font-size: 14px; font-weight: 700; color: var(--white); margin-bottom: 3px; }
+  .step-b p { font-size: 12px; color: rgba(255,255,255,0.5); }
+  .step-b .stag { display: inline-block; font-size: 10px; font-weight: 600; color: var(--blue2); background: rgba(30,111,255,0.12); padding: 1px 7px; border-radius: 4px; margin-bottom: 4px; }
+
+  /* ---- STAT ROW ---- */
+  .stat-row { display: flex; gap: 32px; margin: 28px 0; flex-wrap: wrap; }
+  .stat-item .sn { font-size: 40px; font-weight: 900; color: var(--white); letter-spacing: -2px; }
+  .stat-item .sn span { color: var(--blue2); }
+  .stat-item .sl { font-size: 12px; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  /* ---- SLIDE SPECIFIC ---- */
+
+  /* S1 Title */
+  #s1 { background: linear-gradient(145deg, var(--navy) 0%, #0a1e3d 60%, #060f1e 100%); }
+  #s1::after { content: ''; position: absolute; width: 800px; height: 800px; background: radial-gradient(circle, rgba(30,111,255,0.1) 0%, transparent 65%); top: -200px; right: -100px; pointer-events: none; }
+  #s1 .slide-inner { justify-content: center; padding-bottom: 100px; }
+
+  /* S2 Agenda */
+  #s2 .agenda-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 32px; }
+  #s2 .ag-item { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 16px 14px; text-align: center; }
+  #s2 .ag-item .agi { font-size: 22px; margin-bottom: 8px; display: block; }
+  #s2 .ag-item .agn { font-size: 10px; font-weight: 700; color: var(--blue2); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  #s2 .ag-item p { font-size: 11px; color: rgba(255,255,255,0.45); line-height: 1.5; }
+
+  /* S4 Solution overview */
+  #s4 .sol-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 32px; }
+  #s4 .sol-card { border-radius: 14px; padding: 22px; position: relative; overflow: hidden; }
+  #s4 .sol-card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; }
+  #s4 .sol-core { background: rgba(30,111,255,0.1); border: 1.5px solid rgba(30,111,255,0.35); }
+  #s4 .sol-core::before { background: var(--blue2); }
+  #s4 .sol-ai { background: rgba(0,201,167,0.08); border: 1.5px solid rgba(0,201,167,0.3); }
+  #s4 .sol-ai::before { background: var(--teal); }
+  #s4 .sol-map { background: rgba(124,92,191,0.1); border: 1.5px solid rgba(124,92,191,0.3); }
+  #s4 .sol-map::before { background: var(--purple); }
+  #s4 .sol-card h3 { font-size: 16px; font-weight: 800; color: var(--white); margin-bottom: 8px; }
+  #s4 .sol-card p { font-size: 13px; color: rgba(255,255,255,0.5); line-height: 1.6; }
+  #s4 .sol-card .sli { font-size: 30px; margin-bottom: 12px; display: block; }
+  #s4 .sol-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; padding: 2px 8px; border-radius: 10px; display: inline-block; margin-bottom: 6px; }
+  #s4 .sol-core .sol-label { background: rgba(30,111,255,0.2); color: var(--blue2); }
+  #s4 .sol-ai .sol-label { background: rgba(0,201,167,0.2); color: var(--teal); }
+  #s4 .sol-map .sol-label { background: rgba(124,92,191,0.2); color: #a78bfa; }
+  #s4 .addons-row { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+  #s4 .addon-pill { background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); border-radius: 20px; padding: 6px 14px; font-size: 12px; color: rgba(255,255,255,0.6); font-weight: 500; }
+
+  /* S15 Close */
+  #s15 { background: linear-gradient(145deg, #060f1e 0%, #0a1e3d 60%, var(--navy) 100%); }
+  #s15::after { content: ''; position: absolute; width: 600px; height: 600px; background: radial-gradient(circle, rgba(0,201,167,0.08) 0%, transparent 65%); bottom: -100px; left: -100px; pointer-events: none; }
+
+  @media (max-width: 768px) {
+    .slide-inner { padding: 60px 24px 80px; }
+    .split, .split-wide, .card-grid, .card-grid-4, .price-cards, .advisor-row { grid-template-columns: 1fr; }
+    #s2 .agenda-grid { grid-template-columns: repeat(2, 1fr); }
+    #s4 .sol-grid { grid-template-columns: 1fr; }
+    h1.hero { font-size: 32px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress"><div class="progress-bar" id="progressBar"></div></div>
+
+<div class="deck">
+
+  <!-- ======== S1: TITLE ======== -->
+  <div class="slide active" id="s1">
+    <div class="slide-inner">
+      <div class="tag tag-teal">Intern Presentation · 2026</div>
+      <h1 class="hero">iCore Integration<br><span>Portal</span></h1>
+      <p class="sub" style="margin-top:20px;font-size:clamp(15px,2vw,20px);">En samlad plattform för att sälja, leverera och förvalta integrationer — byggd runt iCore.</p>
+      <div class="stat-row">
+        <div class="stat-item"><div class="sn">3<span>+</span></div><div class="sl">Kärnmoduler</div></div>
+        <div class="stat-item"><div class="sn">3</div><div class="sl">SaaS-tillägg</div></div>
+        <div class="stat-item"><div class="sn"><span>∞</span></div><div class="sl">Kunder</div></div>
+        <div class="stat-item"><div class="sn">1,2<span>M</span></div><div class="sl">MRR-potential / år (20 kunder)</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S2: AGENDA ======== -->
+  <div class="slide" id="s2">
+    <div class="slide-inner">
+      <div class="tag tag-blue">Agenda</div>
+      <h2 class="slide-title">Vad vi går igenom idag</h2>
+      <div class="agenda-grid">
+        <div class="ag-item"><span class="agi">🔴</span><div class="agn">Problem</div><p>Vad som saknas idag i varje leverans</p></div>
+        <div class="ag-item"><span class="agi">💡</span><div class="agn">Lösning</div><p>Tre moduler som löser det</p></div>
+        <div class="ag-item"><span class="agi">📊</span><div class="agn">Dashboard</div><p>Kundportal & realtidsvy</p></div>
+        <div class="ag-item"><span class="agi">🤖</span><div class="agn">AI</div><p>Assistent via MCP</p></div>
+        <div class="ag-item"><span class="agi">🗺️</span><div class="agn">Mapping</div><p>Spec-verktyg med AI</p></div>
+        <div class="ag-item"><span class="agi">➕</span><div class="agn">Tillägg</div><p>SLA, Alerting, Canvas</p></div>
+        <div class="ag-item"><span class="agi">💰</span><div class="agn">Prismodell</div><p>Tre tydliga paket</p></div>
+        <div class="ag-item"><span class="agi">👥</span><div class="agn">Styrgrupp</div><p>Affärsbedömning & råd</p></div>
+        <div class="ag-item"><span class="agi">📈</span><div class="agn">Priser</div><p>SEK-rekommendationer</p></div>
+        <div class="ag-item"><span class="agi">🚀</span><div class="agn">Nästa steg</div><p>Pilot & go-to-market</p></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S3: PROBLEM ======== -->
+  <div class="slide" id="s3">
+    <div class="slide-inner">
+      <div class="tag tag-orange" style="background:rgba(239,68,68,0.12);color:#f87171;border-color:rgba(239,68,68,0.3);">Problemet idag</div>
+      <h2 class="slide-title">Tre saker som saknas i<br>varje integrationsleverans</h2>
+      <div class="card-grid" style="margin-top:28px;">
+        <div class="prob-card">
+          <span class="pi">🔭</span>
+          <h3>Kunden ser ingenting</h3>
+          <p>Integrationen är levererad men kunden vet inte om den fungerar, hur mycket som flödar, eller när något gått fel. Ni är ensamma om att bevaka.</p>
+        </div>
+        <div class="prob-card">
+          <span class="pi">📋</span>
+          <h3>Spec-arbetet tar för lång tid</h3>
+          <p>Mappningsdokument byggs manuellt i Excel. Samma data skrivs om tre gånger – i spec, kod, dokumentation. 1–2 dagar bortkastade per projekt.</p>
+        </div>
+        <div class="prob-card">
+          <span class="pi">📞</span>
+          <h3>Support utan verktyg</h3>
+          <p>Felsökning kräver inloggning på servern och grävning i loggar. Kunden ringer och frågar – ni tappar tid. Det finns ingen dashboard att peka på.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S4: LÖSNINGEN ======== -->
+  <div class="slide" id="s4">
+    <div class="slide-inner">
+      <div class="tag tag-teal">Lösningen</div>
+      <h2 class="slide-title">iCore Integration Portal<br><span>— tre kärnmoduler</span></h2>
+      <div class="sol-grid">
+        <div class="sol-card sol-core">
+          <span class="sli">📊</span>
+          <div class="sol-label">Kärnprodukt</div>
+          <h3>Dashboard &amp; Kundportal</h3>
+          <p>Varje kund får en portal med realtidsdata, orderstatus, larm och SLA-rapporter. Säljs som månadsabonnemang.</p>
+        </div>
+        <div class="sol-card sol-ai">
+          <span class="sli">🤖</span>
+          <div class="sol-label">Premium-tillägg</div>
+          <h3>AI-assistent via MCP</h3>
+          <p>Fråga om integrationsstatus på naturligt språk. Claude kör rätt API-anrop mot iCore. Felsökning på 30 sekunder.</p>
+        </div>
+        <div class="sol-card sol-map">
+          <span class="sli">🗺️</span>
+          <div class="sol-label">Leveransverktyg</div>
+          <h3>Mapping Spec Tool</h3>
+          <p>Ladda upp in/ut-fil. AI auto-mappar. Färdig spec och dokumentation exporteras direkt. Sparar 1–2 dagar per projekt.</p>
+        </div>
+      </div>
+      <div class="addons-row">
+        <div style="font-size:12px;color:rgba(255,255,255,0.35);margin-right:4px;">Tillägg:</div>
+        <div class="addon-pill">📊 SLA-rapporter</div>
+        <div class="addon-pill">🔔 Alerting</div>
+        <div class="addon-pill">🗺️ Integration Canvas</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S5: DASHBOARD ======== -->
+  <div class="slide" id="s5">
+    <div class="slide-inner" style="padding-top:60px;">
+      <div class="split-wide">
+        <div>
+          <div class="tag tag-blue">Modul 1</div>
+          <h2 class="slide-title">Dashboard &amp;<br>Kundportal</h2>
+          <p class="sub" style="margin-bottom:20px;">En portal per kund. Realtid, orderstatus, larm – allt samlat. Custom branding med kundens logga.</p>
+          <div style="display:flex;flex-direction:column;gap:10px;">
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.65);"><span style="color:var(--teal);font-weight:700;">✓</span> Realtidstrafik & volymer</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.65);"><span style="color:var(--teal);font-weight:700;">✓</span> Order Flow Visualizer</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.65);"><span style="color:var(--teal);font-weight:700;">✓</span> Error & Alert Center</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.65);"><span style="color:var(--teal);font-weight:700;">✓</span> Custom branding per kund</div>
+            <div style="display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,0.65);"><span style="color:var(--teal);font-weight:700;">✓</span> Intern övervakningsvy (alla kunder)</div>
+          </div>
+        </div>
+        <div class="mock">
+          <div class="mock-bar">
+            <div class="mock-dot" style="background:#ef4444"></div>
+            <div class="mock-dot" style="background:#f59e0b"></div>
+            <div class="mock-dot" style="background:#22c55e"></div>
+            <div class="mock-url">portal.icore.se/kund/schenker</div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-stats">
+              <div class="mock-stat"><div class="ms-n" style="color:var(--teal)">12 847</div><div class="ms-l">Meddelanden</div></div>
+              <div class="mock-stat"><div class="ms-n" style="color:#22c55e">99.7%</div><div class="ms-l">Uptime</div></div>
+              <div class="mock-stat"><div class="ms-n" style="color:var(--orange)">3</div><div class="ms-l">Varningar</div></div>
+            </div>
+            <div class="mock-bars">
+              <div class="mb" style="height:40%;background:var(--blue2)"></div>
+              <div class="mb" style="height:65%;background:var(--blue2)"></div>
+              <div class="mb" style="height:50%;background:var(--blue2)"></div>
+              <div class="mb" style="height:80%;background:var(--blue2)"></div>
+              <div class="mb" style="height:90%;background:var(--blue2)"></div>
+              <div class="mb" style="height:20%;background:var(--red)"></div>
+              <div class="mb" style="height:15%;background:var(--red)"></div>
+              <div class="mb" style="height:85%;background:var(--blue2)"></div>
+              <div class="mb" style="height:75%;background:var(--blue2)"></div>
+              <div class="mb" style="height:60%;background:var(--blue2)"></div>
+              <div class="mb" style="height:50%;background:var(--blue2)"></div>
+              <div class="mb" style="height:45%;background:var(--blue2)"></div>
+            </div>
+            <div class="mock-row"><div class="ms-dot" style="background:var(--teal)"></div>WMS → iCore → Fortnox<div class="mpill pg">Aktiv</div></div>
+            <div class="mock-row"><div class="ms-dot" style="background:var(--orange)"></div>Bring API → Lager<div class="mpill py">Varning</div></div>
+            <div class="mock-row"><div class="ms-dot" style="background:var(--teal)"></div>ERP → Transport<div class="mpill pg">Aktiv</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S6: KUNDSCENARIER ======== -->
+  <div class="slide" id="s6">
+    <div class="slide-inner">
+      <div class="tag tag-blue">Modul 1 — Användarscenarier</div>
+      <h2 class="slide-title">Fyra användare, fyra vyer</h2>
+      <div class="card-grid-4" style="margin-top:24px;">
+        <div class="card accent-blue">
+          <span class="ci">👔</span>
+          <h3>VD / Logistikchef</h3>
+          <p>"Allt är grönt, 12 847 meddelanden igår. Jag stänger laptopen och går på mötet."</p>
+        </div>
+        <div class="card accent-teal">
+          <span class="ci">🏭</span>
+          <h3>Lageransvarig</h3>
+          <p>"Tre ordrar saknas i plocksystemet. Jag ser direkt att de fastnat sedan 08:15 – Bring hade störning."</p>
+        </div>
+        <div class="card accent-purple">
+          <span class="ci">🔧</span>
+          <h3>IT-ansvarig</h3>
+          <p>"Rött larm 14:22. Jag klickar in, ser felet, fixar och ser kön tömma sig live. 5 minuter, inte 30."</p>
+        </div>
+        <div class="card accent-orange">
+          <span class="ci">🤝</span>
+          <h3>Er konsult</h3>
+          <p>"Alla 8 kunder på en skärm. Jag ser Schenkers varning och ringer dem innan de märkt något."</p>
+        </div>
+      </div>
+      <div class="ba" style="margin-top:20px;">
+        <div class="ba-b">
+          <h4>❌ Utan portal</h4>
+          <ul class="ba-list">
+            <li><span>📞</span> Kunden ringer er när något verkar fel</li>
+            <li><span>⏳</span> Ni gräver i loggar på servern</li>
+            <li><span>📧</span> Mail med förklaring, kund frågar igen nästa dag</li>
+          </ul>
+        </div>
+        <div class="ba-a">
+          <h4>✅ Med portal</h4>
+          <ul class="ba-list">
+            <li><span>🔔</span> Kunden får automatiskt larm om något går fel</li>
+            <li><span>🖥️</span> De ser själva vad som hänt och varför</li>
+            <li><span>😌</span> Ni slipper supporten – kunden är självförsörjande</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S7: AI MCP ======== -->
+  <div class="slide" id="s7">
+    <div class="slide-inner" style="padding-top:60px;">
+      <div class="split">
+        <div>
+          <div class="tag tag-teal">Modul 2</div>
+          <h2 class="slide-title">AI-assistent<br>via <span>MCP</span></h2>
+          <p class="sub" style="margin-bottom:20px;">iCore-APIs exponeras som tools för Claude. Fråga om integrationsstatus på naturligt språk – AI kör rätt API-anrop.</p>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;gap:8px;"><span style="color:var(--teal)">✓</span> Felsökning: 30 min → 30 sek</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;gap:8px;"><span style="color:var(--teal)">✓</span> Kör om felmeddelanden automatiskt</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;gap:8px;"><span style="color:var(--teal)">✓</span> Proaktiv AI-bevakning med larm</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;gap:8px;"><span style="color:var(--teal)">✓</span> Generera vecko-/månadsrapporter</div>
+            <div style="font-size:12px;color:rgba(255,255,255,0.5);display:flex;gap:8px;"><span style="color:var(--teal)">✓</span> Ingen teknisk kunskap krävs av kunden</div>
+          </div>
+        </div>
+        <div class="chat-wrap">
+          <div class="cmsg user">
+            <div class="cav cav-u">👤</div>
+            <div class="cbubble">Hur många ordrar misslyckades idag och varför?</div>
+          </div>
+          <div class="cmsg ai">
+            <div class="cav cav-a">🤖</div>
+            <div class="cbubble"><strong>14 misslyckade meddelanden idag.</strong><br>11 st: Timeout mot Bring API (08:12–09:45)<br>3 st: Ogiltigt artikelnummer i WMS-export</div>
+          </div>
+          <div class="cmsg user">
+            <div class="cav cav-u">👤</div>
+            <div class="cbubble">Kör om de 11 timeout-orderna nu</div>
+          </div>
+          <div class="cmsg ai">
+            <div class="cav cav-a">🤖</div>
+            <div class="cbubble">✅ Kört om 11 meddelanden. 10 lyckades, 1 väntar. Jag bevakar och meddelar om det fastnar igen.</div>
+          </div>
+          <div class="cmsg ai" style="margin-top:12px;">
+            <div class="cav cav-a">🤖</div>
+            <div class="cbubble">⚠️ <strong>Avvikelse hos Schenker</strong> — normalt 1 200 msg/h på tisdagar. Hittills idag: 43. WMS-exporten verkar inte ha körts. Ska jag larma ansvarig?</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S8: MAPPING TOOL ======== -->
+  <div class="slide" id="s8">
+    <div class="slide-inner" style="padding-top:60px;">
+      <div class="split">
+        <div>
+          <div class="tag tag-purple">Modul 3</div>
+          <h2 class="slide-title">Mapping<br><span>Spec Tool</span></h2>
+          <p class="sub" style="margin-bottom:20px;">Ladda upp in- och utfil. AI auto-mappar 70–80% av fälten. Du fyller i resten. Exportera spec och dokumentation.</p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;">
+            <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,0.6);">① Ladda upp källfil</div>
+            <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,0.6);">② Ladda upp målfil</div>
+            <div style="background:rgba(30,111,255,0.15);border:1px solid rgba(30,111,255,0.35);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--blue2);">③ AI auto-mappar</div>
+            <div style="background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 12px;font-size:11px;color:rgba(255,255,255,0.6);">④ Fyll i manuella</div>
+            <div style="background:rgba(0,201,167,0.15);border:1px solid rgba(0,201,167,0.35);border-radius:20px;padding:5px 12px;font-size:11px;color:var(--teal);">⑤ Exportera spec</div>
+          </div>
+          <div style="background:rgba(0,201,167,0.08);border:1px solid rgba(0,201,167,0.2);border-radius:10px;padding:14px;font-size:13px;color:rgba(255,255,255,0.65);">
+            ⏱️ <strong style="color:var(--white);">Sparar 1–2 dagar per projekt</strong> i kravfasen. Kan säljas per spec (25–40 kkr) eller som del av portalen.
+          </div>
+        </div>
+        <div>
+          <div class="map-cols">
+            <div>
+              <div class="map-col"><h5>Källsystem (WMS)</h5></div>
+              <div class="map-f">order_id <span class="mt mt-a">Auto ✓</span></div>
+              <div class="map-f">customer_no <span class="mt mt-a">Auto ✓</span></div>
+              <div class="map-f">delivery_date <span class="mt mt-a">Auto ✓</span></div>
+              <div class="map-f">warehouse_ref <span class="mt mt-m">Manuell</span></div>
+              <div class="map-f">item_code <span class="mt mt-m">Manuell</span></div>
+            </div>
+            <div class="map-arr">→</div>
+            <div>
+              <div class="map-col"><h5>Målsystem (ERP)</h5></div>
+              <div class="map-f">OrderNumber</div>
+              <div class="map-f">CustomerID</div>
+              <div class="map-f">ExpectedDelivery</div>
+              <div class="map-f">ExternalReference</div>
+              <div class="map-f">ArticleCode</div>
+            </div>
+          </div>
+          <div style="background:var(--navy);border-radius:8px;padding:12px;margin-top:12px;font-size:11px;font-family:monospace;line-height:1.8;color:rgba(255,255,255,0.6);">
+            <span style="color:rgba(255,255,255,0.25);">// Genererat – iCore Spec v1.0</span><br>
+            <span style="color:#7dd3fc;">"order_id"</span> → <span style="color:#86efac;">"OrderNumber"</span><br>
+            <span style="color:#7dd3fc;">"delivery_date"</span> → <span style="color:#86efac;">"ExpectedDelivery"</span> <span style="color:rgba(255,255,255,0.25);">// yyyy-MM-dd</span><br>
+            <span style="color:#7dd3fc;">"warehouse_ref"</span> → <span style="color:#86efac;">"ExternalReference"</span> <span style="color:rgba(255,255,255,0.25);">// ⚠ Verifiera</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S9: TILLÄGG ======== -->
+  <div class="slide" id="s9">
+    <div class="slide-inner">
+      <div class="tag tag-orange">SaaS-tillägg</div>
+      <h2 class="slide-title">Tre tillägg som bygger<br>på portalen</h2>
+      <div class="card-grid" style="margin-top:24px;">
+        <div class="card" style="border-color:rgba(245,158,11,0.35);background:rgba(245,158,11,0.07);">
+          <span class="ci">📊</span>
+          <h3>Automatiska SLA-rapporter</h3>
+          <p>Varje månad genereras en PDF-rapport automatiskt: uptime, volymer, lyckade/misslyckade körningar. Kunden ser konkret värdet av integrationen. Ingår i Premium.</p>
+          <div style="margin-top:14px;background:rgba(255,255,255,0.05);border-radius:8px;padding:12px;font-size:12px;color:rgba(255,255,255,0.5);">
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span>Totalt meddelanden</span><span style="color:var(--white);font-weight:700;">48 203</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span>Lyckade körningar</span><span style="color:var(--teal);font-weight:700;">99.8%</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0;">
+              <span>Uptime juni</span><span style="color:var(--teal);font-weight:700;">99.97%</span>
+            </div>
+          </div>
+        </div>
+        <div class="card" style="border-color:rgba(0,201,167,0.35);background:rgba(0,201,167,0.06);">
+          <span class="ci">🔔</span>
+          <h3>Alerting &amp; Notifikationer</h3>
+          <p>Kunden sätter egna regler: "Om ingen order kommit in på 2 timmar – skicka SMS." Proaktiv bevakning utan att ni behöver göra något. Kunden konfigurerar själv.</p>
+          <div style="margin-top:14px;display:flex;flex-direction:column;gap:7px;">
+            <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.55);display:flex;justify-content:space-between;">
+              <span>⏱️ Inga ordrar på 2h</span><span style="background:rgba(30,111,255,0.2);color:var(--blue2);padding:1px 7px;border-radius:8px;font-size:10px;">SMS</span>
+            </div>
+            <div style="background:rgba(255,255,255,0.05);border-radius:6px;padding:8px 10px;font-size:11px;color:rgba(255,255,255,0.55);display:flex;justify-content:space-between;">
+              <span>❌ Mer än 5 fel på 30 min</span><span style="background:rgba(0,201,167,0.15);color:var(--teal);padding:1px 7px;border-radius:8px;font-size:10px;">E-post</span>
+            </div>
+          </div>
+        </div>
+        <div class="card accent-blue">
+          <span class="ci">🗺️</span>
+          <h3>Integration Canvas</h3>
+          <p>Visuellt diagram av kundens systemlandskap – vilka system är kopplade och vad flödar. Används i kundmöten som säljmaterial och för att förklara helheten.</p>
+          <div style="margin-top:14px;background:var(--navy);border-radius:8px;padding:14px;position:relative;min-height:70px;">
+            <div style="position:absolute;top:14px;left:16px;background:rgba(0,201,167,0.2);border:1px solid var(--teal);border-radius:5px;padding:4px 9px;font-size:10px;color:var(--teal);">WMS</div>
+            <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(30,111,255,0.25);border:1px solid var(--blue2);border-radius:5px;padding:4px 9px;font-size:10px;color:var(--blue2);">iCore</div>
+            <div style="position:absolute;top:14px;right:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:5px;padding:4px 9px;font-size:10px;color:rgba(255,255,255,0.6);">ERP</div>
+            <div style="position:absolute;bottom:14px;right:16px;background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.15);border-radius:5px;padding:4px 9px;font-size:10px;color:rgba(255,255,255,0.6);">Bring API</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S10: AFFÄRSMODELL ======== -->
+  <div class="slide" id="s10">
+    <div class="slide-inner">
+      <div class="tag tag-teal">Affärsmodell</div>
+      <h2 class="slide-title">Tre tydliga paket</h2>
+      <p class="sub" style="margin-bottom:28px;">Grundportalen säljs vid leverans. Premium skapar recurring revenue. Enterprise för de mest avancerade kunderna.</p>
+      <div class="price-cards">
+        <div class="price-card">
+          <div class="pc-tier">Grundpaket</div>
+          <div class="pc-name">Integration Visibility</div>
+          <div class="pc-price">3 000 kr / mån</div>
+          <ul class="pc-list">
+            <li><span class="ck">✓</span> Dashboard med realtidsstatus</li>
+            <li><span class="ck">✓</span> Kundportal – "Mina integrationer"</li>
+            <li><span class="ck">✓</span> Grundläggande felvisning</li>
+            <li><span class="ck">✓</span> Default-vy</li>
+          </ul>
+        </div>
+        <div class="price-card feat">
+          <div class="feat-badge">⭐ Rekommenderat</div>
+          <div class="pc-tier">Premium</div>
+          <div class="pc-name">Integration Portal</div>
+          <div class="pc-price">5 000–7 000 kr / mån</div>
+          <ul class="pc-list">
+            <li><span class="ck">✓</span> Allt i Grundpaketet</li>
+            <li><span class="ck">✓</span> Order Flow Visualizer</li>
+            <li><span class="ck">✓</span> Alerting & notifikationer</li>
+            <li><span class="ck">✓</span> Automatiska SLA-rapporter</li>
+            <li><span class="ck">✓</span> Canvas – systemkarta</li>
+            <li><span class="ck">✓</span> Custom branding</li>
+          </ul>
+        </div>
+        <div class="price-card">
+          <div class="pc-tier">Enterprise</div>
+          <div class="pc-name">AI-aktiverad Portal</div>
+          <div class="pc-price">10 000–15 000 kr / mån</div>
+          <ul class="pc-list">
+            <li><span class="ck">✓</span> Allt i Premium</li>
+            <li><span class="ck">✓</span> AI-assistent via MCP</li>
+            <li><span class="ck">✓</span> Mapping Spec Tool</li>
+            <li><span class="ck">✓</span> Intern konsultvy</li>
+            <li><span class="ck">✓</span> Prioriterad support</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S11: STYRGRUPP ======== -->
+  <div class="slide" id="s11">
+    <div class="slide-inner">
+      <div class="tag tag-orange">Styrgrupp — Affärsbedömning</div>
+      <h2 class="slide-title">Tre erfarna rådgivare<br>granskar portalen</h2>
+      <div class="advisor-row" style="margin-top:24px;">
+        <div class="adv">
+          <div class="adv-top">
+            <div class="adv-av" style="background:rgba(30,111,255,0.2);">👨‍💼</div>
+            <div><div class="adv-name">Erik Lindqvist</div><div class="adv-role">Affärsutvecklare · SaaS B2B</div></div>
+          </div>
+          <p class="adv-quote">"Klassisk land-and-expand. Ni levererar integrationen – det är ingångsbiljetten. Portalen är det ni tjänar pengar på år efter år."</p>
+          <div class="adv-key"><span>Nyckelråd:</span> Sälj grundportalen tidigt – vänta inte på att produkten är "klar"</div>
+        </div>
+        <div class="adv">
+          <div class="adv-top">
+            <div class="adv-av" style="background:rgba(0,201,167,0.2);">👩‍💼</div>
+            <div><div class="adv-name">Maria Holmberg</div><div class="adv-role">Säljchef B2B · Logistik &amp; SaaS</div></div>
+          </div>
+          <p class="adv-quote">"Kunder i lager och transport köper trygghet, inte teknik. Sälj det som: 'Nu kan ni se att era integrationer fungerar utan att ringa oss.'"</p>
+          <div class="adv-key"><span>Nyckelråd:</span> Ta Canvas till varje kundmöte – show, don't tell</div>
+        </div>
+        <div class="adv">
+          <div class="adv-top">
+            <div class="adv-av" style="background:rgba(245,158,11,0.2);">🧮</div>
+            <div><div class="adv-name">Johan Svensson</div><div class="adv-role">CFO &amp; Ekonomianalytiker</div></div>
+          </div>
+          <p class="adv-quote">"20 kunder à 5 000 kr/mån = 1,2 Mkr/år. Sätt priserna rätt från start – det är svårt att höja senare."</p>
+          <div class="adv-key"><span>Nyckelråd:</span> Erbjud årsabonnemang med 10–15% rabatt – bättre cashflow</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S12: PRISER ======== -->
+  <div class="slide" id="s12">
+    <div class="slide-inner">
+      <div class="tag tag-teal">Prisrekommendationer</div>
+      <h2 class="slide-title">Styrgruppens prismodell</h2>
+      <p class="sub" style="margin-bottom:24px;">Baserat på marknadsanalys och jämförelse med liknande B2B SaaS-produkter för logistik.</p>
+      <table class="ptable">
+        <thead>
+          <tr>
+            <th>Produkt</th>
+            <th>Modell</th>
+            <th>Pris</th>
+            <th>Potential (20 kunder/år)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="pn">📊 Grundportal</td><td>MRR / kund</td><td class="pp">3 000–5 000 kr/mån</td><td class="pot">720 000–1,2 Mkr/år</td></tr>
+          <tr><td class="pn">🤖 AI-assistent (MCP)</td><td>Premium-tillägg MRR</td><td class="pp">+3 000–8 000 kr/mån</td><td class="pot">Upp till +1,9 Mkr/år</td></tr>
+          <tr><td class="pn">🗺️ Mapping Spec Tool</td><td>Per spec / MRR</td><td class="pp">25–40 kkr/spec eller +1 500/mån</td><td class="pot">360 000 kr/år (MRR)</td></tr>
+          <tr><td class="pn">🔔 Alerting</td><td>Tillägg MRR</td><td class="pp">+1 000–2 000 kr/mån</td><td class="pot">+480 000 kr/år</td></tr>
+          <tr><td class="pn">📊 SLA-rapporter &amp; Canvas</td><td>Ingår i Premium</td><td class="pp">Inkluderat</td><td class="pot">Höjer upplevt värde</td></tr>
+        </tbody>
+      </table>
+      <div style="background:rgba(30,111,255,0.1);border:1px solid rgba(30,111,255,0.25);border-radius:10px;padding:14px 18px;margin-top:16px;font-size:13px;color:rgba(255,255,255,0.7);">
+        💡 <strong style="color:var(--white);">Konservativt scenario:</strong> 10 kunder på Premium (6 000 kr) = <strong style="color:var(--teal);">720 000 kr/år</strong> i recurring revenue med marginalt underhåll.
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S13: GO-TO-MARKET ======== -->
+  <div class="slide" id="s13">
+    <div class="slide-inner">
+      <div class="tag tag-teal">Go-to-market</div>
+      <h2 class="slide-title">Fyra steg från idé<br>till <span>betalande kunder</span></h2>
+      <div class="card-grid-4" style="margin-top:24px;">
+        <div class="card accent-blue">
+          <span class="ci">🎯</span>
+          <h3>Steg 1: Pilot</h3>
+          <p>2–3 befintliga kunder. Portalen gratis 3 månader mot ärlig feedback. Bevisa värdet i verkligheten.</p>
+        </div>
+        <div class="card accent-teal">
+          <span class="ci">💬</span>
+          <h3>Steg 2: Canvas i säljet</h3>
+          <p>Ta med Canvas till varje nytt kundmöte. Visa deras framtida systemkarta. Wow-effekt – portalen blir konkret.</p>
+        </div>
+        <div class="card accent-purple">
+          <span class="ci">📦</span>
+          <h3>Steg 3: Standard</h3>
+          <p>Grundportalen ingår i varje ny integrationsleverans. Premium är naturligt uppgraderingserbjudande efter 3 månader.</p>
+        </div>
+        <div class="card accent-orange">
+          <span class="ci">📈</span>
+          <h3>Steg 4: Upsell</h3>
+          <p>Befintliga kunder utan portal är er snabbaste intäkt. De litar på er redan – ring med ett konkret erbjudande.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S14: NÄSTA STEG ======== -->
+  <div class="slide" id="s14">
+    <div class="slide-inner">
+      <div class="tag tag-blue">Nästa steg</div>
+      <h2 class="slide-title">Från beslut till pilot<br>på <span>4 veckor</span></h2>
+      <div class="step-list" style="margin-top:24px;">
+        <div class="step-item">
+          <div class="step-n">1</div>
+          <div class="step-b"><div class="stag">Daniel · Denna vecka</div><h4>Svara på styrgruppens 4 öppna frågor</h4><p>Prisintervall, om grundportalen ingår i leveransen, vilka pilotkunder, Mapping Tool per spec eller abonnemang.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">2</div>
+          <div class="step-b"><div class="stag">Maya · 1–3 dagar</div><h4>POC: Kundportal för en specifik kund</h4><p>Klickbar HTML-prototyp med realistiska integrationsnamn. Redo att visa i kundmöte.</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">3</div>
+          <div class="step-b"><div class="stag">Daniel + Alex · 1 möte</div><h4>Välj pilotkunder och boka möten</h4><p>Visa Canvas och POCen. Fråga: "Skulle ni betala X kr/mån för det här?"</p></div>
+        </div>
+        <div class="step-item">
+          <div class="step-n">4</div>
+          <div class="step-b"><div class="stag">Chris + Jordan · 2–4 veckor</div><h4>Bygg grundportalen mot riktigt iCore-API</h4><p>Koppla mot pilotkundens iCore. Riktig data, enkel auth. Pilotstart.</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======== S15: CLOSING ======== -->
+  <div class="slide" id="s15">
+    <div class="slide-inner" style="text-align:center;align-items:center;">
+      <div class="tag tag-teal">Tack</div>
+      <h1 class="hero" style="margin-bottom:20px;">En plattform.<br>Obegränsade <span>kunder.</span></h1>
+      <p class="sub" style="text-align:center;margin-bottom:40px;">iCore Integration Portal – byggd för att göra integrationsleveransen till en produkt, inte ett projekt.</p>
+      <div class="stat-row" style="justify-content:center;">
+        <div class="stat-item" style="text-align:center;"><div class="sn">3</div><div class="sl">Moduler</div></div>
+        <div class="stat-item" style="text-align:center;"><div class="sn" style="color:var(--teal)">1,2M</div><div class="sl">MRR-potential/år</div></div>
+        <div class="stat-item" style="text-align:center;"><div class="sn">4</div><div class="sl">Veckor till pilot</div></div>
+      </div>
+      <div style="margin-top:40px;padding:20px 32px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:14px;display:inline-block;">
+        <p style="font-size:14px;color:rgba(255,255,255,0.5);">Full business case:</p>
+        <p style="font-size:13px;font-family:monospace;color:var(--blue2);margin-top:4px;">daniel83larsson-alt.github.io/Dashboard/poc/ideas.html</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- NAV -->
+<div class="nav">
+  <button id="prevBtn" onclick="go(-1)" disabled>←</button>
+  <span class="counter" id="counter">1 / 15</span>
+  <button id="nextBtn" onclick="go(1)">→</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+
+  function go(dir) {
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(total - 1, cur + dir));
+    slides[cur].classList.add('active');
+    document.getElementById('counter').textContent = (cur + 1) + ' / ' + total;
+    document.getElementById('prevBtn').disabled = cur === 0;
+    document.getElementById('nextBtn').disabled = cur === total - 1;
+    document.getElementById('progressBar').style.width = ((cur + 1) / total * 100) + '%';
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+  });
+
+  // Touch/swipe
+  let tx = 0;
+  document.addEventListener('touchstart', e => tx = e.touches[0].clientX);
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+  });
+
+  // Init progress
+  document.getElementById('progressBar').style.width = (1 / total * 100) + '%';
+</script>
+</body>
+</html>
