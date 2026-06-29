@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>DL Trainer – Concept2 PM5</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0e1113;--panel:#161a1c;--panel2:#1e2426;
+  --lcd:#a7bda9;--lcd-dim:#6a7a6e;--ink:#10160f;
+  --lime:#ccd400;--line:#262c2e;--warn:#e0913f;
+  --good:#7bbf8a;--red:#d45b4a;--blue:#4f8ef7;
+  --text:#c0cdc3;--muted:#5a6860;--white:#e9e7dd;
+}
+html,body{height:100%;font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+.app{display:flex;flex-direction:column;height:100vh}
+
+/* TOPBAR */
+.topbar{background:var(--ink);border-bottom:2px solid var(--lime);display:flex;align-items:stretch;gap:0;flex-shrink:0;overflow:hidden}
+.tb-brand{display:flex;align-items:center;gap:12px;padding:12px 20px;border-right:1px solid #1a2210;min-width:200px}
+.tb-icon{width:36px;height:36px;background:var(--lime);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:900;color:#000;font-family:'JetBrains Mono',monospace;flex-shrink:0}
+.tb-title{font-family:'Space Grotesk',sans-serif;font-size:14px;font-weight:700;color:var(--lime);letter-spacing:2px;text-transform:uppercase;line-height:1.1}
+.tb-sub{font-size:10px;color:var(--lcd-dim);font-family:'JetBrains Mono',monospace;margin-top:2px}
+
+.lcd-readout{background:var(--ink);border-right:1px solid #1a2210;padding:8px 20px;flex:1;min-width:0}
+.lcd-top{font-size:9px;color:var(--lcd-dim);font-family:'JetBrains Mono',monospace;letter-spacing:1px;margin-bottom:5px}
+.lcd-row{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap}
+.lcd-val{font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--lcd);line-height:1}
+.lcd-val span{font-size:11px;color:var(--lcd-dim);margin-left:3px;font-weight:400}
+.lcd-rating{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--lime)}
+
+.season-stats{display:flex;align-items:stretch;flex-shrink:0}
+.ss-item{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:10px 18px;border-left:1px solid var(--line)}
+.ss-num{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--lime)}
+.ss-lbl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase;margin-top:2px}
+
+/* TABS */
+.tabs{display:flex;background:var(--panel);border-bottom:1px solid var(--line);flex-shrink:0}
+.tab{padding:13px 20px;font-size:13px;font-weight:500;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;font-family:'Inter',sans-serif}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--lime);border-bottom-color:var(--lime)}
+
+/* MAIN SCROLL */
+.main{flex:1;overflow-y:auto;overflow-x:hidden}
+.view{display:none;padding:24px;max-width:1200px;margin:0 auto}
+.view.active{display:block}
+
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.c-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.c-val{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--lcd);line-height:1}
+.c-unit{font-size:12px;color:var(--lcd-dim);font-weight:400}
+.c-sub{font-size:11px;color:var(--muted);margin-top:6px}
+
+/* CHART PANELS */
+.chart-panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:20px}
+.chart-title{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:4px}
+.chart-subtitle{font-size:12px;color:var(--lcd-dim);margin-bottom:12px}
+.chart-wrap{position:relative;width:100%}
+canvas{width:100%;display:block;border-radius:6px}
+.chart-legend{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+
+/* SECTION TITLE */
+.sec{margin-bottom:20px}
+.sec-title{font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:700;color:var(--lime);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title::after{content:'';flex:1;height:1px;background:var(--line)}
+
+/* MILESTONES */
+.milestones{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:24px}
+.ms{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.ms-icon{font-size:20px;flex-shrink:0}
+.ms-text{font-size:13px;color:var(--text);line-height:1.4}
+.ms-sub{font-size:11px;color:var(--muted)}
+
+/* UPPLÄGGET */
+.upplagg{background:var(--ink);border:1px solid #1a2210;border-left:3px solid var(--lime);border-radius:8px;padding:16px;margin-bottom:24px}
+.upplagg-title{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--lime);letter-spacing:1px;margin-bottom:10px}
+.upplagg p{font-size:13px;color:var(--lcd);line-height:1.7;margin-bottom:8px}
+.upplagg p:last-child{margin-bottom:0}
+.upplagg strong{color:var(--lime)}
+
+/* SESSION LOG */
+.filter-bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.filter-btn{padding:6px 14px;border-radius:20px;border:1px solid var(--line);background:var(--panel);color:var(--muted);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s}
+.filter-btn:hover{border-color:var(--lime);color:var(--lime)}
+.filter-btn.on{background:rgba(204,212,0,.1);border-color:var(--lime);color:var(--lime)}
+
+.session-list{display:flex;flex-direction:column;gap:8px}
+.session-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:grid;grid-template-columns:90px 1fr auto;align-items:center;gap:12px;transition:border-color .15s}
+.session-card:hover{border-color:var(--lcd-dim)}
+.session-card.bad-df{border-left:3px solid var(--warn)}
+.sc-date{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--muted)}
+.sc-main{min-width:0}
+.sc-metrics{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.sc-dist{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--lcd)}
+.sc-pace{font-family:'JetBrains Mono',monospace;font-size:13px;color:var(--lcd-dim)}
+.sc-chip{font-size:10px;padding:2px 8px;border-radius:20px;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.chip-l2{background:rgba(123,191,138,.12);color:var(--good)}
+.chip-hybrid{background:rgba(204,212,0,.12);color:var(--lime)}
+.chip-test{background:rgba(79,142,247,.12);color:var(--blue)}
+.chip-interval{background:rgba(212,91,74,.12);color:var(--red)}
+.chip-baddf{background:rgba(224,145,63,.12);color:var(--warn)}
+.sc-note{font-size:11px;color:var(--muted);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc-stats{display:flex;gap:12px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-top:4px}
+.sc-right{display:flex;flex-direction:column;align-items:flex-end;gap:8px;flex-shrink:0}
+.rating-badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;font-size:14px;font-weight:700}
+.rb-high{background:rgba(204,212,0,.15);color:var(--lime);border:2px solid rgba(204,212,0,.4)}
+.rb-mid{background:rgba(123,191,138,.12);color:var(--good);border:2px solid rgba(123,191,138,.3)}
+.rb-none{background:var(--panel2);color:var(--muted);border:1px solid var(--line);font-size:11px}
+.watts-tag{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--warn);background:rgba(224,145,63,.1);padding:2px 7px;border-radius:4px}
+
+/* BENCHMARKS */
+.bench-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.bench-card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.bc-label{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px}
+.bc-val{font-family:'JetBrains Mono',monospace;font-size:28px;font-weight:700;color:var(--lcd)}
+.bc-unit{font-size:13px;font-weight:400;color:var(--lcd-dim)}
+.bc-sub{font-size:11px;color:var(--muted);margin-top:6px}
+.bc-date{font-size:10px;color:var(--lime);margin-top:4px}
+.bench-card.pb{border-color:rgba(204,212,0,.3);background:rgba(204,212,0,.04)}
+
+.zone-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:20px}
+.zone-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.zc-name{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
+.zc-val{font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700}
+.zc-sub{font-size:11px;color:var(--muted);margin-top:4px}
+.z-l2{color:var(--good)}.z-tempo{color:var(--warn)}.z-max{color:var(--red)}
+
+.missing-list{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px}
+.ml-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px;color:var(--muted)}
+.ml-item:last-child{border-bottom:none}
+.ml-icon{font-size:14px;flex-shrink:0}
+
+/* SLEEP */
+.sleep-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.sleep-note{background:var(--ink);border:1px solid var(--line);border-radius:8px;padding:14px;font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:20px}
+.sleep-note strong{color:var(--lcd)}
+
+/* COACH */
+.coach-layout{display:grid;grid-template-columns:280px 1fr;gap:20px;min-height:500px}
+.coach-roster{display:flex;flex-direction:column;gap:8px}
+.coach-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px;cursor:pointer;display:flex;align-items:center;gap:10px;transition:border-color .15s,background .15s}
+.coach-card:hover{border-color:var(--lime);background:rgba(204,212,0,.04)}
+.coach-card.on{border-color:var(--lime);background:rgba(204,212,0,.08)}
+.cc-icon{font-size:22px;flex-shrink:0;width:36px;text-align:center}
+.cc-info{min-width:0}
+.cc-name{font-size:13px;font-weight:600;color:var(--text)}
+.cc-role{font-size:10px;color:var(--muted);margin-top:2px}
+.coach-veto{font-size:10px;color:var(--lime);background:rgba(204,212,0,.1);padding:1px 7px;border-radius:10px;margin-left:auto;flex-shrink:0}
+
+.chat-area{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.chat-header{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;background:var(--panel2)}
+.ch-icon{font-size:20px}
+.ch-name{font-size:14px;font-weight:600;color:var(--text)}
+.ch-role{font-size:11px;color:var(--muted)}
+.chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px;min-height:340px;max-height:440px}
+.msg{display:flex;gap:10px;align-items:flex-start}
+.msg.user{flex-direction:row-reverse}
+.msg-bubble{max-width:80%;padding:10px 14px;border-radius:10px;font-size:13px;line-height:1.6}
+.msg.coach .msg-bubble{background:var(--ink);border:1px solid var(--line);color:var(--text);border-top-left-radius:3px}
+.msg.user .msg-bubble{background:rgba(204,212,0,.1);border:1px solid rgba(204,212,0,.2);color:var(--white);border-top-right-radius:3px}
+.msg-icon{font-size:18px;flex-shrink:0;margin-top:2px}
+.chat-input-row{border-top:1px solid var(--line);padding:12px 14px;display:flex;gap:10px;background:var(--panel2)}
+.chat-input{flex:1;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 14px;color:var(--text);font-size:13px;font-family:'Inter',sans-serif;outline:none;resize:none}
+.chat-input:focus{border-color:var(--lime)}
+.chat-input::placeholder{color:var(--muted)}
+.send-btn{background:var(--lime);color:#000;border:none;border-radius:8px;padding:10px 18px;font-weight:700;font-size:13px;cursor:pointer;flex-shrink:0;font-family:'Space Grotesk',sans-serif}
+.send-btn:hover{opacity:.9}
+
+.context-bar{background:var(--ink);border:1px solid #1a2210;border-radius:8px;padding:10px 14px;margin-bottom:12px}
+.ctx-title{font-size:9px;color:var(--lime);letter-spacing:1px;text-transform:uppercase;margin-bottom:6px}
+.ctx-items{display:flex;gap:16px;flex-wrap:wrap}
+.ctx-item{font-size:11px;color:var(--muted)}
+.ctx-item strong{color:var(--lcd);font-family:'JetBrains Mono',monospace}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .coach-layout{grid-template-columns:1fr}
+  .chat-messages{min-height:240px;max-height:300px}
+  .tb-brand{min-width:auto}
+  .season-stats{display:none}
+}
+@media(max-width:600px){
+  .cards{grid-template-columns:1fr 1fr}
+  .topbar{flex-wrap:wrap}
+  .lcd-readout{min-width:100%;border-right:none;border-top:1px solid #1a2210}
+  .view{padding:16px}
+  .session-card{grid-template-columns:1fr auto}
+  .sc-date{display:none}
+  .bench-grid{grid-template-columns:1fr 1fr}
+  .sleep-cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<!-- TOPBAR -->
+<header class="topbar">
+  <div class="tb-brand">
+    <div class="tb-icon">▶</div>
+    <div>
+      <div class="tb-title">DL Trainer</div>
+      <div class="tb-sub">Concept2 PM5 · Rodd</div>
+    </div>
+  </div>
+  <div class="lcd-readout">
+    <div class="lcd-top">SENASTE PASS · 29 JUN 2026</div>
+    <div class="lcd-row">
+      <div class="lcd-val">5 534<span>m</span></div>
+      <div class="lcd-val">2:42.6<span>/500m</span></div>
+      <div class="lcd-val">81<span>W avg</span></div>
+      <div class="lcd-val">126<span>bpm</span></div>
+      <div class="lcd-val">20<span>spm</span></div>
+      <div class="lcd-rating">★ 9/10</div>
+    </div>
+  </div>
+  <div class="season-stats">
+    <div class="ss-item">
+      <div class="ss-num" id="ss-total">~351k</div>
+      <div class="ss-lbl">Totalt meter</div>
+    </div>
+    <div class="ss-item">
+      <div class="ss-num">15</div>
+      <div class="ss-lbl">Pass juni</div>
+    </div>
+    <div class="ss-item">
+      <div class="ss-num">4</div>
+      <div class="ss-lbl">Hårda block</div>
+    </div>
+  </div>
+</header>
+
+<!-- TABS -->
+<nav class="tabs">
+  <button class="tab on" onclick="showView('oversikt',this)">Översikt</button>
+  <button class="tab" onclick="showView('passlogg',this)">Passlogg</button>
+  <button class="tab" onclick="showView('riktmarken',this)">Riktmärken</button>
+  <button class="tab" onclick="showView('somn',this)">Sömn</button>
+  <button class="tab" onclick="showView('coach',this)">Coach</button>
+</nav>
+
+<!-- MAIN -->
+<div class="main">
+
+<!-- ÖVERSIKT -->
+<div id="v-oversikt" class="view active">
+  <div class="cards">
+    <div class="card">
+      <div class="c-lbl">Säsong totalt</div>
+      <div class="c-val">~351<span class="c-unit">k m</span></div>
+      <div class="c-sub">Sedan 10 feb 2026</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Bästa 30-min L2</div>
+      <div class="c-val">5 388<span class="c-unit">m</span></div>
+      <div class="c-sub">25 jun · 2:47.0/500m</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Vilopuls (snitt)</div>
+      <div class="c-val">59<span class="c-unit">bpm</span></div>
+      <div class="c-sub">↓ från 64–66 bpm</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">5000m PB</div>
+      <div class="c-val">23:27</div>
+      <div class="c-sub">13 jun · snitt 2:20.7</div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-title">30-min distans — Juni 2026</div>
+    <div class="chart-subtitle">Färgkodad per passtyp · PB-linje 5 388m</div>
+    <div class="chart-wrap"><canvas id="distChart" height="220"></canvas></div>
+    <div class="chart-legend">
+      <div class="leg-item"><div class="leg-dot" style="background:#7bbf8a"></div>L2 rent</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#ccd400"></div>Hybrid (L2+block)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#e0913f"></div>Fel DF (ej jämförbart)</div>
+      <div class="leg-item"><div class="leg-dot" style="background:#4f8ef7"></div>Test / Intervall</div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-title">Vilopuls — 16–22 juni 2026</div>
+    <div class="chart-subtitle">Morgonmätning · Mål: &lt;62 bpm</div>
+    <div class="chart-wrap"><canvas id="hrChart" height="160"></canvas></div>
+  </div>
+
+  <div class="sec-title">Upplägget</div>
+  <div class="upplagg">
+    <div class="upplagg-title">// GÄLLANDE TRÄNINGSSYSTEM · v1.3</div>
+    <p><strong>Kärna:</strong> Polariserat 80/20 (du kör ~90/10 — rätt för din nivå). L2-bas + ett hårt block per vecka minimum.</p>
+    <p><strong>Struktur:</strong> ~26 min L2, sedan ett 4-min block på 90–95%. Blocket läggs <strong>sist</strong> så L2-basen förblir ren.</p>
+    <p><strong>GOLV:</strong> 1 hårt block/vecka = veckan vunnen. Allt över är bonus. Klättring: 1→2×4→3×4→fullt 4×4.</p>
+    <p><strong>Broms:</strong> Vilopuls + sömn styr volym. Nedvarvningsvecka var 4–6:e vecka.</p>
+    <p><strong>Kraftroddarprofil:</strong> Hög kraft/drag, låg frekvens. Bekräftat 29/6: snitt 81W, max 227W utan att spinna upp spm.</p>
+  </div>
+
+  <div class="sec-title">Milstolpar</div>
+  <div class="milestones">
+    <div class="ms"><div class="ms-icon">🏆</div><div><div class="ms-text">5000m PB — 23:27</div><div class="ms-sub">13 juni 2026 · negativ split</div></div></div>
+    <div class="ms"><div class="ms-icon">📊</div><div><div class="ms-text">1 000 Strava-aktiviteter</div><div class="ms-sub">Top 4% · 25 juni 2026</div></div></div>
+    <div class="ms"><div class="ms-icon">💪</div><div><div class="ms-text">4×4 inne i rutinen</div><div class="ms-sub">4 hårda block i juni</div></div></div>
+    <div class="ms"><div class="ms-icon">🚫</div><div><div class="ms-text">Alkoholfri</div><div class="ms-sub">Sedan ~1 juni 2026</div></div></div>
+    <div class="ms"><div class="ms-icon">📏</div><div><div class="ms-text">Bästa L2 — 5 388m/30 min</div><div class="ms-sub">25 juni · 2:47.0/500m</div></div></div>
+    <div class="ms"><div class="ms-icon">⚡</div><div><div class="ms-text">227W maxeffekt</div><div class="ms-sub">29 juni · kraftroddarprofil</div></div></div>
+  </div>
+</div>
+
+<!-- PASSLOGG -->
+<div id="v-passlogg" class="view">
+  <div class="filter-bar">
+    <button class="filter-btn on" onclick="filterSessions('all',this)">Alla (15)</button>
+    <button class="filter-btn" onclick="filterSessions('L2',this)">L2 (9)</button>
+    <button class="filter-btn" onclick="filterSessions('HYBRID',this)">Hybrid (2)</button>
+    <button class="filter-btn" onclick="filterSessions('INTERVAL',this)">Intervall (1)</button>
+    <button class="filter-btn" onclick="filterSessions('TEST',this)">Test (1)</button>
+  </div>
+  <div class="session-list" id="session-list"></div>
+</div>
+
+<!-- RIKTMÄRKEN -->
+<div id="v-riktmarken" class="view">
+  <div class="sec-title">Personbästa</div>
+  <div class="bench-grid">
+    <div class="bench-card pb">
+      <div class="bc-label">5000m tid</div>
+      <div class="bc-val">23:27</div>
+      <div class="bc-sub">Snitt 2:20.7/500m · 24 spm</div>
+      <div class="bc-date">13 jun 2026 · PB ★</div>
+    </div>
+    <div class="bench-card pb">
+      <div class="bc-label">30 min distans (L2)</div>
+      <div class="bc-val">5 388<span class="bc-unit">m</span></div>
+      <div class="bc-sub">2:47.0/500m · 18 spm · 114 bpm</div>
+      <div class="bc-date">25 jun 2026 · PB ★</div>
+    </div>
+    <div class="bench-card">
+      <div class="bc-label">45 min distans (L2)</div>
+      <div class="bc-val">8 047<span class="bc-unit">m</span></div>
+      <div class="bc-sub">2:47.x/500m (beräknat)</div>
+      <div class="bc-date">11 maj 2026</div>
+    </div>
+    <div class="bench-card">
+      <div class="bc-label">Maxpuls (uppmätt)</div>
+      <div class="bc-val">177<span class="bc-unit">bpm</span></div>
+      <div class="bc-sub">Under 5000m-test, sista 1000m</div>
+      <div class="bc-date">13 jun 2026</div>
+    </div>
+    <div class="bench-card">
+      <div class="bc-label">Vilopuls (lägsta)</div>
+      <div class="bc-val">58<span class="bc-unit">bpm</span></div>
+      <div class="bc-sub">↓ från 64–66 bpm (start)</div>
+      <div class="bc-date">Jun 2026</div>
+    </div>
+    <div class="bench-card">
+      <div class="bc-label">Max watt (block)</div>
+      <div class="bc-val">227<span class="bc-unit">W</span></div>
+      <div class="bc-sub">Snitt 81W · kraftroddarprofil</div>
+      <div class="bc-date">29 jun 2026</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Zoner</div>
+  <div class="zone-grid">
+    <div class="zone-card">
+      <div class="zc-name">Zon 2 (L2)</div>
+      <div class="zc-val z-l2">115–124<span style="font-size:13px;color:var(--lcd-dim)"> bpm</span></div>
+      <div class="zc-sub">Aerob bas · &lt;2 mmol laktat</div>
+    </div>
+    <div class="zone-card">
+      <div class="zc-name">Tempo / 4×4</div>
+      <div class="zc-val z-tempo">150–168<span style="font-size:13px;color:var(--lcd-dim)"> bpm</span></div>
+      <div class="zc-sub">VO₂max-stimuli</div>
+    </div>
+    <div class="zone-card">
+      <div class="zc-name">Zon 5 (max)</div>
+      <div class="zc-val z-max">&gt;159<span style="font-size:13px;color:var(--lcd-dim)"> bpm</span></div>
+      <div class="zc-sub">Max 177 bpm (uppmätt)</div>
+    </div>
+    <div class="zone-card">
+      <div class="zc-name">Drag factor (ref)</div>
+      <div class="zc-val" style="color:var(--lcd)">127</div>
+      <div class="zc-sub">Standard · källarsetup</div>
+    </div>
+  </div>
+
+  <div class="sec-title">Saknad data</div>
+  <div class="missing-list">
+    <div class="ml-item"><div class="ml-icon">❓</div>VO₂max-trend (Garmin beräknar sällan för rodd med bröstrem)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>Watt på alla pass (finns bara 29/6 + tester)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>Veckovolym systematisk (meter + timmar/vecka)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>Viktutveckling (vill bli leanare — behöver baseline)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>HRR (mätt en gång ~20 slag — behöver fler mätpunkter)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>2000m-test (ej kört — prognos 8:50–9:00)</div>
+    <div class="ml-item"><div class="ml-icon">❓</div>Säsongstotal exakt (274 032m per 5 jun + juni-pass)</div>
+  </div>
+</div>
+
+<!-- SÖMN -->
+<div id="v-somn" class="view">
+  <div class="sleep-cards">
+    <div class="card">
+      <div class="c-lbl">Snittsömn (4v jun)</div>
+      <div class="c-val">6:46<span class="c-unit">h</span></div>
+      <div class="c-sub">Strax under mål</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Mål</div>
+      <div class="c-val">7:00<span class="c-unit">h</span></div>
+      <div class="c-sub">+14 min behövs</div>
+    </div>
+    <div class="card">
+      <div class="c-lbl">Underskott</div>
+      <div class="c-val">−14<span class="c-unit">min/n</span></div>
+      <div class="c-sub">~1,6h/vecka ackumulerat</div>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-title">Sömntimmar — Juni 2026 (approximation)</div>
+    <div class="chart-subtitle">Snitt 6h 46m · Mållinje 7h</div>
+    <div class="chart-wrap"><canvas id="sleepChart" height="160"></canvas></div>
+  </div>
+
+  <div class="sleep-note">
+    <strong>Bevaka detta.</strong> Sömn under 7h påverkar återhämtning och VO₂max-adaptation. Vilopulsen håller sig stabil (58–60) vilket är ett gott tecken — men en natt på 63 (22/6) är ett tidigt varningstecken. Kassein + magnesium före sömn är rätt strategi. Mål: lägga sig senast 22:30 de kvällar barnet sover tidigt.
+  </div>
+
+  <div class="sec-title">Koppling sömn → träning</div>
+  <div class="upplagg">
+    <div class="upplagg-title">// PROTOKOLL</div>
+    <p><strong>Vilopuls &gt;65 bpm:</strong> Kör bara L2 den dagen. Inga hårda block.</p>
+    <p><strong>Sömn &lt;6h natten innan:</strong> Sänk ambitionsnivån. Prioritera att komma igång — 15 min L2 räknas.</p>
+    <p><strong>Magnesium dagligen:</strong> 300–400mg glycinat eller citrat. Förbättrar sömnkvalitet, inte bara länd.</p>
+    <p><strong>Baby nr 2 anländer ~7 juli:</strong> Planera för inbyggd nedvarvningsvecka. Träning på lågtröskel-läge tills rytmen hittas.</p>
+  </div>
+</div>
+
+<!-- COACH -->
+<div id="v-coach" class="view">
+  <div class="context-bar">
+    <div class="ctx-title">// KONTEXT · IDAG</div>
+    <div class="ctx-items">
+      <div class="ctx-item">Senaste pass: <strong>29 jun</strong></div>
+      <div class="ctx-item">Distans: <strong>5 534m</strong></div>
+      <div class="ctx-item">Betyg: <strong>9/10</strong></div>
+      <div class="ctx-item">Vilopuls (snitt): <strong>59 bpm</strong></div>
+      <div class="ctx-item">Sömn: <strong>6:46h snitt</strong></div>
+      <div class="ctx-item">Block denna vecka: <strong>1×</strong></div>
+    </div>
+  </div>
+  <div class="coach-layout">
+    <div class="coach-roster">
+      <div class="coach-card on" onclick="selectCoach(0,this)">
+        <div class="cc-icon">🚣</div>
+        <div class="cc-info"><div class="cc-name">Roddcoach</div><div class="cc-role">Teknik · Upplägget · Plan</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(1,this)">
+        <div class="cc-icon">📊</div>
+        <div class="cc-info"><div class="cc-name">Dataanalytiker</div><div class="cc-role">Splits · Watt · Trender</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(2,this)">
+        <div class="cc-icon">💤</div>
+        <div class="cc-info"><div class="cc-name">Återhämtningscoach</div><div class="cc-role">Sömn · Vilopuls · Volym</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(3,this)">
+        <div class="cc-icon">🥩</div>
+        <div class="cc-info"><div class="cc-name">Nutritionist</div><div class="cc-role">Protein · Timing · Kreatin</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(4,this)">
+        <div class="cc-icon">🧘</div>
+        <div class="cc-info"><div class="cc-name">Rörlighetscoach</div><div class="cc-role">Kyfos · Musarm · Ischias</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(5,this)">
+        <div class="cc-icon">🔬</div>
+        <div class="cc-info"><div class="cc-name">Vetenskapsrådgivare</div><div class="cc-role">Forskning · Evidens</div></div>
+      </div>
+      <div class="coach-card" onclick="selectCoach(6,this)">
+        <div class="cc-icon">🎉</div>
+        <div class="cc-info"><div class="cc-name">Hejarklacken</div><div class="cc-role">Motivation · Low-threshold</div></div>
+        <div class="coach-veto">VETO</div>
+      </div>
+    </div>
+
+    <div class="chat-area">
+      <div class="chat-header">
+        <div class="ch-icon" id="ch-icon">🚣</div>
+        <div>
+          <div class="ch-name" id="ch-name">Roddcoach</div>
+          <div class="ch-role" id="ch-role">Teknik · Upplägget · Plan</div>
+        </div>
+      </div>
+      <div class="chat-messages" id="chat-messages"></div>
+      <div class="chat-input-row">
+        <textarea class="chat-input" id="chat-input" rows="1" placeholder="Skriv till din coach..." onkeydown="handleKey(event)"></textarea>
+        <button class="send-btn" onclick="sendMessage()">Skicka</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────
+const SESSIONS = [
+  {date:'2026-06-07',m:4956,pace:'3:01.5',spm:16,hr:115,hrMax:null,type:'L2',df:127,note:'Nedre L2-kalibrering',rating:null,watts:null},
+  {date:'2026-06-08',m:5043,pace:'2:58.4',spm:15,hr:118,hrMax:null,type:'L2',df:127,note:'',rating:null,watts:null},
+  {date:'2026-06-09',m:4912,pace:'3:03.2',spm:15,hr:117,hrMax:null,type:'L2',df:127,note:'Återhämtning',rating:null,watts:null},
+  {date:'2026-06-11',m:4876,pace:'3:04.5',spm:15,hr:119,hrMax:null,type:'L2',df:127,note:'',rating:null,watts:null},
+  {date:'2026-06-13',m:5000,pace:'2:20.7',spm:24,hr:159,hrMax:177,type:'TEST',df:127,note:'5000m PB — 23:27 · sista 1000m på 2:10',rating:null,watts:null},
+  {date:'2026-06-15',m:5097,pace:'2:56.5',spm:16,hr:115,hrMax:null,type:'L2',df:127,note:'',rating:null,watts:null},
+  {date:'2026-06-16',m:5098,pace:'2:56.5',spm:18,hr:122,hrMax:null,type:'L2',df:127,note:'Höjd kadens',rating:null,watts:null},
+  {date:'2026-06-17',m:5327,pace:'2:49.5',spm:18,hr:121,hrMax:null,type:'L2',df:127,note:'',rating:null,watts:null},
+  {date:'2026-06-18',m:null,pace:null,spm:24,hr:150,hrMax:170,type:'INTERVAL',df:127,note:'4×4 block: 2:13.6/2:13.1/2:10.7/2:07.6 · snitt 150 bpm',rating:null,watts:null},
+  {date:'2026-06-22',m:5142,pace:'2:55.0',spm:19,hr:119,hrMax:null,type:'L2',df:127,note:'',rating:null,watts:null},
+  {date:'2026-06-23',m:5329,pace:'2:48.8',spm:20,hr:114,hrMax:null,type:'L2',df:127,note:'Nedkyld',rating:null,watts:null},
+  {date:'2026-06-24',m:5614,pace:'2:40.3',spm:20,hr:123,hrMax:null,type:'L2',df:159,note:'OBS: DF 159 — ej jämförbart med DF 127',rating:null,watts:null},
+  {date:'2026-06-25',m:5388,pace:'2:47.0',spm:18,hr:114,hrMax:null,type:'L2',df:127,note:'Bästa rena L2 — PB',rating:null,watts:null},
+  {date:'2026-06-28',m:5747,pace:'2:36.9',spm:20,hr:128,hrMax:156,type:'HYBRID',df:127,note:'15 min L2 + 2×4 block',rating:8,watts:null},
+  {date:'2026-06-29',m:5534,pace:'2:42.6',spm:20,hr:126,hrMax:162,type:'HYBRID',df:127,note:'25 min L2 + 1 attack-block',rating:9,watts:{avg:81,max:227}},
+];
+
+const RESTING_HR = [
+  {date:'2026-06-16',hr:59},{date:'2026-06-17',hr:60},{date:'2026-06-18',hr:58},
+  {date:'2026-06-19',hr:58},{date:'2026-06-20',hr:60},{date:'2026-06-21',hr:59},{date:'2026-06-22',hr:63},
+];
+
+const SLEEP_APPROX = [
+  6.5,7.0,6.8,6.5,7.2,6.3,7.0,6.5,6.8,7.1,6.4,6.9,7.0,6.5,6.8,
+  6.3,7.2,6.7,6.5,6.9,7.0,6.4,6.8,6.5,7.1,6.3,6.7,7.0,6.5,6.8
+];
+
+const COACHES = [
+  {icon:'🚣',name:'Roddcoach',role:'Teknik · Upplägget · Plan',greeting:`Senaste passet 29 juni var starkt — 5 534m med 25 min L2 sedan ett attack-block. Du bekräftade igen att du är en kraftroddare: 227W max utan att spinna upp till höga spm. Det är din superkraft.\n\nSå ser det ut nu: du kör ~90/10 polariserat, vilket är rätt för din nivå. Blocket läggs sist i varmt pass — precis som vi bestämt. Vad vill du jobba med?`},
+  {icon:'📊',name:'Dataanalytiker',role:'Splits · Watt · Trender',greeting:`Trendsummering juni:\n\n• 30-min L2: 4 956m (7/6) → 5 388m (25/6) = +432m, +8,7% på 18 dagar\n• Pace: 3:01.5 → 2:47.0 per 500m\n• Spm-trend: 15–16 → 18–20 (kontrollerat)\n• Vilopuls: stabil 58–60 bpm\n\nHybridpassen 28–29 juni visar 5 500–5 700m men innehåller hårda block — ej L2-jämförbara. Vill du se djupare analys?`},
+  {icon:'💤',name:'Återhämtningscoach',role:'Sömn · Vilopuls · Volym',greeting:`Sömn är din svagaste länk just nu — snittet 6h 46m ligger 14 min under optimalt för din träningsnivå.\n\nVilopulsen är däremot utmärkt: stabil 58–60 bpm i två veckor. Det är ett tecken på god aerob anpassning. Men 22/6 pekade på 63 — inga larm, men notera det.\n\nBaby nr 2 anländer ~7 juli. Planera för naturlig nedvarvningsvecka. Vad oroar dig mest just nu?`},
+  {icon:'🥩',name:'Nutritionist',role:'Protein · Timing · Kreatin',greeting:`Systemet du har är rätt:\n• Kreatin 5g/dag ✓\n• Kasein + kvarg före sömn ✓\n• Whey efter träning ✓\n• Magnesium dagligen ✓\n\nHuvudproblemet: 170–200g protein/dag är ambitiöst vid 105 kg (1,6–1,9 g/kg). Det kräver aktiv planering. Räknar du protein just nu?`},
+  {icon:'🧘',name:'Rörlighetscoach',role:'Kyfos · Musarm · Ischias',greeting:`Ditt rörlighetsprotokoll är rätt designat för ditt besvärsmönster:\n\n• Chin tucks → nacke/kyfos\n• Thorakal rotation → rygg\n• Dörrstretch → bröstmuskel\n• Vadstretch → bakre kedja/häl\n• Foam roller thorakal EXTENSION (ej svank)\n\n4 påminnelser/dag är bra. 18:00-rundan är din viktigaste — direkt efter rodd när kroppen är varm. Vad känns tyngst just nu?`},
+  {icon:'🔬',name:'Vetenskapsrådgivare',role:'Forskning · Evidens',greeting:`Din träning har starkt vetenskapligt stöd:\n\n• Helgerud 2007: 4×4 protokollet → +7–9% VO₂max på 8 veckor\n• BJSM 2025 (exercise snacks): utspridda block ger VO₂max-effekt\n• VO₂max = starkaste livslängdsmåttet vi känner till\n• Polariserat 90/10 är konservativt rätt för din fas\n\nDu kör evidensbaserat. Är det något specifikt du vill ha källhänvisning på?`},
+  {icon:'🎉',name:'Hejarklacken',role:'Motivation · Low-threshold',greeting:`274 000+ meter sedan februari. Top 4% på Strava. Alkoholfri. 5000m PB. 4×4 inne i rutinen.\n\nOch vet du vad? Du hittade alltid ett sätt att köra — även trötta dagar, även med musarm, även med ischias. Det ÄR systemet. Det ÄR träningen.\n\nNästa vecka räcker det med ETT hårt block. Bara ett. Resten är bonus. Du klarar det.`},
+];
+
+// ─── VIEWS ─────────────────────────────────────────────────────
+function showView(id, btn) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  document.getElementById('v-' + id).classList.add('active');
+  if (btn) btn.classList.add('on');
+  if (id === 'oversikt') { drawDistanceChart(); drawHRChart(); }
+  if (id === 'somn') drawSleepChart();
+}
+
+// ─── SESSION LOG ────────────────────────────────────────────────
+function filterSessions(type, btn) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('on'));
+  btn.classList.add('on');
+  renderSessions(type);
+}
+
+function renderSessions(filter) {
+  const list = document.getElementById('session-list');
+  const filtered = filter === 'all' ? SESSIONS : SESSIONS.filter(s => s.type === filter);
+  list.innerHTML = [...filtered].reverse().map(s => {
+    const isBadDF = s.df !== 127;
+    const typeLabel = {L2:'l2',HYBRID:'hybrid',TEST:'test',INTERVAL:'interval'}[s.type] || 'l2';
+    const chipClass = isBadDF ? 'chip-baddf' : 'chip-' + typeLabel;
+    const chipText = isBadDF ? 'FEL DF' : s.type;
+    const rating = s.rating
+      ? `<div class="rating-badge ${s.rating >= 8 ? 'rb-high' : 'rb-mid'}">${s.rating}</div>`
+      : `<div class="rating-badge rb-none">—</div>`;
+    const watts = s.watts
+      ? `<div class="watts-tag">⚡ ${s.watts.avg}W / ${s.watts.max}W</div>`
+      : '';
+    const dist = s.m ? `<span class="sc-dist">${s.m.toLocaleString('sv')}m</span>` : `<span class="sc-dist" style="color:var(--muted)">—</span>`;
+    const pace = s.pace ? `<span class="sc-pace">${s.pace}/500m</span>` : '';
+    const hrMax = s.hrMax ? `/${s.hrMax}` : '';
+    const dateStr = new Date(s.date).toLocaleDateString('sv-SE', {day:'numeric',month:'short'});
+    return `<div class="session-card ${isBadDF ? 'bad-df' : ''}">
+      <div class="sc-date">${dateStr}</div>
+      <div class="sc-main">
+        <div class="sc-metrics">
+          ${dist}${pace}
+          <span class="sc-chip ${chipClass}">${chipText}</span>
+          ${watts}
+        </div>
+        <div class="sc-stats">
+          <span>♥ ${s.hr}${hrMax} bpm</span>
+          <span>${s.spm} spm</span>
+          <span>DF ${s.df}</span>
+        </div>
+        ${s.note ? `<div class="sc-note">${s.note}</div>` : ''}
+      </div>
+      <div class="sc-right">${rating}</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── CHARTS ─────────────────────────────────────────────────────
+function dpr() { return window.devicePixelRatio || 1; }
+
+function setupCanvas(id) {
+  const canvas = document.getElementById(id);
+  const rect = canvas.parentElement.getBoundingClientRect();
+  const w = rect.width;
+  const h = parseInt(canvas.getAttribute('height'));
+  canvas.width = w * dpr();
+  canvas.height = h * dpr();
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr(), dpr());
+  return {ctx, w, h};
+}
+
+function drawDistanceChart() {
+  const {ctx, w, h} = setupCanvas('distChart');
+  const pad = {t:16, r:16, b:36, l:52};
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+
+  // Background
+  ctx.fillStyle = '#10160f';
+  ctx.fillRect(0, 0, w, h);
+
+  // Plot only sessions with meters
+  const pts = SESSIONS.filter(s => s.m);
+  const yMin = 4400, yMax = 6000;
+  const PB = 5388;
+
+  // Grid lines
+  ctx.strokeStyle = '#1e2a1e';
+  ctx.lineWidth = 1;
+  [4500,4750,5000,5250,5388,5500,5750,6000].forEach(v => {
+    const y = pad.t + ch - ((v - yMin) / (yMax - yMin)) * ch;
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+  });
+
+  // PB line
+  const pbY = pad.t + ch - ((PB - yMin) / (yMax - yMin)) * ch;
+  ctx.strokeStyle = 'rgba(204,212,0,0.5)';
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([6, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.l, pbY); ctx.lineTo(pad.l + cw, pbY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(204,212,0,0.8)';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('PB 5 388m', pad.l + 4, pbY - 4);
+
+  // Y axis labels
+  ctx.fillStyle = '#5a6860';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  [4500,5000,5500,6000].forEach(v => {
+    const y = pad.t + ch - ((v - yMin) / (yMax - yMin)) * ch;
+    ctx.fillText((v/1000).toFixed(1)+'k', pad.l - 6, y + 3);
+  });
+
+  // X axis: compute positions
+  const totalDays = 22; // Jun 7 to Jun 29
+  const day0 = new Date('2026-06-07');
+
+  // Connect L2 points with line
+  ctx.strokeStyle = 'rgba(123,191,138,0.3)';
+  ctx.lineWidth = 1.5;
+  const l2pts = pts.filter(s => s.type === 'L2' && s.df === 127);
+  ctx.beginPath();
+  l2pts.forEach((s, i) => {
+    const dayOff = (new Date(s.date) - day0) / 86400000;
+    const x = pad.l + (dayOff / totalDays) * cw;
+    const y = pad.t + ch - ((s.m - yMin) / (yMax - yMin)) * ch;
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Draw points
+  pts.forEach(s => {
+    const dayOff = (new Date(s.date) - day0) / 86400000;
+    const x = pad.l + (dayOff / totalDays) * cw;
+    const y = pad.t + ch - ((s.m - yMin) / (yMax - yMin)) * ch;
+
+    let color;
+    if (s.df !== 127) color = '#e0913f';
+    else if (s.type === 'HYBRID') color = '#ccd400';
+    else if (s.type === 'TEST') color = '#4f8ef7';
+    else color = '#7bbf8a';
+
+    ctx.beginPath();
+    ctx.arc(x, y, s.m === PB ? 7 : 5, 0, Math.PI * 2);
+    ctx.fillStyle = color + '22';
+    ctx.fill();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = s.m === PB ? 2.5 : 1.5;
+    ctx.stroke();
+
+    if (s.m === PB) {
+      ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(x, y, 3, 0, Math.PI * 2); ctx.fill();
+    }
+  });
+
+  // X labels for key dates
+  ctx.fillStyle = '#5a6860';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  ['2026-06-07','2026-06-13','2026-06-18','2026-06-25','2026-06-29'].forEach(d => {
+    const dayOff = (new Date(d) - day0) / 86400000;
+    const x = pad.l + (dayOff / totalDays) * cw;
+    const label = new Date(d).toLocaleDateString('sv-SE', {day:'numeric',month:'short'});
+    ctx.fillText(label, x, h - 6);
+  });
+}
+
+function drawHRChart() {
+  const {ctx, w, h} = setupCanvas('hrChart');
+  const pad = {t:16, r:16, b:30, l:44};
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+
+  ctx.fillStyle = '#10160f';
+  ctx.fillRect(0, 0, w, h);
+
+  const yMin = 55, yMax = 70;
+  const goal = 62;
+
+  // Grid + goal line
+  [58,60,62,64,66].forEach(v => {
+    const y = pad.t + ch - ((v - yMin) / (yMax - yMin)) * ch;
+    ctx.strokeStyle = v === goal ? 'rgba(224,145,63,0.3)' : '#1e2a1e';
+    ctx.lineWidth = 1;
+    ctx.setLineDash(v === goal ? [4,3] : []);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(pad.l + cw, y); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Goal label
+  const goalY = pad.t + ch - ((goal - yMin) / (yMax - yMin)) * ch;
+  ctx.fillStyle = 'rgba(224,145,63,0.7)';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Mål ≤62', pad.l + 4, goalY - 3);
+
+  // Y axis
+  ctx.fillStyle = '#5a6860';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  [58,62,66].forEach(v => {
+    const y = pad.t + ch - ((v - yMin) / (yMax - yMin)) * ch;
+    ctx.fillText(v, pad.l - 6, y + 3);
+  });
+
+  const n = RESTING_HR.length;
+  const pts = RESTING_HR.map((d, i) => {
+    const x = pad.l + (i / (n - 1)) * cw;
+    const y = pad.t + ch - ((d.hr - yMin) / (yMax - yMin)) * ch;
+    return {x, y, hr: d.hr, date: d.date};
+  });
+
+  // Area fill
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pad.t + ch);
+  pts.forEach(p => ctx.lineTo(p.x, p.y));
+  ctx.lineTo(pts[pts.length-1].x, pad.t + ch);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(167,189,169,0.08)';
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  pts.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.strokeStyle = '#a7bda9';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Points
+  pts.forEach(p => {
+    const isHigh = p.hr > 62;
+    ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2);
+    ctx.fillStyle = isHigh ? '#e0913f' : '#a7bda9';
+    ctx.fill();
+    ctx.strokeStyle = '#10160f'; ctx.lineWidth = 1.5; ctx.stroke();
+  });
+
+  // X labels
+  ctx.fillStyle = '#5a6860';
+  ctx.font = '10px JetBrains Mono, monospace';
+  ctx.textAlign = 'center';
+  pts.forEach(p => {
+    const label = new Date(p.date).toLocaleDateString('sv-SE', {day:'numeric',month:'short'});
+    ctx.fillText(label, p.x, h - 4);
+  });
+}
+
+function drawSleepChart() {
+  const {ctx, w, h} = setupCanvas('sleepChart');
+  const pad = {t:16, r:16, b:24, l:36};
+  const cw = w - pad.l - pad.r;
+  const ch = h - pad.t - pad.b;
+
+  ctx.fillStyle = '#10160f';
+  ctx.fillRect(0, 0, w, h);
+
+  const yMin = 5.5, yMax = 8;
+  const goal = 7;
+  const n = SLEEP_APPROX.length;
+  const bw = (cw / n) - 2;
+
+  // Goal line
+  const goalY = pad.t + ch - ((goal - yMin) / (yMax - yMin)) * ch;
+  ctx.strokeStyle = 'rgba(204,212,0,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([5,3]);
+  ctx.beginPath(); ctx.moveTo(pad.l, goalY); ctx.lineTo(pad.l + cw, goalY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(204,212,0,0.6)';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Mål 7h', pad.l + 4, goalY - 3);
+
+  // Bars
+  SLEEP_APPROX.forEach((v, i) => {
+    const x = pad.l + i * (cw / n);
+    const barH = ((v - yMin) / (yMax - yMin)) * ch;
+    const y = pad.t + ch - barH;
+    const isUnder = v < goal;
+    ctx.fillStyle = isUnder ? 'rgba(224,145,63,0.5)' : 'rgba(123,191,138,0.5)';
+    ctx.fillRect(x + 1, y, bw, barH);
+  });
+
+  // Y axis
+  ctx.fillStyle = '#5a6860';
+  ctx.font = '9px JetBrains Mono, monospace';
+  ctx.textAlign = 'right';
+  [6, 7, 8].forEach(v => {
+    const y = pad.t + ch - ((v - yMin) / (yMax - yMin)) * ch;
+    ctx.fillText(v + 'h', pad.l - 4, y + 3);
+  });
+}
+
+// ─── COACH ────────────────────────────────────────────────────────
+let activeCoach = 0;
+let chatHistories = COACHES.map(c => [
+  {role:'coach', text: c.greeting}
+]);
+
+function selectCoach(i, btn) {
+  activeCoach = i;
+  document.querySelectorAll('.coach-card').forEach(c => c.classList.remove('on'));
+  btn.classList.add('on');
+  const c = COACHES[i];
+  document.getElementById('ch-icon').textContent = c.icon;
+  document.getElementById('ch-name').textContent = c.name;
+  document.getElementById('ch-role').textContent = c.role;
+  renderChat();
+}
+
+function renderChat() {
+  const container = document.getElementById('chat-messages');
+  container.innerHTML = chatHistories[activeCoach].map(m => `
+    <div class="msg ${m.role === 'coach' ? 'coach' : 'user'}">
+      ${m.role === 'coach' ? `<div class="msg-icon">${COACHES[activeCoach].icon}</div>` : ''}
+      <div class="msg-bubble">${m.text.replace(/\n/g, '<br>')}</div>
+    </div>
+  `).join('');
+  container.scrollTop = container.scrollHeight;
+}
+
+const MOCK_REPLIES = {
+  0: ["Bra fråga. Fokus just nu: håll frekvensen på 18–20 spm och bygg kraft per drag. Sprintar är bra för teknik, men klättring mot VO₂max sker via 4-min block.", "Nästa steg: kör ett pass i veckan med 2×4 min block sist. Pulsen hinner inte till max på ett ensamt block — det tar tid nära tröskeln."],
+  1: ["Tittar på datan: din L2-pace har förbättrats med 14,5 sek/500m på 18 dagar. Det är exceptionellt för en nybörjare med aerob potentiell.", "Watt-data saknas för de flesta pass. Om du kan aktivera watt-visning på PM5 varje gång ger det ett bättre mått än pace (påverkas ej av DF-variation)."],
+  2: ["Nyckeln: vilopuls på morgonen. Är den >3 bpm över din baseline (59) — sänk intensiteten den dagen. Inga hårda block.", "Baby anländer snart. Planera för 2–3 veckors 'sköld-läge': bara L2, lågtröskel, kort pass. Det bevarar kondition utan att pressa."],
+  3: ["Ät protein med varje mål. Sikta på 40–50g/portion, 4 gånger om dagen. Det är lättare att nå 170g+ med frekventa måltider.", "Kreatin: du gör rätt. 5g/dag är evidensbaserat. Du behöver inte cykla på/av."],
+  4: ["Foam roller: rulla BARA thorakalt (bröstkorg). Undvik svanken — det kan förvärra ischias. Lägg en handduk under för att begränsa rörelsen.", "Underarmsstretchen 3× per dag räcker för musarmen. Det är konsistens som hjälper, inte intensitet."],
+  5: ["Polariserad träning är vetenskapligt överlägsen pyramidal för uthållighetsidrottare (Stöggl & Sperlich 2014). Du kör rätt system.", "VO₂max är den starkaste prediktorn för livslängd vi känner till (Ross 2016, Mandsager 2018). Ditt arbete är medicinskt meningsfullt."],
+  6: ["En session räcker. En. Du har gjort det varje vecka sedan februari. Det är inte en slump — det är en identitet.", "Tröskeln är allt. Sänk den tills det verkar löjligt enkelt. Sedan kör du. Det funkar varje gång."],
+};
+
+let replyIdx = COACHES.map(() => 0);
+
+function sendMessage() {
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if (!text) return;
+  chatHistories[activeCoach].push({role:'user', text});
+  input.value = '';
+
+  setTimeout(() => {
+    const replies = MOCK_REPLIES[activeCoach];
+    const reply = replies[replyIdx[activeCoach] % replies.length];
+    replyIdx[activeCoach]++;
+    chatHistories[activeCoach].push({role:'coach', text: reply});
+    renderChat();
+  }, 600);
+
+  renderChat();
+}
+
+function handleKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+}
+
+// ─── INIT ────────────────────────────────────────────────────────
+function init() {
+  renderSessions('all');
+  selectCoach(0, document.querySelector('.coach-card'));
+  setTimeout(() => { drawDistanceChart(); drawHRChart(); }, 50);
+  window.addEventListener('resize', () => {
+    const active = document.querySelector('.view.active');
+    if (active.id === 'v-oversikt') { drawDistanceChart(); drawHRChart(); }
+    if (active.id === 'v-somn') drawSleepChart();
+  });
+}
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
