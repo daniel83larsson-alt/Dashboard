@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { exchangeConcept2Code, fetchConcept2Results, concept2ResultToActivity } from '@/lib/concept2'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url)

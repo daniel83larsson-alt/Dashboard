@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getConcept2AuthUrl } from '@/lib/concept2'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { randomBytes } from 'crypto'
 
 export async function GET(request: NextRequest) {

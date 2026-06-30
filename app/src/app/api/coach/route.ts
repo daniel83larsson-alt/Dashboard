@@ -1,7 +1,47 @@
 import { NextRequest, NextResponse } from 'next/server'
-import Anthropic from '@anthropic-ai/sdk'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
+
+type Message = { role: string; content: string }
+
+async function callGemini(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
+  const contents = [
+    ...history.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }],
+    })),
+    { role: 'user', parts: [{ text: message }] },
+  ]
+  const res = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents,
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: { maxOutputTokens: 1024 },
+      }),
+    }
+  )
+  const data = await res.json()
+  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+}
+
+async function callAnthropic(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
+  const { default: Anthropic } = await import('@anthropic-ai/sdk')
+  const client = new Anthropic({ apiKey })
+  const response = await client.messages.create({
+    model: 'claude-sonnet-4-6',
+    max_tokens: 1024,
+    system: systemPrompt,
+    messages: [
+      ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      { role: 'user', content: message },
+    ],
+  })
+  return response.content[0].type === 'text' ? response.content[0].text : ''
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -10,7 +50,6 @@ export async function POST(request: NextRequest) {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const { coachId, message, sport } = await request.json()
-
     const coach = getCoachById(coachId as CoachId)
     if (!coach) return NextResponse.json({ error: 'Coach not found' }, { status: 404 })
 
@@ -59,22 +98,17 @@ export async function POST(request: NextRequest) {
       })),
     }
 
-    const history = (sessionData?.messages ?? []) as Array<{ role: string; content: string }>
+    const history = (sessionData?.messages ?? []) as Message[]
     const systemPrompt = coach.systemPrompt(sport, userContext)
-    const apiKey = profile?.llm_api_key_encrypted ?? process.env.ANTHROPIC_API_KEY!
+    const userApiKey = profile?.llm_api_key_encrypted
+    const userProvider = profile?.llm_provider
 
-    const client = new Anthropic({ apiKey })
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 1024,
-      system: systemPrompt,
-      messages: [
-        ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-        { role: 'user', content: message },
-      ],
-    })
-
-    const reply = response.content[0].type === 'text' ? response.content[0].text : ''
+    let reply: string
+    if (userApiKey && userProvider === 'anthropic') {
+      reply = await callAnthropic(userApiKey, systemPrompt, history, message)
+    } else {
+      reply = await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, systemPrompt, history, message)
+    }
 
     const updatedMessages = [
       ...history,

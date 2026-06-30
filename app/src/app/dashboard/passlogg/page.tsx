@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
 function fmt_dur(s: number) {

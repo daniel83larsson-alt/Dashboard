@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { createSupabaseServerClient } from '@/lib/supabase'
+import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { fetchConcept2Results, refreshConcept2Token, concept2ResultToActivity } from '@/lib/concept2'
 
 export async function POST() {
