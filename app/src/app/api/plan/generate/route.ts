@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { startOfWeek } from '@/lib/dates'
 
 function fmtPace(seconds: number, meters: number) {
   if (!meters) return '--'
@@ -34,9 +35,9 @@ export async function POST() {
     const best30 = pr30.length ? pr30.reduce((b, a) => (a.distance > b.distance ? a : b)) : null
 
     // Week frequency
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    const weekStart = startOfWeek(new Date())
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30)
-    const recentWeek = acts.filter(a => new Date(a.start_date) >= weekAgo)
+    const recentWeek = acts.filter(a => new Date(a.start_date) >= weekStart)
     const recentMonth = acts.filter(a => new Date(a.start_date) >= monthAgo)
 
     const contextBlock = `

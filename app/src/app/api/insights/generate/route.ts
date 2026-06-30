@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { startOfWeek } from '@/lib/dates'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -39,7 +40,7 @@ export async function POST() {
     const wellness = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
 
     const now = new Date()
-    const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+    const weekStart = startOfWeek(now)
     const monthAgo = new Date(now); monthAgo.setDate(now.getDate() - 30)
 
     function fmtPace(s: number, m: number) {
@@ -49,7 +50,7 @@ export async function POST() {
     }
 
     const real = activities.filter(a => a.distance > 1000 && a.moving_time > 180)
-    const thisWeek = activities.filter(a => new Date(a.start_date) >= weekAgo).length
+    const thisWeek = activities.filter(a => new Date(a.start_date) >= weekStart).length
     const thisMonth = activities.filter(a => new Date(a.start_date) >= monthAgo).length
     const totalKm = Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)
 

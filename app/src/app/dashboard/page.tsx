@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
+import { startOfWeek } from '@/lib/dates'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
 
@@ -111,11 +112,11 @@ export default async function DashboardPage() {
   const now = new Date()
   const y = now.getFullYear()
   const mo = now.getMonth()
-  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+  const weekStart = startOfWeek(now)
   const monthStart = new Date(y, mo, 1)
   const yearStart  = new Date(y, 0, 1)
 
-  const thisWeek  = activities.filter(a => new Date(a.start_date) >= weekAgo)
+  const thisWeek  = activities.filter(a => new Date(a.start_date) >= weekStart)
   const thisMonth = activities.filter(a => new Date(a.start_date) >= monthStart)
   const thisYear  = activities.filter(a => new Date(a.start_date) >= yearStart)
 

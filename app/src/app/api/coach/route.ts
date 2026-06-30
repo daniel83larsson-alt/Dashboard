@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
+import { startOfWeek } from '@/lib/dates'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -131,9 +132,9 @@ export async function POST(request: NextRequest) {
     const acts = allActivities ?? []
     const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
 
-    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
-    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30)
     const now = new Date()
+    const weekStart = startOfWeek(now)
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30)
     const yr = acts.filter(a => new Date(a.start_date).getFullYear() === now.getFullYear())
 
     function fmtPace(s: number, m: number) {
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       stats: {
         totalSessions: acts.length,
         totalDistKm: Math.round(acts.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000),
-        sessionsThisWeek: acts.filter(a => new Date(a.start_date) >= weekAgo).length,
+        sessionsThisWeek: acts.filter(a => new Date(a.start_date) >= weekStart).length,
         sessionsThisMonth: acts.filter(a => new Date(a.start_date) >= monthAgo).length,
       },
       prs: {
