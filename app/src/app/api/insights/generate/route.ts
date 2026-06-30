@@ -71,7 +71,7 @@ SENASTE 15 PASS:
 ${recentStr}`
 
     // Each specialist gets a unique, focused question
-    const [data, recovery, mental, strength] = await Promise.all([
+    const [data, recovery, mental, strength, mobility] = await Promise.all([
       askAgent(
         apiKey,
         'Du är datadriven träningsanalytiker. Svara på svenska, 3-5 meningar. Gå direkt på mönster — hoppa över sammanfattning av grundstatistik.',
@@ -92,6 +92,11 @@ ${recentStr}`
         'Du är styrkecoach specialiserad på kompletterande träning för roddare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA övningar — inte generella råd.',
         `Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.\n\n${dataBlock}`
       ),
+      askAgent(
+        apiKey,
+        'Du är rörlighets- och stretchcoach specialiserad på roddare och uthållighetsidrottare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA stretch-/mobilityövningar kopplade till vilka muskelgrupper som belastas av sporten i datan — inte generella råd.',
+        `Baserat på vilken typ av träning atleten kör (se sporttyp och volym i datan), vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.\n\n${dataBlock}`
+      ),
     ])
 
     // Head coach synthesizes all specialist input
@@ -101,7 +106,8 @@ SPECIALISTERNAS BEDÖMNINGAR:
 📊 Dataanalytiker: ${data}
 💤 Återhämtning: ${recovery}
 🧠 Mental: ${mental}
-💪 Styrka: ${strength}`
+💪 Styrka: ${strength}
+🤸 Rörlighet: ${mobility}`
 
     const summary = await askAgent(
       apiKey,
@@ -113,7 +119,7 @@ SPECIALISTERNAS BEDÖMNINGAR:
     const insight = {
       generatedAt: now.toISOString(),
       stats: { sessions: activities.length, thisWeek, thisMonth, totalKm, pr30: b30 ? `${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : null },
-      agents: { data, recovery, mental, strength, summary },
+      agents: { data, recovery, mental, strength, mobility, summary },
     }
 
     await supabase.from('coach_sessions').upsert({

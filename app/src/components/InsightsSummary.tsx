@@ -9,6 +9,7 @@ type AgentInsights = {
   recovery: string
   mental: string
   strength: string
+  mobility: string
   summary: string
 }
 
@@ -25,6 +26,7 @@ const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; i
   { key: 'recovery', label: 'Återhämtning', icon: '💤' },
   { key: 'mental',   label: 'Mental',      icon: '🧠' },
   { key: 'strength', label: 'Styrka',      icon: '💪' },
+  { key: 'mobility', label: 'Rörlighet',   icon: '🤸' },
 ]
 
 function shortTake(text: string): string {

@@ -9,6 +9,7 @@ type AgentInsights = {
   recovery: string
   mental: string
   strength: string
+  mobility: string
   summary: string
 }
 
@@ -31,6 +32,7 @@ const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; i
   { key: 'recovery', label: 'Återhämtning',    icon: '💤', role: 'Belastning · Sömn · Vilopuls' },
   { key: 'mental',   label: 'Mentalcoach',     icon: '🧠', role: 'Mindset · Motivation · Verktyg' },
   { key: 'strength', label: 'Styrkecoach',     icon: '💪', role: 'Kompletterande träning · Core' },
+  { key: 'mobility', label: 'Rörlighetscoach', icon: '🤸', role: 'Stretching · Mobility · Förebyggande' },
 ]
 
 function Markdown({ text }: { text: string }) {

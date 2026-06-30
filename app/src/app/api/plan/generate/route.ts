@@ -52,20 +52,29 @@ SAMMANFATTNING:
 - Bäst 30-min: ${best30 ? `${best30.distance}m (${fmtPace(best30.moving_time, best30.distance)}/500m)` : 'okänt'}
 
 MÅL:
-${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})`).join('\n') : '- Inga specificerade mål'}
+${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})${g.target_date ? ` — måldatum: ${g.target_date}` : ' — inget måldatum'}`).join('\n') : '- Inga specificerade mål'}
 `
 
-    const prompt = `Du är en erfaren roddcoach. Skapa ett konkret träningsupplägg för de kommande 4 veckorna baserat på användarens träningshistorik.
+    const hasTargetedGoal = (goals ?? []).some(g => g.target_date)
+
+    const prompt = `Du är en erfaren roddcoach. Bestäm vilken typ av upplägg som passar bäst utifrån målen nedan:
+
+- Om det finns ett mål med specifikt datum: bygg planen som steg mot det målet (ramad som "vecka-för-vecka mot målet").
+- Om det INTE finns något datumsatt mål: ramma planen som "kör det här upplägget i 2-3 veckor, vi justerar sedan efter varje kommande pass" — alltså adaptiv, inte ett fast långtidsschema.
 
 ${contextBlock}
 
-Ge ett strukturerat upplägg med:
-1. En kort analys av nuläget (2-3 meningar)
-2. Vecka-för-vecka plan med specifika pass (typ av pass, distans/tid, intensitet)
-3. Fokusområden för perioden
+Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text):
+{
+  "planType": "mot_mal" eller "adaptiv",
+  "philosophy": "2-3 meningar som förklarar upplägget och varför, anpassat efter vilken typ du valde",
+  "focusAreas": ["fokusområde 1", "fokusområde 2", "fokusområde 3"],
+  "sessions": [
+    { "day": "Måndag", "type": "Vila" eller "Lugn distans" eller "Intervaller" etc, "description": "konkret beskrivning med tid/distans/intensitet" }
+  ]
+}
 
-Var konkret: ange faktiska tider och distanser. Anpassa till deras nuvarande nivå.
-Svara på svenska. Håll det kortfattat men informativt (max 400 ord).`
+"sessions" ska täcka de kommande 7 dagarna (alla 7 dagar, inklusive vilodagar). Var konkret med faktiska tider och distanser anpassat till atletens nuvarande nivå. Svara på svenska.`
 
     const geminiKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
     const res = await fetch(
@@ -75,26 +84,60 @@ Svara på svenska. Håll det kortfattat men informativt (max 400 ord).`
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
+          generationConfig: {
+            maxOutputTokens: 1536,
+            thinkingConfig: { thinkingBudget: 0 },
+            responseMimeType: 'application/json',
+            responseSchema: {
+              type: 'OBJECT',
+              properties: {
+                planType: { type: 'STRING', enum: ['mot_mal', 'adaptiv'] },
+                philosophy: { type: 'STRING' },
+                focusAreas: { type: 'ARRAY', items: { type: 'STRING' } },
+                sessions: {
+                  type: 'ARRAY',
+                  items: {
+                    type: 'OBJECT',
+                    properties: {
+                      day: { type: 'STRING' },
+                      type: { type: 'STRING' },
+                      description: { type: 'STRING' },
+                    },
+                    required: ['day', 'type', 'description'],
+                  },
+                },
+              },
+              required: ['planType', 'philosophy', 'focusAreas', 'sessions'],
+            },
+          },
         }),
       }
     )
     const geminiData = await res.json()
-    const plan = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+    const rawPlan = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+
+    let plan
+    try {
+      plan = JSON.parse(rawPlan)
+    } catch {
+      plan = null
+    }
 
     if (!plan) {
       return NextResponse.json({ error: 'Kunde inte generera plan' }, { status: 500 })
     }
 
+    const planWithMeta = { ...plan, generatedAt: new Date().toISOString(), hasTargetedGoal }
+
     // Store plan in coach_sessions with special id 'weekly_plan'
     await supabase.from('coach_sessions').upsert({
       user_id: user.id,
       coach_id: 'weekly_plan',
-      messages: [{ role: 'assistant', content: plan }],
+      messages: [{ role: 'assistant', content: JSON.stringify(planWithMeta) }],
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,coach_id' })
 
-    return NextResponse.json({ plan })
+    return NextResponse.json({ plan: planWithMeta })
   } catch (err) {
     console.error('Plan generate error:', err)
     return NextResponse.json({ error: 'Generering misslyckades' }, { status: 500 })
