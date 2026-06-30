@@ -85,9 +85,22 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
   ])
 
-  type WellnessData = { restingHR: number | null; sleepHours: number | null; updatedAt: string }
+  type DayWellness = {
+    date: string
+    restingHR: number | null
+    sleepHours: number | null
+    deepSleepHours: number | null
+    remSleepHours: number | null
+    lightSleepHours: number | null
+    steps: number | null
+    bodyBattery: number | null
+    hrv: number | null
+    hrvStatus: string | null
+  }
+  type WellnessStore = { history: DayWellness[]; updatedAt: string }
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const wellness: WellnessData | null = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
+  const wellnessStore: WellnessStore | null = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
+  const wellness: DayWellness | null = wellnessStore?.history?.[0] ?? null
 
   const activities = allActivities ?? []
   const latest = activities[0] ?? null
@@ -200,7 +213,7 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Garmin Wellness ───────────────────────────────────────────────────── */}
-      {wellness && (wellness.restingHR || wellness.sleepHours) && (
+      {wellness && (
         <div>
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Wellness · Garmin</h2>
           <div className="grid grid-cols-2 gap-2">
@@ -210,10 +223,53 @@ export default async function DashboardPage() {
                 <div className="text-muted text-xs mt-1">Vilopuls (bpm)</div>
               </div>
             )}
-            {wellness.sleepHours && (
+            {wellness.sleepHours != null && wellness.sleepHours > 0 && (
               <div className="bg-card border border-edge rounded-2xl p-4">
                 <div className="font-mono text-accent text-2xl font-bold leading-none">{wellness.sleepHours.toFixed(1)}h</div>
                 <div className="text-muted text-xs mt-1">Sömn igår</div>
+                {wellness.deepSleepHours != null && wellness.remSleepHours != null && wellness.lightSleepHours != null && wellness.sleepHours > 0 && (
+                  <div className="mt-2 flex h-2 rounded-full overflow-hidden gap-px">
+                    <div className="bg-accent/90" style={{ width: `${(wellness.deepSleepHours / wellness.sleepHours) * 100}%` }} title="Djup" />
+                    <div className="bg-lcd/70" style={{ width: `${(wellness.remSleepHours / wellness.sleepHours) * 100}%` }} title="REM" />
+                    <div className="bg-edge" style={{ width: `${(wellness.lightSleepHours / wellness.sleepHours) * 100}%` }} title="Lätt" />
+                  </div>
+                )}
+                {wellness.deepSleepHours != null && (
+                  <div className="flex gap-2 mt-1.5 text-[10px] text-muted">
+                    <span><span className="text-accent">▪</span> Djup {wellness.deepSleepHours.toFixed(1)}h</span>
+                    {wellness.remSleepHours != null && <span><span className="text-lcd">▪</span> REM {wellness.remSleepHours.toFixed(1)}h</span>}
+                  </div>
+                )}
+              </div>
+            )}
+            {wellness.steps != null && wellness.steps > 0 && (
+              <div className="bg-card border border-edge rounded-2xl p-4">
+                <div className="font-mono text-accent text-2xl font-bold leading-none">{wellness.steps.toLocaleString('sv-SE')}</div>
+                <div className="text-muted text-xs mt-1">Steg idag</div>
+                <div className="mt-2 h-1.5 bg-bg rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-accent rounded-full transition-all"
+                    style={{ width: `${Math.min((wellness.steps / 10000) * 100, 100)}%` }}
+                  />
+                </div>
+                <div className="text-[10px] text-muted mt-1">{Math.round((wellness.steps / 10000) * 100)}% av 10 000</div>
+              </div>
+            )}
+            {wellness.bodyBattery != null && (
+              <div className="bg-card border border-edge rounded-2xl p-4">
+                <div className={`font-mono text-2xl font-bold leading-none ${wellness.bodyBattery >= 0 ? 'text-accent' : 'text-red-400'}`}>
+                  {wellness.bodyBattery >= 0 ? '+' : ''}{wellness.bodyBattery}
+                </div>
+                <div className="text-muted text-xs mt-1">Body Battery (natt)</div>
+              </div>
+            )}
+            {wellness.hrv != null && (
+              <div className="bg-card border border-edge rounded-2xl p-4">
+                <div className="font-mono text-lcd text-2xl font-bold leading-none">{Math.round(wellness.hrv)}</div>
+                <div className="text-muted text-xs mt-1">HRV (ms)</div>
+                {wellness.hrvStatus && (
+                  <div className="text-[10px] text-lcd mt-1 capitalize">{wellness.hrvStatus.toLowerCase().replace('_', ' ')}</div>
+                )}
               </div>
             )}
           </div>

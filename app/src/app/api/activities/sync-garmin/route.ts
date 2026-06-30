@@ -1,6 +1,25 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { fetchGarminActivities, garminActivityToRow, fetchGarminRestingHR, fetchGarminSleep } from '@/lib/garmin'
+import {
+  fetchGarminActivities,
+  garminActivityToRow,
+  fetchGarminRestingHR,
+  fetchGarminSleepFull,
+  fetchGarminSteps,
+} from '@/lib/garmin'
+
+export type DayWellness = {
+  date: string
+  restingHR: number | null
+  sleepHours: number | null
+  deepSleepHours: number | null
+  remSleepHours: number | null
+  lightSleepHours: number | null
+  steps: number | null
+  bodyBattery: number | null
+  hrv: number | null
+  hrvStatus: string | null
+}
 
 export async function POST() {
   try {
@@ -25,22 +44,50 @@ export async function POST() {
       return NextResponse.json({ error: 'Garmin not configured' }, { status: 400 })
     }
 
-    // Fetch Garmin activities + wellness in parallel
-    const [garminActivities, restingHR, sleepHours] = await Promise.all([
+    // Fetch everything in parallel
+    const [garminActivities, restingHR, sleep, steps] = await Promise.all([
       fetchGarminActivities(100, garminEmail, garminPassword),
       fetchGarminRestingHR(garminEmail, garminPassword),
-      fetchGarminSleep(garminEmail, garminPassword),
+      fetchGarminSleepFull(garminEmail, garminPassword),
+      fetchGarminSteps(garminEmail, garminPassword),
     ])
 
-    // Store wellness data for dashboard + coaches
-    if (restingHR !== null || sleepHours !== null) {
-      await supabase.from('coach_sessions').upsert({
-        user_id: user.id,
-        coach_id: 'garmin_wellness',
-        messages: [{ role: 'system', content: JSON.stringify({ restingHR, sleepHours, updatedAt: new Date().toISOString() }) }],
-        updated_at: new Date().toISOString(),
-      }, { onConflict: 'user_id,coach_id' })
+    // Build today's wellness snapshot
+    const today = new Date().toISOString().slice(0, 10)
+    const todayWellness: DayWellness = {
+      date: today,
+      restingHR: sleep?.restingHR ?? restingHR,
+      sleepHours: sleep?.hours ?? null,
+      deepSleepHours: sleep?.deepHours ?? null,
+      remSleepHours: sleep?.remHours ?? null,
+      lightSleepHours: sleep?.lightHours ?? null,
+      steps,
+      bodyBattery: sleep?.bodyBattery ?? null,
+      hrv: sleep?.hrv ?? null,
+      hrvStatus: sleep?.hrvStatus ?? null,
     }
+
+    // Load existing wellness history and merge (keep 30 days)
+    const { data: wellnessRow } = await supabase
+      .from('coach_sessions')
+      .select('messages')
+      .eq('user_id', user.id)
+      .eq('coach_id', 'garmin_wellness')
+      .single()
+
+    const prevRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+    const prev = prevRaw ? (() => { try { return JSON.parse(prevRaw) } catch { return null } })() : null
+    const prevHistory: DayWellness[] = Array.isArray(prev?.history) ? prev.history : []
+
+    const filtered = prevHistory.filter(d => d.date !== today)
+    const history = [todayWellness, ...filtered].slice(0, 30)
+
+    await supabase.from('coach_sessions').upsert({
+      user_id: user.id,
+      coach_id: 'garmin_wellness',
+      messages: [{ role: 'system', content: JSON.stringify({ history, updatedAt: new Date().toISOString() }) }],
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,coach_id' })
 
     // Fetch existing activities to detect duplicates
     const oldestGarmin = garminActivities.at(-1)
@@ -59,17 +106,14 @@ export async function POST() {
     const toUpsert = garminActivities
       .map(a => garminActivityToRow(a, user.id))
       .filter(row => {
-        // Skip if we already have this exact Garmin activity
         if (existingRows.some(e => e.strava_id === row.strava_id)) return false
 
-        // Skip Rowing activities that duplicate a Concept2 entry
-        // Concept2 IDs are stored as negative numbers (r.id * -1)
         const rowDist = row.distance ?? 0
         const rowTime = row.moving_time ?? 0
         if (row.sport_type === 'Rowing' && rowDist > 0 && rowTime > 0) {
           const rowDate = row.start_date.slice(0, 10)
           const duplicate = existingRows.some(e => {
-            if (e.strava_id >= 0) return false // not a Concept2 entry
+            if (e.strava_id >= 0) return false
             if (!e.distance || !e.moving_time) return false
             const eDate = e.start_date.slice(0, 10)
             if (eDate !== rowDate) return false
@@ -87,10 +131,7 @@ export async function POST() {
       await supabase.from('activities').upsert(toUpsert, { onConflict: 'strava_id' })
     }
 
-    return NextResponse.json({
-      synced: toUpsert.length,
-      wellness: { restingHR, sleepHours },
-    })
+    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness })
   } catch (err) {
     console.error('Garmin sync error:', err)
     return NextResponse.json({ error: 'Garmin sync failed' }, { status: 500 })

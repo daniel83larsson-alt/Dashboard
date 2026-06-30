@@ -78,6 +78,18 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
+export type SleepSummary = {
+  hours: number
+  deepHours: number
+  remHours: number
+  lightHours: number
+  awakeHours: number
+  hrv: number | null
+  hrvStatus: string | null
+  bodyBattery: number | null
+  restingHR: number | null
+}
+
 export async function fetchGarminRestingHR(email?: string, password?: string): Promise<number | null> {
   try {
     const gc = await getGarminClient(email, password)
@@ -97,6 +109,41 @@ export async function fetchGarminSleep(email?: string, password?: string): Promi
     const sleep = await gc.getSleepDuration(yesterday)
     if (!sleep) return null
     return sleep.hours + sleep.minutes / 60
+  } catch {
+    return null
+  }
+}
+
+export async function fetchGarminSleepFull(email?: string, password?: string): Promise<SleepSummary | null> {
+  try {
+    const gc = await getGarminClient(email, password)
+    const yesterday = new Date()
+    yesterday.setDate(yesterday.getDate() - 1)
+    const data = await gc.getSleepData(yesterday)
+    if (!data?.dailySleepDTO) return null
+    const d = data.dailySleepDTO
+    return {
+      hours: (d.sleepTimeSeconds ?? 0) / 3600,
+      deepHours: (d.deepSleepSeconds ?? 0) / 3600,
+      remHours: (d.remSleepSeconds ?? 0) / 3600,
+      lightHours: (d.lightSleepSeconds ?? 0) / 3600,
+      awakeHours: (d.awakeSleepSeconds ?? 0) / 3600,
+      hrv: (data as any).avgOvernightHrv ?? null,
+      hrvStatus: (data as any).hrvStatus ?? null,
+      bodyBattery: (data as any).bodyBatteryChange ?? null,
+      restingHR: (data as any).restingHeartRate ?? null,
+    }
+  } catch {
+    return null
+  }
+}
+
+export async function fetchGarminSteps(email?: string, password?: string): Promise<number | null> {
+  try {
+    const gc = await getGarminClient(email, password)
+    const today = new Date()
+    const steps = await gc.getSteps(today)
+    return typeof steps === 'number' ? steps : null
   } catch {
     return null
   }
