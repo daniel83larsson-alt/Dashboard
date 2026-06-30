@@ -90,11 +90,10 @@ export type SleepSummary = {
   restingHR: number | null
 }
 
-export async function fetchGarminRestingHR(email?: string, password?: string): Promise<number | null> {
+export async function fetchGarminRestingHR(email?: string, password?: string, forDate?: Date): Promise<number | null> {
   try {
     const gc = await getGarminClient(email, password)
-    const today = new Date()
-    const hr = await gc.getHeartRate(today)
+    const hr = await gc.getHeartRate(forDate ?? new Date())
     return (hr as any)?.restingHeartRate ?? null
   } catch {
     return null
@@ -114,12 +113,16 @@ export async function fetchGarminSleep(email?: string, password?: string): Promi
   }
 }
 
-export async function fetchGarminSleepFull(email?: string, password?: string): Promise<SleepSummary | null> {
+// Fetch sleep data for a specific "wake-up date". Sleep stored under wellness
+// date D is fetched by passing D−1 as the Garmin calendar date (the night
+// that ended on the morning of D).
+export async function fetchGarminSleepFull(email?: string, password?: string, wakeDate?: Date): Promise<SleepSummary | null> {
   try {
     const gc = await getGarminClient(email, password)
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const data = await gc.getSleepData(yesterday)
+    const base = wakeDate ?? new Date()
+    const sleepDate = new Date(base)
+    sleepDate.setDate(sleepDate.getDate() - 1)
+    const data = await gc.getSleepData(sleepDate)
     if (!data?.dailySleepDTO) return null
     const d = data.dailySleepDTO
     return {
@@ -138,13 +141,30 @@ export async function fetchGarminSleepFull(email?: string, password?: string): P
   }
 }
 
-export async function fetchGarminSteps(email?: string, password?: string): Promise<number | null> {
+export async function fetchGarminSteps(email?: string, password?: string, forDate?: Date): Promise<number | null> {
   try {
     const gc = await getGarminClient(email, password)
-    const today = new Date()
-    const steps = await gc.getSteps(today)
+    const steps = await gc.getSteps(forDate ?? new Date())
     return typeof steps === 'number' ? steps : null
   } catch {
     return null
+  }
+}
+
+// Fetch a full DayWellness snapshot for an arbitrary past date.
+export async function fetchGarminDayWellness(
+  date: Date,
+  email: string,
+  password: string,
+): Promise<{ restingHR: number | null; sleep: SleepSummary | null; steps: number | null }> {
+  const [restingHR, sleep, steps] = await Promise.allSettled([
+    fetchGarminRestingHR(email, password, date),
+    fetchGarminSleepFull(email, password, date),
+    fetchGarminSteps(email, password, date),
+  ])
+  return {
+    restingHR: restingHR.status === 'fulfilled' ? restingHR.value : null,
+    sleep: sleep.status === 'fulfilled' ? sleep.value : null,
+    steps: steps.status === 'fulfilled' ? steps.value : null,
   }
 }

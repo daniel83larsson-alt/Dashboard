@@ -6,6 +6,7 @@ import {
   fetchGarminRestingHR,
   fetchGarminSleepFull,
   fetchGarminSteps,
+  fetchGarminDayWellness,
 } from '@/lib/garmin'
 import { decrypt } from '@/lib/encrypt'
 
@@ -89,7 +90,46 @@ export async function POST() {
     const prevHistory: DayWellness[] = Array.isArray(prev?.history) ? prev.history : []
 
     const filtered = prevHistory.filter(d => d.date !== today)
-    const history = [todayWellness, ...filtered].slice(0, 30)
+
+    // Backfill missing days — find gaps in the last 30 days and fetch them
+    const storedDates = new Set(filtered.map(d => d.date))
+    const missingDates: Date[] = []
+    for (let i = 1; i <= 29; i++) {
+      const d = new Date()
+      d.setDate(d.getDate() - i)
+      const key = d.toISOString().slice(0, 10)
+      if (!storedDates.has(key)) missingDates.push(d)
+    }
+
+    // Fetch up to 14 missing days in parallel to avoid Garmin rate limits
+    const toBackfill = missingDates.slice(0, 14)
+    const backfilled: DayWellness[] = []
+    if (toBackfill.length > 0) {
+      const results = await Promise.allSettled(
+        toBackfill.map(d => fetchGarminDayWellness(d, garminEmail, garminPassword))
+      )
+      results.forEach((r, i) => {
+        if (r.status !== 'fulfilled') return
+        const { restingHR: hr, sleep: s, steps: st } = r.value
+        backfilled.push({
+          date: toBackfill[i].toISOString().slice(0, 10),
+          restingHR: s?.restingHR ?? hr,
+          sleepHours: s?.hours ?? null,
+          deepSleepHours: s?.deepHours ?? null,
+          remSleepHours: s?.remHours ?? null,
+          lightSleepHours: s?.lightHours ?? null,
+          steps: st,
+          bodyBattery: s?.bodyBattery ?? null,
+          hrv: s?.hrv ?? null,
+          hrvStatus: s?.hrvStatus ?? null,
+        })
+      })
+    }
+
+    const history = [todayWellness, ...backfilled, ...filtered]
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .filter((d, i, arr) => arr.findIndex(x => x.date === d.date) === i)
+      .slice(0, 30)
 
     await supabase.from('coach_sessions').upsert({
       user_id: user.id,
@@ -140,7 +180,7 @@ export async function POST() {
       await supabase.from('activities').upsert(toUpsert, { onConflict: 'strava_id' })
     }
 
-    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness })
+    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness, backfilled: backfilled.length })
   } catch (err) {
     console.error('Garmin sync error:', err)
     return NextResponse.json({ error: 'Garmin sync failed' }, { status: 500 })
