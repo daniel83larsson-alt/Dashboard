@@ -111,7 +111,7 @@ export default function WellnessCharts({ history }: Props) {
               <CartesianGrid vertical={false} stroke={EDGE} />
               <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} />
-              <Tooltip {...tooltip} formatter={(v: number, n: string) => [`${v}h`, n]} />
+              <Tooltip {...tooltip} formatter={(v, n) => [`${v}h`, n]} />
               <Bar dataKey="Djup" stackId="s" fill={ACCENT} radius={[0,0,0,0]} />
               <Bar dataKey="REM" stackId="s" fill={LCD} radius={[0,0,0,0]} />
               <Bar dataKey="Lätt" stackId="s" fill="#374151" radius={[3,3,0,0]} />
@@ -134,7 +134,7 @@ export default function WellnessCharts({ history }: Props) {
               <CartesianGrid vertical={false} stroke={EDGE} />
               <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-              <Tooltip {...tooltip} formatter={(v: number) => [`${v} bpm`, 'Vilopuls']} />
+              <Tooltip {...tooltip} formatter={(v) => [`${v} bpm`, 'Vilopuls']} />
               {avgHR && <ReferenceLine y={avgHR} stroke={MUTED} strokeDasharray="3 3" />}
               <Line type="monotone" dataKey="HR" stroke={LCD} strokeWidth={2} dot={false} connectNulls />
             </LineChart>
@@ -151,7 +151,7 @@ export default function WellnessCharts({ history }: Props) {
               <CartesianGrid vertical={false} stroke={EDGE} />
               <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => `${Math.round(v/1000)}k`} />
-              <Tooltip {...tooltip} formatter={(v: number) => [v.toLocaleString('sv-SE'), 'Steg']} />
+              <Tooltip {...tooltip} formatter={(v) => [typeof v === 'number' ? v.toLocaleString('sv-SE') : v, 'Steg']} />
               <ReferenceLine y={10000} stroke={ACCENT} strokeDasharray="3 3" strokeOpacity={0.5} />
               <Bar dataKey="Steg" fill={ACCENT} radius={[3,3,0,0]} opacity={0.85} />
             </BarChart>
@@ -169,7 +169,7 @@ export default function WellnessCharts({ history }: Props) {
               <CartesianGrid vertical={false} stroke={EDGE} />
               <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-              <Tooltip {...tooltip} formatter={(v: number) => [`${v} ms`, 'HRV']} />
+              <Tooltip {...tooltip} formatter={(v) => [`${v} ms`, 'HRV']} />
               <Line type="monotone" dataKey="HRV" stroke={ACCENT} strokeWidth={2} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
@@ -186,7 +186,7 @@ export default function WellnessCharts({ history }: Props) {
               <CartesianGrid vertical={false} stroke={EDGE} />
               <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
               <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} />
-              <Tooltip {...tooltip} formatter={(v: number) => [`${v >= 0 ? '+' : ''}${v}`, 'Battery']} />
+              <Tooltip {...tooltip} formatter={(v) => [typeof v === 'number' ? `${v >= 0 ? '+' : ''}${v}` : v, 'Battery']} />
               <ReferenceLine y={0} stroke={MUTED} />
               <Bar dataKey="Batteri" radius={[3,3,0,0]}
                 fill={ACCENT}
