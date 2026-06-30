@@ -20,7 +20,7 @@ export default async function InsikterPage() {
   const wellnessHistory = wellnessStore?.history ?? []
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full space-y-8">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-8">
       <div>
         <h1 className="text-2xl font-semibold">Insikter</h1>
         <p className="text-muted text-sm mt-1">Hela tränarteamet analyserar din träning</p>

@@ -64,10 +64,10 @@ export default function WellnessCharts({ history }: Props) {
   const avgHR = hasHR ? Math.round(data.filter(d => d.restingHR).reduce((s, d) => s + d.restingHR!, 0) / data.filter(d => d.restingHR).length) : null
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
 
       {/* Summary row */}
-      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:col-span-2">
         {latest.restingHR && (
           <div className="bg-card border border-edge rounded-xl p-3">
             <div className="font-mono text-lcd text-lg font-bold">{latest.restingHR}</div>

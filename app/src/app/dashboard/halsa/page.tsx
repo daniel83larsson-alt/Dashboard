@@ -1,17 +1,19 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessCharts'
+import InsightsSummary from '@/components/InsightsSummary'
 
 export default async function HalsaPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: wellnessRow } = await supabase
-    .from('coach_sessions')
-    .select('messages')
-    .eq('user_id', user.id)
-    .eq('coach_id', 'garmin_wellness')
-    .single()
+  const [{ data: wellnessRow }, { data: insightRow }] = await Promise.all([
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
+  ])
+
+  const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const savedInsight = insightRaw ? (() => { try { return JSON.parse(insightRaw) } catch { return null } })() : null
 
   const raw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const store = raw ? (() => { try { return JSON.parse(raw) } catch { return null } })() : null
@@ -30,7 +32,7 @@ export default async function HalsaPage() {
   const avgHRV   = avg('hrv')
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full space-y-6">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -151,6 +153,12 @@ export default async function HalsaPage() {
           <div>
             <div className="text-xs text-muted uppercase tracking-wider mb-4">Trender · 30 dagar</div>
             <WellnessCharts history={history} />
+          </div>
+
+          {/* Team insights, compact */}
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-3">Teamets bedömning</div>
+            <InsightsSummary savedInsight={savedInsight} />
           </div>
         </>
       )}
