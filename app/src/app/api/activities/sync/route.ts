@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { fetchConcept2Results, refreshConcept2Token, concept2ResultToActivity } from '@/lib/concept2'
+import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
 
 export async function POST() {
   try {
@@ -55,7 +56,9 @@ export async function POST() {
       await supabase.from('activities').upsert(rows, { onConflict: 'strava_id' })
     }
 
-    return NextResponse.json({ synced: results.length })
+    const cleaned = await autoCleanupDuplicates(supabase, user.id)
+
+    return NextResponse.json({ synced: results.length, cleaned })
   } catch (err) {
     console.error('Sync error:', err)
     return NextResponse.json({ error: 'Sync failed' }, { status: 500 })

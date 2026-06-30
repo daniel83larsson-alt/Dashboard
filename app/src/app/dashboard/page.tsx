@@ -211,14 +211,35 @@ export default async function DashboardPage() {
           <FeedbackDrawer activity={latest} />
         </div>
       ) : (
-        <div className="bg-card border border-edge rounded-2xl p-10 text-center">
+        <div className="bg-card border border-edge rounded-2xl p-8 text-center">
           <div className="text-4xl mb-3">🚣</div>
-          <div className="font-medium mb-1">Inga pass synkade ännu</div>
-          <div className="text-muted text-sm">Anslut Concept2 under Profil</div>
+          <div className="font-medium mb-2">Inga pass synkade ännu</div>
+          <p className="text-muted text-sm mb-4">Anslut en träningskälla under Profil för att komma igång:</p>
+          <div className="flex flex-col gap-2 text-left max-w-xs mx-auto mb-4">
+            <div className="bg-bg rounded-xl px-3 py-2.5 text-xs text-muted">
+              <span className="text-fg font-medium">1. Concept2</span> — för roddpass, klicka "Anslut Concept2" och logga in
+            </div>
+            <div className="bg-bg rounded-xl px-3 py-2.5 text-xs text-muted">
+              <span className="text-fg font-medium">2. Garmin</span> — för alla aktiviteter + hälsodata, ange din vanliga Garmin-inloggning
+            </div>
+          </div>
+          <a href="/dashboard/profil" className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity">
+            Gå till Profil
+          </a>
         </div>
       )}
 
       {/* ── Garmin Wellness ───────────────────────────────────────────────────── */}
+      {!wellness && latest && (
+        <div className="bg-card border border-edge rounded-2xl p-5 text-center">
+          <div className="text-2xl mb-2">💓</div>
+          <div className="text-sm font-medium mb-1">Ingen hälsodata än</div>
+          <p className="text-muted text-xs mb-3">Anslut Garmin under Profil för sömn, puls, steg och Body Battery</p>
+          <a href="/dashboard/profil" className="inline-block text-xs text-accent hover:underline">
+            Gå till Profil →
+          </a>
+        </div>
+      )}
       {wellness && (
         <div>
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Wellness · Garmin</h2>

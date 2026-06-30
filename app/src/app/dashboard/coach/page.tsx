@@ -4,13 +4,14 @@ import { useState, useEffect, useRef } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import ReactMarkdown from 'react-markdown'
 
-type Message = { role: 'user' | 'assistant'; content: string }
+type Message = { role: 'user' | 'assistant'; content: string; warning?: boolean }
 
 export default function CoachPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [loadingHistory, setLoadingHistory] = useState(true)
+  const [locked, setLocked] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -33,7 +34,7 @@ export default function CoachPage() {
 
   async function send() {
     const msg = input.trim()
-    if (!msg || loading) return
+    if (!msg || loading || locked) return
 
     const updated: Message[] = [...messages, { role: 'user', content: msg }]
     setMessages(updated)
@@ -47,8 +48,13 @@ export default function CoachPage() {
         body: JSON.stringify({ coachId: 'roddcoach', message: msg, sport: 'Rowing' }),
       })
       const data = await res.json()
-      const reply = data.reply ?? 'Kunde inte nå coachen. Kontrollera att API-nyckeln är inlagd under Profil.'
-      setMessages([...updated, { role: 'assistant', content: reply }])
+      if (data.blocked) {
+        setMessages([...updated, { role: 'assistant', content: data.warning, warning: true }])
+        if (data.locked) setLocked(true)
+      } else {
+        const reply = data.reply ?? 'Kunde inte nå coachen. Kontrollera att API-nyckeln är inlagd under Profil.'
+        setMessages([...updated, { role: 'assistant', content: reply }])
+      }
     } catch {
       setMessages([...updated, { role: 'assistant', content: 'Nätverksfel. Försök igen.' }])
     }
@@ -103,14 +109,18 @@ export default function CoachPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
-              <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-base flex-shrink-0 mb-1">🚣</div>
+              <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-base flex-shrink-0 mb-1">
+                {msg.warning ? '⚠️' : '🚣'}
+              </div>
             )}
             <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
               msg.role === 'user'
                 ? 'bg-accent text-bg rounded-br-sm'
+                : msg.warning
+                ? 'bg-amber-500/10 border border-amber-500/30 text-amber-200 rounded-bl-sm'
                 : 'bg-card border border-edge text-fg rounded-bl-sm'
             }`}>
-              {msg.role === 'user' ? (
+              {msg.role === 'user' || msg.warning ? (
                 msg.content
               ) : (
                 <ReactMarkdown
@@ -160,13 +170,14 @@ export default function CoachPage() {
           value={input}
           onChange={handleInput}
           onKeyDown={handleKey}
-          placeholder="Skriv ett meddelande..."
-          className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none overflow-hidden leading-relaxed"
+          disabled={locked}
+          placeholder={locked ? 'Kontot är låst' : 'Skriv ett meddelande...'}
+          className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none overflow-hidden leading-relaxed disabled:opacity-50"
           style={{ minHeight: '48px' }}
         />
         <button
           onClick={send}
-          disabled={loading || !input.trim()}
+          disabled={loading || !input.trim() || locked}
           className="bg-accent text-bg font-semibold px-5 py-3 rounded-xl disabled:opacity-40 text-sm flex-shrink-0 transition-opacity h-12"
         >
           Skicka

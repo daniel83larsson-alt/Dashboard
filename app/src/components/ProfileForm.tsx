@@ -4,11 +4,16 @@ import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
+type FlagEntry = { at: string; reason: string; snippet: string }
+
 type Profile = {
   id: string
   name?: string | null
   llm_api_key_encrypted?: string | null
   llm_provider?: string | null
+  locked?: boolean | null
+  flagged_attempts?: number | null
+  flag_log?: FlagEntry[] | null
 }
 
 const DANIEL_CONTEXT_PLACEHOLDER = `Beskriv dina träningsmål, nuvarande nivå och vad du vill uppnå.
@@ -199,9 +204,12 @@ export default function ProfileForm({
           </div>
         ) : (
           <div>
-            <p className="text-muted text-xs mb-3">
+            <p className="text-muted text-xs mb-2">
               Anslut Concept2 Logbook för att automatiskt synka dina roddpass.
             </p>
+            <div className="bg-bg rounded-xl p-3 mb-3 text-xs text-muted leading-relaxed">
+              <span className="text-fg font-medium">Så funkar det:</span> klicka på knappen nedan så skickas du till Concept2 Logbooks egen inloggningssida (log.concept2.com). Logga in med samma konto du använder i Concept2-appen eller på ergometern. Du loggar in direkt hos Concept2 — vi ser eller sparar aldrig ditt lösenord, bara en åtkomsttoken efteråt.
+            </div>
             <a
               href="/api/auth/concept2"
               className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
@@ -238,6 +246,9 @@ export default function ProfileForm({
             <p className="text-muted text-xs">
               Ange dina Garmin Connect-uppgifter för att synka aktiviteter och hälsodata.
             </p>
+            <div className="bg-bg rounded-xl p-3 text-xs text-muted leading-relaxed">
+              <span className="text-fg font-medium">Vilka uppgifter behövs?</span> samma e-post och lösenord som du använder för att logga in på connect.garmin.com eller i Garmin Connect-appen på telefonen. Inget separat konto behövs. Lösenordet krypteras innan det sparas och används bara för att hämta dina egna aktiviteter, sömn, puls och steg.
+            </div>
             <div>
               <label className="text-muted text-xs block mb-1.5">E-post</label>
               <input
@@ -320,6 +331,38 @@ export default function ProfileForm({
           )}
         </div>
       </div>
+
+      {/* Chat security */}
+      {((profile?.flagged_attempts ?? 0) > 0 || profile?.locked) && (
+        <div className={`bg-card border rounded-2xl p-4 flex flex-col gap-3 ${profile?.locked ? 'border-red-500/40' : 'border-amber-500/30'}`}>
+          <div className="flex items-center justify-between">
+            <div className="text-xs uppercase tracking-wider text-muted">Chattsäkerhet</div>
+            {profile?.locked ? (
+              <span className="text-xs text-red-400 font-medium">🔒 Kontot låst</span>
+            ) : (
+              <span className="text-xs text-amber-400 font-medium">{profile?.flagged_attempts} flaggade</span>
+            )}
+          </div>
+          {profile?.locked && (
+            <p className="text-muted text-xs leading-relaxed">
+              Chatten är låst efter upprepade misstänkta meddelanden (kod, prompt-injektion eller orelaterade frågor). Lås upp manuellt i Supabase under tabellen <span className="text-fg font-mono">profiles</span> genom att sätta <span className="text-fg font-mono">locked = false</span>.
+            </p>
+          )}
+          {!!profile?.flag_log?.length && (
+            <div className="flex flex-col gap-1.5">
+              {profile.flag_log.slice(0, 5).map((f, i) => (
+                <div key={i} className="bg-bg rounded-lg px-3 py-2 text-xs">
+                  <div className="flex justify-between text-muted">
+                    <span className="text-fg">{f.reason}</span>
+                    <span>{new Date(f.at).toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                  <div className="text-muted mt-0.5 truncate">&quot;{f.snippet}&quot;</div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <button
         type="submit"

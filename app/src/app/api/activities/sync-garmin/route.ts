@@ -9,6 +9,7 @@ import {
   fetchGarminDayWellness,
 } from '@/lib/garmin'
 import { decrypt } from '@/lib/encrypt'
+import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
 
 export type DayWellness = {
   date: string
@@ -180,7 +181,9 @@ export async function POST() {
       await supabase.from('activities').upsert(toUpsert, { onConflict: 'strava_id' })
     }
 
-    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness, backfilled: backfilled.length })
+    const cleaned = await autoCleanupDuplicates(supabase, user.id)
+
+    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness, backfilled: backfilled.length, cleaned })
   } catch (err) {
     console.error('Garmin sync error:', err)
     return NextResponse.json({ error: 'Garmin sync failed' }, { status: 500 })

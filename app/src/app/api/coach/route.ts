@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
+
+type FlagEntry = { at: string; reason: string; snippet: string }
 
 type Message = { role: string; content: string }
 
@@ -52,12 +55,52 @@ export async function POST(request: NextRequest) {
     const { coachId, message, sport } = await request.json()
     const coach = getCoachById(coachId as CoachId)
     if (!coach) return NextResponse.json({ error: 'Coach not found' }, { status: 404 })
+    if (typeof message !== 'string' || !message.trim()) {
+      return NextResponse.json({ error: 'Meddelande saknas' }, { status: 400 })
+    }
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('name, llm_api_key_encrypted, llm_provider')
+      .select('name, llm_api_key_encrypted, llm_provider, locked, flagged_attempts, flag_log')
       .eq('id', user.id)
       .single()
+
+    if (profile?.locked) {
+      return NextResponse.json({
+        blocked: true,
+        locked: true,
+        warning: 'Det här kontot är låst på grund av upprepade misstänkta meddelanden i chatten. Kontakta admin för att låsa upp.',
+      })
+    }
+
+    const moderationKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
+    const moderation = await moderateMessage(moderationKey, message)
+
+    if (moderation.blocked) {
+      const flaggedAttempts = (profile?.flagged_attempts ?? 0) + 1
+      const prevLog = (profile?.flag_log as FlagEntry[] | null) ?? []
+      const entry: FlagEntry = {
+        at: new Date().toISOString(),
+        reason: moderation.reason ?? 'Okänt',
+        snippet: message.slice(0, 120),
+      }
+      const flagLog = [entry, ...prevLog].slice(0, 10)
+      const shouldLock = flaggedAttempts >= FLAG_THRESHOLD
+
+      await supabase.from('profiles').update({
+        flagged_attempts: flaggedAttempts,
+        flag_log: flagLog,
+        locked: shouldLock,
+      }).eq('id', user.id)
+
+      return NextResponse.json({
+        blocked: true,
+        locked: shouldLock,
+        warning: shouldLock
+          ? 'Meddelandet flaggades och kontot är nu låst efter upprepade misstänkta försök. Kontakta admin för att låsa upp.'
+          : `Det här meddelandet verkar inte handla om träning eller hälsa (${moderation.reason}) och har flaggats. Håll dig till tränings- och hälsorelaterade frågor — kontot låses efter ${FLAG_THRESHOLD} flaggade meddelanden.`,
+      })
+    }
 
     const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }] = await Promise.all([
       supabase

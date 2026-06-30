@@ -88,6 +88,12 @@ alter table public.coach_sessions enable row level security;
 create policy "Users see own sessions" on public.coach_sessions
   for all using (auth.uid() = user_id);
 
+-- Chatt-säkerhet: flaggning och låsning vid misstänkt missbruk (kod-/prompt-
+-- injektionsförsök, orelaterade frågor). Kör vid uppdatering av en befintlig databas:
+alter table public.profiles add column if not exists flagged_attempts integer default 0;
+alter table public.profiles add column if not exists locked boolean default false;
+alter table public.profiles add column if not exists flag_log jsonb default '[]';
+
 -- Auto-skapa profil vid signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public
