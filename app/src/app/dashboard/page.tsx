@@ -1,105 +1,165 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
+import WeeklyPlanCard from '@/components/WeeklyPlanCard'
 
-function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
-function fmt_dur(s: number) {
+function fmtKm(m: number) { return (m / 1000).toFixed(1) + ' km' }
+
+function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m} min`
 }
 
-function fmt_pace(s: number, m: number) {
-  if (!m) return '--'
-  const p = (s / m) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}/500m`
+function fmtPace(seconds: number, meters: number) {
+  if (!meters) return '--'
+  const p = (seconds / meters) * 500
+  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
 }
 
-function fmt_date_long(d: string) {
-  return new Date(d).toLocaleDateString('sv-SE', {
-    weekday: 'long', day: 'numeric', month: 'long'
-  })
+function fmtDateLong(d: string) {
+  return new Date(d).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 }
+
+// ── PR helpers ────────────────────────────────────────────────────────────────
+
+type Activity = {
+  id: string
+  start_date: string
+  distance: number
+  moving_time: number
+  average_heartrate?: number
+  max_heartrate?: number
+  average_watts?: number
+  name: string
+  sport_type: string
+}
+
+type PR = { value: number; unit: string; date: string; display: string }
+
+function computePRs(acts: Activity[]) {
+  const real = acts.filter(a => a.distance >= 1000 && a.moving_time >= 180)
+
+  const best20 = real.filter(a => a.moving_time >= 1050 && a.moving_time <= 1350)
+  const best30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
+  const best45 = real.filter(a => a.moving_time >= 2460 && a.moving_time <= 3000)
+  const best5k  = real.filter(a => a.distance >= 4800 && a.distance <= 5200)
+
+  function top<T extends Activity>(arr: T[], key: keyof T, dir: 'max' | 'min'): T | null {
+    if (!arr.length) return null
+    return arr.reduce((best, cur) =>
+      dir === 'max' ? (cur[key] > best[key] ? cur : best) : (cur[key] < best[key] ? cur : best)
+    )
+  }
+
+  const pr20 = top(best20, 'distance', 'max')
+  const pr30 = top(best30, 'distance', 'max')
+  const pr45 = top(best45, 'distance', 'max')
+  const pr5k = top(best5k, 'moving_time', 'min')
+
+  const prs: { label: string; pr: PR | null }[] = []
+
+  if (pr20) prs.push({ label: 'Bäst 20 min', pr: { value: pr20.distance, unit: 'm', date: pr20.start_date, display: `${pr20.distance} m · ${fmtPace(pr20.moving_time, pr20.distance)}/500m` } })
+  if (pr30) prs.push({ label: 'Bäst 30 min', pr: { value: pr30.distance, unit: 'm', date: pr30.start_date, display: `${pr30.distance} m · ${fmtPace(pr30.moving_time, pr30.distance)}/500m` } })
+  if (pr45) prs.push({ label: 'Bäst 45 min', pr: { value: pr45.distance, unit: 'm', date: pr45.start_date, display: `${pr45.distance} m · ${fmtPace(pr45.moving_time, pr45.distance)}/500m` } })
+  if (pr5k) prs.push({ label: 'Snabbaste 5 000 m', pr: { value: pr5k.moving_time, unit: 's', date: pr5k.start_date, display: `${fmtDur(pr5k.moving_time)} · ${fmtPace(pr5k.moving_time, pr5k.distance)}/500m` } })
+
+  return prs
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('name')
-    .eq('id', user.id)
-    .single()
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }] = await Promise.all([
+    supabase.from('profiles').select('name').eq('id', user.id).single(),
+    supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
+    supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
+  ])
 
-  const { data: latest } = await supabase
-    .from('activities')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('start_date', { ascending: false })
-    .limit(1)
-    .single()
+  const activities = allActivities ?? []
+  const latest = activities[0] ?? null
 
-  const { data: recent } = await supabase
-    .from('activities')
-    .select('id, sport_type, name, distance, moving_time, start_date')
-    .eq('user_id', user.id)
-    .order('start_date', { ascending: false })
-    .limit(8)
+  // ── Date boundaries ────────────────────────────────────────────────────────
+  const now = new Date()
+  const y = now.getFullYear()
+  const mo = now.getMonth()
+  const weekAgo = new Date(now); weekAgo.setDate(now.getDate() - 7)
+  const monthStart = new Date(y, mo, 1)
+  const yearStart  = new Date(y, 0, 1)
 
-  const weekAgo = new Date()
-  weekAgo.setDate(weekAgo.getDate() - 7)
-  const thisWeek = (recent ?? []).filter(a => new Date(a.start_date) > weekAgo)
-  const weekDist = thisWeek.reduce((s, a) => s + (a.distance ?? 0), 0)
+  const thisWeek  = activities.filter(a => new Date(a.start_date) >= weekAgo)
+  const thisMonth = activities.filter(a => new Date(a.start_date) >= monthStart)
+  const thisYear  = activities.filter(a => new Date(a.start_date) >= yearStart)
+
+  function totals(arr: Activity[]) {
+    return {
+      count: arr.length,
+      dist: arr.reduce((s, a) => s + (a.distance ?? 0), 0),
+      time: arr.reduce((s, a) => s + (a.moving_time ?? 0), 0),
+    }
+  }
+
+  const wk = totals(thisWeek)
+  const mm = totals(thisMonth)
+  const yy = totals(thisYear)
+
+  const prs = computePRs(activities)
 
   const firstName = (profile?.name ?? user.email ?? 'Daniel').split(' ')[0]
-  const hour = new Date().getHours()
+  const hour = now.getHours()
   const greeting = hour < 10 ? 'God morgon' : hour < 18 ? 'Hej' : 'God kväll'
 
+  const savedPlan = (planRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? null
+
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full">
+    <div className="p-4 md:p-8 max-w-2xl w-full space-y-6">
+
       {/* Header */}
-      <div className="mb-6">
+      <div>
         <h1 className="text-2xl font-semibold">{greeting}, {firstName}</h1>
         <p className="text-muted text-sm mt-1">
           {thisWeek.length > 0
-            ? `${thisWeek.length} pass denna veckan · ${fmt_km(weekDist)}`
+            ? `${thisWeek.length} pass · ${fmtKm(wk.dist)} denna vecka`
             : 'Inga pass denna veckan ännu'}
         </p>
       </div>
 
-      {/* Latest activity */}
+      {/* ── Senaste pass ────────────────────────────────────────────────────── */}
       {latest ? (
-        <div className="bg-card border border-edge rounded-2xl p-5 mb-6">
+        <div className="bg-card border border-edge rounded-2xl p-5">
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-xs text-muted uppercase tracking-wider mb-1">Senaste pass</div>
               <div className="font-medium text-fg">{latest.name}</div>
-              <div className="text-muted text-xs mt-0.5">{fmt_date_long(latest.start_date)}</div>
+              <div className="text-muted text-xs mt-0.5">{fmtDateLong(latest.start_date)}</div>
             </div>
             <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg capitalize flex-shrink-0 ml-2">
               {latest.sport_type}
             </span>
           </div>
 
-          {/* Key metrics */}
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-accent text-lg font-bold leading-none">{fmt_km(latest.distance)}</div>
+              <div className="font-mono text-accent text-lg font-bold leading-none">{fmtKm(latest.distance)}</div>
               <div className="text-muted text-xs mt-1">Distans</div>
             </div>
             <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-accent text-lg font-bold leading-none">{fmt_dur(latest.moving_time)}</div>
+              <div className="font-mono text-accent text-lg font-bold leading-none">{fmtDur(latest.moving_time)}</div>
               <div className="text-muted text-xs mt-1">Tid</div>
             </div>
             <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-lcd text-lg font-bold leading-none">{fmt_pace(latest.moving_time, latest.distance)}</div>
-              <div className="text-muted text-xs mt-1">Snitt</div>
+              <div className="font-mono text-lcd text-lg font-bold leading-none">{fmtPace(latest.moving_time, latest.distance)}</div>
+              <div className="text-muted text-xs mt-1">/500m</div>
             </div>
           </div>
 
-          {/* HR / watts row */}
           {(latest.average_heartrate || latest.average_watts) && (
             <div className="grid grid-cols-3 gap-2 mb-4">
               {latest.average_heartrate && (
@@ -126,37 +186,125 @@ export default async function DashboardPage() {
           <FeedbackDrawer activity={latest} />
         </div>
       ) : (
-        <div className="bg-card border border-edge rounded-2xl p-10 mb-6 text-center">
+        <div className="bg-card border border-edge rounded-2xl p-10 text-center">
           <div className="text-4xl mb-3">🚣</div>
           <div className="font-medium mb-1">Inga pass synkade ännu</div>
-          <div className="text-muted text-sm">
-            Anslut Strava eller lägg till ett pass manuellt under Inställningar
+          <div className="text-muted text-sm">Anslut Concept2 under Profil</div>
+        </div>
+      )}
+
+      {/* ── Stats: Vecka / Månad / År ─────────────────────────────────────── */}
+      {activities.length > 0 && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Din statistik</h2>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: 'Denna vecka', data: wk },
+              { label: 'Denna månad', data: mm },
+              { label: String(y), data: yy },
+            ].map(({ label, data }) => (
+              <div key={label} className="bg-card border border-edge rounded-2xl p-4">
+                <div className="text-xs text-muted mb-3">{label}</div>
+                <div className="font-mono text-accent text-xl font-bold leading-none mb-0.5">
+                  {fmtKm(data.dist)}
+                </div>
+                <div className="text-muted text-xs">{data.count} pass</div>
+                <div className="text-muted text-xs">{fmtDur(data.time)}</div>
+                {data.dist > 0 && (
+                  <div className="font-mono text-lcd text-xs mt-2">
+                    ⌀ {fmtPace(data.time, data.dist)}/500m
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Extra fun stats */}
+          <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+              <span className="text-2xl">🚣</span>
+              <div>
+                <div className="font-mono text-accent text-sm font-bold">{(yy.dist / 1000).toFixed(0)} km</div>
+                <div className="text-muted text-xs">totalt {y}</div>
+              </div>
+            </div>
+            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+              <span className="text-2xl">⏱</span>
+              <div>
+                <div className="font-mono text-accent text-sm font-bold">{fmtDur(yy.time)}</div>
+                <div className="text-muted text-xs">på roddmaskinen {y}</div>
+              </div>
+            </div>
+            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+              <span className="text-2xl">📅</span>
+              <div>
+                <div className="font-mono text-accent text-sm font-bold">{activities.length} pass</div>
+                <div className="text-muted text-xs">all time</div>
+              </div>
+            </div>
+            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+              <span className="text-2xl">🏅</span>
+              <div>
+                <div className="font-mono text-accent text-sm font-bold">{(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000).toFixed(0)} km</div>
+                <div className="text-muted text-xs">totalt all time</div>
+              </div>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Recent activities */}
-      {recent && recent.length > 1 && (
+      {/* ── Personliga rekord ─────────────────────────────────────────────── */}
+      {prs.length > 0 && (
         <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Tidigare pass</h2>
-          <div className="flex flex-col gap-2">
-            {recent.slice(1).map(a => (
-              <div key={a.id} className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center justify-between">
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Personliga rekord</h2>
+          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+            {prs.map(({ label, pr }) => pr && (
+              <div key={label} className="px-4 py-3 flex items-center justify-between">
                 <div>
-                  <div className="text-sm font-medium">{a.name}</div>
-                  <div className="text-xs text-muted mt-0.5">
-                    {new Date(a.start_date).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  <div className="text-sm font-medium">{label}</div>
+                  <div className="text-muted text-xs mt-0.5">
+                    {new Date(pr.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0 ml-3">
-                  <div className="font-mono text-accent text-sm font-medium">{fmt_km(a.distance)}</div>
-                  <div className="text-muted text-xs">{fmt_dur(a.moving_time)}</div>
+                <div className="font-mono text-accent text-sm font-bold text-right">
+                  {pr.display}
                 </div>
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* ── Mål ─────────────────────────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Mina mål</h2>
+        {goals && goals.length > 0 ? (
+          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+            {goals.map(g => (
+              <div key={g.id} className="px-4 py-3 flex items-center justify-between">
+                <div>
+                  <div className="text-sm font-medium">{g.title}</div>
+                  {g.target_date && (
+                    <div className="text-muted text-xs mt-0.5">
+                      Mål: {new Date(g.target_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
+                    </div>
+                  )}
+                </div>
+                <span className="text-xs bg-bg text-lcd px-2 py-1 rounded-lg">{g.goal_type}</span>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-card border border-edge rounded-2xl p-6 text-center">
+            <div className="text-muted text-sm">Inga aktiva mål</div>
+            <p className="text-muted text-xs mt-1">Sätt mål via din coach eller profil</p>
+          </div>
+        )}
+      </div>
+
+      {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
+      <WeeklyPlanCard savedPlan={savedPlan} activityCount={activities.length} />
+
     </div>
   )
 }

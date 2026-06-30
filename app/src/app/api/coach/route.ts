@@ -59,31 +59,60 @@ export async function POST(request: NextRequest) {
       .eq('id', user.id)
       .single()
 
-    const { data: recentActivities } = await supabase
-      .from('activities')
-      .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts')
-      .eq('user_id', user.id)
-      .eq('sport_type', sport)
-      .order('start_date', { ascending: false })
-      .limit(10)
+    const [{ data: allActivities }, { data: goals }, { data: sessionData }] = await Promise.all([
+      supabase
+        .from('activities')
+        .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts')
+        .eq('user_id', user.id)
+        .order('start_date', { ascending: false })
+        .limit(50),
+      supabase
+        .from('goals')
+        .select('goal_type, title, target_date')
+        .eq('user_id', user.id)
+        .eq('status', 'active'),
+      supabase
+        .from('coach_sessions')
+        .select('messages')
+        .eq('user_id', user.id)
+        .eq('coach_id', coachId)
+        .single(),
+    ])
 
-    const { data: goals } = await supabase
-      .from('goals')
-      .select('goal_type, title, target_date')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+    const acts = allActivities ?? []
+    const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
 
-    const { data: sessionData } = await supabase
-      .from('coach_sessions')
-      .select('messages')
-      .eq('user_id', user.id)
-      .eq('coach_id', coachId)
-      .single()
+    const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+    const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30)
+    const now = new Date()
+    const yr = acts.filter(a => new Date(a.start_date).getFullYear() === now.getFullYear())
+
+    function fmtPace(s: number, m: number) {
+      if (!m) return '--'; const p = s / m * 500
+      return `${Math.floor(p/60)}:${Math.round(p%60).toString().padStart(2,'0')}/500m`
+    }
+    function fmtDur(s: number) {
+      const h = Math.floor(s/3600), m = Math.floor((s%3600)/60)
+      return h > 0 ? `${h}h${m}m` : `${m}min`
+    }
+
+    const pr30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
+    const pr20 = real.filter(a => a.moving_time >= 1050 && a.moving_time <= 1350)
+    const pr45 = real.filter(a => a.moving_time >= 2460 && a.moving_time <= 3000)
+    const pr5k = real.filter(a => a.distance >= 4800 && a.distance <= 5200)
+
+    const best = <T extends { distance: number; moving_time: number }>(arr: T[], by: 'dist' | 'time') =>
+      arr.length ? arr.reduce((b, c) => (by === 'dist' ? c.distance > b.distance : c.moving_time < b.moving_time) ? c : b) : null
+
+    const b30 = best(pr30, 'dist')
+    const b20 = best(pr20, 'dist')
+    const b45 = best(pr45, 'dist')
+    const b5k = best(pr5k, 'time')
 
     const userContext: UserContext = {
       sport,
       name: profile?.name ?? 'Användaren',
-      recentActivities: (recentActivities ?? []).map(a => ({
+      recentActivities: acts.map(a => ({
         date: a.start_date,
         distance: a.distance,
         duration: a.moving_time,
@@ -96,6 +125,18 @@ export async function POST(request: NextRequest) {
         title: g.title,
         targetDate: g.target_date ?? undefined,
       })),
+      stats: {
+        totalSessions: acts.length,
+        totalDistKm: Math.round(acts.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000),
+        sessionsThisWeek: acts.filter(a => new Date(a.start_date) >= weekAgo).length,
+        sessionsThisMonth: acts.filter(a => new Date(a.start_date) >= monthAgo).length,
+      },
+      prs: {
+        best20min: b20 ? `${b20.distance}m (${fmtPace(b20.moving_time, b20.distance)})` : undefined,
+        best30min: b30 ? `${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)})` : undefined,
+        best45min: b45 ? `${b45.distance}m (${fmtPace(b45.moving_time, b45.distance)})` : undefined,
+        fastest5k: b5k ? `${fmtDur(b5k.moving_time)} (${fmtPace(b5k.moving_time, b5k.distance)})` : undefined,
+      },
     }
 
     const history = (sessionData?.messages ?? []) as Message[]

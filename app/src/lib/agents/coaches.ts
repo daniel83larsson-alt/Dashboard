@@ -30,6 +30,18 @@ export type UserContext = {
   goals: Array<{ type: string; title: string; targetDate?: string }>
   restingHR?: number
   avgSleep?: number
+  stats?: {
+    totalSessions: number
+    totalDistKm: number
+    sessionsThisWeek: number
+    sessionsThisMonth: number
+  }
+  prs?: {
+    best20min?: string
+    best30min?: string
+    best45min?: string
+    fastest5k?: string
+  }
 }
 
 const CORE_PHILOSOPHY = `
@@ -56,8 +68,12 @@ ${CORE_PHILOSOPHY}
 ANVÄNDARDATA:
 Namn: ${ctx.name}
 Sport: ${sport}
-Senaste pass: ${JSON.stringify(ctx.recentActivities.slice(0, 5))}
+Totalt: ${ctx.stats?.totalSessions ?? '?'} pass, ${ctx.stats?.totalDistKm ?? '?'} km all time
+Denna vecka: ${ctx.stats?.sessionsThisWeek ?? '?'} pass | Denna månad: ${ctx.stats?.sessionsThisMonth ?? '?'} pass
+${ctx.prs ? `Personliga rekord: 20-min: ${ctx.prs.best20min ?? '--'} | 30-min: ${ctx.prs.best30min ?? '--'} | 45-min: ${ctx.prs.best45min ?? '--'} | 5000m: ${ctx.prs.fastest5k ?? '--'}` : ''}
 Mål: ${JSON.stringify(ctx.goals)}
+Senaste 10 pass:
+${ctx.recentActivities.slice(0, 10).map(a => `${a.date.slice(0,10)} ${a.distance}m ${Math.floor(a.duration/60)}:${String(a.duration%60).padStart(2,'0')}`).join('\n')}
 
 Fokusera på: passupplägg, teknikråd, klättringsväg i intensitet. Var konkret och specifik för just den här användarens data.`,
   },
@@ -72,7 +88,12 @@ Fokusera på: passupplägg, teknikråd, klättringsväg i intensitet. Var konkre
 ${CORE_PHILOSOPHY}
 
 ANVÄNDARDATA:
-${JSON.stringify(ctx.recentActivities)}
+Namn: ${ctx.name} | Totalt: ${ctx.stats?.totalSessions ?? '?'} pass, ${ctx.stats?.totalDistKm ?? '?'} km
+${ctx.prs ? `PB: 20-min=${ctx.prs.best20min ?? '--'} | 30-min=${ctx.prs.best30min ?? '--'} | 45-min=${ctx.prs.best45min ?? '--'} | 5k=${ctx.prs.fastest5k ?? '--'}` : ''}
+Senaste 20 pass:
+${ctx.recentActivities.slice(0, 20).map(a =>
+  `${a.date.slice(0,10)} ${a.distance}m ${Math.floor(a.duration/60)}:${String(a.duration%60).padStart(2,'0')}${a.avgHR ? ` HR:${a.avgHR}` : ''}`
+).join('\n')}
 
 Fokusera på: trender, avvikelser, bekräftade mönster med siffror. Peka på vad data faktiskt säger vs vad som är tolkning. Var specifik med procentuella förändringar och absoluta tal.`,
   },
