@@ -42,6 +42,10 @@ export default function ProfileForm({
   const [syncMsg, setSyncMsg] = useState('')
   const [garminSyncing, setGarminSyncing] = useState(false)
   const [garminMsg, setGarminMsg] = useState('')
+  const [garminEmail, setGarminEmail] = useState('')
+  const [garminPassword, setGarminPassword] = useState('')
+  const [garminSaving, setGarminSaving] = useState(false)
+  const [garminConnected, setGarminConnected] = useState(hasGarmin)
   const router = useRouter()
 
   async function save(e: React.FormEvent) {
@@ -83,6 +87,30 @@ export default function ProfileForm({
       setSyncMsg('Nätverksfel')
     }
     setSyncing(false)
+  }
+
+  async function saveGarmin(e: React.FormEvent) {
+    e.preventDefault()
+    setGarminSaving(true)
+    setGarminMsg('')
+    try {
+      const res = await fetch('/api/garmin/save-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: garminEmail.trim(), password: garminPassword }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setGarminConnected(true)
+        setGarminPassword('')
+        setGarminMsg('Ansluten!')
+      } else {
+        setGarminMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setGarminMsg('Nätverksfel')
+    }
+    setGarminSaving(false)
   }
 
   async function syncGarmin() {
@@ -187,7 +215,7 @@ export default function ProfileForm({
       {/* Garmin */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
         <div className="text-xs text-muted uppercase tracking-wider">Garmin Connect</div>
-        {hasGarmin ? (
+        {garminConnected ? (
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <div className="text-sm text-fg flex items-center gap-2">
@@ -206,9 +234,40 @@ export default function ProfileForm({
             </button>
           </div>
         ) : (
-          <p className="text-muted text-xs">
-            Garmin Connect är inte konfigurerat. Kontakta admin för att aktivera.
-          </p>
+          <div className="flex flex-col gap-3">
+            <p className="text-muted text-xs">
+              Ange dina Garmin Connect-uppgifter för att synka aktiviteter och hälsodata.
+            </p>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">E-post</label>
+              <input
+                type="email"
+                value={garminEmail}
+                onChange={e => setGarminEmail(e.target.value)}
+                placeholder="din@email.com"
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Lösenord</label>
+              <input
+                type="password"
+                value={garminPassword}
+                onChange={e => setGarminPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            {garminMsg && <div className="text-xs text-lcd">{garminMsg}</div>}
+            <button
+              type="button"
+              onClick={saveGarmin}
+              disabled={garminSaving || !garminEmail.trim() || !garminPassword}
+              className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+            >
+              {garminSaving ? 'Ansluter...' : 'Anslut Garmin'}
+            </button>
+          </div>
         )}
       </div>
 

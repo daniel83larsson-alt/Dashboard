@@ -1,29 +1,30 @@
 import { GarminConnect } from 'garmin-connect'
 import type { IActivity } from 'garmin-connect/dist/garmin/types/activity'
 
-let cachedClient: GarminConnect | null = null
-let lastLoginTime = 0
-const LOGIN_TTL_MS = 55 * 60 * 1000 // re-login after 55 min
+// Per-user client cache keyed by email
+const clientCache = new Map<string, { client: GarminConnect; loginTime: number }>()
+const LOGIN_TTL_MS = 55 * 60 * 1000
 
-export async function getGarminClient(): Promise<GarminConnect> {
-  const email = process.env.GARMIN_EMAIL
-  const password = process.env.GARMIN_PASSWORD
-  if (!email || !password) throw new Error('Garmin credentials not configured')
-
+export async function getGarminClientForUser(email: string, password: string): Promise<GarminConnect> {
   const now = Date.now()
-  if (cachedClient && now - lastLoginTime < LOGIN_TTL_MS) {
-    return cachedClient
-  }
+  const cached = clientCache.get(email)
+  if (cached && now - cached.loginTime < LOGIN_TTL_MS) return cached.client
 
   const gc = new GarminConnect({ username: email, password })
   await gc.login()
-  cachedClient = gc
-  lastLoginTime = now
+  clientCache.set(email, { client: gc, loginTime: now })
   return gc
 }
 
-export async function fetchGarminActivities(limit = 100): Promise<IActivity[]> {
-  const gc = await getGarminClient()
+export async function getGarminClient(userEmail?: string, userPassword?: string): Promise<GarminConnect> {
+  const email = userEmail ?? process.env.GARMIN_EMAIL
+  const password = userPassword ?? process.env.GARMIN_PASSWORD
+  if (!email || !password) throw new Error('Garmin credentials not configured')
+  return getGarminClientForUser(email, password)
+}
+
+export async function fetchGarminActivities(limit = 100, email?: string, password?: string): Promise<IActivity[]> {
+  const gc = await getGarminClient(email, password)
   return gc.getActivities(0, limit)
 }
 
@@ -77,9 +78,9 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
-export async function fetchGarminRestingHR(): Promise<number | null> {
+export async function fetchGarminRestingHR(email?: string, password?: string): Promise<number | null> {
   try {
-    const gc = await getGarminClient()
+    const gc = await getGarminClient(email, password)
     const today = new Date()
     const hr = await gc.getHeartRate(today)
     return (hr as any)?.restingHeartRate ?? null
@@ -88,9 +89,9 @@ export async function fetchGarminRestingHR(): Promise<number | null> {
   }
 }
 
-export async function fetchGarminSleep(): Promise<number | null> {
+export async function fetchGarminSleep(email?: string, password?: string): Promise<number | null> {
   try {
-    const gc = await getGarminClient()
+    const gc = await getGarminClient(email, password)
     const yesterday = new Date()
     yesterday.setDate(yesterday.getDate() - 1)
     const sleep = await gc.getSleepDuration(yesterday)

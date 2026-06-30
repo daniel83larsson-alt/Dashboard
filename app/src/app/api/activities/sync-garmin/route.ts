@@ -8,15 +8,28 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    if (!process.env.GARMIN_EMAIL || !process.env.GARMIN_PASSWORD) {
+    // Resolve credentials: user's own first, env vars as fallback
+    const { data: credsRow } = await supabase
+      .from('coach_sessions')
+      .select('messages')
+      .eq('user_id', user.id)
+      .eq('coach_id', 'garmin_credentials')
+      .single()
+
+    const credsRaw = (credsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+    const userCreds = credsRaw ? (() => { try { return JSON.parse(credsRaw) } catch { return null } })() : null
+    const garminEmail = userCreds?.email ?? process.env.GARMIN_EMAIL
+    const garminPassword = userCreds?.password ?? process.env.GARMIN_PASSWORD
+
+    if (!garminEmail || !garminPassword) {
       return NextResponse.json({ error: 'Garmin not configured' }, { status: 400 })
     }
 
     // Fetch Garmin activities + wellness in parallel
     const [garminActivities, restingHR, sleepHours] = await Promise.all([
-      fetchGarminActivities(100),
-      fetchGarminRestingHR(),
-      fetchGarminSleep(),
+      fetchGarminActivities(100, garminEmail, garminPassword),
+      fetchGarminRestingHR(garminEmail, garminPassword),
+      fetchGarminSleep(garminEmail, garminPassword),
     ])
 
     // Store wellness data for dashboard + coaches
@@ -85,7 +98,5 @@ export async function POST() {
 }
 
 export async function GET() {
-  return NextResponse.json({
-    configured: !!(process.env.GARMIN_EMAIL && process.env.GARMIN_PASSWORD),
-  })
+  return NextResponse.json({ configured: true })
 }
