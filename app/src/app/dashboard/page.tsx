@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
+import ActivityCalendar from '@/components/ActivityCalendar'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -301,6 +302,11 @@ export default async function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* ── Kalender ──────────────────────────────────────────────────────────── */}
+      {activities.length > 0 && (
+        <ActivityCalendar trainedDates={activities.map(a => a.start_date)} />
+      )}
 
       {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
       <WeeklyPlanCard savedPlan={savedPlan} activityCount={activities.length} />
