@@ -21,7 +21,8 @@ export async function POST() {
     let accessToken = tokenRow.access_token
     const now = Math.floor(Date.now() / 1000)
 
-    if (tokenRow.expires_at < now + 60) {
+    // Personal tokens never expire (expires_at = 9999999999); skip refresh for those
+    if (tokenRow.refresh_token !== 'personal_token' && tokenRow.expires_at < now + 60) {
       const refreshed = await refreshConcept2Token(tokenRow.refresh_token)
       accessToken = refreshed.access_token
       await supabase.from('concept2_tokens').update({
