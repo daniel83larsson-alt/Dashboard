@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import DuplicateCleanup from '@/components/DuplicateCleanup'
 
 function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
 function fmt_dur(s: number) {
@@ -35,6 +36,8 @@ export default async function PassloggPage() {
           {totalSessions} pass · {fmt_km(totalDist)} totalt
         </p>
       </div>
+
+      <DuplicateCleanup />
 
       {!activities?.length ? (
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">
