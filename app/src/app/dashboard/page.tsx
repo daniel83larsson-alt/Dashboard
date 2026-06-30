@@ -77,12 +77,17 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }] = await Promise.all([
     supabase.from('profiles').select('name').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
   ])
+
+  type WellnessData = { restingHR: number | null; sleepHours: number | null; updatedAt: string }
+  const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const wellness: WellnessData | null = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
 
   const activities = allActivities ?? []
   const latest = activities[0] ?? null
@@ -194,6 +199,27 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* ── Garmin Wellness ───────────────────────────────────────────────────── */}
+      {wellness && (wellness.restingHR || wellness.sleepHours) && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Wellness · Garmin</h2>
+          <div className="grid grid-cols-2 gap-2">
+            {wellness.restingHR && (
+              <div className="bg-card border border-edge rounded-2xl p-4">
+                <div className="font-mono text-lcd text-2xl font-bold leading-none">{wellness.restingHR}</div>
+                <div className="text-muted text-xs mt-1">Vilopuls (bpm)</div>
+              </div>
+            )}
+            {wellness.sleepHours && (
+              <div className="bg-card border border-edge rounded-2xl p-4">
+                <div className="font-mono text-accent text-2xl font-bold leading-none">{wellness.sleepHours.toFixed(1)}h</div>
+                <div className="text-muted text-xs mt-1">Sömn igår</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Stats: Vecka / Månad / År ─────────────────────────────────────── */}
       {activities.length > 0 && (
         <div>
@@ -219,6 +245,36 @@ export default async function DashboardPage() {
               </div>
             ))}
           </div>
+
+          {/* Sport breakdown — only show if there are multiple types */}
+          {(() => {
+            const byType = activities.reduce<Record<string, number>>((acc, a) => {
+              const t = a.sport_type ?? 'Övrigt'
+              acc[t] = (acc[t] ?? 0) + 1
+              return acc
+            }, {})
+            const types = Object.entries(byType).sort((a, b) => b[1] - a[1])
+            if (types.length <= 1) return null
+            const sportIcon: Record<string, string> = {
+              Rowing: '🚣', Run: '🏃', TrailRun: '🏔', Ride: '🚴', VirtualRide: '🚴',
+              Walk: '🚶', Hike: '🥾', Swim: '🏊', WeightTraining: '🏋️', Workout: '💪',
+              HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️',
+            }
+            return (
+              <div className="bg-card border border-edge rounded-2xl p-4 mt-2">
+                <div className="text-xs text-muted mb-3">Aktivitetstyper all time</div>
+                <div className="flex flex-wrap gap-2">
+                  {types.map(([type, count]) => (
+                    <div key={type} className="flex items-center gap-1.5 bg-bg rounded-lg px-3 py-1.5">
+                      <span>{sportIcon[type] ?? '🏅'}</span>
+                      <span className="text-xs text-fg">{type}</span>
+                      <span className="font-mono text-xs text-accent font-bold">{count}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )
+          })()}
 
           {/* Extra fun stats */}
           <div className="grid grid-cols-2 gap-2 mt-2">
