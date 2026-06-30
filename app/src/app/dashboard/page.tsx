@@ -2,6 +2,8 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
+import AutoSync from '@/components/AutoSync'
+import SyncAllButton from '@/components/SyncAllButton'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -139,15 +141,19 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full space-y-6">
+      <AutoSync />
 
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-semibold">{greeting}, {firstName}</h1>
-        <p className="text-muted text-sm mt-1">
-          {thisWeek.length > 0
-            ? `${thisWeek.length} pass · ${fmtKm(wk.dist)} denna vecka`
-            : 'Inga pass denna veckan ännu'}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">{greeting}, {firstName}</h1>
+          <p className="text-muted text-sm mt-1">
+            {thisWeek.length > 0
+              ? `${thisWeek.length} pass · ${fmtKm(wk.dist)} denna vecka`
+              : 'Inga pass denna veckan ännu'}
+          </p>
+        </div>
+        <SyncAllButton />
       </div>
 
       {/* ── Senaste pass ────────────────────────────────────────────────────── */}
