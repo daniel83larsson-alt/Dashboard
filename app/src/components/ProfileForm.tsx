@@ -11,18 +11,29 @@ type Profile = {
   llm_provider?: string | null
 }
 
+const DANIEL_CONTEXT_PLACEHOLDER = `Beskriv dina träningsmål, nuvarande nivå och vad du vill uppnå.
+
+Exempel:
+- Jag roddar 3-4 gånger/vecka, mestadels 20-30 min pass
+- Mål: förbättra 30-min PB från 5747m mot 6000m
+- Vill bygga aerob bas, HR under 130 på längre pass
+- Sekundärt mål: snabbare 5000m, under 22 min`
+
 export default function ProfileForm({
   profile,
   userEmail,
   hasConcept2,
+  savedContext,
 }: {
   profile: Profile | null
   userEmail: string
   hasConcept2: boolean
+  savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [apiKey, setApiKey] = useState('')
-  const [provider, setProvider] = useState(profile?.llm_provider ?? 'anthropic')
+  const [provider, setProvider] = useState(profile?.llm_provider ?? 'gemini')
+  const [context, setContext] = useState(savedContext)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -33,9 +44,19 @@ export default function ProfileForm({
     e.preventDefault()
     setSaving(true)
     const supabase = createSupabaseClient()
+
     const update: Record<string, string> = { name, llm_provider: provider }
     if (apiKey.trim()) update.llm_api_key_encrypted = apiKey.trim()
     await supabase.from('profiles').update(update).eq('id', profile?.id ?? '')
+
+    if (context !== savedContext) {
+      await fetch('/api/context/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ context }),
+      })
+    }
+
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -90,6 +111,21 @@ export default function ProfileForm({
         </div>
       </div>
 
+      {/* Training context */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Träningskontext</div>
+          <p className="text-muted text-xs">Tas med i varje coachsamtal — beskriv dina mål och upplägg</p>
+        </div>
+        <textarea
+          value={context}
+          onChange={e => setContext(e.target.value)}
+          placeholder={DANIEL_CONTEXT_PLACEHOLDER}
+          rows={7}
+          className="w-full bg-bg border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none leading-relaxed"
+        />
+      </div>
+
       {/* Concept2 */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
         <div className="text-xs text-muted uppercase tracking-wider">Concept2 Logbook</div>
@@ -129,29 +165,46 @@ export default function ProfileForm({
       {/* AI settings */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
         <div className="text-xs text-muted uppercase tracking-wider">AI-inställningar</div>
+        <p className="text-muted text-xs -mt-2">
+          Gemini används som standard (gratis). Lägg till din egen nyckel för att prioritera den.
+        </p>
         <div>
-          <label className="text-muted text-xs block mb-1.5">Leverantör</label>
+          <label className="text-muted text-xs block mb-1.5">Leverantör (valfritt)</label>
           <select
             value={provider}
             onChange={e => setProvider(e.target.value)}
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent"
           >
+            <option value="gemini">Google Gemini (standard)</option>
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="openai">OpenAI (GPT)</option>
           </select>
         </div>
         <div>
           <label className="text-muted text-xs block mb-1.5">
-            API-nyckel {hasApiKey ? '(sparat)' : '(obligatorisk för coach)'}
+            Egen API-nyckel {hasApiKey ? '(sparat — lämna tomt för att behålla)' : '(valfritt)'}
           </label>
           <input
             type="password"
             value={apiKey}
             onChange={e => setApiKey(e.target.value)}
-            placeholder={hasApiKey ? '••••••••••••' : 'sk-ant-...'}
+            placeholder={
+              hasApiKey
+                ? '••••••••••••'
+                : provider === 'anthropic'
+                ? 'sk-ant-...'
+                : provider === 'openai'
+                ? 'sk-...'
+                : 'AIzaSy... (från aistudio.google.com)'
+            }
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
-          {!hasApiKey && (
+          {!hasApiKey && provider === 'gemini' && (
+            <p className="text-muted text-xs mt-1.5">
+              Hämta på aistudio.google.com → Get API key (nyckeln börjar med AIzaSy...)
+            </p>
+          )}
+          {!hasApiKey && provider === 'anthropic' && (
             <p className="text-muted text-xs mt-1.5">
               Hämtas på console.anthropic.com → API Keys
             </p>

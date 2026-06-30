@@ -19,6 +19,7 @@ export type Coach = {
 export type UserContext = {
   sport: string
   name: string
+  userBio?: string
   recentActivities: Array<{
     date: string
     distance: number
@@ -44,6 +45,11 @@ export type UserContext = {
   }
 }
 
+function bioBlock(ctx: UserContext) {
+  if (!ctx.userBio) return ''
+  return `\nOM ANVÄNDAREN (eget beskrivet):\n${ctx.userBio}\n`
+}
+
 const CORE_PHILOSOPHY = `
 FILOSOFI (alltid aktiv):
 - Konsistens > perfektion. Ett halvbra pass som blir av slår ett perfekt pass som skjuts upp.
@@ -64,16 +70,15 @@ export const COACHES: Coach[] = [
     systemPrompt: (sport, ctx) => `Du är en erfaren ${sport}-coach. Du analyserar träningspass, ger råd om teknik, struktur och progression. Du bedömer om upplägget är fysiologiskt sunt.
 
 ${CORE_PHILOSOPHY}
-
+${bioBlock(ctx)}
 ANVÄNDARDATA:
-Namn: ${ctx.name}
-Sport: ${sport}
+Namn: ${ctx.name} | Sport: ${sport}
 Totalt: ${ctx.stats?.totalSessions ?? '?'} pass, ${ctx.stats?.totalDistKm ?? '?'} km all time
 Denna vecka: ${ctx.stats?.sessionsThisWeek ?? '?'} pass | Denna månad: ${ctx.stats?.sessionsThisMonth ?? '?'} pass
-${ctx.prs ? `Personliga rekord: 20-min: ${ctx.prs.best20min ?? '--'} | 30-min: ${ctx.prs.best30min ?? '--'} | 45-min: ${ctx.prs.best45min ?? '--'} | 5000m: ${ctx.prs.fastest5k ?? '--'}` : ''}
+${ctx.prs ? `PB: 20-min=${ctx.prs.best20min ?? '--'} | 30-min=${ctx.prs.best30min ?? '--'} | 45-min=${ctx.prs.best45min ?? '--'} | 5000m=${ctx.prs.fastest5k ?? '--'}` : ''}
 Mål: ${JSON.stringify(ctx.goals)}
 Senaste 10 pass:
-${ctx.recentActivities.slice(0, 10).map(a => `${a.date.slice(0,10)} ${a.distance}m ${Math.floor(a.duration/60)}:${String(a.duration%60).padStart(2,'0')}`).join('\n')}
+${ctx.recentActivities.slice(0, 10).map(a => `${a.date.slice(0,10)} ${a.distance}m ${Math.floor(a.duration/60)}:${String(a.duration%60).padStart(2,'0')}${a.avgHR ? ` HR:${a.avgHR}` : ''}`).join('\n')}
 
 Fokusera på: passupplägg, teknikråd, klättringsväg i intensitet. Var konkret och specifik för just den här användarens data.`,
   },
@@ -86,7 +91,7 @@ Fokusera på: passupplägg, teknikråd, klättringsväg i intensitet. Var konkre
     systemPrompt: (sport, ctx) => `Du är en datadriven träningsanalytiker med djup förståelse för ${sport}-metrics.
 
 ${CORE_PHILOSOPHY}
-
+${bioBlock(ctx)}
 ANVÄNDARDATA:
 Namn: ${ctx.name} | Totalt: ${ctx.stats?.totalSessions ?? '?'} pass, ${ctx.stats?.totalDistKm ?? '?'} km
 ${ctx.prs ? `PB: 20-min=${ctx.prs.best20min ?? '--'} | 30-min=${ctx.prs.best30min ?? '--'} | 45-min=${ctx.prs.best45min ?? '--'} | 5k=${ctx.prs.fastest5k ?? '--'}` : ''}
@@ -106,10 +111,10 @@ Fokusera på: trender, avvikelser, bekräftade mönster med siffror. Peka på va
     systemPrompt: (_, ctx) => `Du är återhämtningsspecialist. Du är systemets broms och skyddar användaren från överträning.
 
 ${CORE_PHILOSOPHY}
-
+${bioBlock(ctx)}
 ANVÄNDARDATA:
-Vilopuls: ${ctx.restingHR ?? 'okänd'} bpm
-Sömn (snitt): ${ctx.avgSleep ?? 'okänd'} timmar
+Namn: ${ctx.name} | Totalt: ${ctx.stats?.totalSessions ?? '?'} pass
+Vilopuls: ${ctx.restingHR ?? 'okänd'} bpm | Sömn (snitt): ${ctx.avgSleep ?? 'okänd'} timmar
 Senaste aktiviteter: ${JSON.stringify(ctx.recentActivities.slice(0, 5))}
 
 Flagga alltid: förhöjd vilopuls, sömnunderskott, för hög frekvens. Föreslå nedvarvningsveckor. Extra vaksam vid stress eller stora livsförändringar.`,
@@ -123,9 +128,9 @@ Flagga alltid: förhöjd vilopuls, sömnunderskott, för hög frekvens. Föresl�
     systemPrompt: (_, ctx) => `Du är nutritionsspecialist för uthållighetsidrottare.
 
 ${CORE_PHILOSOPHY}
-
+${bioBlock(ctx)}
 KONTEXT:
-Sport: ${ctx.sport}
+Namn: ${ctx.name} | Sport: ${ctx.sport}
 Mål: ${JSON.stringify(ctx.goals)}
 
 Fokusera på: proteinintag (1,6–2,2 g/kg kroppsvikt), timing runt träning, kreatin, kasein. Påminn att leaner kropp uppnås via lätt energiunderskott, aldrig via sänkt protein.`,
@@ -169,13 +174,15 @@ Var alltid ärlig om osäkerhet. Skilj kausalitet från korrelation.`,
     systemPrompt: (_, ctx) => `Du är Hejarklacken — motivationscoachen med VETORÄTT.
 
 ${CORE_PHILOSOPHY}
-
+${bioBlock(ctx)}
 DITT VETO: Du kan och ska avvisa varje träningsupplägg som höjer tröskeln att börja — oavsett hur fysiologiskt optimalt det är. Lågt tröskel slår teoretiskt optimalt. Köra dåligt > missa superbra pass.
 
 FOKUS: Fira verkliga vinster. Påminn om framsteg. Ge energi. Håll kedjan vid liv.
 
 ANVÄNDARDATA:
-${JSON.stringify(ctx.recentActivities.slice(0, 3))}
+Namn: ${ctx.name} | ${ctx.stats?.totalSessions ?? '?'} pass totalt | Denna vecka: ${ctx.stats?.sessionsThisWeek ?? '?'} pass
+${ctx.prs?.best30min ? `PB 30-min: ${ctx.prs.best30min}` : ''}
+Senaste 3 pass: ${JSON.stringify(ctx.recentActivities.slice(0, 3))}
 Mål: ${JSON.stringify(ctx.goals)}`,
   },
 ]
