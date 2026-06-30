@@ -13,6 +13,7 @@ export default async function ProfilPage() {
   ])
 
   const savedContext = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
+  const hasGarmin = !!(process.env.GARMIN_EMAIL && process.env.GARMIN_PASSWORD)
 
   return (
     <div className="p-4 md:p-8 max-w-lg w-full">
@@ -24,6 +25,7 @@ export default async function ProfilPage() {
         profile={profile}
         userEmail={user.email ?? ''}
         hasConcept2={!!c2token}
+        hasGarmin={hasGarmin}
         savedContext={savedContext}
       />
     </div>

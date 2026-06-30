@@ -23,11 +23,13 @@ export default function ProfileForm({
   profile,
   userEmail,
   hasConcept2,
+  hasGarmin,
   savedContext,
 }: {
   profile: Profile | null
   userEmail: string
   hasConcept2: boolean
+  hasGarmin: boolean
   savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
@@ -38,6 +40,8 @@ export default function ProfileForm({
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [garminSyncing, setGarminSyncing] = useState(false)
+  const [garminMsg, setGarminMsg] = useState('')
   const router = useRouter()
 
   async function save(e: React.FormEvent) {
@@ -79,6 +83,24 @@ export default function ProfileForm({
       setSyncMsg('Nätverksfel')
     }
     setSyncing(false)
+  }
+
+  async function syncGarmin() {
+    setGarminSyncing(true)
+    setGarminMsg('')
+    try {
+      const res = await fetch('/api/activities/sync-garmin', { method: 'POST' })
+      const data = await res.json()
+      if (data.synced !== undefined) {
+        setGarminMsg(`Synkade ${data.synced} nya pass`)
+        router.refresh()
+      } else {
+        setGarminMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setGarminMsg('Nätverksfel')
+    }
+    setGarminSyncing(false)
   }
 
   async function signOut() {
@@ -159,6 +181,34 @@ export default function ProfileForm({
               Anslut Concept2
             </a>
           </div>
+        )}
+      </div>
+
+      {/* Garmin */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div className="text-xs text-muted uppercase tracking-wider">Garmin Connect</div>
+        {hasGarmin ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-sm text-fg flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-accent inline-block" />
+                Ansluten
+              </div>
+              {garminMsg && <div className="text-xs text-lcd mt-1">{garminMsg}</div>}
+            </div>
+            <button
+              type="button"
+              onClick={syncGarmin}
+              disabled={garminSyncing}
+              className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+            >
+              {garminSyncing ? 'Synkar...' : 'Synka nu'}
+            </button>
+          </div>
+        ) : (
+          <p className="text-muted text-xs">
+            Garmin Connect är inte konfigurerat. Kontakta admin för att aktivera.
+          </p>
         )}
       </div>
 
