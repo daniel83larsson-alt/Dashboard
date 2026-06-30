@@ -3,14 +3,14 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-async function askAgent(apiKey: string, system: string, question: string): Promise<string> {
+async function askAgent(apiKey: string, system: string, question: string, maxTokens = 350): Promise<string> {
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: question }] }],
       systemInstruction: { parts: [{ text: system }] },
-      generationConfig: { maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: { maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } },
     }),
   })
   const d = await res.json()
@@ -57,33 +57,63 @@ export async function POST() {
       `${a.start_date.slice(0, 10)} ${a.sport_type} ${a.distance}m ${Math.floor(a.moving_time / 60)}min${a.average_heartrate ? ` HR${Math.round(a.average_heartrate)}` : ''}`
     ).join('\n')
 
-    const dataBlock = `ANVÄNDARE: ${profile?.name ?? 'Okänd'}
-PASS: ${activities.length} tot | ${thisWeek}/v | ${thisMonth}/mån | ${totalKm} km all time
-SÖMN: ${wellness?.sleepHours?.toFixed(1) ?? 'okänd'}h | VILOPULS: ${wellness?.restingHR ?? 'okänd'} bpm
-MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga'}
-${userBio ? `KONTEXT: ${userBio}` : ''}
-SENASTE PASS:
-${recentStr}`
-
-    const question = `Analysera träningsdata nedan. Ge din specifika bedömning på 3-5 meningar. Var direkt, konkret och personlig. Referera till faktisk data.\n\n${dataBlock}`
-
-    // Run all agents in parallel
-    const [coach, data, recovery, mental, strength] = await Promise.all([
-      askAgent(apiKey, 'Du är en erfaren roddcoach. Fokus: teknik, progression, passupplägg. Svara på svenska, 3-5 meningar.', question),
-      askAgent(apiKey, 'Du är dataanalytiker för träning. Fokus: trender, mönster, procentuella förändringar. Svara på svenska, 3-5 meningar.', question),
-      askAgent(apiKey, 'Du är återhämtningsspecialist. Fokus: belastningsbalans, vilopuls, sömn, risk för överträning. Svara på svenska, 3-5 meningar.', question),
-      askAgent(apiKey, 'Du är mentalcoach för idrottare. Fokus: mindset, motivation, mental styrka, mental uthållighet. Svara på svenska, 3-5 meningar.', question),
-      askAgent(apiKey, 'Du är styrkecoach med specialisering på kompletterande träning för uthållighetsidrottare. Fokus: kompletteringsträning, core, styrkeövningar. Svara på svenska, 3-5 meningar.', question),
-    ])
-
-    // Find best 30-min session for pace context
     const pr30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
     const b30 = pr30.length ? pr30.reduce((b, c) => c.distance > b.distance ? c : b) : null
+
+    // Shared data context (short — each agent focuses on what they need)
+    const dataBlock = `ATLET: ${profile?.name ?? 'Okänd'}
+PASS: ${thisWeek} denna vecka | ${thisMonth} denna månad | ${totalKm} km totalt
+${b30 ? `PB 30 min: ${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : ''}
+SÖMN: ${wellness?.sleepHours?.toFixed(1) ?? 'saknas'}h | VILOPULS: ${wellness?.restingHR ?? 'saknas'} bpm
+MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga aktiva mål'}
+${userBio ? `BAKGRUND: ${userBio}` : ''}
+SENASTE 15 PASS:
+${recentStr}`
+
+    // Each specialist gets a unique, focused question
+    const [data, recovery, mental, strength] = await Promise.all([
+      askAgent(
+        apiKey,
+        'Du är datadriven träningsanalytiker. Svara på svenska, 3-5 meningar. Gå direkt på mönster — hoppa över sammanfattning av grundstatistik.',
+        `Identifiera 2-3 konkreta trender eller avvikelser i träningsdata nedan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror.\n\n${dataBlock}`
+      ),
+      askAgent(
+        apiKey,
+        'Du är återhämtnings- och belastningsspecialist. Svara på svenska, 3-5 meningar. Fokusera ENBART på återhämtning, inte på träningsupplägg.',
+        `Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.\n\n${dataBlock}`
+      ),
+      askAgent(
+        apiKey,
+        'Du är mentalcoach för idrottare. Svara på svenska, 3-5 meningar. Fokusera ENBART på det mentala — inte på fysisk träning.',
+        `Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.\n\n${dataBlock}`
+      ),
+      askAgent(
+        apiKey,
+        'Du är styrkecoach specialiserad på kompletterande träning för roddare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA övningar — inte generella råd.',
+        `Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.\n\n${dataBlock}`
+      ),
+    ])
+
+    // Head coach synthesizes all specialist input
+    const summaryContext = `${dataBlock}
+
+SPECIALISTERNAS BEDÖMNINGAR:
+📊 Dataanalytiker: ${data}
+💤 Återhämtning: ${recovery}
+🧠 Mental: ${mental}
+💪 Styrka: ${strength}`
+
+    const summary = await askAgent(
+      apiKey,
+      'Du är huvudcoach och ordförande för detta tränarteam. Svara på svenska. Skriv en syntes i 4-6 meningar. Du får använda fetstil och punktlistor för tydlighet.',
+      `Läs specialisternas bedömningar och sammanfatta det viktigaste för atleten. Vad är det enda viktigaste fokusområdet just nu? Ge 2-3 konkreta prioriteringar för de kommande 2 veckorna.\n\n${summaryContext}`,
+      500
+    )
 
     const insight = {
       generatedAt: now.toISOString(),
       stats: { sessions: activities.length, thisWeek, thisMonth, totalKm, pr30: b30 ? `${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : null },
-      agents: { coach, data, recovery, mental, strength },
+      agents: { data, recovery, mental, strength, summary },
     }
 
     await supabase.from('coach_sessions').upsert({

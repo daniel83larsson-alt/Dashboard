@@ -2,13 +2,14 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import ReactMarkdown from 'react-markdown'
 
 type AgentInsights = {
-  coach: string
   data: string
   recovery: string
   mental: string
   strength: string
+  summary: string
 }
 
 type Insight = {
@@ -25,13 +26,32 @@ type Insight = {
 
 type Props = { savedInsight: Insight | null }
 
-const AGENTS: { key: keyof AgentInsights; label: string; icon: string }[] = [
-  { key: 'coach',    label: 'Roddcoach',          icon: '🚣' },
-  { key: 'data',     label: 'Dataanalytiker',      icon: '📊' },
-  { key: 'recovery', label: 'Återhämtning',        icon: '💤' },
-  { key: 'mental',   label: 'Mentalcoach',         icon: '🧠' },
-  { key: 'strength', label: 'Styrkecoach',         icon: '💪' },
+const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; icon: string; role: string }[] = [
+  { key: 'data',     label: 'Dataanalytiker',  icon: '📊', role: 'Trender · Mönster · Siffror' },
+  { key: 'recovery', label: 'Återhämtning',    icon: '💤', role: 'Belastning · Sömn · Vilopuls' },
+  { key: 'mental',   label: 'Mentalcoach',     icon: '🧠', role: 'Mindset · Motivation · Verktyg' },
+  { key: 'strength', label: 'Styrkecoach',     icon: '💪', role: 'Kompletterande träning · Core' },
 ]
+
+function Markdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-accent">{children}</strong>,
+        em: ({ children }) => <em className="text-lcd italic">{children}</em>,
+        ul: ({ children }) => <ul className="mb-2 last:mb-0 space-y-1 [&>li]:flex [&>li]:gap-2 [&>li]:items-start [&>li]:before:content-['·'] [&>li]:before:text-accent [&>li]:before:flex-shrink-0 [&>li]:before:mt-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 last:mb-0 space-y-1 pl-5 list-decimal marker:text-accent">{children}</ol>,
+        li: ({ children }) => <li className="text-fg leading-relaxed">{children}</li>,
+        h1: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+        h2: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+        h3: ({ children }) => <div className="font-medium text-muted mb-1 mt-1.5 text-xs uppercase tracking-wide">{children}</div>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  )
+}
 
 export default function InsightsPanel({ savedInsight }: Props) {
   const [insight, setInsight] = useState<Insight | null>(savedInsight)
@@ -67,7 +87,7 @@ export default function InsightsPanel({ savedInsight }: Props) {
       <div className="flex items-center justify-between">
         <div>
           {insight && (
-            <p className="text-muted text-xs mt-0.5">
+            <p className="text-muted text-xs">
               {isStale ? '⚠ ' : ''}Uppdaterad {age === 0 ? 'precis' : `${age}h sedan`}
               {isStale && ' · dags att hämta nya'}
             </p>
@@ -115,22 +135,44 @@ export default function InsightsPanel({ savedInsight }: Props) {
         </div>
       )}
 
-      {/* Agent insights */}
+      {/* Specialists */}
       {insight && (
         <div className="flex flex-col gap-3">
-          {AGENTS.map(({ key, label, icon }) => {
+          <div className="text-xs text-muted uppercase tracking-wider px-0.5">Specialisternas bedömning</div>
+          {SPECIALISTS.map(({ key, label, icon, role }) => {
             const text = insight.agents[key]
             if (!text) return null
             return (
               <div key={key} className="bg-card border border-edge rounded-2xl p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <span className="text-xl">{icon}</span>
-                  <span className="text-sm font-medium">{label}</span>
+                  <div>
+                    <div className="text-sm font-medium text-fg">{label}</div>
+                    <div className="text-xs text-muted">{role}</div>
+                  </div>
                 </div>
-                <p className="text-sm text-fg/90 leading-relaxed">{text}</p>
+                <div className="text-sm text-fg/90 leading-relaxed">
+                  <Markdown text={text} />
+                </div>
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Head coach summary */}
+      {insight?.agents.summary && (
+        <div className="bg-card border border-accent/30 rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xl">🚣</span>
+            <div>
+              <div className="text-sm font-semibold text-fg">Huvudcoachens summering</div>
+              <div className="text-xs text-muted">Prioriteringar · Nästa steg</div>
+            </div>
+          </div>
+          <div className="text-sm text-fg leading-relaxed">
+            <Markdown text={insight.agents.summary} />
+          </div>
         </div>
       )}
 
