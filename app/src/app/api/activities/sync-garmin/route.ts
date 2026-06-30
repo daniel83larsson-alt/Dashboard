@@ -7,6 +7,7 @@ import {
   fetchGarminSleepFull,
   fetchGarminSteps,
 } from '@/lib/garmin'
+import { decrypt } from '@/lib/encrypt'
 
 export type DayWellness = {
   date: string
@@ -35,8 +36,16 @@ export async function POST() {
       .eq('coach_id', 'garmin_credentials')
       .single()
 
-    const credsRaw = (credsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-    const userCreds = credsRaw ? (() => { try { return JSON.parse(credsRaw) } catch { return null } })() : null
+    const credsStored = (credsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+    const userCreds = credsStored ? (() => {
+      try {
+        // Try decrypting first; fall back to plain JSON for legacy records
+        const plain = credsStored.length > 100 && !credsStored.startsWith('{')
+          ? decrypt(credsStored)
+          : credsStored
+        return JSON.parse(plain)
+      } catch { return null }
+    })() : null
     const garminEmail = userCreds?.email ?? process.env.GARMIN_EMAIL
     const garminPassword = userCreds?.password ?? process.env.GARMIN_PASSWORD
 
@@ -139,5 +148,8 @@ export async function POST() {
 }
 
 export async function GET() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   return NextResponse.json({ configured: true })
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { GarminConnect } from 'garmin-connect'
+import { encrypt } from '@/lib/encrypt'
 
 export async function POST(request: NextRequest) {
   try {
@@ -17,10 +18,13 @@ export async function POST(request: NextRequest) {
     const gc = new GarminConnect({ username: email.trim(), password: password.trim() })
     await gc.login()
 
+    // Store encrypted — never save plaintext credentials
+    const stored = encrypt(JSON.stringify({ email: email.trim(), password: password.trim() }))
+
     await supabase.from('coach_sessions').upsert({
       user_id: user.id,
       coach_id: 'garmin_credentials',
-      messages: [{ role: 'system', content: JSON.stringify({ email: email.trim(), password: password.trim() }) }],
+      messages: [{ role: 'system', content: stored }],
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,coach_id' })
 
