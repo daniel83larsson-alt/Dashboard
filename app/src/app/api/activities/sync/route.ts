@@ -1,0 +1,62 @@
+import { NextResponse } from 'next/server'
+import { createSupabaseServerClient } from '@/lib/supabase'
+import { fetchConcept2Results, refreshConcept2Token, concept2ResultToActivity } from '@/lib/concept2'
+
+export async function POST() {
+  try {
+    const supabase = await createSupabaseServerClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    const { data: tokenRow } = await supabase
+      .from('concept2_tokens')
+      .select('*')
+      .eq('user_id', user.id)
+      .single()
+
+    if (!tokenRow) {
+      return NextResponse.json({ error: 'Concept2 not connected' }, { status: 400 })
+    }
+
+    let accessToken = tokenRow.access_token
+    const now = Math.floor(Date.now() / 1000)
+
+    if (tokenRow.expires_at < now + 60) {
+      const refreshed = await refreshConcept2Token(tokenRow.refresh_token)
+      accessToken = refreshed.access_token
+      await supabase.from('concept2_tokens').update({
+        access_token: refreshed.access_token,
+        expires_at: now + refreshed.expires_in,
+        updated_at: new Date().toISOString(),
+      }).eq('user_id', user.id)
+    }
+
+    const { data: latest } = await supabase
+      .from('activities')
+      .select('start_date')
+      .eq('user_id', user.id)
+      .order('start_date', { ascending: false })
+      .limit(1)
+      .single()
+
+    const updatedAfter = latest?.start_date
+      ? new Date(new Date(latest.start_date).getTime() - 86400000).toISOString().split('T')[0]
+      : undefined
+
+    const results = await fetchConcept2Results(
+      accessToken,
+      tokenRow.concept2_user_id,
+      updatedAfter
+    )
+
+    if (results.length > 0) {
+      const rows = results.map(r => concept2ResultToActivity(r, user.id))
+      await supabase.from('activities').upsert(rows, { onConflict: 'strava_id' })
+    }
+
+    return NextResponse.json({ synced: results.length })
+  } catch (err) {
+    console.error('Sync error:', err)
+    return NextResponse.json({ error: 'Sync failed' }, { status: 500 })
+  }
+}
