@@ -2,47 +2,30 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
-
-const COACHES = [
-  { id: 'roddcoach', name: 'Roddcoachen', emoji: '🚣', desc: 'Teknik & träning' },
-  { id: 'dataanalytiker', name: 'Analytikern', emoji: '📊', desc: 'Data & trender' },
-  { id: 'aterhamtning', name: 'Återhämtning', emoji: '🌙', desc: 'Vila & recovery' },
-  { id: 'nutritionist', name: 'Nutritionisten', emoji: '🥗', desc: 'Kost & energi' },
-  { id: 'rorlighet', name: 'Rörlighet', emoji: '🤸', desc: 'Stretching & mobilitet' },
-  { id: 'vetenskap', name: 'Vetenskaparen', emoji: '🔬', desc: 'Fysiologi & forskning' },
-  { id: 'hejarklacken', name: 'Hejarklacken', emoji: '🏆', desc: 'Motivation · VETO', veto: true },
-]
+import ReactMarkdown from 'react-markdown'
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
 export default function CoachPage() {
-  const [activeId, setActiveId] = useState('roddcoach')
-  const [byCoach, setByCoach] = useState<Record<string, Message[]>>({})
+  const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
-  const [loadingHistory, setLoadingHistory] = useState(false)
+  const [loadingHistory, setLoadingHistory] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
-
-  const active = COACHES.find(c => c.id === activeId) ?? COACHES[0]
-  const messages = byCoach[activeId] ?? []
+  const inputRef = useRef<HTMLTextAreaElement>(null)
 
   useEffect(() => {
-    if (byCoach[activeId] !== undefined) return
-    setLoadingHistory(true)
     const supabase = createSupabaseClient()
     supabase
       .from('coach_sessions')
       .select('messages')
-      .eq('coach_id', activeId)
+      .eq('coach_id', 'roddcoach')
       .single()
       .then(({ data }) => {
-        setByCoach(prev => ({
-          ...prev,
-          [activeId]: (data?.messages as Message[]) ?? [],
-        }))
+        setMessages((data?.messages as Message[]) ?? [])
         setLoadingHistory(false)
       })
-  }, [activeId, byCoach])
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -53,7 +36,7 @@ export default function CoachPage() {
     if (!msg || loading) return
 
     const updated: Message[] = [...messages, { role: 'user', content: msg }]
-    setByCoach(prev => ({ ...prev, [activeId]: updated }))
+    setMessages(updated)
     setInput('')
     setLoading(true)
 
@@ -61,71 +44,58 @@ export default function CoachPage() {
       const res = await fetch('/api/coach', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ coachId: activeId, message: msg, sport: 'Rowing' }),
+        body: JSON.stringify({ coachId: 'roddcoach', message: msg, sport: 'Rowing' }),
       })
       const data = await res.json()
       const reply = data.reply ?? 'Kunde inte nå coachen. Kontrollera att API-nyckeln är inlagd under Profil.'
-      setByCoach(prev => ({
-        ...prev,
-        [activeId]: [...updated, { role: 'assistant', content: reply }],
-      }))
+      setMessages([...updated, { role: 'assistant', content: reply }])
     } catch {
-      setByCoach(prev => ({
-        ...prev,
-        [activeId]: [...updated, { role: 'assistant', content: 'Nätverksfel. Försök igen.' }],
-      }))
+      setMessages([...updated, { role: 'assistant', content: 'Nätverksfel. Försök igen.' }])
     }
     setLoading(false)
   }
 
+  function handleKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault()
+      send()
+    }
+  }
+
+  function handleInput(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    setInput(e.target.value)
+    const ta = e.target
+    ta.style.height = 'auto'
+    ta.style.height = Math.min(ta.scrollHeight, 160) + 'px'
+  }
+
   return (
     <div className="flex flex-col h-[100dvh] md:h-screen pb-20 md:pb-0">
-      {/* Coach selector */}
-      <div className="border-b border-edge bg-bg flex-shrink-0">
-        <div className="px-4 pt-4 pb-0">
-          <h1 className="text-lg font-semibold mb-3">Coach</h1>
-        </div>
-        <div className="flex gap-2 overflow-x-auto px-4 pb-3 scrollbar-hide">
-          {COACHES.map(c => (
-            <button
-              key={c.id}
-              onClick={() => setActiveId(c.id)}
-              className={`flex-shrink-0 flex flex-col items-center gap-1 px-3 py-2.5 rounded-xl border transition-colors min-w-[72px] ${
-                activeId === c.id
-                  ? 'border-accent bg-accent/10'
-                  : 'border-edge bg-card'
-              }`}
-            >
-              <span className="text-xl leading-none">{c.emoji}</span>
-              <span className={`text-[11px] font-medium text-center leading-tight ${
-                activeId === c.id ? 'text-accent' : 'text-muted'
-              }`}>
-                {c.name}
-              </span>
-            </button>
-          ))}
+      {/* Header */}
+      <div className="border-b border-edge bg-bg flex-shrink-0 px-4 py-4 flex items-center gap-3">
+        <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center text-lg">🚣</div>
+        <div>
+          <div className="font-semibold text-fg text-sm">Din coach</div>
+          <div className="text-xs text-muted">Träning · teknik · plan</div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-3 min-h-0">
+      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 min-h-0">
         {loadingHistory && (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-12">
             <div className="text-muted text-sm">Laddar...</div>
           </div>
         )}
 
         {!loadingHistory && messages.length === 0 && (
-          <div className="flex-1 flex items-center justify-center min-h-0">
+          <div className="flex-1 flex items-center justify-center">
             <div className="text-center py-12">
-              <div className="text-5xl mb-4">{active.emoji}</div>
-              <div className="font-semibold text-fg text-lg">{active.name}</div>
-              <div className="text-muted text-sm mt-1">{active.desc}</div>
-              {active.veto && (
-                <div className="text-xs text-accent mt-2 bg-accent/10 px-3 py-1 rounded-full inline-block">
-                  Kan stoppa dåliga idéer med VETO
-                </div>
-              )}
+              <div className="text-5xl mb-4">🚣</div>
+              <div className="font-semibold text-fg text-base">Vad kan jag hjälpa dig med?</div>
+              <div className="text-muted text-sm mt-2 max-w-xs">
+                Fråga om träningsupplägg, teknik, återhämtning, mål eller veckans plan.
+              </div>
             </div>
           </div>
         )}
@@ -133,23 +103,44 @@ export default function CoachPage() {
         {messages.map((msg, i) => (
           <div key={i} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
             {msg.role === 'assistant' && (
-              <span className="text-xl flex-shrink-0 mb-1">{active.emoji}</span>
+              <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-base flex-shrink-0 mb-1">🚣</div>
             )}
-            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
+            <div className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
               msg.role === 'user'
                 ? 'bg-accent text-bg rounded-br-sm'
                 : 'bg-card border border-edge text-fg rounded-bl-sm'
             }`}>
-              {msg.content}
+              {msg.role === 'user' ? (
+                msg.content
+              ) : (
+                <ReactMarkdown
+                  components={{
+                    p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                    strong: ({ children }) => <strong className="font-semibold text-accent">{children}</strong>,
+                    em: ({ children }) => <em className="text-lcd italic">{children}</em>,
+                    ul: ({ children }) => <ul className="mb-2 last:mb-0 space-y-1 pl-0 [&>li]:flex [&>li]:gap-2 [&>li]:items-start [&>li]:before:content-['·'] [&>li]:before:text-accent [&>li]:before:flex-shrink-0 [&>li]:before:mt-0.5">{children}</ul>,
+                    ol: ({ children }) => <ol className="mb-2 last:mb-0 space-y-1 pl-5 list-decimal marker:text-accent">{children}</ol>,
+                    li: ({ children }) => <li className="text-fg leading-relaxed">{children}</li>,
+                    h1: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+                    h2: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+                    h3: ({ children }) => <div className="font-medium text-muted mb-1 mt-2 first:mt-0 text-xs uppercase tracking-wide">{children}</div>,
+                    code: ({ children }) => <code className="bg-bg px-1.5 py-0.5 rounded text-lcd text-xs font-mono">{children}</code>,
+                    blockquote: ({ children }) => <blockquote className="border-l-2 border-accent pl-3 text-muted my-2">{children}</blockquote>,
+                    hr: () => <hr className="border-edge my-3" />,
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              )}
             </div>
           </div>
         ))}
 
         {loading && (
           <div className="flex items-end gap-2">
-            <span className="text-xl">{active.emoji}</span>
+            <div className="w-7 h-7 rounded-full bg-accent/15 flex items-center justify-center text-base flex-shrink-0">🚣</div>
             <div className="bg-card border border-edge rounded-2xl rounded-bl-sm px-4 py-3">
-              <div className="flex gap-1 items-center">
+              <div className="flex gap-1 items-center h-4">
                 {[0, 150, 300].map(d => (
                   <span key={d} className="w-1.5 h-1.5 bg-muted rounded-full animate-bounce"
                     style={{ animationDelay: `${d}ms` }} />
@@ -162,19 +153,21 @@ export default function CoachPage() {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-edge bg-bg flex gap-2 flex-shrink-0">
-        <input
-          type="text"
+      <div className="p-4 border-t border-edge bg-bg flex gap-2 items-end flex-shrink-0">
+        <textarea
+          ref={inputRef}
+          rows={1}
           value={input}
-          onChange={e => setInput(e.target.value)}
-          onKeyDown={e => e.key === 'Enter' && !e.shiftKey && send()}
-          placeholder={`Fråga ${active.name}...`}
-          className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+          onChange={handleInput}
+          onKeyDown={handleKey}
+          placeholder="Skriv ett meddelande..."
+          className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none overflow-hidden leading-relaxed"
+          style={{ minHeight: '48px' }}
         />
         <button
           onClick={send}
           disabled={loading || !input.trim()}
-          className="bg-accent text-bg font-semibold px-5 py-3 rounded-xl disabled:opacity-40 text-sm flex-shrink-0 transition-opacity"
+          className="bg-accent text-bg font-semibold px-5 py-3 rounded-xl disabled:opacity-40 text-sm flex-shrink-0 transition-opacity h-12"
         >
           Skicka
         </button>
