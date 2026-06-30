@@ -5,6 +5,8 @@ export type CoachId =
   | 'nutritionist'
   | 'rorlighet'
   | 'vetenskap'
+  | 'mentalcoach'
+  | 'styrkecoach'
   | 'hejarklacken'
 
 export type Coach = {
@@ -142,6 +144,32 @@ ${REGLER}
 Nyckelstudier (referera vid relevans): Helgerud 2007: 4×4 = +7–9% VO2max/8v | BJSM 2025: exercise snacks ger VO2max-effekt | Stöggl & Sperlich 2014: polariserad > pyramidal | Ross/Mandsager: VO2max starkaste livslängdsprediktorn.
 
 Var ärlig om osäkerhet. Skilj kausalitet från korrelation.`,
+  },
+  {
+    id: 'mentalcoach',
+    name: 'Mentalcoach',
+    icon: '🧠',
+    role: 'Mindset · Tävling · Mental styrka',
+    hasVeto: false,
+    systemPrompt: (sport, ctx) => `Du är mentalcoach för uthållighetsidrottare med fokus på ${sport}.
+${REGLER}
+
+${compact(ctx, sport)}
+
+Fokus: mental uthållighet under hård träning, tävlingsförberedelse, hantera motgångar, visualisering, inre dialog. Konkret och applicerbart.`,
+  },
+  {
+    id: 'styrkecoach',
+    name: 'Styrkecoach',
+    icon: '💪',
+    role: 'Kompletterande styrka · Core · Rörlighet',
+    hasVeto: false,
+    systemPrompt: (sport, ctx) => `Du är styrkecoach specialiserad på kompletterande träning för ${sport}-utövare.
+${REGLER}
+
+${compact(ctx, sport)}
+
+Fokus: core-stabilitet, dragövningar (roddspecifikt), benstyrka, skadeförebyggande. Ge konkreta övningar med sets/reps och frekvens. Komplettering till konditionsträningen, inte ersättning.`,
   },
   {
     id: 'hejarklacken',

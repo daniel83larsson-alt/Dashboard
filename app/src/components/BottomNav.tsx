@@ -9,9 +9,9 @@ const nav = [
       <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
     </svg>
   )},
-  { href: '/dashboard/passlogg', label: 'Logg', icon: (
+  { href: '/dashboard/insikter', label: 'Insikter', icon: (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-5 h-5">
-      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
     </svg>
   )},
   { href: '/dashboard/coach', label: 'Coach', icon: (
