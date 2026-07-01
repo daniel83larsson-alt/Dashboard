@@ -9,10 +9,11 @@ import NavIcon from '@/components/NavIcon'
 
 const PINNED = ['/dashboard', '/dashboard/coach']
 
-export default function BottomNav() {
+export default function BottomNav({ isAdmin }: { isAdmin?: boolean } = {}) {
   const pathname = usePathname()
   const router = useRouter()
   const [open, setOpen] = useState(false)
+  const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
 
   const pinnedItems = NAV_ITEMS.filter(i => PINNED.includes(i.href))
   const isOnPinned = PINNED.includes(pathname)
@@ -66,7 +67,7 @@ export default function BottomNav() {
               </button>
             </div>
             <div className="p-3 flex flex-col gap-0.5">
-              {NAV_ITEMS.map(item => {
+              {items.map(item => {
                 const active = pathname === item.href
                 return (
                   <Link

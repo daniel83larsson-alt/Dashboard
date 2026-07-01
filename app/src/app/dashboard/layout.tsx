@@ -16,14 +16,15 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .single()
 
   const userName = profile?.name ?? user.email?.split('@')[0] ?? 'Tränare'
+  const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <SideNav userName={userName} />
+      <SideNav userName={userName} isAdmin={isAdmin} />
       <main className="flex-1 flex flex-col pb-20 md:pb-0 md:ml-56 min-h-screen">
         {children}
       </main>
-      <BottomNav />
+      <BottomNav isAdmin={isAdmin} />
     </div>
   )
 }

@@ -6,9 +6,10 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { NAV_ITEMS } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
 
-export default function SideNav({ userName }: { userName: string }) {
+export default function SideNav({ userName, isAdmin }: { userName: string; isAdmin?: boolean }) {
   const pathname = usePathname()
   const router = useRouter()
+  const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
 
   async function signOut() {
     const supabase = createSupabaseClient()
@@ -24,7 +25,7 @@ export default function SideNav({ userName }: { userName: string }) {
       </div>
 
       <nav className="flex flex-col gap-0.5 flex-1">
-        {NAV_ITEMS.map(item => {
+        {items.map(item => {
           const active = pathname === item.href
           return (
             <Link

@@ -94,6 +94,15 @@ alter table public.profiles add column if not exists flagged_attempts integer de
 alter table public.profiles add column if not exists locked boolean default false;
 alter table public.profiles add column if not exists flag_log jsonb default '[]';
 
+-- Admin: ger ditt eget konto (matchat på e-post) läs- och skrivrätt till alla
+-- profiler, utan att öppna upp övriga tabeller (aktiviteter, mål, coach-
+-- sessioner förblir privata per användare). Byt e-postadressen om det behövs.
+-- Kör vid uppdatering av en befintlig databas:
+create policy "Admin reads all profiles" on public.profiles
+  for select using (auth.jwt() ->> 'email' = 'daniel83larsson@gmail.com');
+create policy "Admin updates all profiles" on public.profiles
+  for update using (auth.jwt() ->> 'email' = 'daniel83larsson@gmail.com');
+
 -- Auto-skapa profil vid signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public

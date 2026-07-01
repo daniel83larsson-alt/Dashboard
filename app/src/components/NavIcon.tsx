@@ -8,6 +8,7 @@ const PATHS: Record<string, string> = {
   profile: 'M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z',
   menu: 'M4 6h16M4 12h16M4 18h16',
   close: 'M6 18L18 6M6 6l12 12',
+  admin: 'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {
