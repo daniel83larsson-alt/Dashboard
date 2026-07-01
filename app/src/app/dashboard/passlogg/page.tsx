@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import DuplicateCleanup from '@/components/DuplicateCleanup'
+import Link from 'next/link'
 
 function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
 function fmt_dur(s: number) {
@@ -50,7 +51,7 @@ export default async function PassloggPage() {
           {activities.map(a => {
             const pace = fmt_pace(a.moving_time, a.distance)
             return (
-              <div key={a.id} className="bg-card border border-edge rounded-xl p-4">
+              <Link key={a.id} href={`/dashboard/passlogg/${a.id}`} className="bg-card border border-edge rounded-xl p-4 block hover:border-accent/40 transition-colors">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="font-medium text-sm">{a.name}</div>
@@ -85,7 +86,7 @@ export default async function PassloggPage() {
                     <div className="text-muted text-xs">HR</div>
                   </div>
                 </div>
-              </div>
+              </Link>
             )
           })}
         </div>

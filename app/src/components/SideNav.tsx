@@ -3,44 +3,8 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
-
-const nav = [
-  { href: '/dashboard', label: 'Översikt', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
-    </svg>
-  )},
-  { href: '/dashboard/passlogg', label: 'Passlogg', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-    </svg>
-  )},
-  { href: '/dashboard/insikter', label: 'Insikter', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" />
-    </svg>
-  )},
-  { href: '/dashboard/halsa', label: 'Hälsa', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" />
-    </svg>
-  )},
-  { href: '/dashboard/grafer', label: 'Grafer', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-    </svg>
-  )},
-  { href: '/dashboard/coach', label: 'Coach', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-    </svg>
-  )},
-  { href: '/dashboard/profil', label: 'Profil & Inställningar', icon: (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="w-4 h-4">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z" />
-    </svg>
-  )},
-]
+import { NAV_ITEMS } from '@/lib/nav'
+import NavIcon from '@/components/NavIcon'
 
 export default function SideNav({ userName }: { userName: string }) {
   const pathname = usePathname()
@@ -60,7 +24,7 @@ export default function SideNav({ userName }: { userName: string }) {
       </div>
 
       <nav className="flex flex-col gap-0.5 flex-1">
-        {nav.map(item => {
+        {NAV_ITEMS.map(item => {
           const active = pathname === item.href
           return (
             <Link
@@ -72,7 +36,7 @@ export default function SideNav({ userName }: { userName: string }) {
                   : 'text-muted hover:text-fg hover:bg-edge'
               }`}
             >
-              {item.icon}
+              <NavIcon icon={item.icon} />
               {item.label}
             </Link>
           )
