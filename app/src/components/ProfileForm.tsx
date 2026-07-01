@@ -16,13 +16,15 @@ type Profile = {
   flag_log?: FlagEntry[] | null
 }
 
-const DANIEL_CONTEXT_PLACEHOLDER = `Beskriv dina träningsmål, nuvarande nivå och vad du vill uppnå.
+const DANIEL_CONTEXT_PLACEHOLDER = `Beskriv dig själv, din situation och din träning — ju mer bakgrund, desto bättre feedback.
 
 Exempel:
 - Jag roddar 3-4 gånger/vecka, mestadels 20-30 min pass
+- Jobb: stillasittande kontorsjobb, pendlar 1h/dag — påverkar när jag orkar träna
+- Personlighet: tävlingsinriktad, blir lätt uttråkad av för lugna pass
 - Mål: förbättra 30-min PB från 5747m mot 6000m
 - Vill bygga aerob bas, HR under 130 på längre pass
-- Sekundärt mål: snabbare 5000m, under 22 min`
+- Skador/begränsningar: ont i vänster axel ibland vid högintensiva pass`
 
 export default function ProfileForm({
   profile,
@@ -169,8 +171,8 @@ export default function ProfileForm({
       {/* Training context */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
         <div>
-          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Träningskontext</div>
-          <p className="text-muted text-xs">Tas med i varje coachsamtal — beskriv dina mål och upplägg</p>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Om dig</div>
+          <p className="text-muted text-xs">Tas med i varje coachsamtal — jobb, livssituation, personlighet, skador, mål. Allt som hjälper AI:n förstå helheten, inte bara siffrorna.</p>
         </div>
         <textarea
           value={context}

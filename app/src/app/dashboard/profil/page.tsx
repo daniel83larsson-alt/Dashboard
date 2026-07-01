@@ -1,16 +1,18 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import ProfileForm from '@/components/ProfileForm'
+import GoalsCard from '@/components/GoalsCard'
 
 export default async function ProfilPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: c2token }, { data: ctxRow }, { data: garminCredsRow }] = await Promise.all([
+  const [{ data: profile }, { data: c2token }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('concept2_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_credentials').single(),
+    supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }),
   ])
 
   const savedContext = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -22,6 +24,9 @@ export default async function ProfilPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Profil</h1>
         <p className="text-muted text-sm mt-1">Inställningar och anslutningar</p>
+      </div>
+      <div className="mb-4">
+        <GoalsCard goals={goals ?? []} />
       </div>
       <ProfileForm
         profile={profile}
