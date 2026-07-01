@@ -16,6 +16,30 @@ type Activity = {
 
 type Message = { role: 'user' | 'assistant'; content: string }
 
+// Rowing's /500m split pace makes no sense for cycling (speed) or
+// running/walking (min/km) — format each sport with its own convention.
+function fmtSpeedOrPace(sportType: string, distance: number, movingTime: number): { label: string; value: string } | null {
+  if (distance <= 0 || movingTime <= 0) return null
+
+  if (sportType === 'Ride' || sportType === 'VirtualRide') {
+    const kmh = (distance / 1000) / (movingTime / 3600)
+    return { label: 'Snitthastighet', value: `${kmh.toFixed(1)} km/h` }
+  }
+  if (sportType === 'Run' || sportType === 'TrailRun' || sportType === 'Walk' || sportType === 'Hike') {
+    const secPerKm = movingTime / (distance / 1000)
+    const m = Math.floor(secPerKm / 60)
+    const s = Math.round(secPerKm % 60)
+    return { label: 'Snittempo', value: `${m}:${s.toString().padStart(2, '0')}/km` }
+  }
+  if (sportType === 'Rowing') {
+    const secPer500 = (movingTime / distance) * 500
+    const m = Math.floor(secPer500 / 60)
+    const s = Math.round(secPer500 % 60)
+    return { label: 'Snittfart', value: `${m}:${s.toString().padStart(2, '0')}/500m` }
+  }
+  return null
+}
+
 export default function FeedbackDrawer({ activity }: { activity: Activity }) {
   const [open, setOpen] = useState(false)
   const [messages, setMessages] = useState<Message[]>([])
@@ -62,18 +86,13 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
     setOpen(true)
     if (!initiated) {
       setInitiated(true)
-      const paceSecsPer500 = activity.distance > 0
-        ? (activity.moving_time / activity.distance) * 500
-        : 0
-      const pm = Math.floor(paceSecsPer500 / 60)
-      const ps = Math.round(paceSecsPer500 % 60)
-      const pace = paceSecsPer500 > 0 ? `${pm}:${ps.toString().padStart(2, '0')}/500m` : 'okänt'
+      const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
 
       const parts = [
-        `Analysera mitt senaste pass: "${activity.name}".`,
+        `Analysera mitt senaste ${activity.sport_type}-pass: "${activity.name}".`,
         `Distans: ${(activity.distance / 1000).toFixed(1)} km,`,
-        `Tid: ${Math.floor(activity.moving_time / 60)} min,`,
-        `Snittfart: ${pace}`,
+        `Tid: ${Math.floor(activity.moving_time / 60)} min`,
+        speedOrPace ? `, ${speedOrPace.label}: ${speedOrPace.value}` : '',
         activity.average_heartrate ? `, snitt-HR: ${Math.round(activity.average_heartrate)} bpm` : '',
         activity.max_heartrate ? `, max-HR: ${Math.round(activity.max_heartrate)} bpm` : '',
         activity.average_watts ? `, snitt-watt: ${Math.round(activity.average_watts)}W` : '',
@@ -109,7 +128,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
             {/* Header */}
             <div className="px-5 py-3 border-b border-edge flex items-center justify-between flex-shrink-0">
               <div>
-                <div className="font-semibold text-fg text-sm">Roddcoachen</div>
+                <div className="font-semibold text-fg text-sm">Din coach</div>
                 <div className="text-xs text-muted truncate max-w-[220px]">{activity.name}</div>
               </div>
               <button

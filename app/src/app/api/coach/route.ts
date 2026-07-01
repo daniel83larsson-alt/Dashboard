@@ -112,7 +112,7 @@ export async function POST(request: NextRequest) {
     const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }, { data: overviewRow }] = await Promise.all([
       supabase
         .from('activities')
-        .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts')
+        .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts, sport_type')
         .eq('user_id', user.id)
         .order('start_date', { ascending: false })
         .limit(50),
@@ -186,6 +186,7 @@ export async function POST(request: NextRequest) {
         avgHR: a.average_heartrate ?? undefined,
         maxHR: a.max_heartrate ?? undefined,
         avgWatts: a.average_watts ?? undefined,
+        sport: a.sport_type ?? undefined,
       })),
       goals: (goals ?? []).map(g => ({
         type: g.goal_type,

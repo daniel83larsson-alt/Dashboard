@@ -30,6 +30,7 @@ export type UserContext = {
     avgHR?: number
     maxHR?: number
     avgWatts?: number
+    sport?: string
   }>
   goals: Array<{ type: string; title: string; targetDate?: string }>
   restingHR?: number
@@ -48,21 +49,58 @@ export type UserContext = {
   }
 }
 
+const SPORT_LABELS: Record<string, string> = {
+  Rowing: 'rodd',
+  Run: 'löpning',
+  TrailRun: 'terränglöpning',
+  Ride: 'cykling',
+  VirtualRide: 'inomhuscykling',
+  Walk: 'promenad',
+  Hike: 'vandring',
+  Swim: 'simning',
+  WeightTraining: 'styrketräning',
+  Yoga: 'yoga',
+  Elliptical: 'crosstrainer',
+  Workout: 'träningspass',
+  HIIT: 'HIIT',
+}
+
+export function sportLabel(sport: string): string {
+  return SPORT_LABELS[sport] ?? sport
+}
+
 function compact(ctx: UserContext, sport: string): string {
   const s = ctx.stats
   const p = ctx.prs
+  const label = sportLabel(sport)
+  const isRowing = sport === 'Rowing'
   const acts = ctx.recentActivities.slice(0, 7)
-    .map(a => `${a.date.slice(0,10)} ${a.distance}m ${Math.floor(a.duration/60)}min${a.avgHR ? ` HR${a.avgHR}` : ''}${a.avgWatts ? ` ${a.avgWatts}W` : ''}`)
+    .map(a => `${a.date.slice(0,10)} [${a.sport ? sportLabel(a.sport) : 'okänd sport'}] ${a.distance}m ${Math.floor(a.duration/60)}min${a.avgHR ? ` HR${a.avgHR}` : ''}${a.avgWatts ? ` ${a.avgWatts}W` : ''}`)
     .join('\n')
 
-  return `ANVÄNDARE: ${ctx.name} | ${sport}
+  const sportCounts = ctx.recentActivities.reduce<Record<string, number>>((acc, a) => {
+    const key = a.sport ? sportLabel(a.sport) : 'okänd'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
+  const sportMix = Object.entries(sportCounts)
+    .sort((a, b) => b[1] - a[1])
+    .map(([k, v]) => `${k} ${Math.round((v / ctx.recentActivities.length) * 100)}%`)
+    .join(', ')
+
+  const sportNote = !isRowing
+    ? `OBS: Det aktuella passet/frågan gäller ${label}, INTE rodd. PB-raden nedan är enbart roddspecifik historik (annan sport, annan enhet) — använd den inte som referens för ${label}. Svara helt utifrån ${label}s egna mått (t.ex. km/h eller min/km för cykel/löpning), inte /500m-pace.\n`
+    : ''
+
+  return `${sportNote}ANVÄNDARE: ${ctx.name} | Aktuell sport: ${label}
+SPORTMIX (senaste ${ctx.recentActivities.length} pass): ${sportMix || 'okänd'}
 STATS: ${s?.totalSessions ?? '?'} pass tot | ${s?.sessionsThisWeek ?? '?'}/v | ${s?.sessionsThisMonth ?? '?'}/mån | ${s?.totalDistKm ?? '?'} km all time
-${p ? `PB: 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}
+${p ? `RODD-PB (endast rodd, ej andra sporter): 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}
 ${ctx.restingHR ? `Vilopuls: ${ctx.restingHR} bpm` : ''}${ctx.avgSleep ? ` | Sömn: ${ctx.avgSleep.toFixed(1)}h` : ''}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
 ${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
 ${ctx.userBio ? `KONTEXT: ${ctx.userBio}` : ''}
-SENASTE PASS:
+SENASTE PASS (sport per rad inom hakparentes):
 ${acts}`
 }
 
@@ -75,12 +113,12 @@ export const COACHES: Coach[] = [
     icon: '🚣',
     role: 'Teknik · Upplägget · Progression',
     hasVeto: false,
-    systemPrompt: (sport, ctx) => `Du är en erfaren ${sport}-coach. Analysera träningsdata, ge råd om teknik, struktur och progression.
+    systemPrompt: (sport, ctx) => `Du är personlig tränare, van vid flera sporter. Just nu coachar du användarens ${sportLabel(sport)}. Analysera träningsdata, ge råd om teknik, struktur och progression för DEN sporten — anta aldrig att ett pass är rodd bara för att appen/annan historik är roddfokuserad.
 ${REGLER}
 
 ${compact(ctx, sport)}
 
-Fokus: passupplägg, teknikråd, progressionsväg. Konkret och specifik utifrån denna användares faktiska data.`,
+Fokus: passupplägg, teknikråd, progressionsväg för ${sportLabel(sport)} specifikt. Konkret och specifik utifrån denna användares faktiska data för just detta pass.`,
   },
   {
     id: 'dataanalytiker',
@@ -88,7 +126,7 @@ Fokus: passupplägg, teknikråd, progressionsväg. Konkret och specifik utifrån
     icon: '📊',
     role: 'Splits · Watt · Trender',
     hasVeto: false,
-    systemPrompt: (sport, ctx) => `Du är datadriven träningsanalytiker för ${sport}. Hitta mönster, avvikelser och trender i siffrorna.
+    systemPrompt: (sport, ctx) => `Du är datadriven träningsanalytiker, van vid flera sporter — just nu ${sportLabel(sport)}. Hitta mönster, avvikelser och trender i siffrorna för den sporten.
 ${REGLER}
 
 ${compact(ctx, sport)}
@@ -117,7 +155,7 @@ Flagga alltid: förhöjd vilopuls, sömnunderskott, för hög frekvens. Föresl�
     systemPrompt: (_, ctx) => `Du är nutritionsspecialist för uthållighetsidrottare.
 ${REGLER}
 
-ANVÄNDARE: ${ctx.name} | ${ctx.sport}
+ANVÄNDARE: ${ctx.name} | ${sportLabel(ctx.sport)}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
 ${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
 ${ctx.userBio ? `KONTEXT: ${ctx.userBio}` : ''}
@@ -133,7 +171,7 @@ Fokus: proteinintag 1,6–2,2 g/kg, timing runt träning, kreatin, kasein. Leane
     systemPrompt: (sport, _) => `Du är rörlighets- och skadeförebyggande specialist för ${sport}.
 ${REGLER}
 
-Fokus: sportspecifika rörlighetsövningar, spänningskedjor, konkreta protokoll med frekvens.`,
+Fokus: sportspecifika rörlighetsövningar för ${sportLabel(sport)}, spänningskedjor, konkreta protokoll med frekvens.`,
   },
   {
     id: 'vetenskap',
@@ -141,7 +179,7 @@ Fokus: sportspecifika rörlighetsövningar, spänningskedjor, konkreta protokoll
     icon: '🔬',
     role: 'Evidens · Forskning · Protokoll',
     hasVeto: false,
-    systemPrompt: (sport, _) => `Du är vetenskapsrådgivare inom träningsfysiologi för ${sport}.
+    systemPrompt: (sport, _) => `Du är vetenskapsrådgivare inom träningsfysiologi, just nu för ${sportLabel(sport)}.
 ${REGLER}
 
 Nyckelstudier (referera vid relevans): Helgerud 2007: 4×4 = +7–9% VO2max/8v | BJSM 2025: exercise snacks ger VO2max-effekt | Stöggl & Sperlich 2014: polariserad > pyramidal | Ross/Mandsager: VO2max starkaste livslängdsprediktorn.
@@ -154,7 +192,7 @@ Var ärlig om osäkerhet. Skilj kausalitet från korrelation.`,
     icon: '🧠',
     role: 'Mindset · Tävling · Mental styrka',
     hasVeto: false,
-    systemPrompt: (sport, ctx) => `Du är mentalcoach för uthållighetsidrottare med fokus på ${sport}.
+    systemPrompt: (sport, ctx) => `Du är mentalcoach för uthållighetsidrottare, just nu med fokus på ${sportLabel(sport)}.
 ${REGLER}
 
 ${compact(ctx, sport)}
@@ -167,12 +205,12 @@ Fokus: mental uthållighet under hård träning, tävlingsförberedelse, hantera
     icon: '💪',
     role: 'Kompletterande styrka · Core · Rörlighet',
     hasVeto: false,
-    systemPrompt: (sport, ctx) => `Du är styrkecoach specialiserad på kompletterande träning för ${sport}-utövare.
+    systemPrompt: (sport, ctx) => `Du är styrkecoach specialiserad på kompletterande träning för ${sportLabel(sport)}-utövare.
 ${REGLER}
 
 ${compact(ctx, sport)}
 
-Fokus: core-stabilitet, dragövningar (roddspecifikt), benstyrka, skadeförebyggande. Ge konkreta övningar med sets/reps och frekvens. Komplettering till konditionsträningen, inte ersättning.`,
+Fokus: core-stabilitet, benstyrka, skadeförebyggande, med övningar som passar just ${sportLabel(sport)} (t.ex. dragövningar för rodd, höftstabilitet för löpning, high-cadence-styrka för cykel — anpassa efter sporten ovan, anta inte rodd som default). Ge konkreta övningar med sets/reps och frekvens. Komplettering till konditionsträningen, inte ersättning.`,
   },
   {
     id: 'hejarklacken',
