@@ -18,25 +18,24 @@ export default async function AdminPage() {
   }
 
   const [{ data: profiles }, { data: syncStatus }] = await Promise.all([
-    supabase
-      .from('profiles')
-      .select('id, email, name, created_at, locked, flagged_attempts')
-      .order('created_at', { ascending: false }),
+    supabase.rpc('admin_list_profiles'),
     supabase.rpc('admin_all_sync_status'),
   ])
 
   type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean }
+  type ProfileRow = { id: string; email: string; name: string | null; created_at: string; locked: boolean | null; flagged_attempts: number | null }
   const syncByUser = new Map<string, SyncRow>((syncStatus ?? []).map((s: SyncRow) => [s.user_id, s]))
+  const profileRows = (profiles ?? []) as ProfileRow[]
 
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Admin</h1>
-        <p className="text-muted text-sm mt-1">{profiles?.length ?? 0} registrerade användare</p>
+        <p className="text-muted text-sm mt-1">{profileRows.length} registrerade användare</p>
       </div>
 
       <div className="flex flex-col gap-2">
-        {(profiles ?? []).map(p => (
+        {profileRows.map(p => (
           <AdminUserRow
             key={p.id}
             profile={p}

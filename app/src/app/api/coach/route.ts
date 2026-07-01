@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
+import { decryptMaybeLegacy } from '@/lib/encrypt'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -95,7 +96,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    const moderationKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
+    const userApiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : null
+    const moderationKey = userApiKey ?? process.env.GEMINI_API_KEY!
     const moderation = await moderateMessage(moderationKey, message)
 
     if (moderation.blocked) {
@@ -224,7 +226,6 @@ export async function POST(request: NextRequest) {
 
     const history = (sessionData?.messages ?? []) as Message[]
     const systemPrompt = coach.systemPrompt(sport, userContext)
-    const userApiKey = profile?.llm_api_key_encrypted
     const userProvider = profile?.llm_provider
 
     let reply: string

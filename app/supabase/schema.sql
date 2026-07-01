@@ -203,3 +203,33 @@ end;
 $$;
 revoke all on function public.claim_connected_account(text, text) from public;
 grant execute on function public.claim_connected_account(text, text) to authenticated;
+
+-- SÄKERHETSFIX: "Admin reads all profiles" gav SELECT på hela profiles-raden
+-- (RLS filtrerar rader, inte kolumner) — inklusive llm_api_key_encrypted
+-- (användares egna Anthropic/OpenAI/Gemini-nycklar) och flag_log (utdrag ur
+-- privata chattmeddelanden). Kommentaren ovanför policyn sa uttryckligen att
+-- avsikten bara var att kunna administrera konton, inte läsa hemligheter.
+-- Byter den breda SELECT-policyn mot en security-definer-funktion som bara
+-- returnerar de kolumner adminsidan faktiskt använder — samma mönster som
+-- admin_all_sync_status(). Kör vid uppdatering av en befintlig databas:
+drop policy if exists "Admin reads all profiles" on public.profiles;
+
+create or replace function public.admin_list_profiles()
+returns table(id uuid, email text, name text, created_at timestamptz, locked boolean, flagged_attempts integer)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select p.id, p.email, p.name, p.created_at, p.locked, p.flagged_attempts
+  from public.profiles p
+  order by p.created_at desc;
+end;
+$$;
+revoke all on function public.admin_list_profiles() from public;
+grant execute on function public.admin_list_profiles() to authenticated;

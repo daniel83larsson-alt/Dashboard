@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
+import { decryptMaybeLegacy } from '@/lib/encrypt'
 
 function fmtPace(seconds: number, meters: number) {
   if (!meters) return '--'
@@ -89,7 +90,7 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
 
 "sessions" ska täcka de kommande 7 dagarna (alla 7 dagar, inklusive vilodagar). Var konkret med faktiska tider och distanser anpassat till atletens nuvarande nivå. Svara på svenska.`
 
-    const geminiKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
+    const geminiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
     const res = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
       {

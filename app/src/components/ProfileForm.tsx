@@ -60,9 +60,15 @@ export default function ProfileForm({
     setSaving(true)
     const supabase = createSupabaseClient()
 
-    const update: Record<string, string> = { name, llm_provider: provider }
-    if (apiKey.trim()) update.llm_api_key_encrypted = apiKey.trim()
-    await supabase.from('profiles').update(update).eq('id', profile?.id ?? '')
+    await supabase.from('profiles').update({ name, llm_provider: provider }).eq('id', profile?.id ?? '')
+
+    if (apiKey.trim()) {
+      await fetch('/api/profile/save-llm-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      })
+    }
 
     if (context !== savedContext) {
       await fetch('/api/context/save', {

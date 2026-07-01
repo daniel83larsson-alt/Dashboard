@@ -27,3 +27,17 @@ export function decrypt(stored: string): string {
   decipher.setAuthTag(tag)
   return decipher.update(ciphertext) + decipher.final('utf8')
 }
+
+// Encrypted output is always plain lowercase hex, at least 56 chars (iv+tag)
+// plus ciphertext. Real API keys (sk-ant-..., AIzaSy..., sk-...) contain
+// characters outside [0-9a-f] and are shorter, so this distinguishes rows
+// written before encryption was added without needing a migration.
+export function decryptMaybeLegacy(stored: string): string {
+  const looksEncrypted = stored.length >= 56 && /^[0-9a-f]+$/i.test(stored)
+  if (!looksEncrypted) return stored
+  try {
+    return decrypt(stored)
+  } catch {
+    return stored
+  }
+}

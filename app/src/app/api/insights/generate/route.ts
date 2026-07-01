@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
+import { decryptMaybeLegacy } from '@/lib/encrypt'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -64,7 +65,7 @@ export async function POST() {
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
 
-    const apiKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
+    const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
 
     if (!profile?.llm_api_key_encrypted) {
       const rate = await checkAndConsumeRateLimit(supabase, user.id)
