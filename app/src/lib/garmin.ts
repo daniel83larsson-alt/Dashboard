@@ -23,9 +23,9 @@ export async function getGarminClient(userEmail?: string, userPassword?: string)
   return getGarminClientForUser(email, password)
 }
 
-export async function fetchGarminActivities(limit = 100, email?: string, password?: string): Promise<IActivity[]> {
+export async function fetchGarminActivities(limit = 100, email?: string, password?: string, start = 0): Promise<IActivity[]> {
   const gc = await getGarminClient(email, password)
-  return gc.getActivities(0, limit)
+  return gc.getActivities(start, limit)
 }
 
 export function garminActivityToRow(a: IActivity, userId: string) {

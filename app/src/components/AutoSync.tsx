@@ -9,9 +9,15 @@ const CATCHUP_MAX_ROUNDS = 20 // 20 × 20 days ≈ covers a full year
 
 // Silently syncs Concept2 + Garmin once per browser per interval, triggered
 // on dashboard load (i.e. effectively "on login"). If Garmin wellness
-// history still has gaps (e.g. a brand new user with a year to backfill),
-// schedules additional Garmin-only catch-up rounds a few minutes apart
-// while the tab stays open, instead of hammering Garmin's API all at once.
+// history or the older pass history still has gaps (e.g. a brand new user
+// with a year to backfill), schedules additional Garmin-only catch-up
+// rounds a few minutes apart while the tab stays open, instead of
+// hammering Garmin's API all at once.
+function needsMoreCatchup(data: { remainingGaps?: number; activitiesBackfillDone?: boolean } | undefined): boolean {
+  if (!data) return false
+  return (data.remainingGaps ?? 0) > 0 || data.activitiesBackfillDone === false
+}
+
 export default function AutoSync() {
   const router = useRouter()
 
@@ -27,7 +33,7 @@ export default function AutoSync() {
           const res = await fetch('/api/activities/sync-garmin', { method: 'POST' })
           const data = await res.json()
           if (!cancelled) router.refresh()
-          if (!cancelled && data?.remainingGaps > 0) scheduleCatchup(round + 1)
+          if (!cancelled && needsMoreCatchup(data)) scheduleCatchup(round + 1)
         } catch {
           // Network hiccup — next normal sync (or next tab visit) will retry
         }
@@ -44,8 +50,8 @@ export default function AutoSync() {
     ]).then(([, garminResult]) => {
       if (cancelled) return
       router.refresh()
-      const remainingGaps = garminResult.status === 'fulfilled' ? garminResult.value?.remainingGaps : 0
-      if (remainingGaps > 0) scheduleCatchup(1)
+      const data = garminResult.status === 'fulfilled' ? garminResult.value : undefined
+      if (needsMoreCatchup(data)) scheduleCatchup(1)
     })
 
     return () => {

@@ -17,6 +17,9 @@ import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
 // year at once, to stay well within Garmin's unofficial API rate limits.
 const MAX_HISTORY_DAYS = 365
 const BACKFILL_BATCH_SIZE = 20
+const ACTIVITY_BACKFILL_BATCH_SIZE = 25 // older pass history — kept modest so a big lifetime history doesn't hammer Garmin in one sync
+
+type ActivityBackfillCursor = { offset: number; done: boolean }
 
 export type DayWellness = {
   date: string
@@ -62,13 +65,45 @@ export async function POST() {
       return NextResponse.json({ error: 'Garmin not configured' }, { status: 400 })
     }
 
+    // Load activity-backfill cursor (older pass history beyond the most recent 100)
+    const { data: activityCursorRow } = await supabase
+      .from('coach_sessions')
+      .select('messages')
+      .eq('user_id', user.id)
+      .eq('coach_id', 'garmin_activity_backfill')
+      .single()
+
+    const activityCursorRaw = (activityCursorRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+    const activityCursor: ActivityBackfillCursor = activityCursorRaw
+      ? (() => { try { return JSON.parse(activityCursorRaw) } catch { return { offset: 100, done: false } } })()
+      : { offset: 100, done: false }
+
     // Fetch everything in parallel
-    const [garminActivities, restingHR, sleep, steps] = await Promise.all([
+    const [garminActivities, backfillActivities, restingHR, sleep, steps] = await Promise.all([
       fetchGarminActivities(100, garminEmail, garminPassword),
+      activityCursor.done
+        ? Promise.resolve([])
+        : fetchGarminActivities(ACTIVITY_BACKFILL_BATCH_SIZE, garminEmail, garminPassword, activityCursor.offset),
       fetchGarminRestingHR(garminEmail, garminPassword),
       fetchGarminSleepFull(garminEmail, garminPassword),
       fetchGarminSteps(garminEmail, garminPassword),
     ])
+
+    const newCursor: ActivityBackfillCursor = activityCursor.done
+      ? activityCursor
+      : {
+          offset: activityCursor.offset + backfillActivities.length,
+          done: backfillActivities.length < ACTIVITY_BACKFILL_BATCH_SIZE,
+        }
+
+    await supabase.from('coach_sessions').upsert({
+      user_id: user.id,
+      coach_id: 'garmin_activity_backfill',
+      messages: [{ role: 'system', content: JSON.stringify(newCursor) }],
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id,coach_id' })
+
+    const allGarminActivities = [...garminActivities, ...backfillActivities]
 
     // Build today's wellness snapshot
     const today = new Date().toISOString().slice(0, 10)
@@ -148,10 +183,11 @@ export async function POST() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,coach_id' })
 
-    // Fetch existing activities to detect duplicates
-    const oldestGarmin = garminActivities.at(-1)
-    const since = oldestGarmin
-      ? new Date(oldestGarmin.startTimeLocal).toISOString()
+    // Fetch existing activities to detect duplicates — cover the full date
+    // range of both the recent batch and any older backfilled batch
+    const allDates = allGarminActivities.map(a => new Date(a.startTimeLocal).getTime())
+    const since = allDates.length
+      ? new Date(Math.min(...allDates)).toISOString()
       : new Date(0).toISOString()
 
     const { data: existing } = await supabase
@@ -162,7 +198,7 @@ export async function POST() {
 
     const existingRows = existing ?? []
 
-    const toUpsert = garminActivities
+    const toUpsert = allGarminActivities
       .map(a => garminActivityToRow(a, user.id))
       .filter(row => {
         if (existingRows.some(e => e.strava_id === row.strava_id)) return false
@@ -197,6 +233,8 @@ export async function POST() {
       wellness: todayWellness,
       backfilled: backfilled.length,
       remainingGaps,
+      activitiesBackfilled: backfillActivities.length,
+      activitiesBackfillDone: newCursor.done,
       cleaned,
     })
   } catch (err) {
