@@ -64,6 +64,22 @@ export async function fetchConcept2Results(
   return data.data ?? []
 }
 
+// The list endpoint above returns summaries — some results carry full
+// interval/split data only on their single-result detail endpoint.
+// Fetched on demand (activity detail page), not during bulk sync.
+export async function fetchConcept2ResultDetail(
+  accessToken: string,
+  userId: number,
+  resultId: number
+): Promise<Concept2Result | null> {
+  const res = await fetch(`${C2_API}/users/${userId}/results/${resultId}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) return null
+  const data = await res.json()
+  return data.data ?? null
+}
+
 export type Concept2Result = {
   id: number
   date: string

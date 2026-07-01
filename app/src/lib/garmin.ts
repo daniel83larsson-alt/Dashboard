@@ -149,6 +149,41 @@ export async function fetchGarminSteps(email?: string, password?: string, forDat
   }
 }
 
+export type HrZone = { zoneNumber: number; secsInZone: number; zoneLowBoundary?: number }
+
+// Per-activity heart-rate-zone breakdown. This isn't wrapped by the
+// garmin-connect package (no typed method exists for it), so it calls
+// Garmin Connect's internal activity-service endpoint directly — the same
+// one connect.garmin.com's own web UI uses, reverse-engineered by the
+// wider Garmin-API community. Unofficial: shape may drift if Garmin
+// changes it, hence the defensive parsing and null-on-any-failure.
+export async function fetchGarminHrZones(activityId: number, email: string, password: string): Promise<HrZone[] | null> {
+  try {
+    const gc = await getGarminClient(email, password)
+    const data = await gc.get<unknown>(`https://connectapi.garmin.com/activity-service/activity/${activityId}/hrTimeInZones`)
+    if (!Array.isArray(data)) return null
+    const zones: HrZone[] = data
+      .map((z) => {
+        const zone = z as Record<string, unknown>
+        return {
+          zoneNumber: zone.zoneNumber,
+          secsInZone: zone.secsInZone,
+          zoneLowBoundary: zone.zoneLowBoundary,
+        }
+      })
+      .filter((z): z is { zoneNumber: number; secsInZone: number; zoneLowBoundary: unknown } =>
+        typeof z.zoneNumber === 'number' && typeof z.secsInZone === 'number')
+      .map(z => ({
+        zoneNumber: z.zoneNumber,
+        secsInZone: z.secsInZone,
+        zoneLowBoundary: typeof z.zoneLowBoundary === 'number' ? z.zoneLowBoundary : undefined,
+      }))
+    return zones.length ? zones : null
+  } catch {
+    return null
+  }
+}
+
 // Fetch a full DayWellness snapshot for an arbitrary past date.
 export async function fetchGarminDayWellness(
   date: Date,

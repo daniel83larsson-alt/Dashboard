@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react'
 
 type Activity = {
   id: string
+  strava_id: number
   sport_type: string
   name: string
   distance: number
@@ -82,11 +83,31 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
     setLoading(false)
   }
 
-  function openAndAsk() {
+  async function openAndAsk() {
     setOpen(true)
     if (!initiated) {
       setInitiated(true)
       const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
+
+      let zoneStr = ''
+      if (activity.strava_id >= 0) {
+        try {
+          const res = await fetch(`/api/activities/${activity.id}/garmin-zones`)
+          const data = await res.json()
+          const zones: { zoneNumber: number; secsInZone: number }[] | null = data.zones
+          if (zones?.length) {
+            const total = zones.reduce((s, z) => s + z.secsInZone, 0)
+            if (total > 0) {
+              zoneStr = `, pulszoner: ${zones
+                .sort((a, b) => a.zoneNumber - b.zoneNumber)
+                .map(z => `Z${z.zoneNumber} ${Math.round((z.secsInZone / total) * 100)}%`)
+                .join(' ')}`
+            }
+          }
+        } catch {
+          // zones are a bonus for the coach's assessment — skip silently if unavailable
+        }
+      }
 
       const parts = [
         `Analysera mitt senaste ${activity.sport_type}-pass: "${activity.name}".`,
@@ -96,6 +117,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
         activity.average_heartrate ? `, snitt-HR: ${Math.round(activity.average_heartrate)} bpm` : '',
         activity.max_heartrate ? `, max-HR: ${Math.round(activity.max_heartrate)} bpm` : '',
         activity.average_watts ? `, snitt-watt: ${Math.round(activity.average_watts)}W` : '',
+        zoneStr,
         `. Ge konkret feedback på passet och tre fokuspunkter inför nästa pass.`,
       ]
       sendMessage(parts.join(''))

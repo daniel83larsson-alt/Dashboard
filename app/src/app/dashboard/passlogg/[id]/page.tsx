@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
+import ActivityEnrichment from '@/components/ActivityEnrichment'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
 function fmtDur(s: number) {
@@ -86,8 +87,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const lng: number | null = isNum(rawLng) && rawLng !== 0 ? rawLng : null
   const hasCoords = lat !== null && lng !== null
 
-  const c2Splits = !isGarmin && Array.isArray(raw.split) ? (raw.split as Array<{ distance: number; time: number; pace: number; stroke_rate?: number; heart_rate?: number }>) : []
-
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full space-y-5">
       <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Passlogg</Link>
@@ -168,38 +167,8 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       )}
 
-      {/* Concept2 splits */}
-      {c2Splits.length > 0 && (
-        <div>
-          <div className="text-xs text-muted uppercase tracking-wider mb-3">Delsträckor</div>
-          <div className="bg-card border border-edge rounded-2xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-muted text-xs border-b border-edge">
-                  <th className="text-left font-medium px-4 py-2">#</th>
-                  <th className="text-left font-medium px-4 py-2">Distans</th>
-                  <th className="text-left font-medium px-4 py-2">Tid</th>
-                  <th className="text-left font-medium px-4 py-2">/500m</th>
-                  <th className="text-left font-medium px-4 py-2">SPM</th>
-                  <th className="text-left font-medium px-4 py-2">HR</th>
-                </tr>
-              </thead>
-              <tbody>
-                {c2Splits.map((s, i) => (
-                  <tr key={i} className="border-b border-edge last:border-0">
-                    <td className="px-4 py-2 text-muted">{i + 1}</td>
-                    <td className="px-4 py-2 font-mono">{s.distance}m</td>
-                    <td className="px-4 py-2 font-mono">{fmtDur(s.time / 10)}</td>
-                    <td className="px-4 py-2 font-mono text-lcd">{fmtPace(s.time / 10, s.distance)}</td>
-                    <td className="px-4 py-2 font-mono">{s.stroke_rate ?? '--'}</td>
-                    <td className="px-4 py-2 font-mono">{s.heart_rate ?? '--'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+      {/* HR zones (Garmin) or splits (Concept2), fetched on demand */}
+      <ActivityEnrichment activityId={activity.id} isGarmin={isGarmin} />
 
       {!isGarmin && (!!raw.verified || !!raw.ranked || !!raw.workout_type) && (
         <div className="flex flex-wrap gap-2">
