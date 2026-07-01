@@ -17,10 +17,8 @@ export async function getGarminClientForUser(email: string, password: string): P
 }
 
 export async function getGarminClient(userEmail?: string, userPassword?: string): Promise<GarminConnect> {
-  const email = userEmail ?? process.env.GARMIN_EMAIL
-  const password = userPassword ?? process.env.GARMIN_PASSWORD
-  if (!email || !password) throw new Error('Garmin credentials not configured')
-  return getGarminClientForUser(email, password)
+  if (!userEmail || !userPassword) throw new Error('Garmin credentials not configured')
+  return getGarminClientForUser(userEmail, userPassword)
 }
 
 export async function fetchGarminActivities(limit = 100, email?: string, password?: string, start = 0): Promise<IActivity[]> {

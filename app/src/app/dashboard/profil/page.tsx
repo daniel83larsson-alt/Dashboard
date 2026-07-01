@@ -18,7 +18,7 @@ export default async function ProfilPage() {
 
   const savedContext = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
   const garminCredsRaw = (garminCredsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const hasGarmin = !!(garminCredsRaw || (process.env.GARMIN_EMAIL && process.env.GARMIN_PASSWORD))
+  const hasGarmin = !!garminCredsRaw
   const savedOverview = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
   return (

@@ -58,8 +58,11 @@ export async function POST() {
         return JSON.parse(plain)
       } catch { return null }
     })() : null
-    const garminEmail = userCreds?.email ?? process.env.GARMIN_EMAIL
-    const garminPassword = userCreds?.password ?? process.env.GARMIN_PASSWORD
+    // No shared/env-var fallback: each user must connect their own Garmin
+    // account via Profil, otherwise their sync would silently pull whoever
+    // owns the shared credentials' activities into their account.
+    const garminEmail = userCreds?.email
+    const garminPassword = userCreds?.password
 
     if (!garminEmail || !garminPassword) {
       return NextResponse.json({ error: 'Garmin not configured' }, { status: 400 })
