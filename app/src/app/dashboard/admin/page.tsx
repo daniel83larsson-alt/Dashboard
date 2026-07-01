@@ -17,10 +17,16 @@ export default async function AdminPage() {
     )
   }
 
-  const { data: profiles } = await supabase
-    .from('profiles')
-    .select('id, email, name, created_at, locked, flagged_attempts')
-    .order('created_at', { ascending: false })
+  const [{ data: profiles }, { data: syncStatus }] = await Promise.all([
+    supabase
+      .from('profiles')
+      .select('id, email, name, created_at, locked, flagged_attempts')
+      .order('created_at', { ascending: false }),
+    supabase.rpc('admin_all_sync_status'),
+  ])
+
+  type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean }
+  const syncByUser = new Map<string, SyncRow>((syncStatus ?? []).map((s: SyncRow) => [s.user_id, s]))
 
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full">
@@ -31,7 +37,13 @@ export default async function AdminPage() {
 
       <div className="flex flex-col gap-2">
         {(profiles ?? []).map(p => (
-          <AdminUserRow key={p.id} profile={p} isSelf={p.id === user.id} />
+          <AdminUserRow
+            key={p.id}
+            profile={p}
+            isSelf={p.id === user.id}
+            hasConcept2={!!syncByUser.get(p.id)?.has_concept2}
+            hasGarmin={!!syncByUser.get(p.id)?.has_garmin}
+          />
         ))}
       </div>
     </div>

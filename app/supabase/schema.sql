@@ -103,6 +103,33 @@ create policy "Admin reads all profiles" on public.profiles
 create policy "Admin updates all profiles" on public.profiles
   for update using (auth.jwt() ->> 'email' = 'daniel83larsson@gmail.com');
 
+-- Admin: vilka appar (Concept2/Garmin) varje användare har anslutit — bara
+-- ja/nej, aldrig själva access-tokens/lösenorden. Körs som security definer
+-- så den kan läsa concept2_tokens/coach_sessions trots att admin saknar
+-- direkt SELECT-rättighet där; kontrollen sker inuti funktionen.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_all_sync_status()
+returns table(user_id uuid, has_concept2 boolean, has_garmin boolean)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.jwt() ->> 'email' != 'daniel83larsson@gmail.com' then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    p.id,
+    exists(select 1 from public.concept2_tokens c where c.user_id = p.id),
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'garmin_credentials')
+  from public.profiles p;
+end;
+$$;
+revoke all on function public.admin_all_sync_status() from public;
+grant execute on function public.admin_all_sync_status() to authenticated;
+
 -- Auto-skapa profil vid signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public

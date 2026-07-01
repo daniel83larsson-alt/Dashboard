@@ -13,7 +13,17 @@ type Profile = {
   flagged_attempts: number | null
 }
 
-export default function AdminUserRow({ profile, isSelf }: { profile: Profile; isSelf: boolean }) {
+export default function AdminUserRow({
+  profile,
+  isSelf,
+  hasConcept2,
+  hasGarmin,
+}: {
+  profile: Profile
+  isSelf: boolean
+  hasConcept2: boolean
+  hasGarmin: boolean
+}) {
   const [busy, setBusy] = useState(false)
   const router = useRouter()
 
@@ -40,6 +50,14 @@ export default function AdminUserRow({ profile, isSelf }: { profile: Profile; is
           {(profile.flagged_attempts ?? 0) > 0 && (
             <div className="text-amber-400 text-[11px] mt-1">{profile.flagged_attempts} flaggade chattmeddelanden</div>
           )}
+          <div className="flex gap-1.5 mt-2">
+            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${hasConcept2 ? 'text-accent border-accent/30 bg-accent/10' : 'text-muted border-edge'}`}>
+              {hasConcept2 ? '✓' : '–'} Concept2
+            </span>
+            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${hasGarmin ? 'text-accent border-accent/30 bg-accent/10' : 'text-muted border-edge'}`}>
+              {hasGarmin ? '✓' : '–'} Garmin
+            </span>
+          </div>
         </div>
         {!isSelf && (
           <button
