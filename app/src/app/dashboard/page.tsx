@@ -139,7 +139,7 @@ export default async function DashboardPage() {
 
   const prs = computePRs(activities)
 
-  const firstName = (profile?.name ?? user.email ?? 'Daniel').split(' ')[0]
+  const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
   const greeting = hour < 10 ? 'God morgon' : hour < 18 ? 'Hej' : 'God kväll'
 

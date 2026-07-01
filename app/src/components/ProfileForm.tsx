@@ -16,14 +16,14 @@ type Profile = {
   flag_log?: FlagEntry[] | null
 }
 
-const DANIEL_CONTEXT_PLACEHOLDER = `Beskriv dig själv, din situation och din träning — ju mer bakgrund, desto bättre feedback.
+const CONTEXT_PLACEHOLDER = `Beskriv dig själv, din situation och din träning — ju mer bakgrund, desto bättre feedback.
 
 Exempel:
-- Jag roddar 3-4 gånger/vecka, mestadels 20-30 min pass
+- Jag tränar 3-4 gånger/vecka, mestadels 20-30 min pass
 - Jobb: stillasittande kontorsjobb, pendlar 1h/dag — påverkar när jag orkar träna
 - Personlighet: tävlingsinriktad, blir lätt uttråkad av för lugna pass
-- Mål: förbättra 30-min PB från 5747m mot 6000m
-- Vill bygga aerob bas, HR under 130 på längre pass
+- Mål: förbättra mitt personbästa på en standarddistans
+- Vill bygga aerob bas, hålla pulsen nere på längre pass
 - Skador/begränsningar: ont i vänster axel ibland vid högintensiva pass`
 
 export default function ProfileForm({
@@ -162,7 +162,7 @@ export default function ProfileForm({
           <input
             value={name}
             onChange={e => setName(e.target.value)}
-            placeholder="Daniel Larsson"
+            placeholder="För- och efternamn"
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
         </div>
@@ -177,7 +177,7 @@ export default function ProfileForm({
         <textarea
           value={context}
           onChange={e => setContext(e.target.value)}
-          placeholder={DANIEL_CONTEXT_PLACEHOLDER}
+          placeholder={CONTEXT_PLACEHOLDER}
           rows={7}
           className="w-full bg-bg border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none leading-relaxed"
         />

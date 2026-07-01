@@ -15,7 +15,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     .eq('id', user.id)
     .single()
 
-  const userName = profile?.name ?? user.email?.split('@')[0] ?? 'Daniel'
+  const userName = profile?.name ?? user.email?.split('@')[0] ?? 'Tränare'
 
   return (
     <div className="min-h-screen bg-bg flex">
