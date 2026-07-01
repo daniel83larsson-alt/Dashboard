@@ -19,7 +19,7 @@ const TYPE_LABEL: Record<Goal['goal_type'], string> = {
   habit: 'Vana',
 }
 
-export default function GoalsCard({ goals }: { goals: Goal[] }) {
+export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; savedOverview: string }) {
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [goalType, setGoalType] = useState<Goal['goal_type']>('metric')
@@ -28,7 +28,26 @@ export default function GoalsCard({ goals }: { goals: Goal[] }) {
   const [description, setDescription] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [overview, setOverview] = useState(savedOverview)
+  const [overviewSaving, setOverviewSaving] = useState(false)
+  const [overviewSaved, setOverviewSaved] = useState(false)
   const router = useRouter()
+
+  async function saveOverview() {
+    setOverviewSaving(true)
+    try {
+      await fetch('/api/goals/save-overview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ overview }),
+      })
+      setOverviewSaved(true)
+      setTimeout(() => setOverviewSaved(false), 2000)
+      router.refresh()
+    } finally {
+      setOverviewSaving(false)
+    }
+  }
 
   async function addGoal(e: React.FormEvent) {
     e.preventDefault()
@@ -88,6 +107,28 @@ export default function GoalsCard({ goals }: { goals: Goal[] }) {
           {open ? 'Avbryt' : '+ Nytt mål'}
         </button>
       </div>
+
+      <div>
+        <label className="text-muted text-xs block mb-1.5">Övergripande mål (fritext)</label>
+        <p className="text-muted text-[11px] mb-1.5">För sånt som inte passar en konkret siffra eller ett datum — t.ex. &quot;hållbar träning&quot;, &quot;undvika skador&quot;, &quot;ha kul&quot;</p>
+        <textarea
+          value={overview}
+          onChange={e => setOverview(e.target.value)}
+          placeholder="T.ex. Hållbar träning över tid, inte maximal prestation just nu. Prioritera att undvika skador framför snabba resultat."
+          rows={3}
+          className="w-full bg-bg border border-edge rounded-xl px-3 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none leading-relaxed"
+        />
+        <button
+          type="button"
+          onClick={saveOverview}
+          disabled={overviewSaving || overview === savedOverview}
+          className="mt-2 text-xs bg-bg border border-edge px-3 py-1.5 rounded-lg text-fg disabled:opacity-40 hover:border-accent transition-colors"
+        >
+          {overviewSaved ? '✓ Sparat' : overviewSaving ? 'Sparar...' : 'Spara'}
+        </button>
+      </div>
+
+      <div className="border-t border-edge pt-3" />
 
       {goals.length === 0 && !open && (
         <p className="text-muted text-xs">Inga aktiva mål. Lägg till ett så anpassar coachen och veckoplanen sig efter det.</p>

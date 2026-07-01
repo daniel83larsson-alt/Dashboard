@@ -28,18 +28,20 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }] = await Promise.all([
+    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
       supabase.from('profiles').select('name, llm_api_key_encrypted').eq('id', user.id).single(),
       supabase.from('activities').select('start_date, distance, moving_time, average_heartrate, average_watts, sport_type')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
+      supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
 
     const apiKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
     const activities = acts ?? []
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
+    const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
     const wellness = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
 
@@ -71,6 +73,7 @@ PASS: ${thisWeek} denna vecka | ${thisMonth} denna månad | ${totalKm} km totalt
 ${b30 ? `PB 30 min: ${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : ''}
 SÖMN: ${wellness?.sleepHours?.toFixed(1) ?? 'saknas'}h | VILOPULS: ${wellness?.restingHR ?? 'saknas'} bpm
 MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga aktiva mål'}
+${overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 ${userBio ? `BAKGRUND: ${userBio}` : ''}
 SENASTE 15 PASS:
 ${recentStr}`

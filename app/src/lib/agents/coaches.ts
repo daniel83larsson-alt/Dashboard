@@ -22,6 +22,7 @@ export type UserContext = {
   sport: string
   name: string
   userBio?: string
+  overviewGoal?: string
   recentActivities: Array<{
     date: string
     distance: number
@@ -59,6 +60,7 @@ STATS: ${s?.totalSessions ?? '?'} pass tot | ${s?.sessionsThisWeek ?? '?'}/v | $
 ${p ? `PB: 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}
 ${ctx.restingHR ? `Vilopuls: ${ctx.restingHR} bpm` : ''}${ctx.avgSleep ? ` | Sömn: ${ctx.avgSleep.toFixed(1)}h` : ''}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
+${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
 ${ctx.userBio ? `KONTEXT: ${ctx.userBio}` : ''}
 SENASTE PASS:
 ${acts}`
@@ -117,6 +119,7 @@ ${REGLER}
 
 ANVÄNDARE: ${ctx.name} | ${ctx.sport}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
+${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
 ${ctx.userBio ? `KONTEXT: ${ctx.userBio}` : ''}
 
 Fokus: proteinintag 1,6–2,2 g/kg, timing runt träning, kreatin, kasein. Leaner kropp = lätt energiunderskott, aldrig sänkt protein.`,

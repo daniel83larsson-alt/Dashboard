@@ -21,11 +21,14 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const [{ data: activities }, { data: goals }, { data: profile }] = await Promise.all([
+    const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([
       supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }).limit(30),
       supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
       supabase.from('profiles').select('name, llm_api_key_encrypted').eq('id', user.id).single(),
+      supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
+
+    const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
     const acts = activities ?? []
     const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
@@ -54,6 +57,7 @@ SAMMANFATTNING:
 
 MÅL:
 ${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})${g.target_date ? ` — måldatum: ${g.target_date}` : ' — inget måldatum'}`).join('\n') : '- Inga specificerade mål'}
+${overviewGoal ? `\nÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 `
 
     const hasTargetedGoal = (goals ?? []).some(g => g.target_date)

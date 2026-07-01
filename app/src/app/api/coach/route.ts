@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }] = await Promise.all([
+    const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }, { data: overviewRow }] = await Promise.all([
       supabase
         .from('activities')
         .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts')
@@ -132,6 +132,12 @@ export async function POST(request: NextRequest) {
         .select('messages')
         .eq('user_id', user.id)
         .eq('coach_id', 'user_context')
+        .single(),
+      supabase
+        .from('coach_sessions')
+        .select('messages')
+        .eq('user_id', user.id)
+        .eq('coach_id', 'goals_overview')
         .single(),
     ])
 
@@ -166,11 +172,13 @@ export async function POST(request: NextRequest) {
     const b5k = best(pr5k, 'time')
 
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
+    const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
     const userContext: UserContext = {
       sport,
       name: profile?.name ?? 'Användaren',
       userBio: userBio || undefined,
+      overviewGoal: overviewGoal || undefined,
       recentActivities: acts.map(a => ({
         date: a.start_date,
         distance: a.distance,
