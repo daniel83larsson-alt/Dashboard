@@ -23,6 +23,17 @@ export async function GET(request: NextRequest) {
     const tokens = await exchangeStravaCode(code)
     const athlete = await fetchStravaAthlete(tokens.access_token)
 
+    // Refuse to link a Strava account that's already connected to another
+    // DL Trainer profile — shared logins are what caused activities to leak
+    // between accounts before.
+    const { error: claimError } = await supabase.rpc('claim_connected_account', {
+      p_provider: 'strava',
+      p_external_id: String(athlete.id),
+    })
+    if (claimError) {
+      return NextResponse.redirect(new URL('/onboarding?error=strava_taken', request.url))
+    }
+
     await supabase.from('strava_tokens').upsert({
       user_id: user.id,
       athlete_id: athlete.id,

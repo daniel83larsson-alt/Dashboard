@@ -2,7 +2,12 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import ProfileForm from '@/components/ProfileForm'
 import GoalsCard from '@/components/GoalsCard'
 
-export default async function ProfilPage() {
+export default async function ProfilPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string }>
+}) {
+  const { error } = await searchParams
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
@@ -27,6 +32,16 @@ export default async function ProfilPage() {
         <h1 className="text-2xl font-semibold">Profil</h1>
         <p className="text-muted text-sm mt-1">Inställningar och anslutningar</p>
       </div>
+      {error === 'concept2_taken' && (
+        <div className="mb-4 bg-card border border-red-500/40 rounded-2xl p-4 text-sm text-fg">
+          Det här Concept2-kontot är redan anslutet till en annan DL Trainer-profil. Varje person behöver sitt eget Concept2-konto.
+        </div>
+      )}
+      {(error === 'concept2_auth' || error === 'concept2_failed') && (
+        <div className="mb-4 bg-card border border-amber-500/30 rounded-2xl p-4 text-sm text-fg">
+          Kunde inte ansluta Concept2. Försök igen.
+        </div>
+      )}
       <div className="mb-4">
         <GoalsCard goals={goals ?? []} savedOverview={savedOverview} />
       </div>

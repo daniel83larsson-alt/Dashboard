@@ -156,3 +156,50 @@ create trigger on_auth_user_created
 alter table public.activities drop constraint if exists activities_strava_id_key;
 create unique index if not exists activities_user_strava_unique
   on public.activities(user_id, strava_id);
+
+-- Förhindrar att samma Garmin/Concept2/Strava-konto kopplas till flera olika
+-- DL Trainer-profiler (t.ex. en familj som delar en Garmin-inloggning) — det
+-- var precis den typen av delning som orsakade att pass hamnade på fel
+-- användare innan strava_id-fixen ovan. external_id är e-post (Garmin,
+-- normaliserad till gemener) eller leverantörens egna konto-id
+-- (Concept2/Strava) — primärnyckeln (provider, external_id) garanterar att
+-- varje riktigt konto bara kan höra till EN DL Trainer-profil åt gången.
+-- Kör vid uppdatering av en befintlig databas:
+create table if not exists public.connected_accounts (
+  provider text not null check (provider in ('garmin', 'concept2', 'strava')),
+  external_id text not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  primary key (provider, external_id)
+);
+alter table public.connected_accounts enable row level security;
+create policy "Users see own connections" on public.connected_accounts
+  for select using (auth.uid() = user_id);
+
+-- Anropas innan vi sparar Garmin/Concept2/Strava-uppgifter. Kastar ett fel om
+-- kontot redan är kopplat till en ANNAN användare (utan att avslöja vem),
+-- annars flyttar kopplingen till den anropande användaren atomärt.
+create or replace function public.claim_connected_account(p_provider text, p_external_id text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if exists (
+    select 1 from public.connected_accounts
+    where provider = p_provider and external_id = p_external_id and user_id != auth.uid()
+  ) then
+    raise exception 'already_connected';
+  end if;
+
+  delete from public.connected_accounts
+  where provider = p_provider and user_id = auth.uid() and external_id != p_external_id;
+
+  insert into public.connected_accounts (provider, external_id, user_id)
+  values (p_provider, p_external_id, auth.uid())
+  on conflict (provider, external_id) do nothing;
+end;
+$$;
+revoke all on function public.claim_connected_account(text, text) from public;
+grant execute on function public.claim_connected_account(text, text) to authenticated;

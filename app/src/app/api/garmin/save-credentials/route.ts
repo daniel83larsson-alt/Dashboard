@@ -13,10 +13,25 @@ export async function POST(request: NextRequest) {
     if (!email?.trim() || !password?.trim()) {
       return NextResponse.json({ error: 'E-post och lösenord krävs' }, { status: 400 })
     }
+    const normalizedEmail = email.trim().toLowerCase()
 
     // Verify credentials work before saving
     const gc = new GarminConnect({ username: email.trim(), password: password.trim() })
     await gc.login()
+
+    // Refuse to link a Garmin account that's already connected to another
+    // DL Trainer profile — shared logins are what caused activities to leak
+    // between accounts before.
+    const { error: claimError } = await supabase.rpc('claim_connected_account', {
+      p_provider: 'garmin',
+      p_external_id: normalizedEmail,
+    })
+    if (claimError) {
+      return NextResponse.json(
+        { error: 'Det här Garmin-kontot är redan anslutet till en annan DL Trainer-profil. Varje person behöver sitt eget Garmin-konto.' },
+        { status: 409 }
+      )
+    }
 
     // Store encrypted — never save plaintext credentials
     const stored = encrypt(JSON.stringify({ email: email.trim(), password: password.trim() }))
