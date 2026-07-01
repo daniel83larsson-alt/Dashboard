@@ -38,7 +38,7 @@ export default async function HalsaPage() {
       <div className="flex items-start justify-between">
         <div>
           <h1 className="text-2xl font-semibold">Hälsa</h1>
-          <p className="text-muted text-sm mt-1">Wellness-data från Garmin · senaste 30 dagarna</p>
+          <p className="text-muted text-sm mt-1">Wellness-data från Garmin · {history.length > 0 ? `senaste ${history.length} dagarna` : 'väntar på data'}</p>
         </div>
         {updatedAt && (
           <div className="text-right">
@@ -150,9 +150,9 @@ export default async function HalsaPage() {
             </div>
           )}
 
-          {/* 30-day charts */}
+          {/* Trend charts */}
           <div>
-            <div className="text-xs text-muted uppercase tracking-wider mb-4">Trender · 30 dagar</div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-4">Trender · {history.length} dagar</div>
             <WellnessCharts history={history} />
           </div>
 

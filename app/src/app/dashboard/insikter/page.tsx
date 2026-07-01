@@ -29,7 +29,7 @@ export default async function InsikterPage() {
 
       {wellnessHistory.length > 0 && (
         <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Wellness · 30 dagar</h2>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Wellness · {wellnessHistory.length} dagar</h2>
           <WellnessCharts history={wellnessHistory} />
         </div>
       )}

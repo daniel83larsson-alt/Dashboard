@@ -11,6 +11,13 @@ import {
 import { decrypt } from '@/lib/encrypt'
 import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
 
+// How much wellness history we keep and how many missing days we backfill
+// per sync call. A new user's history fills in gradually — each sync (auto
+// or manual) fetches the next batch of missing days rather than the whole
+// year at once, to stay well within Garmin's unofficial API rate limits.
+const MAX_HISTORY_DAYS = 365
+const BACKFILL_BATCH_SIZE = 20
+
 export type DayWellness = {
   date: string
   restingHR: number | null
@@ -92,18 +99,20 @@ export async function POST() {
 
     const filtered = prevHistory.filter(d => d.date !== today)
 
-    // Backfill missing days — find gaps in the last 30 days and fetch them
+    // Backfill missing days — find gaps in the history window and fetch them
     const storedDates = new Set(filtered.map(d => d.date))
     const missingDates: Date[] = []
-    for (let i = 1; i <= 29; i++) {
+    for (let i = 1; i <= MAX_HISTORY_DAYS - 1; i++) {
       const d = new Date()
       d.setDate(d.getDate() - i)
       const key = d.toISOString().slice(0, 10)
       if (!storedDates.has(key)) missingDates.push(d)
     }
 
-    // Fetch up to 14 missing days in parallel to avoid Garmin rate limits
-    const toBackfill = missingDates.slice(0, 14)
+    // Fetch one batch of missing days per sync to avoid Garmin rate limits —
+    // a full year backfills over several syncs rather than one huge burst
+    const toBackfill = missingDates.slice(0, BACKFILL_BATCH_SIZE)
+    const remainingGaps = missingDates.length - toBackfill.length
     const backfilled: DayWellness[] = []
     if (toBackfill.length > 0) {
       const results = await Promise.allSettled(
@@ -130,7 +139,7 @@ export async function POST() {
     const history = [todayWellness, ...backfilled, ...filtered]
       .sort((a, b) => b.date.localeCompare(a.date))
       .filter((d, i, arr) => arr.findIndex(x => x.date === d.date) === i)
-      .slice(0, 30)
+      .slice(0, MAX_HISTORY_DAYS)
 
     await supabase.from('coach_sessions').upsert({
       user_id: user.id,
@@ -183,7 +192,13 @@ export async function POST() {
 
     const cleaned = await autoCleanupDuplicates(supabase, user.id)
 
-    return NextResponse.json({ synced: toUpsert.length, wellness: todayWellness, backfilled: backfilled.length, cleaned })
+    return NextResponse.json({
+      synced: toUpsert.length,
+      wellness: todayWellness,
+      backfilled: backfilled.length,
+      remainingGaps,
+      cleaned,
+    })
   } catch (err) {
     console.error('Garmin sync error:', err)
     return NextResponse.json({ error: 'Garmin sync failed' }, { status: 500 })
