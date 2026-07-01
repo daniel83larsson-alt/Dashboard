@@ -15,7 +15,11 @@ async function askAgent(apiKey: string, system: string, question: string, maxTok
     }),
   })
   const d = await res.json()
-  return d.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const text = d.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!res.ok || !text) {
+    throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
+  }
+  return text
 }
 
 export async function POST() {

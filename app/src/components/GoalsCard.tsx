@@ -42,6 +42,7 @@ export default function GoalsCard({ goals }: { goals: Goal[] }) {
 
     const { error: insertError } = await supabase.from('goals').insert({
       user_id: user.id,
+      sport_type: 'Rowing',
       goal_type: goalType,
       title: title.trim(),
       description: description.trim() || null,

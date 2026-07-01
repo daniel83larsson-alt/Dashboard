@@ -29,7 +29,11 @@ async function callGemini(apiKey: string, systemPrompt: string, history: Message
     }
   )
   const data = await res.json()
-  return data.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
+  if (!res.ok || !text) {
+    throw new Error(`Gemini call failed: ${data.error?.message ?? res.status}`)
+  }
+  return text
 }
 
 async function callAnthropic(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
@@ -44,7 +48,9 @@ async function callAnthropic(apiKey: string, systemPrompt: string, history: Mess
       { role: 'user', content: message },
     ],
   })
-  return response.content[0].type === 'text' ? response.content[0].text : ''
+  const text = response.content[0].type === 'text' ? response.content[0].text : ''
+  if (!text) throw new Error('Anthropic call returned no text')
+  return text
 }
 
 export async function POST(request: NextRequest) {

@@ -7,9 +7,10 @@ export default async function InsikterPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: insightRow }, { data: wellnessRow }] = await Promise.all([
+  const [{ data: insightRow }, { data: wellnessRow }, { count: activityCount }] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
+    supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -35,7 +36,7 @@ export default async function InsikterPage() {
 
       <div>
         <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Tränarteamets analys</h2>
-        <InsightsPanel savedInsight={savedInsight} />
+        <InsightsPanel savedInsight={savedInsight} activityCount={activityCount ?? 0} />
       </div>
     </div>
   )

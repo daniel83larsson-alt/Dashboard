@@ -7,9 +7,10 @@ export default async function HalsaPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: wellnessRow }, { data: insightRow }] = await Promise.all([
+  const [{ data: wellnessRow }, { data: insightRow }, { count: activityCount }] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
+    supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
   ])
 
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -158,7 +159,7 @@ export default async function HalsaPage() {
           {/* Team insights, compact */}
           <div>
             <div className="text-xs text-muted uppercase tracking-wider mb-3">Teamets bedömning</div>
-            <InsightsSummary savedInsight={savedInsight} />
+            <InsightsSummary savedInsight={savedInsight} activityCount={activityCount ?? 0} />
           </div>
         </>
       )}

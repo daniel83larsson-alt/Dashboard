@@ -52,7 +52,7 @@ export default function CoachPage() {
         setMessages([...updated, { role: 'assistant', content: data.warning, warning: true }])
         if (data.locked) setLocked(true)
       } else {
-        const reply = data.reply ?? 'Kunde inte nå coachen. Kontrollera att API-nyckeln är inlagd under Profil.'
+        const reply = data.reply || 'Kunde inte nå coachen. Kontrollera att API-nyckeln är inlagd under Profil.'
         setMessages([...updated, { role: 'assistant', content: reply }])
       }
     } catch {

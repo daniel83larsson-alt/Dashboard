@@ -25,7 +25,7 @@ type Insight = {
   agents: AgentInsights
 }
 
-type Props = { savedInsight: Insight | null }
+type Props = { savedInsight: Insight | null; activityCount?: number }
 
 const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; icon: string; role: string }[] = [
   { key: 'data',     label: 'Dataanalytiker',  icon: '📊', role: 'Trender · Mönster · Siffror' },
@@ -55,7 +55,7 @@ function Markdown({ text }: { text: string }) {
   )
 }
 
-export default function InsightsPanel({ savedInsight }: Props) {
+export default function InsightsPanel({ savedInsight, activityCount = 0 }: Props) {
   const [insight, setInsight] = useState<Insight | null>(savedInsight)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
@@ -97,7 +97,7 @@ export default function InsightsPanel({ savedInsight }: Props) {
         </div>
         <button
           onClick={generate}
-          disabled={loading}
+          disabled={loading || activityCount === 0}
           className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2"
         >
           {loading ? (
@@ -183,7 +183,11 @@ export default function InsightsPanel({ savedInsight }: Props) {
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">
           <div className="text-4xl mb-3">🔍</div>
           <div className="font-medium mb-1">Inga insikter ännu</div>
-          <p className="text-muted text-sm">Klicka "Hämta insikter" så analyserar hela tränarteamet din data</p>
+          <p className="text-muted text-sm">
+            {activityCount === 0
+              ? 'Synka träningspass under Profil först — tränarteamet behöver data att analysera'
+              : 'Klicka "Hämta insikter" så analyserar hela tränarteamet din data'}
+          </p>
         </div>
       )}
     </div>
