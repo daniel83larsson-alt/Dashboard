@@ -99,9 +99,9 @@ alter table public.profiles add column if not exists flag_log jsonb default '[]'
 -- sessioner förblir privata per användare). Byt e-postadressen om det behövs.
 -- Kör vid uppdatering av en befintlig databas:
 create policy "Admin reads all profiles" on public.profiles
-  for select using (auth.jwt() ->> 'email' = 'daniel83larsson@gmail.com');
+  for select using (lower(auth.jwt() ->> 'email') = lower('daniel83larsson@gmail.com'));
 create policy "Admin updates all profiles" on public.profiles
-  for update using (auth.jwt() ->> 'email' = 'daniel83larsson@gmail.com');
+  for update using (lower(auth.jwt() ->> 'email') = lower('daniel83larsson@gmail.com'));
 
 -- Admin: vilka appar (Concept2/Garmin) varje användare har anslutit — bara
 -- ja/nej, aldrig själva access-tokens/lösenorden. Körs som security definer
@@ -115,7 +115,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if auth.jwt() ->> 'email' != 'daniel83larsson@gmail.com' then
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
     raise exception 'not authorized';
   end if;
 
