@@ -17,15 +17,19 @@ export default function CoachPage() {
 
   useEffect(() => {
     const supabase = createSupabaseClient()
-    supabase
-      .from('coach_sessions')
-      .select('messages')
-      .eq('coach_id', 'roddcoach')
-      .single()
-      .then(({ data }) => {
-        setMessages((data?.messages as Message[]) ?? [])
-        setLoadingHistory(false)
-      })
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (!user) { setLoadingHistory(false); return }
+      supabase
+        .from('coach_sessions')
+        .select('messages')
+        .eq('user_id', user.id)
+        .eq('coach_id', 'roddcoach')
+        .single()
+        .then(({ data }) => {
+          setMessages((data?.messages as Message[]) ?? [])
+          setLoadingHistory(false)
+        })
+    })
   }, [])
 
   useEffect(() => {
