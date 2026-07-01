@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
+import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -64,6 +65,14 @@ export async function POST() {
     ])
 
     const apiKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!
+
+    if (!profile?.llm_api_key_encrypted) {
+      const rate = await checkAndConsumeRateLimit(supabase, user.id)
+      if (!rate.allowed) {
+        return NextResponse.json({ error: rateLimitMessage(rate) }, { status: 429 })
+      }
+    }
+
     const activities = acts ?? []
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''

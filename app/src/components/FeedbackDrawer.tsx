@@ -51,6 +51,8 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
       const data = await res.json()
       if (data.reply) {
         setMessages(prev => [...prev, { role: 'assistant', content: data.reply }])
+      } else if (data.warning) {
+        setMessages(prev => [...prev, { role: 'assistant', content: data.warning }])
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: 'Kunde inte nå coachen just nu. Kontrollera att API-nyckeln är konfigurerad under Profil.' }])
       }

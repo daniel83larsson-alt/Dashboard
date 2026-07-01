@@ -3,6 +3,7 @@ import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coache
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
 import { startOfWeek } from '@/lib/dates'
+import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -84,6 +85,14 @@ export async function POST(request: NextRequest) {
         locked: true,
         warning: 'Det här kontot är låst på grund av upprepade misstänkta meddelanden i chatten. Kontakta admin för att låsa upp.',
       })
+    }
+
+    const usingSharedKey = !profile?.llm_api_key_encrypted
+    if (usingSharedKey) {
+      const rate = await checkAndConsumeRateLimit(supabase, user.id)
+      if (!rate.allowed) {
+        return NextResponse.json({ blocked: true, warning: rateLimitMessage(rate) })
+      }
     }
 
     const moderationKey = profile?.llm_api_key_encrypted ?? process.env.GEMINI_API_KEY!

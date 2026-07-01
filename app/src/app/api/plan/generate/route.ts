@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
+import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 
 function fmtPace(seconds: number, meters: number) {
   if (!meters) return '--'
@@ -29,6 +30,13 @@ export async function POST() {
     ])
 
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
+
+    if (!profile?.llm_api_key_encrypted) {
+      const rate = await checkAndConsumeRateLimit(supabase, user.id)
+      if (!rate.allowed) {
+        return NextResponse.json({ error: rateLimitMessage(rate) }, { status: 429 })
+      }
+    }
 
     const acts = activities ?? []
     const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
