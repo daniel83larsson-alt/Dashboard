@@ -43,7 +43,17 @@ export async function POST() {
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-    const wellness = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
+    const wellnessStore = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
+    const wellnessHistory: Array<Record<string, number | string | null>> = wellnessStore?.history ?? []
+    const wellness = wellnessHistory[0] ?? null
+
+    const avg7 = (key: string) => {
+      const vals = wellnessHistory.slice(0, 7).map(d => d[key]).filter((v): v is number => typeof v === 'number')
+      return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null
+    }
+    const avgSleep7 = avg7('sleepHours')
+    const avgSteps7 = avg7('steps')
+    const avgHrv7 = avg7('hrv')
 
     const now = new Date()
     const weekStart = startOfWeek(now)
@@ -67,43 +77,57 @@ export async function POST() {
     const pr30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
     const b30 = pr30.length ? pr30.reduce((b, c) => c.distance > b.distance ? c : b) : null
 
+    const hasActivities = activities.length > 0
+
     // Shared data context (short — each agent focuses on what they need)
     const dataBlock = `ATLET: ${profile?.name ?? 'Okänd'}
 PASS: ${thisWeek} denna vecka | ${thisMonth} denna månad | ${totalKm} km totalt
 ${b30 ? `PB 30 min: ${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : ''}
-SÖMN: ${wellness?.sleepHours?.toFixed(1) ?? 'saknas'}h | VILOPULS: ${wellness?.restingHR ?? 'saknas'} bpm
+SÖMN: ${typeof wellness?.sleepHours === 'number' ? wellness.sleepHours.toFixed(1) : 'saknas'}h (7-dagarssnitt: ${avgSleep7 ? avgSleep7.toFixed(1) + 'h' : 'saknas'}) | VILOPULS: ${wellness?.restingHR ?? 'saknas'} bpm
+STEG: ${wellness?.steps ?? 'saknas'} (7-dagarssnitt: ${avgSteps7 ? Math.round(avgSteps7) : 'saknas'}) | HRV: ${wellness?.hrv ?? 'saknas'} ms (7-dagarssnitt: ${avgHrv7 ? Math.round(avgHrv7) : 'saknas'}) | BODY BATTERY: ${wellness?.bodyBattery ?? 'saknas'}
 MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga aktiva mål'}
 ${overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 ${userBio ? `BAKGRUND: ${userBio}` : ''}
-SENASTE 15 PASS:
-${recentStr}`
+${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE ÄNNU — endast Garmin-hälsodata (sömn/puls/steg) tillgänglig.'}`
 
-    // Each specialist gets a unique, focused question
+    // Each specialist gets a unique, focused question — adapted when there's
+    // no logged training yet so they don't force a training-frame onto
+    // wellness-only data (e.g. a user who's only connected Garmin so far)
     const [data, recovery, mental, strength, mobility] = await Promise.all([
       askAgent(
         apiKey,
         'Du är datadriven träningsanalytiker. Svara på svenska, 3-5 meningar. Gå direkt på mönster — hoppa över sammanfattning av grundstatistik.',
-        `Identifiera 2-3 konkreta trender eller avvikelser i träningsdata nedan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror.\n\n${dataBlock}`
+        hasActivities
+          ? `Identifiera 2-3 konkreta trender eller avvikelser i träningsdata nedan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror.\n\n${dataBlock}`
+          : `Inga träningspass är loggade än, men det finns hälsodata från Garmin. Analysera sömn-, steg- och pulstrender nedan — vad säger de om vardagsaktivitet och återhämtningsbas inför att börja träna strukturerat?\n\n${dataBlock}`
       ),
       askAgent(
         apiKey,
         'Du är återhämtnings- och belastningsspecialist. Svara på svenska, 3-5 meningar. Fokusera ENBART på återhämtning, inte på träningsupplägg.',
-        `Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.\n\n${dataBlock}`
+        hasActivities
+          ? `Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.\n\n${dataBlock}`
+          : `Bedöm återhämtningsbasen utifrån sömn, vilopuls och HRV nedan (inga träningspass loggade än). Är kroppen i ett bra läge för att börja träna? Ge ett konkret råd.\n\n${dataBlock}`
       ),
       askAgent(
         apiKey,
         'Du är mentalcoach för idrottare. Svara på svenska, 3-5 meningar. Fokusera ENBART på det mentala — inte på fysisk träning.',
-        `Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.\n\n${dataBlock}`
+        hasActivities
+          ? `Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.\n\n${dataBlock}`
+          : `Inga pass är loggade än. Ge ett konkret mentalt verktyg eller lågtröskel-tankesätt för att komma igång med strukturerad träning, utifrån bakgrunden nedan.\n\n${dataBlock}`
       ),
       askAgent(
         apiKey,
         'Du är styrkecoach specialiserad på kompletterande träning för roddare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA övningar — inte generella råd.',
-        `Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.\n\n${dataBlock}`
+        hasActivities
+          ? `Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.\n\n${dataBlock}`
+          : `Inga pass är loggade än. Föreslå ett enkelt, lågtröskel startprogram (3-4 övningar, sets/reps) för att börja bygga en grund, anpassat efter bakgrunden nedan.\n\n${dataBlock}`
       ),
       askAgent(
         apiKey,
-        'Du är rörlighets- och stretchcoach specialiserad på roddare och uthållighetsidrottare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA stretch-/mobilityövningar kopplade till vilka muskelgrupper som belastas av sporten i datan — inte generella råd.',
-        `Baserat på vilken typ av träning atleten kör (se sporttyp och volym i datan), vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.\n\n${dataBlock}`
+        'Du är rörlighets- och stretchcoach specialiserad på roddare och uthållighetsidrottare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA stretch-/mobilityövningar — inte generella råd.',
+        hasActivities
+          ? `Baserat på vilken typ av träning atleten kör (se sporttyp och volym i datan), vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.\n\n${dataBlock}`
+          : `Inga pass är loggade än. Föreslå 3-4 generella rörlighetsövningar som är bra att bygga in som vana innan strukturerad träning börjar, med namn och hur länge/ofta.\n\n${dataBlock}`
       ),
     ])
 

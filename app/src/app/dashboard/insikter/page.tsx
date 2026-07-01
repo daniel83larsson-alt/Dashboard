@@ -36,7 +36,7 @@ export default async function InsikterPage() {
 
       <div>
         <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Tränarteamets analys</h2>
-        <InsightsPanel savedInsight={savedInsight} activityCount={activityCount ?? 0} />
+        <InsightsPanel savedInsight={savedInsight} activityCount={activityCount ?? 0} hasWellness={wellnessHistory.length > 0} />
       </div>
     </div>
   )

@@ -159,7 +159,7 @@ export default async function HalsaPage() {
           {/* Team insights, compact */}
           <div>
             <div className="text-xs text-muted uppercase tracking-wider mb-3">Teamets bedömning</div>
-            <InsightsSummary savedInsight={savedInsight} activityCount={activityCount ?? 0} />
+            <InsightsSummary savedInsight={savedInsight} activityCount={activityCount ?? 0} hasWellness={history.length > 0} />
           </div>
         </>
       )}
