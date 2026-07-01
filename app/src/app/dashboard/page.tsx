@@ -80,13 +80,16 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }] = await Promise.all([
     supabase.from('profiles').select('name').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
   ])
+
+  const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
   type DayWellness = {
     date: string
@@ -156,6 +159,42 @@ export default async function DashboardPage() {
         </div>
         <SyncAllButton />
       </div>
+
+      {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
+      {(() => {
+        const hasActivities = activities.length > 0
+        const hasGoals = (goals ?? []).length > 0
+        const hasContext = userBio.trim().length > 0
+        if (hasActivities && hasGoals && hasContext) return null
+
+        const steps = [
+          { done: hasActivities, label: 'Anslut en träningskälla', hint: 'Concept2 eller Garmin' },
+          { done: hasGoals, label: 'Sätt ett mål', hint: 'styr veckoplanen och coachens råd' },
+          { done: hasContext, label: 'Berätta om dig själv', hint: 'jobb, situation, personlighet — under "Om dig"' },
+        ]
+
+        return (
+          <div className="bg-card border border-accent/30 rounded-2xl p-4">
+            <div className="text-xs text-accent uppercase tracking-wider mb-3">Kom igång</div>
+            <div className="flex flex-col gap-2">
+              {steps.map((s, i) => (
+                <div key={i} className="flex items-center gap-3">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-xs flex-shrink-0 ${s.done ? 'bg-accent text-bg' : 'border border-edge text-muted'}`}>
+                    {s.done ? '✓' : i + 1}
+                  </span>
+                  <div className="text-sm">
+                    <span className={s.done ? 'text-muted line-through' : 'text-fg'}>{s.label}</span>
+                    <span className="text-muted text-xs ml-2">{s.hint}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <a href="/dashboard/profil" className="inline-block mt-3 text-xs text-accent hover:underline">
+              Gå till Profil →
+            </a>
+          </div>
+        )
+      })()}
 
       {/* ── Senaste pass ────────────────────────────────────────────────────── */}
       {latest ? (
@@ -438,7 +477,9 @@ export default async function DashboardPage() {
         ) : (
           <div className="bg-card border border-edge rounded-2xl p-6 text-center">
             <div className="text-muted text-sm">Inga aktiva mål</div>
-            <p className="text-muted text-xs mt-1">Sätt mål via din coach eller profil</p>
+            <p className="text-muted text-xs mt-1">
+              <a href="/dashboard/profil" className="text-accent hover:underline">Sätt ett mål under Profil</a>
+            </p>
           </div>
         )}
       </div>
