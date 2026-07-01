@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
+import { fmtSpeedOrPace } from '@/lib/sport'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -92,17 +93,14 @@ export async function POST() {
 
     const now = new Date()
     const weekStart = startOfWeek(now)
-    const monthAgo = new Date(now); monthAgo.setDate(now.getDate() - 30)
-
-    function fmtPace(s: number, m: number) {
-      if (!m || !s) return '--'
-      const p = (s / m) * 500
-      return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
-    }
+    // Calendar month, matching the dashboard's "Denna månad" — a trailing
+    // 30-day window here previously disagreed with the dashboard whenever a
+    // week straddled a month boundary.
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
 
     const real = activities.filter(a => a.distance > 1000 && a.moving_time > 180)
     const thisWeek = activities.filter(a => new Date(a.start_date) >= weekStart).length
-    const thisMonth = activities.filter(a => new Date(a.start_date) >= monthAgo).length
+    const thisMonth = activities.filter(a => new Date(a.start_date) >= monthStart).length
     const totalKm = Math.round(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000)
 
     const recentStr = activities.slice(0, 15).map(a =>
@@ -111,13 +109,14 @@ export async function POST() {
 
     const pr30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
     const b30 = pr30.length ? pr30.reduce((b, c) => c.distance > b.distance ? c : b) : null
+    const b30SpeedOrPace = b30 ? fmtSpeedOrPace(b30.sport_type, b30.distance, b30.moving_time) : null
 
     const hasActivities = activities.length > 0
 
     // Shared data context (short — each agent focuses on what they need)
     const dataBlock = `ATLET: ${profile?.name ?? 'Okänd'}
 PASS: ${thisWeek} denna vecka | ${thisMonth} denna månad | ${totalKm} km totalt
-${b30 ? `PB 30 min: ${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : ''}
+${b30 ? `PB 30 min (${b30.sport_type}): ${b30.distance}m${b30SpeedOrPace ? ` (${b30SpeedOrPace.value})` : ''}` : ''}
 SÖMN: ${typeof wellness?.sleepHours === 'number' ? wellness.sleepHours.toFixed(1) : 'saknas'}h (7-dagarssnitt: ${avgSleep7 ? avgSleep7.toFixed(1) + 'h' : 'saknas'}) | VILOPULS: ${wellness?.restingHR ?? 'saknas'} bpm
 STEG: ${wellness?.steps ?? 'saknas'} (7-dagarssnitt: ${avgSteps7 ? Math.round(avgSteps7) : 'saknas'}) | HRV: ${wellness?.hrv ?? 'saknas'} ms (7-dagarssnitt: ${avgHrv7 ? Math.round(avgHrv7) : 'saknas'}) | BODY BATTERY: ${wellness?.bodyBattery ?? 'saknas'}
 MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga aktiva mål'}
@@ -159,7 +158,7 @@ summary (Huvudcoach): Läs de fem bedömningarna du själv precis formulerat och
 
     const insight = {
       generatedAt: now.toISOString(),
-      stats: { sessions: activities.length, thisWeek, thisMonth, totalKm, pr30: b30 ? `${b30.distance}m (${fmtPace(b30.moving_time, b30.distance)}/500m)` : null },
+      stats: { sessions: activities.length, thisWeek, thisMonth, totalKm, pr30: b30 ? `${b30.distance}m${b30SpeedOrPace ? ` (${b30SpeedOrPace.value})` : ''}` : null },
       agents: { data, recovery, mental, strength, mobility, summary },
     }
 

@@ -18,7 +18,7 @@ export type DayWellness = {
   hrvStatus: string | null
 }
 
-type Props = { history: DayWellness[] }
+type Props = { history: DayWellness[]; showSummary?: boolean }
 
 const ACCENT = '#ccd400'
 const LCD    = '#a7bda9'
@@ -50,7 +50,7 @@ function trimToDataRange<T>(rows: T[], hasValue: (row: T) => boolean): T[] {
   return rows.slice(first, last + 1)
 }
 
-export default function WellnessCharts({ history }: Props) {
+export default function WellnessCharts({ history, showSummary = true }: Props) {
   if (!history.length) return null
 
   // Oldest first for charts
@@ -84,6 +84,7 @@ export default function WellnessCharts({ history }: Props) {
     <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
 
       {/* Summary row */}
+      {showSummary && (
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-5 lg:col-span-2">
         {latest.restingHR && (
           <div className="bg-card border border-edge rounded-xl p-3">
@@ -118,6 +119,7 @@ export default function WellnessCharts({ history }: Props) {
           </div>
         )}
       </div>
+      )}
 
       {/* Sleep stages stacked bar */}
       {hasSleep && (

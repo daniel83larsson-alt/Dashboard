@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import Link from 'next/link'
 import InsightsPanel from '@/components/InsightsPanel'
-import WellnessCharts from '@/components/WellnessCharts'
 import ZoneTabs from '@/components/ZoneTabs'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import { startOfWeek } from '@/lib/dates'
@@ -45,18 +45,25 @@ export default async function InsikterPage() {
   const hasAnyZoneData = zonePeriods.some(p => p.zones.length > 0)
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-8">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto space-y-8">
       <div>
         <h1 className="text-2xl font-semibold">Insikter</h1>
         <p className="text-muted text-sm mt-1">Hela tränarteamet analyserar din träning</p>
       </div>
 
-      {wellnessHistory.length > 0 && (
-        <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Wellness · {wellnessHistory.length} dagar</h2>
-          <WellnessCharts history={wellnessHistory} />
-        </div>
-      )}
+      {wellnessHistory.length > 0 && (() => {
+        const latest = wellnessHistory[0]
+        return (
+          <div className="bg-card border border-edge rounded-2xl p-4 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-xs text-muted flex-wrap">
+              {latest.restingHR && <span><span className="font-mono text-lcd font-bold">{latest.restingHR}</span> vilopuls</span>}
+              {latest.sleepHours != null && latest.sleepHours > 0 && <span><span className="font-mono text-accent font-bold">{latest.sleepHours.toFixed(1)}h</span> sömn</span>}
+              {latest.hrv != null && <span><span className="font-mono text-lcd font-bold">{Math.round(latest.hrv)}</span> HRV</span>}
+            </div>
+            <Link href="/dashboard/halsa" className="text-accent text-xs hover:underline flex-shrink-0">Se all hälsodata →</Link>
+          </div>
+        )
+      })()}
 
       {hasAnyZoneData && (
         <div>

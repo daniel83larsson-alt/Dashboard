@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import DuplicateCleanup from '@/components/DuplicateCleanup'
 import Link from 'next/link'
+import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
 
 function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
 function fmt_dur(s: number) {
@@ -8,11 +9,6 @@ function fmt_dur(s: number) {
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m} min`
-}
-function fmt_pace(s: number, m: number) {
-  if (!m) return '--'
-  const p = (s / m) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
 }
 
 export default async function PassloggPage() {
@@ -30,7 +26,7 @@ export default async function PassloggPage() {
   const totalSessions = activities?.length ?? 0
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Passlogg</h1>
         <p className="text-muted text-sm mt-1">
@@ -49,7 +45,7 @@ export default async function PassloggPage() {
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {activities.map(a => {
-            const pace = fmt_pace(a.moving_time, a.distance)
+            const speedOrPace = fmtSpeedOrPace(a.sport_type, a.distance, a.moving_time)
             return (
               <Link key={a.id} href={`/dashboard/passlogg/${a.id}`} className="bg-card border border-edge rounded-xl p-4 block hover:border-accent/40 transition-colors">
                 <div className="flex items-start justify-between mb-3">
@@ -61,23 +57,24 @@ export default async function PassloggPage() {
                       })}
                     </div>
                   </div>
-                  <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg capitalize flex-shrink-0 ml-2">
-                    {a.sport_type}
+                  <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg flex-shrink-0 ml-2 flex items-center gap-1">
+                    <span>{sportIcon(a.sport_type)}</span>
+                    <span className="capitalize">{sportLabel(a.sport_type)}</span>
                   </span>
                 </div>
 
                 <div className="grid grid-cols-4 gap-2">
                   <div>
-                    <div className="font-mono text-accent text-sm font-bold">{fmt_km(a.distance)}</div>
+                    <div className="font-mono text-fg text-sm font-bold">{fmt_km(a.distance)}</div>
                     <div className="text-muted text-xs">km</div>
                   </div>
                   <div>
-                    <div className="font-mono text-accent text-sm font-bold">{fmt_dur(a.moving_time)}</div>
+                    <div className="font-mono text-fg text-sm font-bold">{fmt_dur(a.moving_time)}</div>
                     <div className="text-muted text-xs">tid</div>
                   </div>
                   <div>
-                    <div className="font-mono text-lcd text-sm font-bold">{pace}</div>
-                    <div className="text-muted text-xs">/500m</div>
+                    <div className="font-mono text-lcd text-sm font-bold">{speedOrPace?.value ?? '--'}</div>
+                    <div className="text-muted text-xs">{speedOrPace?.label ?? '–'}</div>
                   </div>
                   <div>
                     <div className="font-mono text-lcd text-sm font-bold">

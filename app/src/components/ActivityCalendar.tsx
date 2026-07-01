@@ -73,39 +73,43 @@ export default function ActivityCalendar({ trainedDates }: Props) {
         </div>
       </div>
       <div className="bg-card border border-edge rounded-2xl p-4">
-        {/* Day labels */}
-        <div className="grid grid-cols-7 mb-2">
-          {dayLabels.map((d, i) => (
-            <div key={i} className="text-center text-muted text-xs pb-1">{d}</div>
-          ))}
-        </div>
-        {/* Day cells */}
-        <div className="grid grid-cols-7 gap-y-1">
-          {cells.map((day, i) => {
-            if (!day) return <div key={i} />
-            const cellDate = new Date(viewYear, viewMonth, day)
-            const dateStr = cellDate.toLocaleDateString('sv-SE')
-            const isToday = isCurrentMonth && day === today.getDate()
-            const hasTrained = trained.has(dateStr)
-            const isFuture = cellDate > today
+        {/* Cells are fixed-size, so this stays compact instead of stretching
+            into oversized squares when the card spans a wide desktop column. */}
+        <div className="max-w-xs mx-auto">
+          {/* Day labels */}
+          <div className="grid grid-cols-7 mb-2">
+            {dayLabels.map((d, i) => (
+              <div key={i} className="text-center text-muted text-xs pb-1">{d}</div>
+            ))}
+          </div>
+          {/* Day cells */}
+          <div className="grid grid-cols-7 gap-y-1">
+            {cells.map((day, i) => {
+              if (!day) return <div key={i} />
+              const cellDate = new Date(viewYear, viewMonth, day)
+              const dateStr = cellDate.toLocaleDateString('sv-SE')
+              const isToday = isCurrentMonth && day === today.getDate()
+              const hasTrained = trained.has(dateStr)
+              const isFuture = cellDate > today
 
-            return (
-              <div key={i} className="flex items-center justify-center aspect-square">
-                <div
-                  className={`
-                    w-7 h-7 flex items-center justify-center rounded-lg text-xs font-mono relative
-                    ${isToday ? 'ring-1 ring-accent' : ''}
-                    ${hasTrained ? 'bg-accent/20 text-accent font-bold' : isFuture ? 'text-muted/40' : 'text-muted'}
-                  `}
-                >
-                  {hasTrained && (
-                    <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />
-                  )}
-                  {day}
+              return (
+                <div key={i} className="flex items-center justify-center h-9">
+                  <div
+                    className={`
+                      w-7 h-7 flex items-center justify-center rounded-lg text-xs font-mono relative
+                      ${isToday ? 'ring-1 ring-accent' : ''}
+                      ${hasTrained ? 'bg-accent/20 text-accent font-bold' : isFuture ? 'text-muted/40' : 'text-muted'}
+                    `}
+                  >
+                    {hasTrained && (
+                      <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />
+                    )}
+                    {day}
+                  </div>
                 </div>
-              </div>
-            )
-          })}
+              )
+            })}
+          </div>
         </div>
         {/* Legend */}
         <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">

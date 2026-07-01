@@ -24,6 +24,11 @@ function fmtDateLong(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
+function shortTake(text: string, max = 140): string {
+  const clean = text.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim()
+  return clean.length > max ? clean.slice(0, max - 1).trimEnd() + '…' : clean
+}
+
 // ── PR helpers ────────────────────────────────────────────────────────────────
 
 type Activity = {
@@ -115,7 +120,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }] = await Promise.all([
     supabase.from('profiles').select('name').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
@@ -123,6 +128,8 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
   ])
 
   const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -187,8 +194,15 @@ export default async function DashboardPage() {
 
   const savedPlan = (planRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? null
 
+  // Latest team insights, for a short desktop-sidebar teaser — reuses
+  // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
+  const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const savedInsight = insightRaw ? (() => { try { return JSON.parse(insightRaw) } catch { return null } })() : null
+  const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
+
   return (
-    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-6">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-6xl w-full mx-auto space-y-6">
       <AutoSync />
 
       {/* Header */}
@@ -240,17 +254,20 @@ export default async function DashboardPage() {
         )
       })()}
 
+      <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:[grid-auto-flow:dense] space-y-6 lg:space-y-0">
+
       {/* ── Senaste pass ────────────────────────────────────────────────────── */}
       {latest ? (
-        <div className="bg-card border border-edge rounded-2xl p-5">
+        <div className="bg-card border border-edge rounded-2xl p-5 lg:col-span-2 lg:order-1">
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-xs text-muted uppercase tracking-wider mb-1">Senaste pass</div>
               <div className="font-medium text-fg">{latest.name}</div>
               <div className="text-muted text-xs mt-0.5">{fmtDateLong(latest.start_date)}</div>
             </div>
-            <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg capitalize flex-shrink-0 ml-2">
-              {latest.sport_type}
+            <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg flex-shrink-0 ml-2 flex items-center gap-1">
+              <span>{sportIcon(latest.sport_type)}</span>
+              <span className="capitalize">{sportLabel(latest.sport_type)}</span>
             </span>
           </div>
 
@@ -297,7 +314,7 @@ export default async function DashboardPage() {
           <FeedbackDrawer activity={latest} />
         </div>
       ) : (
-        <div className="bg-card border border-edge rounded-2xl p-8 text-center">
+        <div className="bg-card border border-edge rounded-2xl p-8 text-center lg:col-span-2 lg:order-1">
           <div className="text-4xl mb-3">🚣</div>
           <div className="font-medium mb-2">Inga pass synkade ännu</div>
           <p className="text-muted text-sm mb-4">Anslut en träningskälla under Profil för att komma igång:</p>
@@ -315,9 +332,32 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* ── Senaste insikter (teaser, desktop sidebar) ───────────────────────── */}
+      {(savedInsight?.agents?.summary || savedHealthInsight?.recovery) && (
+        <div className="bg-card border border-edge rounded-2xl p-4 lg:order-2">
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Senaste insikter</h2>
+          <div className="flex flex-col gap-3">
+            {savedInsight?.agents?.summary && (
+              <div>
+                <div className="text-xs text-accent font-medium mb-1">🚣 Tränarteamet</div>
+                <p className="text-xs text-fg/90 leading-relaxed">{shortTake(savedInsight.agents.summary)}</p>
+                <a href="/dashboard/insikter" className="text-xs text-accent hover:underline mt-1 inline-block">Se hela analysen →</a>
+              </div>
+            )}
+            {savedHealthInsight?.recovery && (
+              <div className={savedInsight?.agents?.summary ? 'pt-3 border-t border-edge' : ''}>
+                <div className="text-xs text-accent font-medium mb-1">💤 Återhämtning</div>
+                <p className="text-xs text-fg/90 leading-relaxed">{shortTake(savedHealthInsight.recovery)}</p>
+                <a href="/dashboard/halsa" className="text-xs text-accent hover:underline mt-1 inline-block">Se hälsodata →</a>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ── Garmin Wellness ───────────────────────────────────────────────────── */}
       {!wellness && latest && (
-        <div className="bg-card border border-edge rounded-2xl p-5 text-center">
+        <div className="bg-card border border-edge rounded-2xl p-5 text-center lg:col-span-2 lg:order-3">
           <div className="text-2xl mb-2">💓</div>
           <div className="text-sm font-medium mb-1">Ingen hälsodata än</div>
           <p className="text-muted text-xs mb-3">Anslut Garmin under Profil för sömn, puls, steg och Body Battery</p>
@@ -327,7 +367,7 @@ export default async function DashboardPage() {
         </div>
       )}
       {wellness && (
-        <div>
+        <div className="lg:col-span-2 lg:order-3">
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Wellness · Garmin</h2>
           <div className="grid grid-cols-2 gap-2">
             {wellness.restingHR && (
@@ -391,12 +431,12 @@ export default async function DashboardPage() {
 
       {/* ── Stats: Vecka / Månad / År ─────────────────────────────────────── */}
       {activities.length > 0 && (
-        <div>
+        <div className="lg:col-span-2 lg:order-5">
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Din statistik</h2>
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: 'Denna vecka', data: wk },
-              { label: 'Denna månad', data: mm },
+              { label: now.toLocaleDateString('sv-SE', { month: 'long' }).replace(/^./, c => c.toUpperCase()), data: mm },
               { label: String(y), data: yy },
             ].map(({ label, data }) => (
               <div key={label} className="bg-card border border-edge rounded-2xl p-4">
@@ -482,7 +522,7 @@ export default async function DashboardPage() {
 
       {/* ── Veckans pulszoner ──────────────────────────────────────────────── */}
       {weekZones.length > 0 && (
-        <div>
+        <div className="lg:order-4">
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Veckans pulszoner</h2>
           <div className="bg-card border border-edge rounded-2xl p-4">
             <ZoneBar zones={weekZones} />
@@ -494,36 +534,43 @@ export default async function DashboardPage() {
       )}
 
       {/* ── Personliga rekord per sport ───────────────────────────────────── */}
-      {sportPRs.map(({ sport, prs }) => (
-        <div key={sport}>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
-            <span>{sportIcon(sport)}</span>
-            <span className="capitalize">{sportLabel(sport)} — personbästa</span>
-          </h2>
-          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-            {prs.map(({ label, pr }) => (
-              <a
-                key={label}
-                href={`/dashboard/passlogg/${pr.activityId}`}
-                className="px-4 py-3 flex items-center justify-between hover:bg-bg transition-colors"
-              >
-                <div>
-                  <div className="text-sm font-medium">{label}</div>
-                  <div className="text-muted text-xs mt-0.5">
-                    {new Date(pr.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                  </div>
+      {sportPRs.length > 0 && (
+        <div className="lg:col-span-2 lg:order-6">
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Personliga rekord</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {sportPRs.map(({ sport, prs }) => (
+              <div key={sport}>
+                <div className="text-xs text-muted mb-2 flex items-center gap-1.5">
+                  <span>{sportIcon(sport)}</span>
+                  <span className="capitalize">{sportLabel(sport)}</span>
                 </div>
-                <div className="font-mono text-accent text-sm font-bold text-right">
-                  {pr.display}
+                <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+                  {prs.map(({ label, pr }) => (
+                    <a
+                      key={label}
+                      href={`/dashboard/passlogg/${pr.activityId}`}
+                      className="px-4 py-3 flex items-center justify-between hover:bg-bg transition-colors"
+                    >
+                      <div>
+                        <div className="text-sm font-medium">{label}</div>
+                        <div className="text-muted text-xs mt-0.5">
+                          {new Date(pr.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </div>
+                      </div>
+                      <div className="font-mono text-accent text-sm font-bold text-right">
+                        {pr.display}
+                      </div>
+                    </a>
+                  ))}
                 </div>
-              </a>
+              </div>
             ))}
           </div>
         </div>
-      ))}
+      )}
 
       {/* ── Mål ─────────────────────────────────────────────────────────────── */}
-      <div>
+      <div className="lg:order-7">
         <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Mina mål</h2>
         {goals && goals.length > 0 ? (
           <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
@@ -553,12 +600,17 @@ export default async function DashboardPage() {
 
       {/* ── Kalender ──────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
-        <ActivityCalendar trainedDates={activities.map(a => a.start_date)} />
+        <div className="lg:col-span-3 lg:order-8">
+          <ActivityCalendar trainedDates={activities.map(a => a.start_date)} />
+        </div>
       )}
 
       {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
-      <WeeklyPlanCard savedPlan={savedPlan} activityCount={activities.length} />
+      <div className="lg:col-span-3 lg:order-9">
+        <WeeklyPlanCard savedPlan={savedPlan} activityCount={activities.length} />
+      </div>
 
+      </div>
     </div>
   )
 }

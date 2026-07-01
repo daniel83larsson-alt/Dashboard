@@ -107,7 +107,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
     <>
       <button
         onClick={openAndAsk}
-        className="w-full bg-accent text-bg font-semibold py-3.5 rounded-xl hover:opacity-90 transition-opacity text-sm"
+        className="w-full border border-accent/40 text-accent font-semibold py-3 rounded-xl hover:bg-accent/10 transition-colors text-sm"
       >
         Begär feedback från tränaren
       </button>

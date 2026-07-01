@@ -32,7 +32,7 @@ export default async function HalsaPage() {
   const avgHRV   = avg('hrv')
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-6">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
@@ -149,10 +149,10 @@ export default async function HalsaPage() {
             </div>
           )}
 
-          {/* Trend charts */}
+          {/* Trend charts — summary tiles omitted, "Senaste dag" above already covers today's values */}
           <div>
-            <div className="text-xs text-muted uppercase tracking-wider mb-4">Trender · {history.length} dagar</div>
-            <WellnessCharts history={history} />
+            <div className="text-xs text-muted uppercase tracking-wider mb-4">Utveckling över tid</div>
+            <WellnessCharts history={history} showSummary={false} />
           </div>
 
           {/* Team insights, health-data only */}

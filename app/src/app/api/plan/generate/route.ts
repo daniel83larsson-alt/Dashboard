@@ -3,12 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
-
-function fmtPace(seconds: number, meters: number) {
-  if (!meters) return '--'
-  const p = (seconds / meters) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
-}
+import { fmtSpeedOrPace, sportLabel, fmtMinSec } from '@/lib/sport'
 
 function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
@@ -42,8 +37,10 @@ export async function POST() {
     const acts = activities ?? []
     const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
 
-    // Compute PR summary for context
-    const pr30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
+    // Rowing-only PR — mixing in another sport's best 30-min effort here
+    // would misrepresent it with rowing's /500m pace math.
+    const rowingReal = real.filter(a => a.sport_type === 'Rowing')
+    const pr30 = rowingReal.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
     const best30 = pr30.length ? pr30.reduce((b, a) => (a.distance > b.distance ? a : b)) : null
 
     // Week frequency
@@ -53,16 +50,17 @@ export async function POST() {
     const recentMonth = acts.filter(a => new Date(a.start_date) >= monthAgo)
 
     const contextBlock = `
-TRÄNINGSDATA (senaste 30 pass):
-${real.slice(0, 20).map(a =>
-  `${a.start_date.slice(0, 10)}  ${a.distance}m  ${fmtDur(a.moving_time)}  ${fmtPace(a.moving_time, a.distance)}/500m${a.average_heartrate ? `  HR:${Math.round(a.average_heartrate)}` : ''}`
-).join('\n')}
+TRÄNINGSDATA (senaste 30 pass, alla sporter):
+${real.slice(0, 20).map(a => {
+  const speedOrPace = fmtSpeedOrPace(a.sport_type, a.distance, a.moving_time)
+  return `${a.start_date.slice(0, 10)}  ${sportLabel(a.sport_type)}  ${a.distance}m  ${fmtDur(a.moving_time)}${speedOrPace ? `  ${speedOrPace.value}` : ''}${a.average_heartrate ? `  HR:${Math.round(a.average_heartrate)}` : ''}`
+}).join('\n')}
 
 SAMMANFATTNING:
 - Totalt antal pass: ${acts.length}
 - Senaste veckan: ${recentWeek.length} pass
 - Senaste månaden: ${recentMonth.length} pass
-- Bäst 30-min: ${best30 ? `${best30.distance}m (${fmtPace(best30.moving_time, best30.distance)}/500m)` : 'okänt'}
+- Bäst 30-min rodd: ${best30 ? `${best30.distance}m (${fmtMinSec((best30.moving_time / best30.distance) * 500)}/500m)` : 'okänt (eller ingen rodd loggad)'}
 
 MÅL:
 ${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})${g.target_date ? ` — måldatum: ${g.target_date}` : ' — inget måldatum'}`).join('\n') : '- Inga specificerade mål'}
@@ -71,7 +69,7 @@ ${overviewGoal ? `\nÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 
     const hasTargetedGoal = (goals ?? []).some(g => g.target_date)
 
-    const prompt = `Du är en erfaren roddcoach. Bestäm vilken typ av upplägg som passar bäst utifrån målen nedan:
+    const prompt = `Du är ett erfaret tränarteam inom uthållighetsidrott (rodd, cykling, löpning m.fl.). Utgå från vilken/vilka sporter atleten faktiskt loggar pass inom (se träningsdatan nedan) — anta inte att det är rodd om det inte stämmer. Bestäm vilken typ av upplägg som passar bäst utifrån målen nedan:
 
 - Om det finns ett mål med specifikt datum: bygg planen som steg mot det målet (ramad som "vecka-för-vecka mot målet").
 - Om det INTE finns något datumsatt mål: ramma planen som "kör det här upplägget i 2-3 veckor, vi justerar sedan efter varje kommande pass" — alltså adaptiv, inte ett fast långtidsschema.

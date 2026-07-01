@@ -9,7 +9,7 @@ export default async function AdminPage() {
   const isAdmin = process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
   if (!isAdmin) {
     return (
-      <div className="p-4 md:p-8 max-w-lg w-full">
+      <div className="p-4 md:p-8 max-w-lg w-full mx-auto">
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">
           <div className="font-medium">Ingen åtkomst</div>
         </div>
@@ -28,7 +28,7 @@ export default async function AdminPage() {
   const profileRows = (profiles ?? []) as ProfileRow[]
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full">
+    <div className="p-4 md:p-8 max-w-2xl w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Admin</h1>
         <p className="text-muted text-sm mt-1">{profileRows.length} registrerade användare</p>

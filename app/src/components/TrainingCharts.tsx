@@ -4,7 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
-import { isCycling, sportLabel } from '@/lib/sport'
+import { isCycling, isRunOrWalk, sportLabel, fmtSpeedOrPace, fmtMinSec } from '@/lib/sport'
 
 type Activity = {
   start_date: string
@@ -16,15 +16,14 @@ type Activity = {
 
 type Props = { activities: Activity[]; sport: string }
 
-function fmtPace(s: number, m: number) {
-  if (!m || !s) return '--'
-  const p = (s / m) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
-}
-
 function paceSeconds(s: number, m: number) {
   if (!m || !s) return null
   return Math.round((s / m) * 500)
+}
+
+function paceSecondsPerKm(s: number, m: number) {
+  if (!m || !s) return null
+  return Math.round((s / m) * 1000)
 }
 
 function speedKmh(s: number, m: number) {
@@ -49,18 +48,26 @@ export default function TrainingCharts({ activities, sport }: Props) {
   const filtered = activities.filter(a => a.sport_type === sport && a.distance > 0 && a.moving_time > 0)
   const recent = filtered.slice(0, 40).reverse()
   const cycling = isCycling(sport)
+  const runWalk = isRunOrWalk(sport)
   const label = sportLabel(sport)
 
   // ── Per-session data ──────────────────────────────────────────────────────
-  const sessionData = recent.map(a => ({
-    date: new Date(a.start_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }),
-    dist: Math.round(a.distance),
-    distKm: +(a.distance / 1000).toFixed(2),
-    dur: Math.round(a.moving_time / 60),
-    pace: cycling ? speedKmh(a.moving_time, a.distance) : paceSeconds(a.moving_time, a.distance),
-    paceStr: cycling ? `${speedKmh(a.moving_time, a.distance) ?? '--'} km/h` : `${fmtPace(a.moving_time, a.distance)}/500m`,
-    hr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
-  }))
+  const sessionData = recent.map(a => {
+    let pace: number | null
+    if (cycling) pace = speedKmh(a.moving_time, a.distance)
+    else if (runWalk) pace = paceSecondsPerKm(a.moving_time, a.distance)
+    else pace = paceSeconds(a.moving_time, a.distance)
+    const speedOrPace = fmtSpeedOrPace(a.sport_type, a.distance, a.moving_time)
+    return {
+      date: new Date(a.start_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }),
+      dist: Math.round(a.distance),
+      distKm: +(a.distance / 1000).toFixed(2),
+      dur: Math.round(a.moving_time / 60),
+      pace,
+      paceStr: speedOrPace ? speedOrPace.value : '--',
+      hr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
+    }
+  })
 
   // ── Weekly volume (last 16 weeks) ─────────────────────────────────────────
   const weeklyMap: Record<string, { dist: number; count: number; label: string }> = {}
@@ -90,10 +97,10 @@ export default function TrainingCharts({ activities, sport }: Props) {
   }
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start lg:gap-6">
 
-      {/* Weekly volume */}
-      <div className="bg-card border border-edge rounded-2xl p-4">
+      {/* Weekly volume — full-width headline chart */}
+      <div className="bg-card border border-edge rounded-2xl p-4 lg:col-span-2">
         <div className="text-xs text-muted uppercase tracking-wider mb-4">Veckovolym (km)</div>
         <ResponsiveContainer width="100%" height={160}>
           <BarChart data={weeklyData} margin={{ top: 0, right: 0, bottom: 0, left: -20 }}>
@@ -129,7 +136,7 @@ export default function TrainingCharts({ activities, sport }: Props) {
       {/* Pace/speed trend */}
       <div className="bg-card border border-edge rounded-2xl p-4">
         <div className="text-xs text-muted uppercase tracking-wider mb-4">
-          {cycling ? 'Snitthastighet (km/h)' : 'Medelpace /500m'} — senaste 40
+          {cycling ? 'Snitthastighet (km/h)' : runWalk ? 'Snittempo (min/km)' : 'Snittempo (/500m)'} — senaste 40
         </div>
         <ResponsiveContainer width="100%" height={150}>
           <LineChart data={sessionData} margin={{ top: 4, right: 0, bottom: 0, left: -20 }}>
@@ -147,14 +154,17 @@ export default function TrainingCharts({ activities, sport }: Props) {
             />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(_: unknown, __: unknown, props: { payload?: { paceStr?: string } }) => [props.payload?.paceStr ?? '--', cycling ? 'Hastighet' : 'Pace /500m']}
+              formatter={(_: unknown, __: unknown, props: { payload?: { paceStr?: string } }) => [props.payload?.paceStr ?? '--', cycling ? 'Hastighet' : 'Tempo']}
             />
             <ReferenceLine y={avgPaceOrSpeed} stroke={MUTED} strokeDasharray="4 4" />
             <Line type="monotone" dataKey="pace" stroke={LCD} strokeWidth={2} dot={false} connectNulls />
           </LineChart>
         </ResponsiveContainer>
         <div className="text-xs text-muted mt-2">
-          Snitt: <span className="font-mono text-lcd">{cycling ? `${avgPaceOrSpeed.toFixed(1)} km/h` : `${fmtPace(avgPaceOrSpeed, 500)}/500m`}</span>
+          Snitt: <span className="font-mono text-lcd">{
+            cycling ? `${avgPaceOrSpeed.toFixed(1)} km/h`
+            : `${fmtMinSec(avgPaceOrSpeed)}${runWalk ? '/km' : '/500m'}`
+          }</span>
           <span className="ml-2 opacity-50">(streckad linje)</span>
         </div>
       </div>

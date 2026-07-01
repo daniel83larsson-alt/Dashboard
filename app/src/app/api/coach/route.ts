@@ -5,6 +5,7 @@ import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
+import { fmtMinSec } from '@/lib/sport'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -159,7 +160,11 @@ export async function POST(request: NextRequest) {
     ])
 
     const acts = allActivities ?? []
-    const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
+    // The PR block below is fed into the prompt as "RODD-PB (endast rodd,
+    // ej andra sporter)" (coaches.ts) — filter to rowing here so that claim
+    // is actually true, instead of quietly mixing in another sport's best
+    // effort and rendering it with rowing's /500m pace math.
+    const real = acts.filter(a => a.sport_type === 'Rowing' && (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
 
     const now = new Date()
     const weekStart = startOfWeek(now)
@@ -167,8 +172,8 @@ export async function POST(request: NextRequest) {
     const yr = acts.filter(a => new Date(a.start_date).getFullYear() === now.getFullYear())
 
     function fmtPace(s: number, m: number) {
-      if (!m) return '--'; const p = s / m * 500
-      return `${Math.floor(p/60)}:${Math.round(p%60).toString().padStart(2,'0')}/500m`
+      if (!m) return '--'
+      return `${fmtMinSec((s / m) * 500)}/500m`
     }
     function fmtDur(s: number) {
       const h = Math.floor(s/3600), m = Math.floor((s%3600)/60)

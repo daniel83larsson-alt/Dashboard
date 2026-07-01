@@ -35,9 +35,10 @@ export default function HealthInsightCard({ savedInsight }: { savedInsight: Heal
     <div className="bg-card border border-edge rounded-2xl p-4">
       <div className="flex items-center justify-between mb-3">
         <div>
-          <div className="text-sm font-semibold text-fg">Teamets bedömning</div>
+          <div className="text-sm font-semibold text-fg">Hälsoteamets bedömning</div>
+          <div className="text-muted text-[11px] mt-0.5">Baserat enbart på din hälsodata — sömn, vilopuls, HRV, steg</div>
           {insight && (
-            <div className="text-muted text-xs mt-0.5">Uppdaterad {age === 0 ? 'precis' : `${age}h sedan`}</div>
+            <div className="text-muted text-xs mt-1">Uppdaterad {age === 0 ? 'precis' : `${age}h sedan`}</div>
           )}
         </div>
         <button

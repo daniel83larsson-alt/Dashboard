@@ -40,6 +40,15 @@ export function isRunOrWalk(sport: string): boolean {
   return sport === 'Run' || sport === 'TrailRun' || sport === 'Walk' || sport === 'Hike'
 }
 
+// Rounds to whole seconds and carries into minutes so e.g. 119.6s renders as
+// "2:00" rather than "1:60".
+export function fmtMinSec(totalSeconds: number): string {
+  const rounded = Math.round(totalSeconds)
+  const m = Math.floor(rounded / 60)
+  const s = rounded % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
 export function fmtSpeedOrPace(sportType: string, distance: number, movingTime: number): { label: string; value: string } | null {
   if (distance <= 0 || movingTime <= 0) return null
 
@@ -49,15 +58,11 @@ export function fmtSpeedOrPace(sportType: string, distance: number, movingTime: 
   }
   if (isRunOrWalk(sportType)) {
     const secPerKm = movingTime / (distance / 1000)
-    const m = Math.floor(secPerKm / 60)
-    const s = Math.round(secPerKm % 60)
-    return { label: 'Snittempo', value: `${m}:${s.toString().padStart(2, '0')}/km` }
+    return { label: 'Snittempo', value: `${fmtMinSec(secPerKm)}/km` }
   }
   if (sportType === 'Rowing') {
     const secPer500 = (movingTime / distance) * 500
-    const m = Math.floor(secPer500 / 60)
-    const s = Math.round(secPer500 % 60)
-    return { label: 'Snittfart', value: `${m}:${s.toString().padStart(2, '0')}/500m` }
+    return { label: 'Snittempo', value: `${fmtMinSec(secPer500)}/500m` }
   }
   return null
 }

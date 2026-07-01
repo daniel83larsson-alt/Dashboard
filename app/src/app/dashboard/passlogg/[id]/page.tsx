@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
+import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
 function fmtDur(s: number) {
@@ -10,11 +11,6 @@ function fmtDur(s: number) {
   const sec = Math.floor(s % 60)
   if (h > 0) return `${h}h ${m}m ${sec}s`
   return `${m}m ${sec}s`
-}
-function fmtPace(s: number, m: number) {
-  if (!m) return '--'
-  const p = (s / m) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}/500m`
 }
 
 // Garmin's raw activity payload has ~100 fields, most null/unknown for any
@@ -62,7 +58,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   if (!activity) {
     return (
-      <div className="p-4 md:p-8 max-w-2xl w-full">
+      <div className="p-4 md:p-8 max-w-2xl w-full mx-auto">
         <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Passlogg</Link>
         <div className="bg-card border border-edge rounded-2xl p-10 text-center mt-6">
           <div className="font-medium">Hittade inte passet</div>
@@ -73,7 +69,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   const isGarmin = activity.strava_id >= 0
   const raw = (activity.raw_data ?? {}) as Record<string, unknown>
-  const pace = fmtPace(activity.moving_time, activity.distance)
+  const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
 
   const garminExtras = isGarmin
     ? GARMIN_EXTRA_FIELDS
@@ -88,7 +84,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const hasCoords = lat !== null && lng !== null
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full space-y-5">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-5">
       <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Passlogg</Link>
 
       {/* Header */}
@@ -101,44 +97,56 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             </p>
           </div>
           <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg capitalize">{activity.sport_type}</span>
+            <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg flex items-center gap-1">
+              <span>{sportIcon(activity.sport_type)}</span>
+              <span className="capitalize">{sportLabel(activity.sport_type)}</span>
+            </span>
             <span className="text-[10px] text-muted">{isGarmin ? 'Garmin' : 'Concept2'}</span>
           </div>
         </div>
       </div>
 
-      {/* Core stats */}
-      <div className="bg-card border border-edge rounded-2xl p-5 grid grid-cols-3 gap-3">
-        <div>
-          <div className="font-mono text-accent text-lg font-bold leading-none">{fmtKm(activity.distance)}</div>
-          <div className="text-muted text-xs mt-1">Distans</div>
-        </div>
-        <div>
-          <div className="font-mono text-accent text-lg font-bold leading-none">{fmtDur(activity.moving_time)}</div>
-          <div className="text-muted text-xs mt-1">Tid</div>
-        </div>
-        <div>
-          <div className="font-mono text-lcd text-lg font-bold leading-none">{pace}</div>
-          <div className="text-muted text-xs mt-1">Snittfart</div>
-        </div>
-        {activity.average_heartrate && (
+      {/* Core stats + HR zones/splits side by side on desktop — on mobile
+          this was previously buried far below Map/Garmin extras, leaving
+          the page ~80% empty on a wide screen with no focal point. */}
+      <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start space-y-5 lg:space-y-0">
+        <div className="bg-card border border-edge rounded-2xl p-5 grid grid-cols-3 gap-3">
           <div>
-            <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(activity.average_heartrate)}</div>
-            <div className="text-muted text-xs mt-1">Snitt-HR</div>
+            <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtKm(activity.distance)}</div>
+            <div className="text-muted text-xs mt-1">Distans</div>
           </div>
-        )}
-        {activity.max_heartrate && (
           <div>
-            <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(activity.max_heartrate)}</div>
-            <div className="text-muted text-xs mt-1">Max-HR</div>
+            <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtDur(activity.moving_time)}</div>
+            <div className="text-muted text-xs mt-1">Tid</div>
           </div>
-        )}
-        {activity.average_watts != null && (
-          <div>
-            <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(activity.average_watts)}W</div>
-            <div className="text-muted text-xs mt-1">Snitt-watt</div>
-          </div>
-        )}
+          {speedOrPace && (
+            <div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{speedOrPace.value}</div>
+              <div className="text-muted text-xs mt-1">{speedOrPace.label}</div>
+            </div>
+          )}
+          {activity.average_heartrate && (
+            <div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(activity.average_heartrate)}</div>
+              <div className="text-muted text-xs mt-1">Snitt-HR</div>
+            </div>
+          )}
+          {activity.max_heartrate && (
+            <div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(activity.max_heartrate)}</div>
+              <div className="text-muted text-xs mt-1">Max-HR</div>
+            </div>
+          )}
+          {activity.average_watts != null && (
+            <div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(activity.average_watts)}W</div>
+              <div className="text-muted text-xs mt-1">Snitt-watt</div>
+            </div>
+          )}
+        </div>
+
+        {/* HR zones (Garmin) or splits (Concept2), fetched on demand */}
+        <ActivityEnrichment activityId={activity.id} isGarmin={isGarmin} />
       </div>
 
       {/* Map */}
@@ -166,9 +174,6 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           </div>
         </div>
       )}
-
-      {/* HR zones (Garmin) or splits (Concept2), fetched on demand */}
-      <ActivityEnrichment activityId={activity.id} isGarmin={isGarmin} />
 
       {!isGarmin && (!!raw.verified || !!raw.ranked || !!raw.workout_type) && (
         <div className="flex flex-wrap gap-2">

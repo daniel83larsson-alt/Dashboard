@@ -29,7 +29,7 @@ type Props = { savedInsight: Insight | null; activityCount?: number; hasWellness
 
 const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; icon: string; role: string }[] = [
   { key: 'data',     label: 'Dataanalytiker',  icon: '📊', role: 'Trender · Mönster · Siffror' },
-  { key: 'recovery', label: 'Återhämtning',    icon: '💤', role: 'Belastning · Sömn · Vilopuls' },
+  { key: 'recovery', label: 'Återhämtning',    icon: '💤', role: 'Hela träningsbilden + hälsodata' },
   { key: 'mental',   label: 'Mentalcoach',     icon: '🧠', role: 'Mindset · Motivation · Verktyg' },
   { key: 'strength', label: 'Styrkecoach',     icon: '💪', role: 'Kompletterande träning · Core' },
   { key: 'mobility', label: 'Rörlighetscoach', icon: '🤸', role: 'Stretching · Mobility · Förebyggande' },
@@ -114,27 +114,34 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
 
       {error && <p className="text-red-400 text-sm">{error}</p>}
 
-      {/* Stats snapshot */}
+      {/* Stats snapshot — frozen at generation time, can drift from the live
+          dashboard as new passes sync in. Labeled explicitly so it doesn't
+          read as a live, contradicting number. */}
       {insight && (
-        <div className="grid grid-cols-2 gap-2">
-          <div className="bg-card border border-edge rounded-xl p-3">
-            <div className="font-mono text-accent text-lg font-bold">{insight.stats.thisWeek}</div>
-            <div className="text-muted text-xs">pass denna vecka</div>
-          </div>
-          <div className="bg-card border border-edge rounded-xl p-3">
-            <div className="font-mono text-accent text-lg font-bold">{insight.stats.thisMonth}</div>
-            <div className="text-muted text-xs">pass denna månad</div>
-          </div>
-          <div className="bg-card border border-edge rounded-xl p-3">
-            <div className="font-mono text-accent text-lg font-bold">{insight.stats.totalKm} km</div>
-            <div className="text-muted text-xs">all time</div>
-          </div>
-          {insight.stats.pr30 && (
+        <div>
+          <div className="grid grid-cols-2 gap-2">
             <div className="bg-card border border-edge rounded-xl p-3">
-              <div className="font-mono text-lcd text-sm font-bold leading-tight">{insight.stats.pr30}</div>
-              <div className="text-muted text-xs mt-0.5">PB 30 min</div>
+              <div className="font-mono text-accent text-lg font-bold">{insight.stats.thisWeek}</div>
+              <div className="text-muted text-xs">pass denna vecka</div>
             </div>
-          )}
+            <div className="bg-card border border-edge rounded-xl p-3">
+              <div className="font-mono text-accent text-lg font-bold">{insight.stats.thisMonth}</div>
+              <div className="text-muted text-xs">pass denna månad</div>
+            </div>
+            <div className="bg-card border border-edge rounded-xl p-3">
+              <div className="font-mono text-accent text-lg font-bold">{insight.stats.totalKm} km</div>
+              <div className="text-muted text-xs">all time</div>
+            </div>
+            {insight.stats.pr30 && (
+              <div className="bg-card border border-edge rounded-xl p-3">
+                <div className="font-mono text-lcd text-sm font-bold leading-tight">{insight.stats.pr30}</div>
+                <div className="text-muted text-xs mt-0.5">PB 30 min</div>
+              </div>
+            )}
+          </div>
+          <p className="text-muted text-[10px] mt-1.5">
+            Ögonblicksbild vid analysen ({new Date(insight.generatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}) — kan skilja sig från Passlogg om du synkat nya pass sen dess
+          </p>
         </div>
       )}
 
