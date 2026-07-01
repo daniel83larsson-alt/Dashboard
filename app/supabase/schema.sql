@@ -32,7 +32,7 @@ create policy "Users see own tokens" on public.strava_tokens
 create table public.activities (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references public.profiles(id) on delete cascade,
-  strava_id bigint unique not null,
+  strava_id bigint not null,
   sport_type text not null,
   name text not null,
   distance numeric not null default 0,
@@ -52,6 +52,7 @@ create table public.activities (
 alter table public.activities enable row level security;
 create policy "Users see own activities" on public.activities
   for all using (auth.uid() = user_id);
+create unique index activities_user_strava_unique on public.activities(user_id, strava_id);
 create index activities_user_sport on public.activities(user_id, sport_type);
 create index activities_start_date on public.activities(start_date desc);
 
@@ -143,3 +144,15 @@ $$;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- SÄKERHETSFIX: strava_id hade en GLOBAL unik-constraint (delad mellan ALLA
+-- användare) istället för att vara unik per användare. Alla synk-rutter gör
+-- upsert med onConflict på strava_id, vilket innebär att om två olika DL
+-- Trainer-konton någonsin synkar samma käll-ID (t.ex. samma Garmin/Concept2-
+-- inloggning kopplad till två olika konton) skrevs user_id på den befintliga
+-- raden över — passet bytte ägare till den som synkade sist. Detta är
+-- troliga orsaken till att en användares pass synts på ett annat konto.
+-- Kör vid uppdatering av en befintlig databas:
+alter table public.activities drop constraint if exists activities_strava_id_key;
+create unique index if not exists activities_user_strava_unique
+  on public.activities(user_id, strava_id);

@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (results.length > 0) {
       const rows = results.map(r => concept2ResultToActivity(r, user.id))
-      await supabase.from('activities').upsert(rows, { onConflict: 'strava_id' })
+      await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
     }
 
     const response = NextResponse.redirect(

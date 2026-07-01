@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
         description: a.description ?? null,
         raw_data: a,
       }))
-      await supabase.from('activities').upsert(rows, { onConflict: 'strava_id' })
+      await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
     }
 
     const redirectUrl = sports.length > 0

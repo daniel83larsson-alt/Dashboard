@@ -226,7 +226,7 @@ export async function POST() {
       })
 
     if (toUpsert.length > 0) {
-      await supabase.from('activities').upsert(toUpsert, { onConflict: 'strava_id' })
+      await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
     }
 
     const cleaned = await autoCleanupDuplicates(supabase, user.id)
