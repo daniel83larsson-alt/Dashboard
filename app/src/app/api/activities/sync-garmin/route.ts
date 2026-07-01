@@ -7,6 +7,7 @@ import {
   fetchGarminSleepFull,
   fetchGarminSteps,
   fetchGarminDayWellness,
+  fetchGarminHrZones,
   mapActivityType,
 } from '@/lib/garmin'
 import { decrypt } from '@/lib/encrypt'
@@ -19,6 +20,12 @@ import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
 const MAX_HISTORY_DAYS = 365
 const BACKFILL_BATCH_SIZE = 20
 const ACTIVITY_BACKFILL_BATCH_SIZE = 25 // older pass history — kept modest so a big lifetime history doesn't hammer Garmin in one sync
+
+// HR-zone backfill: deliberately scoped to "this week + this month" for now
+// (not full history) and fetched a few at a time, since this hits Garmin's
+// unofficial per-activity zone endpoint once per pass — wider historical
+// coverage can be added later if it's worth the extra load.
+const ZONE_BACKFILL_BATCH_SIZE = 5
 
 type ActivityBackfillCursor = { offset: number; done: boolean }
 
@@ -253,6 +260,34 @@ export async function POST() {
       }
     }
 
+    // Gradual HR-zone backfill for this week + this month's Garmin passes —
+    // fetched a few at a time each sync rather than all at once.
+    const nowForZones = new Date()
+    const startOfThisMonth = new Date(nowForZones.getFullYear(), nowForZones.getMonth(), 1)
+    const sevenDaysAgo = new Date(nowForZones)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const zoneSince = startOfThisMonth < sevenDaysAgo ? startOfThisMonth : sevenDaysAgo
+
+    const { data: zoneCandidates } = await supabase
+      .from('activities')
+      .select('id, strava_id, raw_data')
+      .eq('user_id', user.id)
+      .gte('strava_id', 0)
+      .gte('start_date', zoneSince.toISOString())
+
+    const missingZones = (zoneCandidates ?? []).filter(a => !(a.raw_data as { hrZones?: unknown } | null)?.hrZones)
+    const zoneBatch = missingZones.slice(0, ZONE_BACKFILL_BATCH_SIZE)
+    let zonesBackfilled = 0
+    for (const row of zoneBatch) {
+      const zones = await fetchGarminHrZones(row.strava_id, garminEmail, garminPassword)
+      if (zones) {
+        const raw = (row.raw_data as Record<string, unknown> | null) ?? {}
+        await supabase.from('activities').update({ raw_data: { ...raw, hrZones: zones } }).eq('id', row.id)
+        zonesBackfilled++
+      }
+    }
+    const zonesRemaining = missingZones.length - zoneBatch.length
+
     return NextResponse.json({
       synced: toUpsert.length,
       wellness: todayWellness,
@@ -262,6 +297,8 @@ export async function POST() {
       activitiesBackfillDone: newCursor.done,
       cleaned,
       reclassified,
+      zonesBackfilled,
+      zonesRemaining,
     })
   } catch (err) {
     console.error('Garmin sync error:', err)

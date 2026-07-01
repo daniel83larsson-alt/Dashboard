@@ -13,9 +13,9 @@ const CATCHUP_MAX_ROUNDS = 20 // 20 × 20 days ≈ covers a full year
 // with a year to backfill), schedules additional Garmin-only catch-up
 // rounds a few minutes apart while the tab stays open, instead of
 // hammering Garmin's API all at once.
-function needsMoreCatchup(data: { remainingGaps?: number; activitiesBackfillDone?: boolean } | undefined): boolean {
+function needsMoreCatchup(data: { remainingGaps?: number; activitiesBackfillDone?: boolean; zonesRemaining?: number } | undefined): boolean {
   if (!data) return false
-  return (data.remainingGaps ?? 0) > 0 || data.activitiesBackfillDone === false
+  return (data.remainingGaps ?? 0) > 0 || data.activitiesBackfillDone === false || (data.zonesRemaining ?? 0) > 0
 }
 
 export default function AutoSync() {

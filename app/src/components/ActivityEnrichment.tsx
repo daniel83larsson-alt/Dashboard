@@ -1,12 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { zonesToSummary, type HrZone } from '@/lib/zones'
+import ZoneBar from '@/components/ZoneBar'
 
-type HrZone = { zoneNumber: number; secsInZone: number; zoneLowBoundary?: number }
 type C2Split = { distance: number; time: number; pace: number; stroke_rate?: number; heart_rate?: number }
-
-const ZONE_COLORS = ['#6b7280', '#a7bda9', '#ccd400', '#e0a83a', '#e0543a']
-const ZONE_LABELS = ['Zon 1 · Uppvärmning', 'Zon 2 · Lätt', 'Zon 3 · Måttlig', 'Zon 4 · Hård', 'Zon 5 · Max']
 
 function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
@@ -55,35 +53,14 @@ export default function ActivityEnrichment({ activityId, isGarmin }: { activityI
 
   if (isGarmin) {
     if (!zones || zones.length === 0) return null
-    const total = zones.reduce((s, z) => s + z.secsInZone, 0)
-    if (total === 0) return null
-    const sorted = [...zones].sort((a, b) => a.zoneNumber - b.zoneNumber)
+    const summary = zonesToSummary(zones)
+    if (summary.length === 0) return null
 
     return (
       <div>
         <div className="text-xs text-muted uppercase tracking-wider mb-3">Pulszoner</div>
         <div className="bg-card border border-edge rounded-2xl p-4">
-          <div className="flex h-4 rounded-full overflow-hidden gap-px mb-3">
-            {sorted.map(z => (
-              <div
-                key={z.zoneNumber}
-                style={{ width: `${(z.secsInZone / total) * 100}%`, backgroundColor: ZONE_COLORS[z.zoneNumber - 1] ?? '#6b7280' }}
-              />
-            ))}
-          </div>
-          <div className="flex flex-col gap-1.5">
-            {sorted.map(z => (
-              <div key={z.zoneNumber} className="flex items-center justify-between text-xs">
-                <span className="flex items-center gap-2 text-muted">
-                  <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: ZONE_COLORS[z.zoneNumber - 1] ?? '#6b7280' }} />
-                  {ZONE_LABELS[z.zoneNumber - 1] ?? `Zon ${z.zoneNumber}`}
-                </span>
-                <span className="font-mono text-fg">
-                  {Math.round((z.secsInZone / total) * 100)}% · {fmtDur(z.secsInZone)}
-                </span>
-              </div>
-            ))}
-          </div>
+          <ZoneBar zones={summary} />
         </div>
       </div>
     )

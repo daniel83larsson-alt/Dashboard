@@ -6,6 +6,8 @@ import { startOfWeek } from '@/lib/dates'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
 import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
+import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
+import ZoneBar from '@/components/ZoneBar'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,6 +36,7 @@ type Activity = {
   average_watts?: number
   name: string
   sport_type: string
+  raw_data?: unknown
 }
 
 type PR = { value: number; unit: string; date: string; display: string; activityId: string }
@@ -174,6 +177,9 @@ export default async function DashboardPage() {
   const yy = totals(thisYear)
 
   const sportPRs = computeAllSportPRs(activities)
+
+  const weekZones = aggregateZones(thisWeek)
+  const weekZoneCoverage = zoneCoverageCount(thisWeek)
 
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
@@ -469,6 +475,19 @@ export default async function DashboardPage() {
                 <div className="font-mono text-accent text-sm font-bold">{(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000).toFixed(0)} km</div>
                 <div className="text-muted text-xs">totalt all time</div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Veckans pulszoner ──────────────────────────────────────────────── */}
+      {weekZones.length > 0 && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Veckans pulszoner</h2>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <ZoneBar zones={weekZones} />
+            <div className="text-[10px] text-muted mt-3">
+              Baserat på {weekZoneCoverage} av {thisWeek.length} pass denna vecka — resten fylls på gradvis
             </div>
           </div>
         </div>
