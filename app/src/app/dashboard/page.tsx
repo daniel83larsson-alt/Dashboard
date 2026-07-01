@@ -188,7 +188,7 @@ export default async function DashboardPage() {
   const savedPlan = (planRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? null
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full space-y-6">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-6">
       <AutoSync />
 
       {/* Header */}

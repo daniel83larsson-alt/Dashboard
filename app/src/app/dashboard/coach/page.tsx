@@ -82,16 +82,19 @@ export default function CoachPage() {
   return (
     <div className="flex flex-col h-[100dvh] md:h-screen pb-20 md:pb-0">
       {/* Header */}
-      <div className="border-b border-edge bg-bg flex-shrink-0 px-4 py-4 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center text-lg">🚣</div>
-        <div>
-          <div className="font-semibold text-fg text-sm">Din coach</div>
-          <div className="text-xs text-muted">Träning · teknik · plan</div>
+      <div className="border-b border-edge bg-bg flex-shrink-0">
+        <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
+          <div className="w-9 h-9 rounded-full bg-accent/15 flex items-center justify-center text-lg">🚣</div>
+          <div>
+            <div className="font-semibold text-fg text-sm">Din coach</div>
+            <div className="text-xs text-muted">Träning · teknik · plan</div>
+          </div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 flex flex-col gap-4 min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="max-w-2xl mx-auto px-4 py-4 flex flex-col gap-4">
         {loadingHistory && (
           <div className="flex justify-center py-12">
             <div className="text-muted text-sm">Laddar...</div>
@@ -165,27 +168,30 @@ export default function CoachPage() {
         )}
         <div ref={bottomRef} />
       </div>
+      </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-edge bg-bg flex gap-2 items-end flex-shrink-0">
-        <textarea
-          ref={inputRef}
-          rows={1}
-          value={input}
-          onChange={handleInput}
-          onKeyDown={handleKey}
-          disabled={locked}
-          placeholder={locked ? 'Kontot är låst' : 'Skriv ett meddelande...'}
-          className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none overflow-hidden leading-relaxed disabled:opacity-50"
-          style={{ minHeight: '48px' }}
-        />
-        <button
-          onClick={send}
-          disabled={loading || !input.trim() || locked}
-          className="bg-accent text-bg font-semibold px-5 py-3 rounded-xl disabled:opacity-40 text-sm flex-shrink-0 transition-opacity h-12"
-        >
-          Skicka
-        </button>
+      <div className="border-t border-edge bg-bg flex-shrink-0">
+        <div className="max-w-2xl mx-auto p-4 flex gap-2 items-end">
+          <textarea
+            ref={inputRef}
+            rows={1}
+            value={input}
+            onChange={handleInput}
+            onKeyDown={handleKey}
+            disabled={locked}
+            placeholder={locked ? 'Kontot är låst' : 'Skriv ett meddelande...'}
+            className="flex-1 bg-card border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none overflow-hidden leading-relaxed disabled:opacity-50"
+            style={{ minHeight: '48px' }}
+          />
+          <button
+            onClick={send}
+            disabled={loading || !input.trim() || locked}
+            className="bg-accent text-bg font-semibold px-5 py-3 rounded-xl disabled:opacity-40 text-sm flex-shrink-0 transition-opacity h-12"
+          >
+            Skicka
+          </button>
+        </div>
       </div>
     </div>
   )

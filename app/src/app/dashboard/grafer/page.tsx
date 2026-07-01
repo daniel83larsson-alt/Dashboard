@@ -14,7 +14,7 @@ export default async function GraferPage() {
     .limit(200)
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Grafer</h1>
         <p className="text-muted text-sm mt-1">Trender, pace och volym</p>

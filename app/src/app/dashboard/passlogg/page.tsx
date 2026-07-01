@@ -30,7 +30,7 @@ export default async function PassloggPage() {
   const totalSessions = activities?.length ?? 0
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full">
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Passlogg</h1>
         <p className="text-muted text-sm mt-1">
@@ -47,7 +47,7 @@ export default async function PassloggPage() {
           <div className="text-muted text-sm">Dina synkade pass visas här</div>
         </div>
       ) : (
-        <div className="flex flex-col gap-2">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
           {activities.map(a => {
             const pace = fmt_pace(a.moving_time, a.distance)
             return (

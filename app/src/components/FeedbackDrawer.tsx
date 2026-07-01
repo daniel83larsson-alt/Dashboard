@@ -118,7 +118,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
             className="flex-1 bg-black/70"
             onClick={() => setOpen(false)}
           />
-          <div className="bg-card border-t border-edge rounded-t-3xl flex flex-col"
+          <div className="bg-card border-t border-edge rounded-t-3xl flex flex-col w-full max-w-2xl mx-auto"
             style={{ maxHeight: '85vh' }}>
 
             {/* Handle bar */}
