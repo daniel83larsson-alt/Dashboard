@@ -1,3 +1,5 @@
+import { sportLabel } from '@/lib/sport'
+
 export type CoachId =
   | 'roddcoach'
   | 'dataanalytiker'
@@ -47,26 +49,6 @@ export type UserContext = {
     best45min?: string
     fastest5k?: string
   }
-}
-
-const SPORT_LABELS: Record<string, string> = {
-  Rowing: 'rodd',
-  Run: 'löpning',
-  TrailRun: 'terränglöpning',
-  Ride: 'cykling',
-  VirtualRide: 'inomhuscykling',
-  Walk: 'promenad',
-  Hike: 'vandring',
-  Swim: 'simning',
-  WeightTraining: 'styrketräning',
-  Yoga: 'yoga',
-  Elliptical: 'crosstrainer',
-  Workout: 'träningspass',
-  HIIT: 'HIIT',
-}
-
-export function sportLabel(sport: string): string {
-  return SPORT_LABELS[sport] ?? sport
 }
 
 function compact(ctx: UserContext, sport: string): string {

@@ -4,6 +4,7 @@ import {
   AreaChart, Area, BarChart, Bar, LineChart, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
 } from 'recharts'
+import { isCycling, sportLabel } from '@/lib/sport'
 
 type Activity = {
   start_date: string
@@ -13,7 +14,7 @@ type Activity = {
   sport_type: string
 }
 
-type Props = { activities: Activity[] }
+type Props = { activities: Activity[]; sport: string }
 
 function fmtPace(s: number, m: number) {
   if (!m || !s) return '--'
@@ -24,6 +25,11 @@ function fmtPace(s: number, m: number) {
 function paceSeconds(s: number, m: number) {
   if (!m || !s) return null
   return Math.round((s / m) * 500)
+}
+
+function speedKmh(s: number, m: number) {
+  if (!m || !s) return null
+  return +((m / 1000) / (s / 3600)).toFixed(1)
 }
 
 const ACCENT = '#ccd400'
@@ -39,9 +45,11 @@ const tooltipStyle = {
   fontSize: 12,
 }
 
-export default function TrainingCharts({ activities }: Props) {
-  const rowing = activities.filter(a => a.sport_type === 'Rowing' && a.distance > 0 && a.moving_time > 0)
-  const recent = rowing.slice(0, 40).reverse()
+export default function TrainingCharts({ activities, sport }: Props) {
+  const filtered = activities.filter(a => a.sport_type === sport && a.distance > 0 && a.moving_time > 0)
+  const recent = filtered.slice(0, 40).reverse()
+  const cycling = isCycling(sport)
+  const label = sportLabel(sport)
 
   // ── Per-session data ──────────────────────────────────────────────────────
   const sessionData = recent.map(a => ({
@@ -49,19 +57,19 @@ export default function TrainingCharts({ activities }: Props) {
     dist: Math.round(a.distance),
     distKm: +(a.distance / 1000).toFixed(2),
     dur: Math.round(a.moving_time / 60),
-    pace: paceSeconds(a.moving_time, a.distance),
-    paceStr: fmtPace(a.moving_time, a.distance),
+    pace: cycling ? speedKmh(a.moving_time, a.distance) : paceSeconds(a.moving_time, a.distance),
+    paceStr: cycling ? `${speedKmh(a.moving_time, a.distance) ?? '--'} km/h` : `${fmtPace(a.moving_time, a.distance)}/500m`,
     hr: a.average_heartrate ? Math.round(a.average_heartrate) : null,
   }))
 
   // ── Weekly volume (last 16 weeks) ─────────────────────────────────────────
   const weeklyMap: Record<string, { dist: number; count: number; label: string }> = {}
-  rowing.forEach(a => {
+  filtered.forEach(a => {
     const d = new Date(a.start_date)
     const mon = new Date(d); mon.setDate(d.getDate() - ((d.getDay() + 6) % 7))
     const key = mon.toISOString().slice(0, 10)
-    const label = mon.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
-    if (!weeklyMap[key]) weeklyMap[key] = { dist: 0, count: 0, label }
+    const wkLabel = mon.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
+    if (!weeklyMap[key]) weeklyMap[key] = { dist: 0, count: 0, label: wkLabel }
     weeklyMap[key].dist += a.distance
     weeklyMap[key].count += 1
   })
@@ -70,13 +78,13 @@ export default function TrainingCharts({ activities }: Props) {
     .slice(-16)
     .map(([, v]) => ({ ...v, distKm: +(v.dist / 1000).toFixed(1) }))
 
-  const avgPace = sessionData.filter(d => d.pace).reduce((s, d) => s + (d.pace ?? 0), 0) / (sessionData.filter(d => d.pace).length || 1)
+  const avgPaceOrSpeed = sessionData.filter(d => d.pace != null).reduce((s, d) => s + (d.pace ?? 0), 0) / (sessionData.filter(d => d.pace != null).length || 1)
 
-  if (rowing.length === 0) {
+  if (filtered.length === 0) {
     return (
       <div className="bg-card border border-edge rounded-2xl p-10 text-center">
         <div className="text-4xl mb-3">📊</div>
-        <div className="text-muted text-sm">Inga roddpass att visa ännu</div>
+        <div className="text-muted text-sm">Inga {label}-pass att visa ännu</div>
       </div>
     )
   }
@@ -118,9 +126,11 @@ export default function TrainingCharts({ activities }: Props) {
         </ResponsiveContainer>
       </div>
 
-      {/* Pace trend */}
+      {/* Pace/speed trend */}
       <div className="bg-card border border-edge rounded-2xl p-4">
-        <div className="text-xs text-muted uppercase tracking-wider mb-4">Medelpace /500m — senaste 40</div>
+        <div className="text-xs text-muted uppercase tracking-wider mb-4">
+          {cycling ? 'Snitthastighet (km/h)' : 'Medelpace /500m'} — senaste 40
+        </div>
         <ResponsiveContainer width="100%" height={150}>
           <LineChart data={sessionData} margin={{ top: 4, right: 0, bottom: 0, left: -20 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={EDGE} vertical={false} />
@@ -129,21 +139,22 @@ export default function TrainingCharts({ activities }: Props) {
               tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false}
               domain={['auto', 'auto']}
               tickFormatter={v => {
+                if (cycling) return `${v}`
                 const m = Math.floor(v / 60); const s = Math.round(v % 60)
                 return `${m}:${s.toString().padStart(2, '0')}`
               }}
-              reversed
+              reversed={!cycling}
             />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(_: unknown, __: unknown, props: { payload?: { paceStr?: string } }) => [props.payload?.paceStr ?? '--', 'Pace /500m']}
+              formatter={(_: unknown, __: unknown, props: { payload?: { paceStr?: string } }) => [props.payload?.paceStr ?? '--', cycling ? 'Hastighet' : 'Pace /500m']}
             />
-            <ReferenceLine y={avgPace} stroke={MUTED} strokeDasharray="4 4" />
+            <ReferenceLine y={avgPaceOrSpeed} stroke={MUTED} strokeDasharray="4 4" />
             <Line type="monotone" dataKey="pace" stroke={LCD} strokeWidth={2} dot={false} connectNulls />
           </LineChart>
         </ResponsiveContainer>
         <div className="text-xs text-muted mt-2">
-          Snitt: <span className="font-mono text-lcd">{fmtPace(avgPace, 500)}/500m</span>
+          Snitt: <span className="font-mono text-lcd">{cycling ? `${avgPaceOrSpeed.toFixed(1)} km/h` : `${fmtPace(avgPaceOrSpeed, 500)}/500m`}</span>
           <span className="ml-2 opacity-50">(streckad linje)</span>
         </div>
       </div>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { fmtSpeedOrPace } from '@/lib/sport'
 
 type Activity = {
   id: string
@@ -16,30 +17,6 @@ type Activity = {
 }
 
 type Message = { role: 'user' | 'assistant'; content: string }
-
-// Rowing's /500m split pace makes no sense for cycling (speed) or
-// running/walking (min/km) — format each sport with its own convention.
-function fmtSpeedOrPace(sportType: string, distance: number, movingTime: number): { label: string; value: string } | null {
-  if (distance <= 0 || movingTime <= 0) return null
-
-  if (sportType === 'Ride' || sportType === 'VirtualRide') {
-    const kmh = (distance / 1000) / (movingTime / 3600)
-    return { label: 'Snitthastighet', value: `${kmh.toFixed(1)} km/h` }
-  }
-  if (sportType === 'Run' || sportType === 'TrailRun' || sportType === 'Walk' || sportType === 'Hike') {
-    const secPerKm = movingTime / (distance / 1000)
-    const m = Math.floor(secPerKm / 60)
-    const s = Math.round(secPerKm % 60)
-    return { label: 'Snittempo', value: `${m}:${s.toString().padStart(2, '0')}/km` }
-  }
-  if (sportType === 'Rowing') {
-    const secPer500 = (movingTime / distance) * 500
-    const m = Math.floor(secPer500 / 60)
-    const s = Math.round(secPer500 % 60)
-    return { label: 'Snittfart', value: `${m}:${s.toString().padStart(2, '0')}/500m` }
-  }
-  return null
-}
 
 export default function FeedbackDrawer({ activity }: { activity: Activity }) {
   const [open, setOpen] = useState(false)

@@ -5,6 +5,7 @@ import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek } from '@/lib/dates'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
+import { sportLabel, sportIcon, fmtSpeedOrPace, isCycling, isRunOrWalk } from '@/lib/sport'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -43,8 +44,12 @@ type Activity = {
 
 type PR = { value: number; unit: string; date: string; display: string }
 
+// Rowing-specific PR windows (20/30/45min splits, 5k time trial) are erg
+// conventions — only meaningful when compared within rowing, so this only
+// ever looks at Rowing-tagged activities. Other sports get their own bests
+// via computeOtherSportBests below instead of being mixed into these.
 function computePRs(acts: Activity[]) {
-  const real = acts.filter(a => a.distance >= 1000 && a.moving_time >= 180)
+  const real = acts.filter(a => a.sport_type === 'Rowing' && a.distance >= 1000 && a.moving_time >= 180)
 
   const best20 = real.filter(a => a.moving_time >= 1050 && a.moving_time <= 1350)
   const best30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
@@ -71,6 +76,44 @@ function computePRs(acts: Activity[]) {
   if (pr5k) prs.push({ label: 'Snabbaste 5 000 m', pr: { value: pr5k.moving_time, unit: 's', date: pr5k.start_date, display: `${fmtDur(pr5k.moving_time)} · ${fmtPace(pr5k.moving_time, pr5k.distance)}/500m` } })
 
   return prs
+}
+
+// Simple per-sport bests for cycling and running/walking — different units
+// than rowing (km/h, min/km), so kept as a separate summary rather than
+// forced into the rowing PR windows above.
+function computeOtherSportBests(acts: Activity[]) {
+  const bests: { label: string; icon: string; display: string; date: string }[] = []
+
+  const rides = acts.filter(a => isCycling(a.sport_type) && a.distance >= 1000 && a.moving_time >= 60)
+  if (rides.length) {
+    const longest = rides.reduce((b, c) => c.distance > b.distance ? c : b)
+    const speedOrPace = fmtSpeedOrPace(longest.sport_type, longest.distance, longest.moving_time)
+    bests.push({
+      label: 'Längsta cykeltur', icon: '🚴', date: longest.start_date,
+      display: `${fmtKm(longest.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}`,
+    })
+    const fastest = rides.filter(a => a.distance >= 10000).sort((a, b) =>
+      (b.distance / b.moving_time) - (a.distance / a.moving_time))[0]
+    if (fastest) {
+      const kmh = (fastest.distance / 1000) / (fastest.moving_time / 3600)
+      bests.push({ label: 'Snabbaste snitt (≥10km)', icon: '⚡', date: fastest.start_date, display: `${kmh.toFixed(1)} km/h` })
+    }
+  }
+
+  const runs = acts.filter(a => isRunOrWalk(a.sport_type) && a.distance >= 1000 && a.moving_time >= 60)
+  if (runs.length) {
+    const longest = runs.reduce((b, c) => c.distance > b.distance ? c : b)
+    const speedOrPace = fmtSpeedOrPace(longest.sport_type, longest.distance, longest.moving_time)
+    bests.push({
+      label: 'Längsta löprunda', icon: '🏃', date: longest.start_date,
+      display: `${fmtKm(longest.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}`,
+    })
+    const best5k = runs.filter(a => a.distance >= 4800 && a.distance <= 5200)
+      .reduce<Activity | null>((b, c) => (!b || c.moving_time < b.moving_time) ? c : b, null)
+    if (best5k) bests.push({ label: 'Snabbaste 5 km', icon: '⏱', date: best5k.start_date, display: fmtDur(best5k.moving_time) })
+  }
+
+  return bests
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -112,6 +155,7 @@ export default async function DashboardPage() {
 
   const activities = allActivities ?? []
   const latest = activities[0] ?? null
+  const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
@@ -126,10 +170,13 @@ export default async function DashboardPage() {
   const thisYear  = activities.filter(a => new Date(a.start_date) >= yearStart)
 
   function totals(arr: Activity[]) {
+    const sports = new Set(arr.map(a => a.sport_type))
     return {
       count: arr.length,
       dist: arr.reduce((s, a) => s + (a.distance ?? 0), 0),
       time: arr.reduce((s, a) => s + (a.moving_time ?? 0), 0),
+      // Only one meaningful pace/speed figure when the period isn't a mix of sports
+      singleSport: sports.size === 1 ? [...sports][0] : null,
     }
   }
 
@@ -138,6 +185,7 @@ export default async function DashboardPage() {
   const yy = totals(thisYear)
 
   const prs = computePRs(activities)
+  const otherBests = computeOtherSportBests(activities)
 
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
@@ -221,10 +269,12 @@ export default async function DashboardPage() {
               <div className="font-mono text-accent text-lg font-bold leading-none">{fmtDur(latest.moving_time)}</div>
               <div className="text-muted text-xs mt-1">Tid</div>
             </div>
-            <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-lcd text-lg font-bold leading-none">{fmtPace(latest.moving_time, latest.distance)}</div>
-              <div className="text-muted text-xs mt-1">/500m</div>
-            </div>
+            {latestSpeedOrPace && (
+              <div className="bg-bg rounded-xl p-3">
+                <div className="font-mono text-lcd text-lg font-bold leading-none">{latestSpeedOrPace.value}</div>
+                <div className="text-muted text-xs mt-1">{latestSpeedOrPace.label}</div>
+              </div>
+            )}
           </div>
 
           {(latest.average_heartrate || latest.average_watts) && (
@@ -362,9 +412,9 @@ export default async function DashboardPage() {
                 </div>
                 <div className="text-muted text-xs">{data.count} pass</div>
                 <div className="text-muted text-xs">{fmtDur(data.time)}</div>
-                {data.dist > 0 && (
+                {data.dist > 0 && data.singleSport && fmtSpeedOrPace(data.singleSport, data.dist, data.time) && (
                   <div className="font-mono text-lcd text-xs mt-2">
-                    ⌀ {fmtPace(data.time, data.dist)}/500m
+                    ⌀ {fmtSpeedOrPace(data.singleSport, data.dist, data.time)!.value}
                   </div>
                 )}
               </div>
@@ -373,27 +423,28 @@ export default async function DashboardPage() {
 
           {/* Sport breakdown — only show if there are multiple types */}
           {(() => {
-            const byType = activities.reduce<Record<string, number>>((acc, a) => {
+            const byType = activities.reduce<Record<string, { count: number; dist: number; time: number }>>((acc, a) => {
               const t = a.sport_type ?? 'Övrigt'
-              acc[t] = (acc[t] ?? 0) + 1
+              if (!acc[t]) acc[t] = { count: 0, dist: 0, time: 0 }
+              acc[t].count += 1
+              acc[t].dist += a.distance ?? 0
+              acc[t].time += a.moving_time ?? 0
               return acc
             }, {})
-            const types = Object.entries(byType).sort((a, b) => b[1] - a[1])
+            const types = Object.entries(byType).sort((a, b) => b[1].dist - a[1].dist)
             if (types.length <= 1) return null
-            const sportIcon: Record<string, string> = {
-              Rowing: '🚣', Run: '🏃', TrailRun: '🏔', Ride: '🚴', VirtualRide: '🚴',
-              Walk: '🚶', Hike: '🥾', Swim: '🏊', WeightTraining: '🏋️', Workout: '💪',
-              HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️',
-            }
             return (
               <div className="bg-card border border-edge rounded-2xl p-4 mt-2">
-                <div className="text-xs text-muted mb-3">Aktivitetstyper all time</div>
-                <div className="flex flex-wrap gap-2">
-                  {types.map(([type, count]) => (
-                    <div key={type} className="flex items-center gap-1.5 bg-bg rounded-lg px-3 py-1.5">
-                      <span>{sportIcon[type] ?? '🏅'}</span>
-                      <span className="text-xs text-fg">{type}</span>
-                      <span className="font-mono text-xs text-accent font-bold">{count}</span>
+                <div className="text-xs text-muted mb-3">Sportfördelning all time</div>
+                <div className="flex flex-col gap-2">
+                  {types.map(([type, s]) => (
+                    <div key={type} className="flex items-center gap-3 bg-bg rounded-lg px-3 py-2">
+                      <span className="text-lg flex-shrink-0">{sportIcon(type)}</span>
+                      <div className="flex-1 min-w-0">
+                        <div className="text-xs text-fg capitalize">{sportLabel(type)}</div>
+                        <div className="text-[10px] text-muted">{s.count} pass · {fmtDur(s.time)}</div>
+                      </div>
+                      <span className="font-mono text-xs text-accent font-bold flex-shrink-0">{fmtKm(s.dist)}</span>
                     </div>
                   ))}
                 </div>
@@ -404,17 +455,17 @@ export default async function DashboardPage() {
           {/* Extra fun stats */}
           <div className="grid grid-cols-2 gap-2 mt-2">
             <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">🚣</span>
+              <span className="text-2xl">🏅</span>
               <div>
                 <div className="font-mono text-accent text-sm font-bold">{(yy.dist / 1000).toFixed(0)} km</div>
-                <div className="text-muted text-xs">totalt {y}</div>
+                <div className="text-muted text-xs">totalt {y}, alla sporter</div>
               </div>
             </div>
             <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
               <span className="text-2xl">⏱</span>
               <div>
                 <div className="font-mono text-accent text-sm font-bold">{fmtDur(yy.time)}</div>
-                <div className="text-muted text-xs">på roddmaskinen {y}</div>
+                <div className="text-muted text-xs">träningstid {y}</div>
               </div>
             </div>
             <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
@@ -438,7 +489,7 @@ export default async function DashboardPage() {
       {/* ── Personliga rekord ─────────────────────────────────────────────── */}
       {prs.length > 0 && (
         <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Personliga rekord</h2>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Roddrekord (personbästa)</h2>
           <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
             {prs.map(({ label, pr }) => pr && (
               <div key={label} className="px-4 py-3 flex items-center justify-between">
@@ -450,6 +501,31 @@ export default async function DashboardPage() {
                 </div>
                 <div className="font-mono text-accent text-sm font-bold text-right">
                   {pr.display}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── Övriga sporters rekord ────────────────────────────────────────── */}
+      {otherBests.length > 0 && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Övriga sporter</h2>
+          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+            {otherBests.map(({ label, icon, display, date }) => (
+              <div key={label} className="px-4 py-3 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <span>{icon}</span>
+                  <div>
+                    <div className="text-sm font-medium">{label}</div>
+                    <div className="text-muted text-xs mt-0.5">
+                      {new Date(date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+                <div className="font-mono text-accent text-sm font-bold text-right">
+                  {display}
                 </div>
               </div>
             ))}

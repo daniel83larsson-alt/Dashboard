@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import TrainingCharts from '@/components/TrainingCharts'
+import SportChartsTabs from '@/components/SportChartsTabs'
 
 export default async function GraferPage() {
   const supabase = await createSupabaseServerClient()
@@ -19,7 +19,7 @@ export default async function GraferPage() {
         <h1 className="text-2xl font-semibold">Grafer</h1>
         <p className="text-muted text-sm mt-1">Trender, pace och volym</p>
       </div>
-      <TrainingCharts activities={activities ?? []} />
+      <SportChartsTabs activities={activities ?? []} />
     </div>
   )
 }
