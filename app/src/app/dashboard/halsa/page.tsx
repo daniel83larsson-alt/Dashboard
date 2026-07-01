@@ -1,20 +1,19 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessCharts'
-import InsightsSummary from '@/components/InsightsSummary'
+import HealthInsightCard from '@/components/HealthInsightCard'
 
 export default async function HalsaPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: wellnessRow }, { data: insightRow }, { count: activityCount }] = await Promise.all([
+  const [{ data: wellnessRow }, { data: healthInsightRow }] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
-    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
-    supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
   ])
 
-  const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const savedInsight = insightRaw ? (() => { try { return JSON.parse(insightRaw) } catch { return null } })() : null
+  const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
 
   const raw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const store = raw ? (() => { try { return JSON.parse(raw) } catch { return null } })() : null
@@ -156,11 +155,8 @@ export default async function HalsaPage() {
             <WellnessCharts history={history} />
           </div>
 
-          {/* Team insights, compact */}
-          <div>
-            <div className="text-xs text-muted uppercase tracking-wider mb-3">Teamets bedömning</div>
-            <InsightsSummary savedInsight={savedInsight} activityCount={activityCount ?? 0} hasWellness={history.length > 0} />
-          </div>
+          {/* Team insights, health-data only */}
+          <HealthInsightCard savedInsight={savedHealthInsight} />
         </>
       )}
     </div>

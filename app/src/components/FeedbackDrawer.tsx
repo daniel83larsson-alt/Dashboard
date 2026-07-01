@@ -97,7 +97,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
         activity.max_heartrate ? `, max-HR: ${Math.round(activity.max_heartrate)} bpm` : '',
         activity.average_watts ? `, snitt-watt: ${Math.round(activity.average_watts)}W` : '',
         zoneStr,
-        `. Ge konkret feedback på passet och tre fokuspunkter inför nästa pass.`,
+        `. Ge ett kort betyg 1-10 för passet utifrån mina mål och min plan (skriv "Betyg: X/10"), sen max 2-3 meningar konkret feedback och EN rekommendation inför nästa pass. Håll det kort — jag chattar vidare om jag vill veta mer.`,
       ]
       sendMessage(parts.join(''))
     }
