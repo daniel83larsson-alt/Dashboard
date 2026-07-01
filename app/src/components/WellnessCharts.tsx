@@ -35,6 +35,21 @@ function shortDate(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
+// Backfill gradually fills in the full year with whatever Garmin actually
+// returns — some stretches of history end up with no usable data for a
+// given metric (device not worn, or Garmin has nothing that far back), so
+// without trimming the x-axis stretches across months of empty space
+// before the real, dense recent data. Cuts each chart's own leading/
+// trailing empty run rather than sharing one window across all metrics,
+// since coverage can differ per metric.
+function trimToDataRange<T>(rows: T[], hasValue: (row: T) => boolean): T[] {
+  const first = rows.findIndex(hasValue)
+  if (first === -1) return []
+  let last = rows.length - 1
+  while (last > first && !hasValue(rows[last])) last--
+  return rows.slice(first, last + 1)
+}
+
 export default function WellnessCharts({ history }: Props) {
   if (!history.length) return null
 
@@ -49,17 +64,19 @@ export default function WellnessCharts({ history }: Props) {
 
   const latest = history[0]
 
-  const sleepData = data.map(d => ({
-    date: shortDate(d.date),
-    Djup: d.deepSleepHours ? +d.deepSleepHours.toFixed(1) : null,
-    REM: d.remSleepHours ? +d.remSleepHours.toFixed(1) : null,
-    Lätt: d.lightSleepHours ? +d.lightSleepHours.toFixed(1) : null,
-  }))
-
-  const hrData = data.map(d => ({ date: shortDate(d.date), HR: d.restingHR ?? null }))
-  const stepsData = data.map(d => ({ date: shortDate(d.date), Steg: d.steps ?? null }))
-  const hrvData = data.map(d => ({ date: shortDate(d.date), HRV: d.hrv ? +d.hrv.toFixed(0) : null }))
-  const batteryData = data.map(d => ({ date: shortDate(d.date), Batteri: d.bodyBattery ?? null }))
+  const sleepData = trimToDataRange(
+    data.map(d => ({
+      date: shortDate(d.date),
+      Djup: d.deepSleepHours ? +d.deepSleepHours.toFixed(1) : null,
+      REM: d.remSleepHours ? +d.remSleepHours.toFixed(1) : null,
+      Lätt: d.lightSleepHours ? +d.lightSleepHours.toFixed(1) : null,
+    })),
+    d => d.Djup != null || d.REM != null || d.Lätt != null
+  )
+  const hrData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), HR: d.restingHR ?? null })), d => d.HR != null)
+  const stepsData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), Steg: d.steps ?? null })), d => d.Steg != null)
+  const hrvData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), HRV: d.hrv ? +d.hrv.toFixed(0) : null })), d => d.HRV != null)
+  const batteryData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), Batteri: d.bodyBattery ?? null })), d => d.Batteri != null)
 
   const avgHR = hasHR ? Math.round(data.filter(d => d.restingHR).reduce((s, d) => s + d.restingHR!, 0) / data.filter(d => d.restingHR).length) : null
 
