@@ -8,9 +8,15 @@ type FlagEntry = { at: string; reason: string; snippet: string }
 
 type Message = { role: string; content: string }
 
+// Shorter replies + a bounded slice of history — keeps both output tokens
+// and input tokens (context grows with every turn otherwise) down, since
+// most users share one Gemini quota. Full history still stays in the DB.
+const MAX_REPLY_TOKENS = 500
+const MAX_HISTORY_TURNS = 16
+
 async function callGemini(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
   const contents = [
-    ...history.map(m => ({
+    ...history.slice(-MAX_HISTORY_TURNS).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
       parts: [{ text: m.content }],
     })),
@@ -24,7 +30,7 @@ async function callGemini(apiKey: string, systemPrompt: string, history: Message
       body: JSON.stringify({
         contents,
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
+        generationConfig: { maxOutputTokens: MAX_REPLY_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
       }),
     }
   )
@@ -41,10 +47,10 @@ async function callAnthropic(apiKey: string, systemPrompt: string, history: Mess
   const client = new Anthropic({ apiKey })
   const response = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
+    max_tokens: MAX_REPLY_TOKENS,
     system: systemPrompt,
     messages: [
-      ...history.map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      ...history.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
       { role: 'user', content: message },
     ],
   })

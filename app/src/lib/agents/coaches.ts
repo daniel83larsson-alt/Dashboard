@@ -86,7 +86,7 @@ SENASTE PASS (sport per rad inom hakparentes):
 ${acts}`
 }
 
-const REGLER = `REGLER: Konsistens > perfektion. Lågt tröskel. Återhämtning styr volym. Svara på svenska, var kortfattad och konkret.`
+const REGLER = `REGLER: Konsistens > perfektion. Lågt tröskel. Återhämtning styr volym. Svara på svenska. Håll svaret kort — max 4-5 meningar om inte användaren uttryckligen ber om en längre genomgång.`
 
 export const COACHES: Coach[] = [
   {

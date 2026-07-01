@@ -4,14 +4,39 @@ import { startOfWeek } from '@/lib/dates'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-async function askAgent(apiKey: string, system: string, question: string, maxTokens = 350): Promise<string> {
+type AgentInsights = { data: string; recovery: string; mental: string; strength: string; mobility: string; summary: string }
+
+// Single call producing all five specialist perspectives + the head coach's
+// summary in one structured response, instead of six separate Gemini calls
+// (one per specialist + one synthesis) — same shared quota, a sixth of the
+// requests, at the cost of each perspective being generated in the same
+// pass rather than fully independently.
+async function askAgentTeam(apiKey: string, question: string): Promise<AgentInsights> {
+  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker, återhämtnings- och belastningsspecialist, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: 3-5 meningar, svenska, konkret, gå direkt på sak — utom "summary" som är huvudcoachens syntes i 4-6 meningar (fetstil/punktlistor tillåtet där).`
+
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ role: 'user', parts: [{ text: question }] }],
       systemInstruction: { parts: [{ text: system }] },
-      generationConfig: { maxOutputTokens: maxTokens, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: {
+        maxOutputTokens: 1600,
+        thinkingConfig: { thinkingBudget: 0 },
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            data: { type: 'STRING' },
+            recovery: { type: 'STRING' },
+            mental: { type: 'STRING' },
+            strength: { type: 'STRING' },
+            mobility: { type: 'STRING' },
+            summary: { type: 'STRING' },
+          },
+          required: ['data', 'recovery', 'mental', 'strength', 'mobility', 'summary'],
+        },
+      },
     }),
   })
   const d = await res.json()
@@ -19,7 +44,7 @@ async function askAgent(apiKey: string, system: string, question: string, maxTok
   if (!res.ok || !text) {
     throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
   }
-  return text
+  return JSON.parse(text) as AgentInsights
 }
 
 export async function POST() {
@@ -90,63 +115,37 @@ ${overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 ${userBio ? `BAKGRUND: ${userBio}` : ''}
 ${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE ÄNNU — endast Garmin-hälsodata (sömn/puls/steg) tillgänglig.'}`
 
-    // Each specialist gets a unique, focused question — adapted when there's
-    // no logged training yet so they don't force a training-frame onto
-    // wellness-only data (e.g. a user who's only connected Garmin so far)
-    const [data, recovery, mental, strength, mobility] = await Promise.all([
-      askAgent(
-        apiKey,
-        'Du är datadriven träningsanalytiker. Svara på svenska, 3-5 meningar. Gå direkt på mönster — hoppa över sammanfattning av grundstatistik.',
-        hasActivities
-          ? `Identifiera 2-3 konkreta trender eller avvikelser i träningsdata nedan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror.\n\n${dataBlock}`
-          : `Inga träningspass är loggade än, men det finns hälsodata från Garmin. Analysera sömn-, steg- och pulstrender nedan — vad säger de om vardagsaktivitet och återhämtningsbas inför att börja träna strukturerat?\n\n${dataBlock}`
-      ),
-      askAgent(
-        apiKey,
-        'Du är återhämtnings- och belastningsspecialist. Svara på svenska, 3-5 meningar. Fokusera ENBART på återhämtning, inte på träningsupplägg.',
-        hasActivities
-          ? `Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.\n\n${dataBlock}`
-          : `Bedöm återhämtningsbasen utifrån sömn, vilopuls och HRV nedan (inga träningspass loggade än). Är kroppen i ett bra läge för att börja träna? Ge ett konkret råd.\n\n${dataBlock}`
-      ),
-      askAgent(
-        apiKey,
-        'Du är mentalcoach för idrottare. Svara på svenska, 3-5 meningar. Fokusera ENBART på det mentala — inte på fysisk träning.',
-        hasActivities
-          ? `Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.\n\n${dataBlock}`
-          : `Inga pass är loggade än. Ge ett konkret mentalt verktyg eller lågtröskel-tankesätt för att komma igång med strukturerad träning, utifrån bakgrunden nedan.\n\n${dataBlock}`
-      ),
-      askAgent(
-        apiKey,
-        'Du är styrkecoach specialiserad på kompletterande träning för roddare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA övningar — inte generella råd.',
-        hasActivities
-          ? `Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.\n\n${dataBlock}`
-          : `Inga pass är loggade än. Föreslå ett enkelt, lågtröskel startprogram (3-4 övningar, sets/reps) för att börja bygga en grund, anpassat efter bakgrunden nedan.\n\n${dataBlock}`
-      ),
-      askAgent(
-        apiKey,
-        'Du är rörlighets- och stretchcoach specialiserad på roddare och uthållighetsidrottare. Svara på svenska, 3-5 meningar. Föreslå KONKRETA stretch-/mobilityövningar — inte generella råd.',
-        hasActivities
-          ? `Baserat på vilken typ av träning atleten kör (se sporttyp och volym i datan), vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.\n\n${dataBlock}`
-          : `Inga pass är loggade än. Föreslå 3-4 generella rörlighetsövningar som är bra att bygga in som vana innan strukturerad träning börjar, med namn och hur länge/ofta.\n\n${dataBlock}`
-      ),
-    ])
+    // One combined question covering all five specialist angles plus the
+    // head-coach synthesis — adapted when there's no logged training yet so
+    // the team doesn't force a training-frame onto wellness-only data (e.g.
+    // a user who's only connected Garmin so far).
+    const question = `${dataBlock}
 
-    // Head coach synthesizes all specialist input
-    const summaryContext = `${dataBlock}
+Ge teamets bedömning av datan ovan, ett fält per roll:
 
-SPECIALISTERNAS BEDÖMNINGAR:
-📊 Dataanalytiker: ${data}
-💤 Återhämtning: ${recovery}
-🧠 Mental: ${mental}
-💪 Styrka: ${strength}
-🤸 Rörlighet: ${mobility}`
+data (Dataanalytiker): ${hasActivities
+      ? 'Identifiera 2-3 konkreta trender eller avvikelser i träningsdatan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror. Hoppa över sammanfattning av grundstatistik.'
+      : 'Inga träningspass är loggade än, men det finns hälsodata från Garmin. Analysera sömn-, steg- och pulstrender — vad säger de om vardagsaktivitet och återhämtningsbas inför att börja träna strukturerat?'}
 
-    const summary = await askAgent(
-      apiKey,
-      'Du är huvudcoach och ordförande för detta tränarteam. Svara på svenska. Skriv en syntes i 4-6 meningar. Du får använda fetstil och punktlistor för tydlighet.',
-      `Läs specialisternas bedömningar och sammanfatta det viktigaste för atleten. Vad är det enda viktigaste fokusområdet just nu? Ge 2-3 konkreta prioriteringar för de kommande 2 veckorna.\n\n${summaryContext}`,
-      500
-    )
+recovery (Återhämtningsspecialist, fokusera ENBART på återhämtning): ${hasActivities
+      ? 'Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.'
+      : 'Bedöm återhämtningsbasen utifrån sömn, vilopuls och HRV (inga träningspass loggade än). Är kroppen i ett bra läge för att börja träna? Ge ett konkret råd.'}
+
+mental (Mentalcoach, fokusera ENBART på det mentala): ${hasActivities
+      ? 'Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.'
+      : 'Inga pass är loggade än. Ge ett konkret mentalt verktyg eller lågtröskel-tankesätt för att komma igång med strukturerad träning.'}
+
+strength (Styrkecoach för kompletterande träning, KONKRETA övningar): ${hasActivities
+      ? 'Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.'
+      : 'Inga pass är loggade än. Föreslå ett enkelt, lågtröskel startprogram (3-4 övningar, sets/reps).'}
+
+mobility (Rörlighets-/stretchcoach, KONKRETA övningar): ${hasActivities
+      ? 'Baserat på vilken typ av träning atleten kör, vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.'
+      : 'Inga pass är loggade än. Föreslå 3-4 generella rörlighetsövningar som bra vanor att bygga in, med namn och hur länge/ofta.'}
+
+summary (Huvudcoach): Läs de fem bedömningarna du själv precis formulerat och sammanfatta det viktigaste för atleten. Vad är det enda viktigaste fokusområdet just nu? Ge 2-3 konkreta prioriteringar för de kommande 2 veckorna.`
+
+    const { data, recovery, mental, strength, mobility, summary } = await askAgentTeam(apiKey, question)
 
     const insight = {
       generatedAt: now.toISOString(),

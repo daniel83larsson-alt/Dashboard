@@ -75,9 +75,17 @@ onTopic=false: meddelandet handlar om programmering/kod, allmänna kunskapsfråg
 
 export type ModerationResult = { blocked: boolean; reason?: string }
 
+const SHORT_MESSAGE_LIMIT = 24 // chars
+
 export async function moderateMessage(apiKey: string, message: string): Promise<ModerationResult> {
   const patternHit = checkPatterns(message)
   if (patternHit) return { blocked: true, reason: patternHit }
+
+  // Short follow-ups ("ja", "tack", "20 min", "typ 5 km") are overwhelmingly
+  // benign in an ongoing coach conversation — the topic-check prompt itself
+  // already says to allow these, so skip the LLM call entirely for them
+  // rather than spending a Gemini request confirming the obvious.
+  if (message.trim().length <= SHORT_MESSAGE_LIMIT) return { blocked: false }
 
   const onTopic = await checkTopicRelevance(apiKey, message)
   if (!onTopic) return { blocked: true, reason: 'Orelaterat ämne' }
