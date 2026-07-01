@@ -5,7 +5,7 @@ import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek } from '@/lib/dates'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
-import { sportLabel, sportIcon, fmtSpeedOrPace, isCycling, isRunOrWalk } from '@/lib/sport'
+import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,12 +16,6 @@ function fmtDur(s: number) {
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m} min`
-}
-
-function fmtPace(seconds: number, meters: number) {
-  if (!meters) return '--'
-  const p = (seconds / meters) * 500
-  return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}`
 }
 
 function fmtDateLong(d: string) {
@@ -42,78 +36,73 @@ type Activity = {
   sport_type: string
 }
 
-type PR = { value: number; unit: string; date: string; display: string }
+type PR = { value: number; unit: string; date: string; display: string; activityId: string }
+type SportPRs = { sport: string; totalDist: number; prs: { label: string; pr: PR }[] }
 
-// Rowing-specific PR windows (20/30/45min splits, 5k time trial) are erg
-// conventions — only meaningful when compared within rowing, so this only
-// ever looks at Rowing-tagged activities. Other sports get their own bests
-// via computeOtherSportBests below instead of being mixed into these.
-function computePRs(acts: Activity[]) {
-  const real = acts.filter(a => a.sport_type === 'Rowing' && a.distance >= 1000 && a.moving_time >= 180)
+// Same best-effort-window convention rowing PRs use (best distance covered
+// in ~20/30/45 min), generalized to any distance-based sport so each one
+// gets its own personal bests instead of only rowing having them.
+const TIME_WINDOWS = [
+  { label: '20 min', minSec: 1050, maxSec: 1350 },
+  { label: '30 min', minSec: 1620, maxSec: 1980 },
+  { label: '45 min', minSec: 2460, maxSec: 3000 },
+]
 
-  const best20 = real.filter(a => a.moving_time >= 1050 && a.moving_time <= 1350)
-  const best30 = real.filter(a => a.moving_time >= 1620 && a.moving_time <= 1980)
-  const best45 = real.filter(a => a.moving_time >= 2460 && a.moving_time <= 3000)
-  const best5k  = real.filter(a => a.distance >= 4800 && a.distance <= 5200)
-
-  function top<T extends Activity>(arr: T[], key: keyof T, dir: 'max' | 'min'): T | null {
-    if (!arr.length) return null
-    return arr.reduce((best, cur) =>
-      dir === 'max' ? (cur[key] > best[key] ? cur : best) : (cur[key] < best[key] ? cur : best)
-    )
-  }
-
-  const pr20 = top(best20, 'distance', 'max')
-  const pr30 = top(best30, 'distance', 'max')
-  const pr45 = top(best45, 'distance', 'max')
-  const pr5k = top(best5k, 'moving_time', 'min')
-
-  const prs: { label: string; pr: PR | null }[] = []
-
-  if (pr20) prs.push({ label: 'Bäst 20 min', pr: { value: pr20.distance, unit: 'm', date: pr20.start_date, display: `${pr20.distance} m · ${fmtPace(pr20.moving_time, pr20.distance)}/500m` } })
-  if (pr30) prs.push({ label: 'Bäst 30 min', pr: { value: pr30.distance, unit: 'm', date: pr30.start_date, display: `${pr30.distance} m · ${fmtPace(pr30.moving_time, pr30.distance)}/500m` } })
-  if (pr45) prs.push({ label: 'Bäst 45 min', pr: { value: pr45.distance, unit: 'm', date: pr45.start_date, display: `${pr45.distance} m · ${fmtPace(pr45.moving_time, pr45.distance)}/500m` } })
-  if (pr5k) prs.push({ label: 'Snabbaste 5 000 m', pr: { value: pr5k.moving_time, unit: 's', date: pr5k.start_date, display: `${fmtDur(pr5k.moving_time)} · ${fmtPace(pr5k.moving_time, pr5k.distance)}/500m` } })
-
-  return prs
+// "Snabbaste X" benchmark distance per sport — rowing/running race over 5k,
+// cycling benchmarks are conventionally longer, swimming shorter.
+const BENCHMARK_DISTANCE: Record<string, { meters: number; label: string }> = {
+  Rowing: { meters: 5000, label: '5 000 m' },
+  Run: { meters: 5000, label: '5 km' },
+  TrailRun: { meters: 5000, label: '5 km' },
+  Walk: { meters: 5000, label: '5 km' },
+  Hike: { meters: 5000, label: '5 km' },
+  Ride: { meters: 20000, label: '20 km' },
+  VirtualRide: { meters: 20000, label: '20 km' },
+  Swim: { meters: 1000, label: '1 000 m' },
 }
 
-// Simple per-sport bests for cycling and running/walking — different units
-// than rowing (km/h, min/km), so kept as a separate summary rather than
-// forced into the rowing PR windows above.
-function computeOtherSportBests(acts: Activity[]) {
-  const bests: { label: string; icon: string; display: string; date: string }[] = []
+// Only sports where distance/pace PRs are meaningful — strength/yoga/etc.
+// don't fit this "personal best" shape and are left out.
+const PR_ELIGIBLE_SPORTS = new Set(Object.keys(BENCHMARK_DISTANCE))
 
-  const rides = acts.filter(a => isCycling(a.sport_type) && a.distance >= 1000 && a.moving_time >= 60)
-  if (rides.length) {
-    const longest = rides.reduce((b, c) => c.distance > b.distance ? c : b)
-    const speedOrPace = fmtSpeedOrPace(longest.sport_type, longest.distance, longest.moving_time)
-    bests.push({
-      label: 'Längsta cykeltur', icon: '🚴', date: longest.start_date,
-      display: `${fmtKm(longest.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}`,
+function computeSportPRs(acts: Activity[], sport: string): SportPRs {
+  const real = acts.filter(a => a.sport_type === sport && a.distance >= 200 && a.moving_time >= 60)
+  const prs: { label: string; pr: PR }[] = []
+
+  for (const w of TIME_WINDOWS) {
+    const inWindow = real.filter(a => a.moving_time >= w.minSec && a.moving_time <= w.maxSec)
+    if (!inWindow.length) continue
+    const best = inWindow.reduce((b, c) => c.distance > b.distance ? c : b)
+    const speedOrPace = fmtSpeedOrPace(sport, best.distance, best.moving_time)
+    prs.push({
+      label: `Bäst ${w.label}`,
+      pr: { value: best.distance, unit: 'm', date: best.start_date, activityId: best.id, display: `${fmtKm(best.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
     })
-    const fastest = rides.filter(a => a.distance >= 10000).sort((a, b) =>
-      (b.distance / b.moving_time) - (a.distance / a.moving_time))[0]
-    if (fastest) {
-      const kmh = (fastest.distance / 1000) / (fastest.moving_time / 3600)
-      bests.push({ label: 'Snabbaste snitt (≥10km)', icon: '⚡', date: fastest.start_date, display: `${kmh.toFixed(1)} km/h` })
+  }
+
+  const bench = BENCHMARK_DISTANCE[sport]
+  if (bench) {
+    const near = real.filter(a => a.distance >= bench.meters * 0.96 && a.distance <= bench.meters * 1.04)
+    if (near.length) {
+      const fastest = near.reduce((b, c) => c.moving_time < b.moving_time ? c : b)
+      const speedOrPace = fmtSpeedOrPace(sport, fastest.distance, fastest.moving_time)
+      prs.push({
+        label: `Snabbaste ${bench.label}`,
+        pr: { value: fastest.moving_time, unit: 's', date: fastest.start_date, activityId: fastest.id, display: `${fmtDur(fastest.moving_time)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
+      })
     }
   }
 
-  const runs = acts.filter(a => isRunOrWalk(a.sport_type) && a.distance >= 1000 && a.moving_time >= 60)
-  if (runs.length) {
-    const longest = runs.reduce((b, c) => c.distance > b.distance ? c : b)
-    const speedOrPace = fmtSpeedOrPace(longest.sport_type, longest.distance, longest.moving_time)
-    bests.push({
-      label: 'Längsta löprunda', icon: '🏃', date: longest.start_date,
-      display: `${fmtKm(longest.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}`,
-    })
-    const best5k = runs.filter(a => a.distance >= 4800 && a.distance <= 5200)
-      .reduce<Activity | null>((b, c) => (!b || c.moving_time < b.moving_time) ? c : b, null)
-    if (best5k) bests.push({ label: 'Snabbaste 5 km', icon: '⏱', date: best5k.start_date, display: fmtDur(best5k.moving_time) })
-  }
+  const totalDist = real.reduce((s, a) => s + a.distance, 0)
+  return { sport, totalDist, prs }
+}
 
-  return bests
+function computeAllSportPRs(acts: Activity[]): SportPRs[] {
+  const sports = [...new Set(acts.map(a => a.sport_type))].filter(s => PR_ELIGIBLE_SPORTS.has(s))
+  return sports
+    .map(sport => computeSportPRs(acts, sport))
+    .filter(s => s.prs.length > 0)
+    .sort((a, b) => b.totalDist - a.totalDist)
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -184,8 +173,7 @@ export default async function DashboardPage() {
   const mm = totals(thisMonth)
   const yy = totals(thisYear)
 
-  const prs = computePRs(activities)
-  const otherBests = computeOtherSportBests(activities)
+  const sportPRs = computeAllSportPRs(activities)
 
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
@@ -486,13 +474,20 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Personliga rekord ─────────────────────────────────────────────── */}
-      {prs.length > 0 && (
-        <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Roddrekord (personbästa)</h2>
+      {/* ── Personliga rekord per sport ───────────────────────────────────── */}
+      {sportPRs.map(({ sport, prs }) => (
+        <div key={sport}>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3 flex items-center gap-1.5">
+            <span>{sportIcon(sport)}</span>
+            <span className="capitalize">{sportLabel(sport)} — personbästa</span>
+          </h2>
           <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-            {prs.map(({ label, pr }) => pr && (
-              <div key={label} className="px-4 py-3 flex items-center justify-between">
+            {prs.map(({ label, pr }) => (
+              <a
+                key={label}
+                href={`/dashboard/passlogg/${pr.activityId}`}
+                className="px-4 py-3 flex items-center justify-between hover:bg-bg transition-colors"
+              >
                 <div>
                   <div className="text-sm font-medium">{label}</div>
                   <div className="text-muted text-xs mt-0.5">
@@ -502,36 +497,11 @@ export default async function DashboardPage() {
                 <div className="font-mono text-accent text-sm font-bold text-right">
                   {pr.display}
                 </div>
-              </div>
+              </a>
             ))}
           </div>
         </div>
-      )}
-
-      {/* ── Övriga sporters rekord ────────────────────────────────────────── */}
-      {otherBests.length > 0 && (
-        <div>
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Övriga sporter</h2>
-          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-            {otherBests.map(({ label, icon, display, date }) => (
-              <div key={label} className="px-4 py-3 flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span>{icon}</span>
-                  <div>
-                    <div className="text-sm font-medium">{label}</div>
-                    <div className="text-muted text-xs mt-0.5">
-                      {new Date(date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </div>
-                  </div>
-                </div>
-                <div className="font-mono text-accent text-sm font-bold text-right">
-                  {display}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      ))}
 
       {/* ── Mål ─────────────────────────────────────────────────────────────── */}
       <div>
