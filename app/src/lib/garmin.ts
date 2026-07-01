@@ -48,20 +48,38 @@ export function garminActivityToRow(a: IActivity, userId: string) {
   }
 }
 
-function mapActivityType(typeKey: string): string {
-  const map: Record<string, string> = {
+export function mapActivityType(typeKey: string): string {
+  const key = (typeKey || '').toLowerCase()
+  const exact: Record<string, string> = {
     rowing: 'Rowing',
     indoor_rowing: 'Rowing',
     running: 'Run',
     street_running: 'Run',
-    trail_running: 'TrailRun',
+    treadmill_running: 'Run',
+    track_running: 'Run',
     indoor_running: 'Run',
+    ultra_run: 'Run',
+    trail_running: 'TrailRun',
     cycling: 'Ride',
+    road_biking: 'Ride',
+    mountain_biking: 'Ride',
+    gravel_cycling: 'Ride',
+    cyclocross: 'Ride',
+    cyclocross_cycling: 'Ride',
+    track_cycling: 'Ride',
+    recumbent_cycling: 'Ride',
+    handcycling: 'Ride',
+    e_bike_fitness: 'Ride',
+    e_bike_mountain: 'Ride',
+    virtual_ride: 'VirtualRide',
     indoor_cycling: 'VirtualRide',
     walking: 'Walk',
+    casual_walking: 'Walk',
+    speed_walking: 'Walk',
     hiking: 'Hike',
     swimming: 'Swim',
     open_water_swimming: 'Swim',
+    lap_swimming: 'Swim',
     strength_training: 'WeightTraining',
     fitness_equipment: 'WeightTraining',
     yoga: 'Yoga',
@@ -69,7 +87,24 @@ function mapActivityType(typeKey: string): string {
     indoor_cardio: 'Workout',
     hiit: 'HIIT',
   }
-  return map[typeKey] ?? 'Workout'
+  if (exact[key]) return exact[key]
+
+  // Fallback for typeKeys Garmin adds over time that aren't in the exact
+  // list above (e-bikes, regional cycling variants, etc.) — matched by
+  // substring rather than dumped into the generic 'Workout' bucket.
+  if (key.includes('row')) return 'Rowing'
+  if (key.includes('trail') && key.includes('run')) return 'TrailRun'
+  if (key.includes('run')) return 'Run'
+  if (key.includes('cycl') || key.includes('bik')) return key.includes('indoor') || key.includes('virtual') ? 'VirtualRide' : 'Ride'
+  if (key.includes('walk')) return 'Walk'
+  if (key.includes('hik')) return 'Hike'
+  if (key.includes('swim')) return 'Swim'
+  if (key.includes('strength') || key.includes('weight')) return 'WeightTraining'
+  if (key.includes('yoga')) return 'Yoga'
+  if (key.includes('elliptical')) return 'Elliptical'
+  if (key.includes('hiit')) return 'HIIT'
+
+  return 'Workout'
 }
 
 function formatDate(dateStr: string) {

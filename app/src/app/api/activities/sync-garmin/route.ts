@@ -7,6 +7,7 @@ import {
   fetchGarminSleepFull,
   fetchGarminSteps,
   fetchGarminDayWellness,
+  mapActivityType,
 } from '@/lib/garmin'
 import { decrypt } from '@/lib/encrypt'
 import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
@@ -231,6 +232,27 @@ export async function POST() {
 
     const cleaned = await autoCleanupDuplicates(supabase, user.id)
 
+    // Self-heal previously-synced Garmin activities that fell back to the
+    // generic 'Workout' bucket under an older, narrower type mapping — the
+    // real Garmin typeKey is preserved in raw_data, so this re-derives the
+    // sport each sync without needing a one-off migration.
+    let reclassified = 0
+    const { data: unclassified } = await supabase
+      .from('activities')
+      .select('id, raw_data')
+      .eq('user_id', user.id)
+      .eq('sport_type', 'Workout')
+      .gte('strava_id', 0)
+    for (const row of unclassified ?? []) {
+      const typeKey = (row.raw_data as { activityType?: { typeKey?: string } } | null)?.activityType?.typeKey
+      if (!typeKey) continue
+      const newType = mapActivityType(typeKey)
+      if (newType !== 'Workout') {
+        await supabase.from('activities').update({ sport_type: newType }).eq('id', row.id)
+        reclassified++
+      }
+    }
+
     return NextResponse.json({
       synced: toUpsert.length,
       wellness: todayWellness,
@@ -239,6 +261,7 @@ export async function POST() {
       activitiesBackfilled: backfillActivities.length,
       activitiesBackfillDone: newCursor.done,
       cleaned,
+      reclassified,
     })
   } catch (err) {
     console.error('Garmin sync error:', err)

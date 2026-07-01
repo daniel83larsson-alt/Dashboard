@@ -127,7 +127,8 @@ export default function ProfileForm({
       const res = await fetch('/api/activities/sync-garmin', { method: 'POST' })
       const data = await res.json()
       if (data.synced !== undefined) {
-        setGarminMsg(`Synkade ${data.synced} nya pass`)
+        const reclass = data.reclassified ? ` · ${data.reclassified} omklassade` : ''
+        setGarminMsg(`Synkade ${data.synced} nya pass${reclass}`)
         router.refresh()
       } else {
         setGarminMsg(data.error ?? 'Något gick fel')
