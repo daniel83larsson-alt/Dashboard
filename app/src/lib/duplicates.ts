@@ -57,3 +57,43 @@ export function suggestKeepId(group: ActivityRow[]): string {
     (cur.created_at ?? '') > (best.created_at ?? '') ? cur : best
   ).id
 }
+
+export type MergedPair<T extends ActivityRow> = { primary: T; partner: T }
+
+// Splits activities into a) genuine Concept2+Garmin pairs for the SAME
+// session, which should be treated as one pass everywhere distance/time
+// gets summed or counted, and b) everything else (unmatched activities,
+// plus same-source duplicate groups — those are real dupes to delete via
+// DuplicateCleanup, not two complementary sources to merge). Only exact
+// 1-Garmin + 1-Concept2 groups are merged; anything ambiguous (3+ way ties,
+// two Garmin rows, etc.) is left alone rather than guessed at.
+export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { singles: T[]; pairs: MergedPair<T>[] } {
+  const groups = findDuplicateGroups(activities)
+  const merged = new Set<string>()
+  const pairs: MergedPair<T>[] = []
+
+  for (const group of groups) {
+    const garmin = group.filter(a => a.strava_id >= 0)
+    const concept2 = group.filter(a => a.strava_id < 0)
+    if (garmin.length === 1 && concept2.length === 1) {
+      const primary = activities.find(a => a.id === concept2[0].id)!
+      const partner = activities.find(a => a.id === garmin[0].id)!
+      pairs.push({ primary, partner })
+      merged.add(primary.id)
+      merged.add(partner.id)
+    }
+  }
+
+  return { singles: activities.filter(a => !merged.has(a.id)), pairs }
+}
+
+// One row per real session for stats: merged pairs count once (using the
+// more precise Concept2 distance/time), so total km/pass counts and PRs
+// don't double a workout that happened to sync from two sources. Keeps the
+// caller's original ordering (callers rely on this already being sorted by
+// start_date, e.g. activities[0] as "latest pass").
+export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
+  const { pairs } = splitMergedPairs(activities)
+  const dropped = new Set(pairs.map(p => p.partner.id))
+  return activities.filter(a => !dropped.has(a.id))
+}

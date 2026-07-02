@@ -14,7 +14,15 @@ export async function GET() {
       .eq('user_id', user.id)
       .order('start_date', { ascending: false })
 
-    const groups = findDuplicateGroups(activities ?? [])
+    // A clean 1-Garmin + 1-Concept2 pair is now merged for display and
+    // stats (Passlogg, dashboard totals) instead of being a delete-one
+    // choice — only flag groups that AREN'T that (same-source double-syncs,
+    // 3+-way ties), where deletion is still the right call.
+    const groups = findDuplicateGroups(activities ?? []).filter(group => {
+      const garmin = group.filter(a => a.strava_id >= 0)
+      const concept2 = group.filter(a => a.strava_id < 0)
+      return !(garmin.length === 1 && concept2.length === 1)
+    })
     const result = groups.map(group => ({ activities: group, suggestedKeepId: suggestKeepId(group) }))
 
     return NextResponse.json({ groups: result })

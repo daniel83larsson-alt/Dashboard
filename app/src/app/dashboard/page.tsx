@@ -8,6 +8,7 @@ import SyncAllButton from '@/components/SyncAllButton'
 import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
+import { dedupeForStats } from '@/lib/duplicates'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -33,6 +34,8 @@ function shortTake(text: string, max = 140): string {
 
 type Activity = {
   id: string
+  strava_id: number
+  description?: string | null
   start_date: string
   distance: number
   moving_time: number
@@ -152,7 +155,10 @@ export default async function DashboardPage() {
   const wellnessStore: WellnessStore | null = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
   const wellness: DayWellness | null = wellnessStore?.history?.[0] ?? null
 
-  const activities = allActivities ?? []
+  // Concept2 + Garmin can both sync the same real session — count it once
+  // in every stat/PR below, not twice, using the more precise Concept2 row
+  // when a pair is found.
+  const activities: Activity[] = dedupeForStats(allActivities ?? [])
   const latest = activities[0] ?? null
   const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
 
