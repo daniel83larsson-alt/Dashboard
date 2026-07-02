@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { NAV_ITEMS } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
@@ -11,7 +11,6 @@ const PINNED = ['/dashboard', '/dashboard/coach']
 
 export default function BottomNav({ isAdmin }: { isAdmin?: boolean } = {}) {
   const pathname = usePathname()
-  const router = useRouter()
   const [open, setOpen] = useState(false)
   const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
 
@@ -21,7 +20,10 @@ export default function BottomNav({ isAdmin }: { isAdmin?: boolean } = {}) {
   async function signOut() {
     const supabase = createSupabaseClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    // Hard navigation, not router.push — see login/page.tsx. Same-browser,
+    // different-person handoff (phone passed around, shared device) is the
+    // exact scenario where a client-cached page/layout can leak across users.
+    window.location.href = '/login'
   }
 
   return (

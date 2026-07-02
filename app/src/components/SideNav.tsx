@@ -1,20 +1,23 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
+import { usePathname } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { NAV_ITEMS } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
 
 export default function SideNav({ userName, isAdmin }: { userName: string; isAdmin?: boolean }) {
   const pathname = usePathname()
-  const router = useRouter()
   const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
 
   async function signOut() {
     const supabase = createSupabaseClient()
     await supabase.auth.signOut()
-    router.push('/login')
+    // Hard navigation — see login/page.tsx for why: this layout (including
+    // userName above) is cached client-side across route changes, and
+    // Supabase's cookie write isn't visible to that cache. A soft push can
+    // leave the NEXT person on this browser looking at this user's shell.
+    window.location.href = '/login'
   }
 
   return (

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup'>('login')
@@ -12,7 +11,6 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
-  const router = useRouter()
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -35,8 +33,17 @@ export default function LoginPage() {
       else setMessage('Kolla din e-post och klicka på länken för att aktivera kontot.')
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) setError('Felaktig e-post eller lösenord')
-      else router.push('/dashboard')
+      if (error) {
+        setError('Felaktig e-post eller lösenord')
+      } else {
+        // Hard navigation, not router.push — Supabase's browser client sets
+        // the session cookie directly via document.cookie, which Next.js's
+        // client-side route cache has no way to know about. A client-side
+        // push can therefore reuse a PREVIOUS user's cached page/layout
+        // (e.g. the last person who used this browser) until a real reload
+        // happens. Auth transitions always get a full reload.
+        window.location.href = '/dashboard'
+      }
     }
     setLoading(false)
   }
