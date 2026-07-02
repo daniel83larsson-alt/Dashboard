@@ -1,0 +1,61 @@
+-- Hemkoll — nya tabeller i SAMMA Supabase-projekt som DL Trainer, men helt
+-- isolerade från dess tabeller (egen "hemkoll_"-prefix, egen RLS per
+-- auth.uid()). Delar bara inloggningssystemet (auth.users), inte data.
+-- Kör i Supabase SQL Editor.
+
+create extension if not exists pgcrypto;
+
+create table if not exists public.hemkoll_house_items (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  name text not null,
+  category text,
+  purchase_date date,
+  warranty_until date,
+  location text,
+  notes text,
+  created_at timestamptz default now()
+);
+alter table public.hemkoll_house_items enable row level security;
+create policy "Users manage own house items" on public.hemkoll_house_items
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table if not exists public.hemkoll_events (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete cascade not null,
+  item_id uuid references public.hemkoll_house_items(id) on delete cascade,
+  title text not null,
+  event_date date not null,
+  cost numeric,
+  notes text,
+  created_at timestamptz default now()
+);
+alter table public.hemkoll_events enable row level security;
+create policy "Users manage own house events" on public.hemkoll_events
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Strukturerad husdata (byggår, boyta, uppvärmning m.m.), fylls i manuellt
+-- eller av importagenten som läser en prospekt-/annonslänk.
+create table if not exists public.hemkoll_house_profile (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  address text,
+  build_year int,
+  living_area_sqm numeric,
+  heating_type text,
+  energy_class text,
+  source_url text,
+  raw_extracted jsonb default '{}',
+  updated_at timestamptz default now()
+);
+alter table public.hemkoll_house_profile enable row level security;
+create policy "Users manage own house profile" on public.hemkoll_house_profile
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create table if not exists public.hemkoll_advisor_sessions (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  messages jsonb default '[]',
+  updated_at timestamptz default now()
+);
+alter table public.hemkoll_advisor_sessions enable row level security;
+create policy "Users manage own advisor session" on public.hemkoll_advisor_sessions
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
