@@ -194,44 +194,24 @@ export async function POST() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,coach_id' })
 
-    // Fetch existing activities to detect duplicates — cover the full date
-    // range of both the recent batch and any older backfilled batch
-    const allDates = allGarminActivities.map(a => new Date(a.startTimeLocal).getTime())
-    const since = allDates.length
-      ? new Date(Math.min(...allDates)).toISOString()
-      : new Date(0).toISOString()
-
+    // Fetch already-synced Garmin activity ids so this sync doesn't re-upsert
+    // the same activity every time it runs
     const { data: existing } = await supabase
       .from('activities')
-      .select('strava_id, start_date, distance, moving_time, sport_type')
+      .select('strava_id')
       .eq('user_id', user.id)
-      .gte('start_date', since)
+      .gte('strava_id', 0)
 
     const existingRows = existing ?? []
 
+    // Only skip a Garmin activity that's already been synced (same
+    // strava_id) — a Garmin row that happens to match an existing Concept2
+    // pass by distance/time is intentionally still inserted now, so both
+    // sources exist and get merged for display (Passlogg, dashboard,
+    // detail page) instead of the Concept2 row being the only survivor.
     const toUpsert = allGarminActivities
       .map(a => garminActivityToRow(a, user.id))
-      .filter(row => {
-        if (existingRows.some(e => e.strava_id === row.strava_id)) return false
-
-        const rowDist = row.distance ?? 0
-        const rowTime = row.moving_time ?? 0
-        if (row.sport_type === 'Rowing' && rowDist > 0 && rowTime > 0) {
-          const rowDate = row.start_date.slice(0, 10)
-          const duplicate = existingRows.some(e => {
-            if (e.strava_id >= 0) return false
-            if (!e.distance || !e.moving_time) return false
-            const eDate = e.start_date.slice(0, 10)
-            if (eDate !== rowDate) return false
-            const distMatch = Math.abs(e.distance - rowDist) / rowDist < 0.05
-            const timeMatch = Math.abs(e.moving_time - rowTime) / rowTime < 0.05
-            return distMatch && timeMatch
-          })
-          if (duplicate) return false
-        }
-
-        return true
-      })
+      .filter(row => !existingRows.some(e => e.strava_id === row.strava_id))
 
     if (toUpsert.length > 0) {
       await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })

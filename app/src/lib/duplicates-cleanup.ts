@@ -4,12 +4,22 @@ import { findDuplicateGroups, suggestKeepId } from '@/lib/duplicates'
 type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 
 // Scans all of a user's activities for fuzzy-matched duplicates (same day,
-// sport, distance/time within 5% — typically the same real pass synced from
-// both Concept2 and Garmin) and keeps one row per group, deleting the rest.
-// Before deleting, copies over anything worth preserving from the losing
-// rows (Garmin's HR zones, Concept2's split data, watts) onto the survivor
-// so switching which source "wins" never throws away data. Runs
+// sport, distance/time within 5%) and keeps one row per group, deleting the
+// rest. Before deleting, copies over anything worth preserving from the
+// losing rows (Garmin's HR zones, Concept2's split data, watts) onto the
+// survivor so switching which source "wins" never throws away data. Runs
 // automatically on every sync so duplicates never accumulate.
+//
+// EXCEPT: a clean 1-Garmin + 1-Concept2 pair for the same session is no
+// longer deleted here — Passlogg, the dashboard, and the detail page all
+// merge that pair live for display (splitMergedPairs/dedupeForStats in
+// duplicates.ts) using each row's own API route (garmin-zones needs a real
+// Garmin strava_id, concept2-detail needs a real Concept2 one). Deleting
+// either half would silently break that merge and make the copied-over
+// field unreachable anyway, since those routes gate on strava_id sign, not
+// on raw_data contents. This function now only cleans up genuine same-
+// source duplicates (double-syncs) and 3+-way ties, which the display
+// merge doesn't handle and which really are just redundant rows.
 export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data: activities } = await supabase
     .from('activities')
@@ -18,7 +28,11 @@ export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: st
 
   if (!activities?.length) return 0
 
-  const groups = findDuplicateGroups(activities)
+  const groups = findDuplicateGroups(activities).filter(group => {
+    const garmin = group.filter(a => a.strava_id >= 0)
+    const concept2 = group.filter(a => a.strava_id < 0)
+    return !(garmin.length === 1 && concept2.length === 1)
+  })
   if (!groups.length) return 0
 
   const idsToDelete: string[] = []
