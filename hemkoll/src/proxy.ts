@@ -31,6 +31,9 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // No caching layer may replay one user's page for whoever loads the URL
+  // next on a shared device — same guardrail as DL Trainer's proxy.ts.
+  response.headers.set('Cache-Control', 'no-store, must-revalidate')
   return response
 }
 

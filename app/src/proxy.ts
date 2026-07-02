@@ -31,6 +31,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Every authenticated page carries another user's private data if it's
+  // ever served to the wrong person — belt-and-braces on top of the
+  // per-request Supabase queries: no browser, proxy, or CDN layer is
+  // allowed to cache and replay this response for whoever loads the URL
+  // next on a shared device.
+  response.headers.set('Cache-Control', 'no-store, must-revalidate')
   return response
 }
 
