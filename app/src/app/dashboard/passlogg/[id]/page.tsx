@@ -3,6 +3,7 @@ import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
 import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
+import { isFuzzyMatch } from '@/lib/duplicates'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
 function fmtDur(s: number) {
@@ -71,17 +72,48 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const raw = (activity.raw_data ?? {}) as Record<string, unknown>
   const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
 
-  const garminExtras = isGarmin
+  // Same real-world session can get synced from both Concept2 (erg) and
+  // Garmin (wrist HR) — look for the other-source counterpart within a wide
+  // window and merge their data instead of showing two half-empty passes.
+  const windowStart = new Date(new Date(activity.start_date).getTime() - 36 * 3600 * 1000)
+  const windowEnd = new Date(new Date(activity.start_date).getTime() + 36 * 3600 * 1000)
+  const { data: sameDayActivities } = await supabase
+    .from('activities')
+    .select('id, strava_id, start_date, distance, moving_time, sport_type, name, average_heartrate, max_heartrate, description, raw_data')
+    .eq('user_id', user.id)
+    .eq('sport_type', activity.sport_type)
+    .neq('id', activity.id)
+    .gte('start_date', windowStart.toISOString())
+    .lte('start_date', windowEnd.toISOString())
+
+  const partner = (sameDayActivities ?? []).find(cand => isFuzzyMatch(activity, cand)) ?? null
+  const partnerIsGarmin = partner ? partner.strava_id >= 0 : false
+  const partnerRaw = (partner?.raw_data ?? {}) as Record<string, unknown>
+
+  const garminRaw = isGarmin ? raw : (partner && partnerIsGarmin ? partnerRaw : null)
+  const garminExtras = garminRaw
     ? GARMIN_EXTRA_FIELDS
-        .map(f => ({ ...f, value: raw[f.key] }))
+        .map(f => ({ ...f, value: garminRaw[f.key] }))
         .filter(f => isNum(f.value) && f.value !== 0)
     : []
 
-  const rawLat = isGarmin ? raw.startLatitude : undefined
-  const rawLng = isGarmin ? raw.startLongitude : undefined
+  const rawLat = garminRaw?.startLatitude
+  const rawLng = garminRaw?.startLongitude
   const lat: number | null = isNum(rawLat) && rawLat !== 0 ? rawLat : null
   const lng: number | null = isNum(rawLng) && rawLng !== 0 ? rawLng : null
   const hasCoords = lat !== null && lng !== null
+
+  // Concept2 doesn't always have a paired HR strap — fall back to the
+  // matched Garmin session's HR when this record doesn't have its own.
+  const mergedAvgHr = activity.average_heartrate ?? partner?.average_heartrate ?? null
+  const mergedMaxHr = activity.max_heartrate ?? partner?.max_heartrate ?? null
+
+  const garminActivityId = isGarmin ? activity.id : (partner && partnerIsGarmin ? partner.id : undefined)
+  const concept2ActivityId = !isGarmin ? activity.id : (partner && !partnerIsGarmin ? partner.id : undefined)
+
+  const sourceLabel = partner
+    ? 'Concept2 + Garmin'
+    : (isGarmin ? 'Garmin' : 'Concept2')
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-5">
@@ -101,9 +133,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <span>{sportIcon(activity.sport_type)}</span>
               <span className="capitalize">{sportLabel(activity.sport_type)}</span>
             </span>
-            <span className="text-[10px] text-muted">{isGarmin ? 'Garmin' : 'Concept2'}</span>
+            <span className="text-[10px] text-muted">{sourceLabel}</span>
           </div>
         </div>
+        {partner && (
+          <p className="text-[11px] text-accent mt-2">
+            🔗 Sammanslaget med ett {partnerIsGarmin ? 'Garmin' : 'Concept2'}-pass från samma träning — {isGarmin ? 'Concept2 ger exakt distans/tempo/delsträckor från roddmaskinen' : 'Garmin ger pulszoner'} ovanpå det du ser här.
+          </p>
+        )}
       </div>
 
       {/* Core stats + HR zones/splits side by side on desktop — on mobile
@@ -125,15 +162,15 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
               <div className="text-muted text-xs mt-1">{speedOrPace.label}</div>
             </div>
           )}
-          {activity.average_heartrate && (
+          {mergedAvgHr && (
             <div>
-              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(activity.average_heartrate)}</div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(mergedAvgHr)}</div>
               <div className="text-muted text-xs mt-1">Snitt-HR</div>
             </div>
           )}
-          {activity.max_heartrate && (
+          {mergedMaxHr && (
             <div>
-              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(activity.max_heartrate)}</div>
+              <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{Math.round(mergedMaxHr)}</div>
               <div className="text-muted text-xs mt-1">Max-HR</div>
             </div>
           )}
@@ -145,8 +182,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           )}
         </div>
 
-        {/* HR zones (Garmin) or splits (Concept2), fetched on demand */}
-        <ActivityEnrichment activityId={activity.id} isGarmin={isGarmin} />
+        {/* HR zones (Garmin) and/or splits (Concept2), fetched on demand —
+            both render together when this pass was merged from two sources */}
+        <ActivityEnrichment garminActivityId={garminActivityId} concept2ActivityId={concept2ActivityId} />
       </div>
 
       {/* Map */}

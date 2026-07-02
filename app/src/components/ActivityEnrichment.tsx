@@ -19,7 +19,13 @@ function fmtPace(s: number, m: number) {
   return `${Math.floor(p / 60)}:${Math.round(p % 60).toString().padStart(2, '0')}/500m`
 }
 
-export default function ActivityEnrichment({ activityId, isGarmin }: { activityId: string; isGarmin: boolean }) {
+// Takes the Garmin and/or Concept2 activity id for the SAME real-world
+// session. When a pass was synced from both (e.g. Concept2 for the erg,
+// Garmin worn on the wrist for HR), both ids are passed and this renders
+// Concept2's splits — the erg's own precise per-stroke measurement, which
+// Garmin's wrist-based tracking doesn't match for indoor rowing — alongside
+// Garmin's HR-zone breakdown, which Concept2 doesn't compute on its own.
+export default function ActivityEnrichment({ garminActivityId, concept2ActivityId }: { garminActivityId?: string; concept2ActivityId?: string }) {
   const [zones, setZones] = useState<HrZone[] | null>(null)
   const [splits, setSplits] = useState<C2Split[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -28,15 +34,18 @@ export default function ActivityEnrichment({ activityId, isGarmin }: { activityI
     let cancelled = false
     async function load() {
       try {
-        if (isGarmin) {
-          const res = await fetch(`/api/activities/${activityId}/garmin-zones`)
-          const data = await res.json()
-          if (!cancelled) setZones(data.zones ?? null)
-        } else {
-          const res = await fetch(`/api/activities/${activityId}/concept2-detail`)
-          const data = await res.json()
-          if (!cancelled) setSplits(data.detail?.split ?? null)
-        }
+        await Promise.all([
+          garminActivityId
+            ? fetch(`/api/activities/${garminActivityId}/garmin-zones`)
+                .then(r => r.json())
+                .then(data => { if (!cancelled) setZones(data.zones ?? null) })
+            : Promise.resolve(),
+          concept2ActivityId
+            ? fetch(`/api/activities/${concept2ActivityId}/concept2-detail`)
+                .then(r => r.json())
+                .then(data => { if (!cancelled) setSplits(data.detail?.split ?? null) })
+            : Promise.resolve(),
+        ])
       } catch {
         // silently give up — enrichment is a bonus, not core functionality
       } finally {
@@ -45,58 +54,60 @@ export default function ActivityEnrichment({ activityId, isGarmin }: { activityI
     }
     load()
     return () => { cancelled = true }
-  }, [activityId, isGarmin])
+  }, [garminActivityId, concept2ActivityId])
 
-  if (loading) {
+  if (loading && (garminActivityId || concept2ActivityId)) {
     return <div className="bg-card border border-edge rounded-2xl p-4 h-24 animate-pulse" />
   }
 
-  if (isGarmin) {
-    if (!zones || zones.length === 0) return null
-    const summary = zonesToSummary(zones)
-    if (summary.length === 0) return null
+  const zoneSummary = zones ? zonesToSummary(zones) : []
+  const hasZones = zoneSummary.length > 0
+  const hasSplits = !!splits && splits.length > 0
 
-    return (
-      <div>
-        <div className="text-xs text-muted uppercase tracking-wider mb-3">Pulszoner</div>
-        <div className="bg-card border border-edge rounded-2xl p-4">
-          <ZoneBar zones={summary} />
-        </div>
-      </div>
-    )
-  }
-
-  if (!splits || splits.length === 0) return null
+  if (!hasZones && !hasSplits) return null
 
   return (
-    <div>
-      <div className="text-xs text-muted uppercase tracking-wider mb-3">Delsträckor</div>
-      <div className="bg-card border border-edge rounded-2xl overflow-hidden">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-muted text-xs border-b border-edge">
-              <th className="text-left font-medium px-4 py-2">#</th>
-              <th className="text-left font-medium px-4 py-2">Distans</th>
-              <th className="text-left font-medium px-4 py-2">Tid</th>
-              <th className="text-left font-medium px-4 py-2">/500m</th>
-              <th className="text-left font-medium px-4 py-2">SPM</th>
-              <th className="text-left font-medium px-4 py-2">HR</th>
-            </tr>
-          </thead>
-          <tbody>
-            {splits.map((s, i) => (
-              <tr key={i} className="border-b border-edge last:border-0">
-                <td className="px-4 py-2 text-muted">{i + 1}</td>
-                <td className="px-4 py-2 font-mono">{s.distance}m</td>
-                <td className="px-4 py-2 font-mono">{fmtDur(s.time / 10)}</td>
-                <td className="px-4 py-2 font-mono text-lcd">{fmtPace(s.time / 10, s.distance)}</td>
-                <td className="px-4 py-2 font-mono">{s.stroke_rate ?? '--'}</td>
-                <td className="px-4 py-2 font-mono">{s.heart_rate ?? '--'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="flex flex-col gap-5">
+      {hasZones && (
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-3">Pulszoner</div>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <ZoneBar zones={zoneSummary} />
+          </div>
+        </div>
+      )}
+
+      {hasSplits && (
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-3">Delsträckor</div>
+          <div className="bg-card border border-edge rounded-2xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-muted text-xs border-b border-edge">
+                  <th className="text-left font-medium px-4 py-2">#</th>
+                  <th className="text-left font-medium px-4 py-2">Distans</th>
+                  <th className="text-left font-medium px-4 py-2">Tid</th>
+                  <th className="text-left font-medium px-4 py-2">/500m</th>
+                  <th className="text-left font-medium px-4 py-2">SPM</th>
+                  <th className="text-left font-medium px-4 py-2">HR</th>
+                </tr>
+              </thead>
+              <tbody>
+                {splits!.map((s, i) => (
+                  <tr key={i} className="border-b border-edge last:border-0">
+                    <td className="px-4 py-2 text-muted">{i + 1}</td>
+                    <td className="px-4 py-2 font-mono">{s.distance}m</td>
+                    <td className="px-4 py-2 font-mono">{fmtDur(s.time / 10)}</td>
+                    <td className="px-4 py-2 font-mono text-lcd">{fmtPace(s.time / 10, s.distance)}</td>
+                    <td className="px-4 py-2 font-mono">{s.stroke_rate ?? '--'}</td>
+                    <td className="px-4 py-2 font-mono">{s.heart_rate ?? '--'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

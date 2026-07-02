@@ -11,7 +11,10 @@ export type ActivityRow = {
   created_at?: string
 }
 
-function isFuzzyMatch(a: ActivityRow, b: ActivityRow): boolean {
+// Exported so the activity-detail page can find the matching Garmin/Concept2
+// counterpart for a single pass and merge their data, without re-running the
+// full-list scan findDuplicateGroups does.
+export function isFuzzyMatch(a: ActivityRow, b: ActivityRow): boolean {
   if (a.id === b.id) return false
   if (a.sport_type !== b.sport_type) return false
   if (a.start_date.slice(0, 10) !== b.start_date.slice(0, 10)) return false
