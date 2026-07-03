@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import HouseProfileCard from '@/components/HouseProfileCard'
+import HouseMap from '@/components/HouseMap'
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -18,6 +19,9 @@ export default async function OverviewPage() {
   ])
 
   const itemCount = items?.length ?? 0
+  const rawExtracted = (profile?.raw_extracted ?? null) as Record<string, unknown> | null
+  const lat = typeof rawExtracted?.lat === 'number' ? rawExtracted.lat : null
+  const lng = typeof rawExtracted?.lng === 'number' ? rawExtracted.lng : null
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto space-y-6">
@@ -29,16 +33,24 @@ export default async function OverviewPage() {
       </div>
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
-        <div className="lg:col-span-2">
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Husprofil</h2>
-          <HouseProfileCard profile={profile ?? null} />
+        <div className="lg:col-span-2 space-y-6">
+          <div>
+            <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Husprofil</h2>
+            <HouseProfileCard profile={profile ?? null} />
+          </div>
+          {lat != null && lng != null && (
+            <div>
+              <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Läge</h2>
+              <HouseMap lat={lat} lng={lng} address={profile?.address} />
+            </div>
+          )}
         </div>
 
         <div>
           <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Snabbval</h2>
           <div className="flex flex-col gap-2">
             <Link href="/dashboard/import" className="bg-card border border-edge rounded-xl p-3 text-sm hover:border-accent/40 transition-colors flex items-center gap-2">
-              🔗 Importera från länk
+              🔗 Importera
             </Link>
             <Link href="/dashboard/items" className="bg-card border border-edge rounded-xl p-3 text-sm hover:border-accent/40 transition-colors flex items-center gap-2">
               📋 Lägg till objekt
