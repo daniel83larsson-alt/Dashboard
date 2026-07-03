@@ -1,8 +1,33 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import Anthropic from '@anthropic-ai/sdk'
+
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
 type Message = { role: 'user' | 'assistant'; content: string }
+
+// elprisetjustnu.se — fully open, no key, no signup. Zone defaults to SE3
+// (Stockholm/Mälardalen, the most populous zone) until the house profile
+// has a real one; disclosed in the prompt so the advisor never states it
+// as fact for a house that might be in SE1/SE2/SE4.
+async function fetchElpris(zone: string): Promise<string | null> {
+  try {
+    const now = new Date()
+    const y = now.getFullYear()
+    const m = String(now.getMonth() + 1).padStart(2, '0')
+    const d = String(now.getDate()).padStart(2, '0')
+    const res = await fetch(`https://www.elprisetjustnu.se/api/v1/prices/${y}/${m}-${d}_${zone}.json`)
+    if (!res.ok) return null
+    const hours: { SEK_per_kWh: number; time_start: string }[] = await res.json()
+    if (!hours.length) return null
+    const cheapest = hours.reduce((a, b) => (b.SEK_per_kWh < a.SEK_per_kWh ? b : a))
+    const priciest = hours.reduce((a, b) => (b.SEK_per_kWh > a.SEK_per_kWh ? b : a))
+    const avg = hours.reduce((s, h) => s + h.SEK_per_kWh, 0) / hours.length
+    const hr = (t: string) => new Date(t).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
+    return `ELPRIS IDAG (zon ${zone}, öre/kWh): snitt ${(avg * 100).toFixed(0)}, billigast ${(cheapest.SEK_per_kWh * 100).toFixed(0)} kl ${hr(cheapest.time_start)}, dyrast ${(priciest.SEK_per_kWh * 100).toFixed(0)} kl ${hr(priciest.time_start)}`
+  } catch {
+    return null
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -15,11 +40,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Meddelande saknas' }, { status: 400 })
     }
 
-    const [{ data: profile }, { data: items }, { data: events }, { data: sessionRow }] = await Promise.all([
+    const DEFAULT_ZONE = 'SE3' // Stockholm/Mälardalen — until the house profile stores a real zone
+
+    const [{ data: profile }, { data: items }, { data: events }, { data: sessionRow }, elprisBlock] = await Promise.all([
       supabase.from('hemkoll_house_profile').select('*').eq('user_id', user.id).single(),
       supabase.from('hemkoll_house_items').select('name, category, purchase_date, warranty_until, location, notes').eq('user_id', user.id),
       supabase.from('hemkoll_events').select('title, event_date, cost, notes, item_id').eq('user_id', user.id).order('event_date', { ascending: false }).limit(30),
       supabase.from('hemkoll_advisor_sessions').select('messages').eq('user_id', user.id).single(),
+      fetchElpris(DEFAULT_ZONE),
     ])
 
     const houseBlock = profile
@@ -34,31 +62,38 @@ export async function POST(request: NextRequest) {
       ? `SENASTE HÄNDELSER:\n${(events ?? []).map(e => `- ${e.event_date}: ${e.title}${e.cost ? ` (${e.cost} kr)` : ''}`).join('\n')}`
       : 'SENASTE HÄNDELSER: inga loggade än.'
 
-    const systemPrompt = `Du är en pragmatisk husrådgivare. Svara ENDAST utifrån datan nedan om frågan handlar om det här specifika huset — gissa inte på fakta om huset som inte finns i datan, säg då att informationen saknas och vad som behövs för ett bättre svar. Ge konkreta, prioriterade råd (vad är mest värt att göra först, ungefär varför), inte generiska floskler. Svara kort och konkret på svenska.
+    const systemPrompt = `Du är en pragmatisk husrådgivare. Svara ENDAST utifrån datan nedan om frågan handlar om det här specifika huset — gissa inte på fakta om huset som inte finns i datan, säg då att informationen saknas och vad som behövs för ett bättre svar. Elpriset nedan är för en ANTAGEN elprisszon (${DEFAULT_ZONE}) tills huset har en riktig zon sparad — nämn det om du använder elprissiffror i svaret. Ge konkreta, prioriterade råd (vad är mest värt att göra först, ungefär varför), inte generiska floskler. Svara kort och konkret på svenska.
 
 ${houseBlock}
 
 ${itemsBlock}
 
-${eventsBlock}`
+${eventsBlock}
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+${elprisBlock ?? 'ELPRIS IDAG: kunde inte hämtas just nu.'}`
+
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) return NextResponse.json({ error: 'AI-nyckel saknas i miljön' }, { status: 500 })
 
     const history = ((sessionRow?.messages as Message[] | null) ?? [])
-    const client = new Anthropic({ apiKey })
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 500,
-      system: systemPrompt,
-      messages: [
-        ...history.slice(-16).map(m => ({ role: m.role, content: m.content })),
-        { role: 'user' as const, content: message },
-      ],
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [
+          ...history.slice(-16).map(m => ({ role: m.role === 'assistant' ? 'model' : 'user', parts: [{ text: m.content }] })),
+          { role: 'user', parts: [{ text: message }] },
+        ],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+        generationConfig: { maxOutputTokens: 500, thinkingConfig: { thinkingBudget: 0 } },
+      }),
     })
-
-    const reply = response.content[0].type === 'text' ? response.content[0].text : ''
-    if (!reply) throw new Error('Inget svar från AI')
+    const geminiData = await geminiRes.json()
+    const reply = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!geminiRes.ok || !reply) {
+      console.error('Gemini advisor error:', geminiData.error ?? geminiRes.status)
+      throw new Error('Inget svar från AI')
+    }
 
     const updatedMessages: Message[] = [...history, { role: 'user', content: message }, { role: 'assistant', content: reply }]
     await supabase.from('hemkoll_advisor_sessions').upsert({

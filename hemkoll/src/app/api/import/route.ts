@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import Anthropic from '@anthropic-ai/sdk'
 
-// Strips tags/scripts and collapses whitespace so we send Claude readable
+const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+
+// Strips tags/scripts and collapses whitespace so we send the model readable
 // text instead of raw HTML — cheaper and more reliable extraction. Many
 // listing sites render with client-side JS, so this can come back thin;
 // that's a known limitation (would need a headless-browser fetch to fix),
@@ -44,27 +45,45 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Sidan gav nästan ingen läsbar text (kräver ofta inloggning eller renderas med JS) — fyll i manuellt istället' }, { status: 422 })
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY
+    const apiKey = process.env.GEMINI_API_KEY
     if (!apiKey) {
       return NextResponse.json({ error: 'AI-nyckel saknas i miljön' }, { status: 500 })
     }
 
-    const client = new Anthropic({ apiKey })
-    const message = await client.messages.create({
-      model: 'claude-sonnet-4-6',
-      max_tokens: 800,
-      system: 'Du extraherar strukturerad husdata från text hämtad från en bostadsannons/mäklarprospekt. Svara ENDAST med JSON, inga kommentarer. Sätt fält till null om de inte går att hitta i texten — gissa aldrig.',
-      messages: [{
-        role: 'user',
-        content: `Extrahera följande fält från texten nedan som JSON: {"address": string|null, "build_year": number|null, "living_area_sqm": number|null, "heating_type": string|null, "energy_class": string|null}\n\nTEXT:\n${text}`,
-      }],
+    const geminiRes = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text}` }] }],
+        systemInstruction: { parts: [{ text: 'Du extraherar strukturerad husdata från text hämtad från en bostadsannons/mäklarprospekt. Svara ENDAST med JSON enligt schema. Sätt fält till null om de inte går att hitta i texten — gissa aldrig.' }] },
+        generationConfig: {
+          maxOutputTokens: 500,
+          thinkingConfig: { thinkingBudget: 0 },
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: 'OBJECT',
+            properties: {
+              address: { type: 'STRING', nullable: true },
+              build_year: { type: 'INTEGER', nullable: true },
+              living_area_sqm: { type: 'NUMBER', nullable: true },
+              heating_type: { type: 'STRING', nullable: true },
+              energy_class: { type: 'STRING', nullable: true },
+            },
+            required: ['address', 'build_year', 'living_area_sqm', 'heating_type', 'energy_class'],
+          },
+        },
+      }),
     })
+    const geminiData = await geminiRes.json()
+    const raw = geminiData.candidates?.[0]?.content?.parts?.[0]?.text
+    if (!geminiRes.ok || !raw) {
+      console.error('Gemini extraction error:', geminiData.error ?? geminiRes.status)
+      return NextResponse.json({ error: 'AI-anropet misslyckades' }, { status: 500 })
+    }
 
-    const raw = message.content[0].type === 'text' ? message.content[0].text : ''
     let extracted: Record<string, unknown>
     try {
-      const jsonMatch = raw.match(/\{[\s\S]*\}/)
-      extracted = jsonMatch ? JSON.parse(jsonMatch[0]) : {}
+      extracted = JSON.parse(raw)
     } catch {
       return NextResponse.json({ error: 'Kunde inte tolka svaret från AI:n' }, { status: 500 })
     }
