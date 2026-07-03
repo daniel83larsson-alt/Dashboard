@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import HouseProfileCard from '@/components/HouseProfileCard'
 import HouseMap from '@/components/HouseMap'
+import HomeyCard from '@/components/HomeyCard'
 
 function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -59,6 +60,9 @@ export default async function OverviewPage() {
               💬 Fråga rådgivaren
             </Link>
           </div>
+
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-3 mt-6">Anslutna hem-system</h2>
+          <HomeyCard />
         </div>
       </div>
 

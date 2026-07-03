@@ -59,3 +59,18 @@ create table if not exists public.hemkoll_advisor_sessions (
 alter table public.hemkoll_advisor_sessions enable row level security;
 create policy "Users manage own advisor session" on public.hemkoll_advisor_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Homey OAuth2-koppling. `token` speglar homey-api-paketets egen Token-form
+-- (token_type, access_token, refresh_token, expires_in, grant_type) så att
+-- SDK:ts inbyggda auto-refresh kan läsa/skriva den direkt via en egen
+-- StorageAdapter (se src/lib/homey.ts). Bara läsrättigheter används mot
+-- Homeys API — ingen styrning av enheter.
+create table if not exists public.hemkoll_homey_connections (
+  user_id uuid references auth.users(id) on delete cascade primary key,
+  token jsonb not null,
+  connected_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+alter table public.hemkoll_homey_connections enable row level security;
+create policy "Users manage own homey connection" on public.hemkoll_homey_connections
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
