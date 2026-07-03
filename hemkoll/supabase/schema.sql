@@ -1,7 +1,8 @@
 -- Hemkoll — nya tabeller i SAMMA Supabase-projekt som DL Trainer, men helt
 -- isolerade från dess tabeller (egen "hemkoll_"-prefix, egen RLS per
 -- auth.uid()). Delar bara inloggningssystemet (auth.users), inte data.
--- Kör i Supabase SQL Editor.
+-- Kör i Supabase SQL Editor. Säker att köra om — create table och create
+-- policy är båda skyddade mot att köras flera gånger.
 
 create extension if not exists pgcrypto;
 
@@ -17,6 +18,7 @@ create table if not exists public.hemkoll_house_items (
   created_at timestamptz default now()
 );
 alter table public.hemkoll_house_items enable row level security;
+drop policy if exists "Users manage own house items" on public.hemkoll_house_items;
 create policy "Users manage own house items" on public.hemkoll_house_items
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -31,6 +33,7 @@ create table if not exists public.hemkoll_events (
   created_at timestamptz default now()
 );
 alter table public.hemkoll_events enable row level security;
+drop policy if exists "Users manage own house events" on public.hemkoll_events;
 create policy "Users manage own house events" on public.hemkoll_events
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -48,6 +51,7 @@ create table if not exists public.hemkoll_house_profile (
   updated_at timestamptz default now()
 );
 alter table public.hemkoll_house_profile enable row level security;
+drop policy if exists "Users manage own house profile" on public.hemkoll_house_profile;
 create policy "Users manage own house profile" on public.hemkoll_house_profile
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -57,6 +61,7 @@ create table if not exists public.hemkoll_advisor_sessions (
   updated_at timestamptz default now()
 );
 alter table public.hemkoll_advisor_sessions enable row level security;
+drop policy if exists "Users manage own advisor session" on public.hemkoll_advisor_sessions;
 create policy "Users manage own advisor session" on public.hemkoll_advisor_sessions
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
@@ -72,5 +77,6 @@ create table if not exists public.hemkoll_homey_connections (
   updated_at timestamptz default now()
 );
 alter table public.hemkoll_homey_connections enable row level security;
+drop policy if exists "Users manage own homey connection" on public.hemkoll_homey_connections;
 create policy "Users manage own homey connection" on public.hemkoll_homey_connections
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
