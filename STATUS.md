@@ -25,10 +25,11 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 - 🔄 "Sök mer info om huset" — AI-sökning (Google-grunding via Gemini, gratis upp till 1500 sökningar/dag) efter taxeringsvärde, tomtarea, kommun m.m. Visas som förslag, sparas bara om du väljer det. Samma verifieringsstatus som ovan.
 - 🔄 Karta över husets läge på Översikt (gratis OpenStreetMap, ingen nyckel) — dyker upp automatiskt när en adress är sparad. Samma verifieringsstatus som ovan.
 - ✅ Desktop-skiss levererad som interaktiv mockup (Artifact), v2 efter feedback: ljusare tema, flera uppvärmningssystem visas, missvisande "mätare" för boyta/ålder borttagna, åäö-buggen (saknad charset) fixad.
-- ⏳ SMHI-väderdata i rådgivaren — utlovat, inte byggt än.
+- 🧊 SMHI-väderdata i rådgivaren — nedprioriterat efter beslut 2026-07-03. Daniel: inte intressant som "dagens väder", men kan bli relevant senare som historisk väderdata matchad mot elförbrukning. Vilar tills vidare.
 - ⏳ Stöd för flera uppvärmningssystem i verkliga appen (idag bara ett textfält `heating_type`) — bekräftat i skissen, inte byggt i produktionskoden än.
-- 🔍 Homey-koppling — utredd: Homey har ett rent OAuth2 Web API (api.developer.homey.app), fungerar bra för alla användare eftersom Homey är molnbaserat. Realistisk att bygga.
-- 🔍 Home Assistant-koppling — utredd: kräver antingen att användarens HA-instans är nåbar utifrån (t.ex. via Nabu Casa) plus en manuellt inklistrad åtkomsttoken, eller så går det inte alls om HA bara körs lokalt hemma. Mer begränsat än Homey.
+- 🔄 **Homey-koppling — prioriterad, näst på tur.** Utredd: Homey har ett rent OAuth2 Web API (api.developer.homey.app), fungerar bra för alla användare eftersom Homey är molnbaserat. Daniel äger själv en Homey, så vi kan testa live. Väntar på svar om omfattning (bara läsa data, eller även styra enheter) innan bygget startar.
+- 🧊 Home Assistant-koppling — utredd men inte prioriterad: kräver antingen att användarens HA-instans är nåbar utifrån (t.ex. via Nabu Casa) plus en manuellt inklistrad åtkomsttoken, eller går det inte alls om HA bara körs lokalt hemma.
+- 🔄 **Besiktningsprotokoll → att-göra-lista — prioriterad, näst på tur.** Bygger vidare på dokumentimporten som redan finns: läser protokollet och strukturerar det till en avbockningsbar lista med allvarlighetsgrad, istället för bara husfält.
 - ⏳ Besiktningsprotokoll → automatisk att-göra-lista — inte påbörjat, behöver avgränsas (Noa: vad är "klar" här, binärt?) innan det byggs.
 - ⏳ Projekt med budget + tips från flera agenter — inte påbörjat, samma sak: behöver avgränsas till ett konkret, verifierbart mål innan bygge.
 - 🧊 Fastighetsregister/energideklaration via Boverket/Lantmäteriet — kräver BankID-signerat avtal/konto, inte en snabb integration. Väntar på beslut om det är värt att göra just nu.
