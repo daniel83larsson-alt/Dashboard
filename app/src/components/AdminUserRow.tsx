@@ -13,16 +13,31 @@ type Profile = {
   flagged_attempts: number | null
 }
 
+function fmtLastSynced(iso: string | null) {
+  if (!iso) return null
+  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (1000 * 60 * 60 * 24))
+  if (days <= 0) return 'idag'
+  if (days === 1) return 'igår'
+  if (days < 30) return `${days} dagar sedan`
+  return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
+}
+
 export default function AdminUserRow({
   profile,
   isSelf,
   hasConcept2,
   hasGarmin,
+  activityCount,
+  daysSynced,
+  lastSynced,
 }: {
   profile: Profile
   isSelf: boolean
   hasConcept2: boolean
   hasGarmin: boolean
+  activityCount: number
+  daysSynced: number
+  lastSynced: string | null
 }) {
   const [busy, setBusy] = useState(false)
   const router = useRouter()
@@ -57,6 +72,11 @@ export default function AdminUserRow({
             <span className={`text-[10px] px-1.5 py-0.5 rounded border ${hasGarmin ? 'text-accent border-accent/30 bg-accent/10' : 'text-muted border-edge'}`}>
               {hasGarmin ? '✓' : '–'} Garmin
             </span>
+          </div>
+          <div className="text-muted text-[11px] mt-1.5">
+            {activityCount > 0
+              ? `${activityCount} pass · ${daysSynced} dagar · senast synkat ${fmtLastSynced(lastSynced)}`
+              : (hasConcept2 || hasGarmin) ? 'Anslutet men inget synkat än' : 'Inget synkat ännu'}
           </div>
         </div>
         {!isSelf && (

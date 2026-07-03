@@ -17,14 +17,17 @@ export default async function AdminPage() {
     )
   }
 
-  const [{ data: profiles }, { data: syncStatus }] = await Promise.all([
+  const [{ data: profiles }, { data: syncStatus }, { data: activityStats }] = await Promise.all([
     supabase.rpc('admin_list_profiles'),
     supabase.rpc('admin_all_sync_status'),
+    supabase.rpc('admin_activity_stats'),
   ])
 
   type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean }
+  type ActivityStatsRow = { user_id: string; activity_count: number; days_synced: number; last_synced: string }
   type ProfileRow = { id: string; email: string; name: string | null; created_at: string; locked: boolean | null; flagged_attempts: number | null }
   const syncByUser = new Map<string, SyncRow>((syncStatus ?? []).map((s: SyncRow) => [s.user_id, s]))
+  const statsByUser = new Map<string, ActivityStatsRow>((activityStats ?? []).map((s: ActivityStatsRow) => [s.user_id, s]))
   const profileRows = (profiles ?? []) as ProfileRow[]
 
   return (
@@ -42,6 +45,9 @@ export default async function AdminPage() {
             isSelf={p.id === user.id}
             hasConcept2={!!syncByUser.get(p.id)?.has_concept2}
             hasGarmin={!!syncByUser.get(p.id)?.has_garmin}
+            activityCount={statsByUser.get(p.id)?.activity_count ?? 0}
+            daysSynced={statsByUser.get(p.id)?.days_synced ?? 0}
+            lastSynced={statsByUser.get(p.id)?.last_synced ?? null}
           />
         ))}
       </div>

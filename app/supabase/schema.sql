@@ -131,6 +131,36 @@ $$;
 revoke all on function public.admin_all_sync_status() from public;
 grant execute on function public.admin_all_sync_status() to authenticated;
 
+-- Admin: antal loggade pass, antal distinkta dagar med minst ett pass, och
+-- senaste synktillfälle per användare — en snabb koll på om någon
+-- faktiskt använder appen och om synken fungerar. Räknar rader i
+-- activities rakt av (kan inkludera ett fåtal Concept2+Garmin-par av
+-- samma pass som två rader — det slås ihop i UI:t men inte här).
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_activity_stats()
+returns table(user_id uuid, activity_count bigint, days_synced bigint, last_synced timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    a.user_id,
+    count(*)::bigint,
+    count(distinct a.start_date::date)::bigint,
+    max(a.start_date)
+  from public.activities a
+  group by a.user_id;
+end;
+$$;
+revoke all on function public.admin_activity_stats() from public;
+grant execute on function public.admin_activity_stats() to authenticated;
+
 -- Auto-skapa profil vid signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public
