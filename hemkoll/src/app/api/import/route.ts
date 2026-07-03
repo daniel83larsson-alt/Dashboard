@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-const EXTRACTION_SYSTEM = 'Du extraherar strukturerad husdata ur vad användaren skickar in — en bostadsannons, ett mäklarprospekt, ett besiktningsprotokoll eller bara fritext de klistrat in. Svara ENDAST med JSON enligt schema. Sätt fält till null om de inte går att hitta i källan — gissa aldrig.'
+const EXTRACTION_SYSTEM = 'Du extraherar strukturerad husdata ur vad användaren skickar in — en bostadsannons, ett mäklarprospekt, ett besiktningsprotokoll eller bara fritext/anteckningar de klistrat in. Fånga så mycket som möjligt av: grundfakta (adress, byggår, boyta, källararea, köppris, köpår, energiklass), ALLA uppvärmningssystem som nämns var för sig (inte bara ett — många hus kombinerar t.ex. pelletspanna, solceller och vedkamin), smart hem-plattform, solcellsdata, elbilsladdning, tidigare renoveringar, och pågående/planerade projekt (med kostnad/besparing om det nämns). heating_type ska vara en kort sammanfattning i en mening; heating_systems ska lista varje system för sig. Svara ENDAST med JSON enligt schema. Sätt fält till null (eller tom lista) om de inte går att hitta i källan — gissa aldrig, hitta aldrig på siffror eller fakta som inte står i texten.'
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
@@ -11,10 +11,74 @@ const RESPONSE_SCHEMA = {
     address: { type: 'STRING', nullable: true },
     build_year: { type: 'INTEGER', nullable: true },
     living_area_sqm: { type: 'NUMBER', nullable: true },
+    basement_area_sqm: { type: 'NUMBER', nullable: true },
     heating_type: { type: 'STRING', nullable: true },
     energy_class: { type: 'STRING', nullable: true },
+    purchase_price_sek: { type: 'INTEGER', nullable: true },
+    purchase_year: { type: 'INTEGER', nullable: true },
+    smart_home_platform: { type: 'STRING', nullable: true },
+    heating_systems: {
+      type: 'ARRAY',
+      nullable: true,
+      items: {
+        type: 'OBJECT',
+        properties: {
+          type: { type: 'STRING', nullable: true },
+          role: { type: 'STRING', nullable: true, description: 'T.ex. primär, komplement, reserv, endast rumsvärme' },
+          installed_year: { type: 'INTEGER', nullable: true },
+          notes: { type: 'STRING', nullable: true },
+        },
+        required: ['type', 'role', 'installed_year', 'notes'],
+      },
+    },
+    solar_pv: {
+      type: 'OBJECT',
+      nullable: true,
+      properties: {
+        capacity_kw: { type: 'NUMBER', nullable: true },
+        production_kwh_last_year: { type: 'NUMBER', nullable: true },
+        consumption_kwh_last_year: { type: 'NUMBER', nullable: true },
+        self_sufficiency_pct: { type: 'NUMBER', nullable: true },
+      },
+      required: ['capacity_kw', 'production_kwh_last_year', 'consumption_kwh_last_year', 'self_sufficiency_pct'],
+    },
+    ev_charging: {
+      type: 'OBJECT',
+      nullable: true,
+      properties: {
+        annual_kwh: { type: 'NUMBER', nullable: true },
+        charger: { type: 'STRING', nullable: true },
+      },
+      required: ['annual_kwh', 'charger'],
+    },
+    renovations: {
+      type: 'ARRAY',
+      nullable: true,
+      items: { type: 'STRING' },
+      description: 'Korta punkter om tidigare genomförda renoveringar/förbättringar',
+    },
+    ongoing_projects: {
+      type: 'ARRAY',
+      nullable: true,
+      items: {
+        type: 'OBJECT',
+        properties: {
+          title: { type: 'STRING', nullable: true },
+          goal: { type: 'STRING', nullable: true },
+          estimated_cost_sek: { type: 'INTEGER', nullable: true },
+          expected_savings_sek: { type: 'INTEGER', nullable: true },
+          notes: { type: 'STRING', nullable: true },
+        },
+        required: ['title', 'goal', 'estimated_cost_sek', 'expected_savings_sek', 'notes'],
+      },
+    },
+    strategy_notes: { type: 'STRING', nullable: true, description: 'Ekonomiska principer eller strategi kring huset, om det nämns' },
   },
-  required: ['address', 'build_year', 'living_area_sqm', 'heating_type', 'energy_class'],
+  required: [
+    'address', 'build_year', 'living_area_sqm', 'basement_area_sqm', 'heating_type', 'energy_class',
+    'purchase_price_sek', 'purchase_year', 'smart_home_platform', 'heating_systems', 'solar_pv',
+    'ev_charging', 'renovations', 'ongoing_projects', 'strategy_notes',
+  ],
 }
 
 // Extra, non-schema fields the "sök mer info" feature can find — stored inside
@@ -71,11 +135,18 @@ async function geocode(address: string): Promise<{ lat: number; lng: number } | 
   }
 }
 
+class GeminiError extends Error {
+  constructor(message: string, public status: number) {
+    super(message)
+  }
+}
+
 async function extractViaGemini(
   apiKey: string,
   parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>,
   system: string,
-  schema: object
+  schema: object,
+  maxOutputTokens = 700
 ) {
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
@@ -84,7 +155,7 @@ async function extractViaGemini(
       contents: [{ role: 'user', parts }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
-        maxOutputTokens: 700,
+        maxOutputTokens,
         thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
         responseSchema: schema,
@@ -95,7 +166,7 @@ async function extractViaGemini(
   const raw = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !raw) {
     console.error('Gemini extraction error:', data.error ?? res.status)
-    throw new Error('AI-anropet misslyckades')
+    throw new GeminiError('AI-anropet misslyckades', res.status)
   }
   return JSON.parse(raw) as Record<string, unknown>
 }
@@ -123,7 +194,7 @@ async function groundedSearch(apiKey: string, address: string): Promise<{ text: 
     .join('\n')
   if (!res.ok || !raw) {
     console.error('Gemini search error:', data.error ?? res.status)
-    throw new Error('Sökningen misslyckades')
+    throw new GeminiError('Sökningen misslyckades', res.status)
   }
   const chunks = data.candidates?.[0]?.groundingMetadata?.groundingChunks ?? []
   const sources: string[] = chunks.map((c: { web?: { uri?: string } }) => c.web?.uri).filter((u: string | undefined): u is string => !!u)
@@ -179,12 +250,12 @@ export async function POST(request: NextRequest) {
       if (text.length < 200) {
         return NextResponse.json({ error: 'Sidan gav nästan ingen läsbar text (kräver ofta inloggning eller renderas med JS) — prova fritext eller fyll i manuellt istället' }, { status: 422 })
       }
-      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA)
+      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
     } else if (mode === 'text') {
       const text = (body.text as string)?.trim()
       if (!text) return NextResponse.json({ error: 'Text saknas' }, { status: 400 })
       if (text.length < 20) return NextResponse.json({ error: 'För kort text för att extrahera något ur' }, { status: 422 })
-      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text.slice(0, 15000)}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA)
+      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text.slice(0, 15000)}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
     } else if (mode === 'document') {
       const fileBase64 = body.fileBase64 as string
       const fileMimeType = body.fileMimeType as string
@@ -195,7 +266,7 @@ export async function POST(request: NextRequest) {
       extracted = await extractViaGemini(apiKey, [
         { text: 'Extrahera husdata ur det bifogade dokumentet.' },
         { inlineData: { mimeType: fileMimeType, data: fileBase64 } },
-      ], EXTRACTION_SYSTEM, RESPONSE_SCHEMA)
+      ], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
     } else {
       return NextResponse.json({ error: 'Okänt importläge' }, { status: 400 })
     }
@@ -210,6 +281,9 @@ export async function POST(request: NextRequest) {
     // data on the next import.
     return NextResponse.json({ mode, extracted, geo, current: current ?? null, sourceUrl })
   } catch (err) {
+    if (err instanceof GeminiError && err.status === 429) {
+      return NextResponse.json({ error: 'AI-tjänsten är hårt belastad just nu (gratis-kvoten är tillfälligt full) — vänta en minut och försök igen' }, { status: 429 })
+    }
     console.error('Import error:', err)
     return NextResponse.json({ error: 'Import misslyckades' }, { status: 500 })
   }

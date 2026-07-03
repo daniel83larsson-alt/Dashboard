@@ -13,6 +13,7 @@ export async function GET(request: NextRequest) {
   const expectedState = request.cookies.get('homey_oauth_state')?.value
 
   const fail = (reason: string) => {
+    console.error('Homey callback failed:', reason, { hasCode: !!code, hasState: !!state, hasExpectedState: !!expectedState })
     const dest = new URL('/dashboard', request.url)
     dest.searchParams.set('homey_error', reason)
     const res = NextResponse.redirect(dest)

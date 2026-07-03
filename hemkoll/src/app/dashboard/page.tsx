@@ -8,10 +8,24 @@ function fmtDate(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
-export default async function OverviewPage() {
+const HOMEY_ERROR_MESSAGES: Record<string, string> = {
+  missing_code: 'Homey skickade inte tillbaka någon inloggningskod — prova igen.',
+  invalid_state: 'Anslutningsförsöket verkade inte höra ihop med det du startade (kan hända om det tog för lång tid, eller om du öppnade länken i ett nytt fönster) — prova igen.',
+  token_exchange_failed: 'Homey avvisade inloggningen — dubbelkolla att redirect-URI:n i din Web API Client på Homeys utvecklarportal är exakt https://hemkoll-phi.vercel.app/api/homey/callback.',
+}
+
+export default async function OverviewPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ homey_connected?: string; homey_error?: string }>
+}) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+
+  const params = await searchParams
+  const homeyConnected = params.homey_connected === '1'
+  const homeyError = params.homey_error ? (HOMEY_ERROR_MESSAGES[params.homey_error] ?? `Något gick fel (${params.homey_error}).`) : null
 
   const [{ data: profile }, { data: items }, { data: events }] = await Promise.all([
     supabase.from('hemkoll_house_profile').select('*').eq('user_id', user.id).single(),
@@ -32,6 +46,13 @@ export default async function OverviewPage() {
           {itemCount > 0 ? `${itemCount} objekt loggade` : 'Inget loggat ännu — börja under Objekt & logg'}
         </p>
       </div>
+
+      {homeyConnected && (
+        <div className="bg-card border border-accent/30 rounded-xl p-3 text-accent text-sm">✓ Homey anslutet</div>
+      )}
+      {homeyError && (
+        <div className="bg-card border border-red-500/30 rounded-xl p-3 text-red-400 text-sm">⚠ Homey-anslutningen misslyckades: {homeyError}</div>
+      )}
 
       <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-6 lg:space-y-0">
         <div className="lg:col-span-2 space-y-6">

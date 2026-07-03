@@ -4,12 +4,22 @@ import { useState, useRef, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 
+type HeatingSystem = { type: string | null; role: string | null; installed_year: number | null; notes: string | null }
+type OngoingProject = { title: string | null; goal: string | null; estimated_cost_sek: number | null; expected_savings_sek: number | null; notes: string | null }
+type SolarPv = { capacity_kw: number | null; production_kwh_last_year: number | null; consumption_kwh_last_year: number | null; self_sufficiency_pct: number | null }
+type EvCharging = { annual_kwh: number | null; charger: string | null }
+
 type Profile = {
   address: string | null
   build_year: number | null
   living_area_sqm: number | null
+  basement_area_sqm: number | null
   heating_type: string | null
   energy_class: string | null
+  purchase_price_sek: number | null
+  purchase_year: number | null
+  smart_home_platform: string | null
+  heating_systems: HeatingSystem[] | null
   raw_extracted?: Record<string, unknown> | null
 } | null
 
@@ -17,8 +27,18 @@ type Extracted = {
   address: string | null
   build_year: number | null
   living_area_sqm: number | null
+  basement_area_sqm: number | null
   heating_type: string | null
   energy_class: string | null
+  purchase_price_sek: number | null
+  purchase_year: number | null
+  smart_home_platform: string | null
+  heating_systems: HeatingSystem[] | null
+  solar_pv: SolarPv | null
+  ev_charging: EvCharging | null
+  renovations: string[] | null
+  ongoing_projects: OngoingProject[] | null
+  strategy_notes: string | null
 }
 
 type ResearchExtracted = {
@@ -41,12 +61,18 @@ const TABS: { mode: Mode; label: string; icon: string }[] = [
   { mode: 'document', label: 'Dokument', icon: '📄' },
 ]
 
+const sek = (v: unknown) => `${Number(v).toLocaleString('sv-SE')} kr`
+
 const FIELDS: { key: keyof Extracted; label: string; format?: (v: unknown) => string }[] = [
   { key: 'address', label: 'Adress' },
   { key: 'build_year', label: 'Byggår' },
   { key: 'living_area_sqm', label: 'Boyta', format: v => `${v} m²` },
-  { key: 'heating_type', label: 'Uppvärmning' },
+  { key: 'basement_area_sqm', label: 'Källararea', format: v => `${v} m²` },
+  { key: 'purchase_price_sek', label: 'Köppris', format: sek },
+  { key: 'purchase_year', label: 'Köpår' },
+  { key: 'heating_type', label: 'Uppvärmning (sammanfattning)' },
   { key: 'energy_class', label: 'Energiklass' },
+  { key: 'smart_home_platform', label: 'Smart hem-plattform' },
 ]
 
 const RESEARCH_FIELDS: { key: keyof ResearchExtracted; label: string; format?: (v: unknown) => string }[] = [
@@ -55,8 +81,8 @@ const RESEARCH_FIELDS: { key: keyof ResearchExtracted; label: string; format?: (
   { key: 'rooms', label: 'Antal rum' },
   { key: 'build_year', label: 'Byggår' },
   { key: 'energy_class', label: 'Energiklass' },
-  { key: 'assessed_value_sek', label: 'Taxeringsvärde', format: v => `${Number(v).toLocaleString('sv-SE')} kr` },
-  { key: 'latest_sale_price_sek', label: 'Senaste försäljningspris', format: v => `${Number(v).toLocaleString('sv-SE')} kr` },
+  { key: 'assessed_value_sek', label: 'Taxeringsvärde', format: sek },
+  { key: 'latest_sale_price_sek', label: 'Senaste försäljningspris', format: sek },
   { key: 'latest_sale_date', label: 'Försäljningsdatum' },
 ]
 
@@ -70,6 +96,10 @@ function fileToBase64(file: File): Promise<string> {
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
+}
+
+function hasExtra(e: Extracted) {
+  return !!(e.solar_pv || e.ev_charging || (e.renovations?.length) || (e.ongoing_projects?.length) || e.strategy_notes)
 }
 
 export default function ImportPage() {
@@ -88,6 +118,8 @@ export default function ImportPage() {
   const [geo, setGeo] = useState<{ lat: number; lng: number } | null>(null)
   const [sourceUrl, setSourceUrl] = useState<string | null>(null)
   const [selected, setSelected] = useState<Record<string, boolean>>({})
+  const [heatingSelected, setHeatingSelected] = useState(false)
+  const [extraSelected, setExtraSelected] = useState(false)
   const [committing, setCommitting] = useState(false)
 
   const [researching, setResearching] = useState(false)
@@ -135,18 +167,21 @@ export default function ImportPage() {
       })
       const data = await res.json()
       if (res.ok) {
-        setExtracted(data.extracted)
+        const ex = data.extracted as Extracted
+        setExtracted(ex)
         setCurrent(data.current)
         setGeo(data.geo)
         setSourceUrl(data.sourceUrl)
         const init: Record<string, boolean> = {}
         for (const f of FIELDS) {
-          const val = data.extracted[f.key]
+          const val = ex[f.key]
           if (val == null) continue
           const curVal = data.current?.[f.key]
           init[f.key] = curVal == null || curVal === ''
         }
         setSelected(init)
+        setHeatingSelected(!!ex.heating_systems?.length && !data.current?.heating_systems?.length)
+        setExtraSelected(hasExtra(ex))
       } else {
         setError(data.error ?? 'Något gick fel')
       }
@@ -167,8 +202,23 @@ export default function ImportPage() {
     for (const f of FIELDS) {
       if (selected[f.key] && extracted[f.key] != null) payload[f.key] = extracted[f.key]
     }
+    if (heatingSelected && extracted.heating_systems?.length) {
+      payload.heating_systems = extracted.heating_systems
+    }
     if (selected.address && geo) {
       payload.raw_extracted = { ...(current?.raw_extracted ?? {}), lat: geo.lat, lng: geo.lng }
+    }
+    if (extraSelected && hasExtra(extracted)) {
+      payload.raw_extracted = {
+        ...(payload.raw_extracted as Record<string, unknown> ?? current?.raw_extracted ?? {}),
+        extra: {
+          solar_pv: extracted.solar_pv,
+          ev_charging: extracted.ev_charging,
+          renovations: extracted.renovations,
+          ongoing_projects: extracted.ongoing_projects,
+          strategy_notes: extracted.strategy_notes,
+        },
+      }
     }
     if (sourceUrl) payload.source_url = sourceUrl
 
@@ -245,7 +295,7 @@ export default function ImportPage() {
     <div className="p-4 md:p-8 max-w-2xl w-full mx-auto">
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Importera</h1>
-        <p className="text-muted text-sm mt-1">Länk, dokument eller fritext — en agent läser igenom och strukturerar husdata åt dig</p>
+        <p className="text-muted text-sm mt-1">Länk, dokument eller fritext — en agent läser igenom och strukturerar husdata åt dig, inklusive flera uppvärmningssystem, solceller, renoveringar och pågående projekt</p>
       </div>
 
       <div className="flex gap-1 bg-card border border-edge rounded-xl p-1 mb-4">
@@ -286,7 +336,7 @@ export default function ImportPage() {
               rows={8}
               className="w-full bg-bg border border-edge rounded-lg px-3 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent resize-none"
             />
-            <p className="text-muted text-xs">Minst några meningar behövs för att AI:n ska hitta något att strukturera</p>
+            <p className="text-muted text-xs">Ju mer detaljerat, desto mer plockas ut — köppris, flera uppvärmningssystem, solceller, renoveringshistorik, pågående projekt</p>
           </>
         )}
 
@@ -323,12 +373,13 @@ export default function ImportPage() {
       {extracted && (
         <div className="mt-4 bg-card border border-accent/30 rounded-2xl p-4">
           <div className="text-xs text-accent uppercase tracking-wider mb-1">Hittades — välj vad som ska sparas</div>
-          <p className="text-muted text-xs mb-3">Sparas inte förrän du väljer fält och trycker Spara. Fält som skulle ersätta något du redan har ifyllt är förbockade som avstängda.</p>
+          <p className="text-muted text-xs mb-3">Sparas inte förrän du väljer och trycker Spara. Fält som skulle ersätta något du redan har ifyllt är förbockade som avstängda.</p>
+
           <div className="divide-y divide-edge">
             {FIELDS.map(f => {
               const newVal = extracted[f.key]
               if (newVal == null) return null
-              const curVal = current?.[f.key]
+              const curVal = current?.[f.key as keyof Profile]
               const changed = curVal != null && String(curVal) !== String(newVal)
               const display = f.format ? f.format(newVal) : String(newVal)
               const curDisplay = curVal != null && f.format ? f.format(curVal) : curVal != null ? String(curVal) : null
@@ -349,12 +400,106 @@ export default function ImportPage() {
               )
             })}
           </div>
+
+          {!!extracted.heating_systems?.length && (
+            <div className="mt-4 pt-4 border-t border-edge">
+              <label className="flex items-start gap-3 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={heatingSelected}
+                  onChange={e => setHeatingSelected(e.target.checked)}
+                  className="mt-1"
+                />
+                <div className="flex-1 text-sm">
+                  <div className="text-muted text-xs mb-1">Uppvärmningssystem ({extracted.heating_systems.length} st) — ersätter hela listan om vald</div>
+                  <div className="flex flex-col gap-1.5">
+                    {extracted.heating_systems.map((h, i) => (
+                      <div key={i} className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <span className="font-medium">{h.type ?? '—'}</span>
+                        {h.role && <span className="text-muted"> · {h.role}</span>}
+                        {h.installed_year && <span className="text-muted"> · sedan {h.installed_year}</span>}
+                        {h.notes && <div className="text-muted text-xs mt-0.5">{h.notes}</div>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
+          {hasExtra(extracted) && (
+            <div className="mt-4 pt-4 border-t border-edge">
+              <label className="flex items-start gap-3 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={extraSelected}
+                  onChange={e => setExtraSelected(e.target.checked)}
+                  className="mt-1"
+                />
+                <div className="flex-1 text-sm">
+                  <div className="text-muted text-xs mb-2">Extra info — sparas som ett block, ersätter tidigare extra info om vald</div>
+                  <div className="flex flex-col gap-2">
+                    {extracted.solar_pv && (
+                      <div className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <div className="text-xs text-muted mb-0.5">Solceller</div>
+                        {extracted.solar_pv.capacity_kw != null && <div>{extracted.solar_pv.capacity_kw} kW installerat</div>}
+                        {extracted.solar_pv.production_kwh_last_year != null && <div className="text-muted text-xs">Producerat: {extracted.solar_pv.production_kwh_last_year} kWh/år</div>}
+                        {extracted.solar_pv.consumption_kwh_last_year != null && <div className="text-muted text-xs">Förbrukat: {extracted.solar_pv.consumption_kwh_last_year} kWh/år</div>}
+                        {extracted.solar_pv.self_sufficiency_pct != null && <div className="text-muted text-xs">Självförsörjningsgrad: {extracted.solar_pv.self_sufficiency_pct}%</div>}
+                      </div>
+                    )}
+                    {extracted.ev_charging && (
+                      <div className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <div className="text-xs text-muted mb-0.5">Elbilsladdning</div>
+                        {extracted.ev_charging.annual_kwh != null && <div>{extracted.ev_charging.annual_kwh} kWh/år</div>}
+                        {extracted.ev_charging.charger && <div className="text-muted text-xs">{extracted.ev_charging.charger}</div>}
+                      </div>
+                    )}
+                    {!!extracted.renovations?.length && (
+                      <div className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <div className="text-xs text-muted mb-1">Renoveringshistorik</div>
+                        <ul className="list-disc pl-4 flex flex-col gap-0.5">
+                          {extracted.renovations.map((r, i) => <li key={i}>{r}</li>)}
+                        </ul>
+                      </div>
+                    )}
+                    {!!extracted.ongoing_projects?.length && (
+                      <div className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <div className="text-xs text-muted mb-1">Pågående/planerade projekt</div>
+                        <div className="flex flex-col gap-2">
+                          {extracted.ongoing_projects.map((p, i) => (
+                            <div key={i}>
+                              <span className="font-medium">{p.title ?? '—'}</span>
+                              {(p.estimated_cost_sek != null || p.expected_savings_sek != null) && (
+                                <span className="text-muted text-xs">
+                                  {p.estimated_cost_sek != null && ` · ${sek(p.estimated_cost_sek)}`}
+                                  {p.expected_savings_sek != null && ` · sparar ${sek(p.expected_savings_sek)}/år`}
+                                </span>
+                              )}
+                              {p.goal && <div className="text-muted text-xs">{p.goal}</div>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {extracted.strategy_notes && (
+                      <div className="bg-bg border border-edge rounded-lg px-3 py-2">
+                        <div className="text-xs text-muted mb-0.5">Strategi/principer</div>
+                        <div>{extracted.strategy_notes}</div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
           <button
             onClick={commit}
-            disabled={committing || !Object.values(selected).some(Boolean)}
-            className="mt-3 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+            disabled={committing || (!Object.values(selected).some(Boolean) && !heatingSelected && !extraSelected)}
+            className="mt-4 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
           >
-            {committing ? 'Sparar...' : 'Spara valda fält'}
+            {committing ? 'Sparar...' : 'Spara valt'}
           </button>
         </div>
       )}

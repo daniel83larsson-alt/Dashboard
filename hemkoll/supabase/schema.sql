@@ -38,7 +38,7 @@ create policy "Users manage own house events" on public.hemkoll_events
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 -- Strukturerad husdata (byggår, boyta, uppvärmning m.m.), fylls i manuellt
--- eller av importagenten som läser en prospekt-/annonslänk.
+-- eller av importagenten som läser en prospekt-/annonslänk/fritext/dokument.
 create table if not exists public.hemkoll_house_profile (
   user_id uuid references auth.users(id) on delete cascade primary key,
   address text,
@@ -54,6 +54,15 @@ alter table public.hemkoll_house_profile enable row level security;
 drop policy if exists "Users manage own house profile" on public.hemkoll_house_profile;
 create policy "Users manage own house profile" on public.hemkoll_house_profile
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+-- Utökning: köp, källare och flera uppvärmningssystem samtidigt (många hus
+-- kombinerar t.ex. pelletspanna + solceller + vedkamin). heating_type lever
+-- kvar som en kort sammanfattning; heating_systems är listan med detaljer.
+alter table public.hemkoll_house_profile add column if not exists purchase_price_sek numeric;
+alter table public.hemkoll_house_profile add column if not exists purchase_year int;
+alter table public.hemkoll_house_profile add column if not exists basement_area_sqm numeric;
+alter table public.hemkoll_house_profile add column if not exists smart_home_platform text;
+alter table public.hemkoll_house_profile add column if not exists heating_systems jsonb default '[]';
 
 create table if not exists public.hemkoll_advisor_sessions (
   user_id uuid references auth.users(id) on delete cascade primary key,
