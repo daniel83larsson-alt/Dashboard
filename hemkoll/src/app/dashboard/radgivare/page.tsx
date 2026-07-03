@@ -2,8 +2,29 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
+import ReactMarkdown from 'react-markdown'
 
 type Message = { role: 'user' | 'assistant'; content: string }
+
+function AdvisorMarkdown({ text }: { text: string }) {
+  return (
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+        strong: ({ children }) => <strong className="font-semibold text-accent">{children}</strong>,
+        em: ({ children }) => <em className="text-lcd italic">{children}</em>,
+        ul: ({ children }) => <ul className="mb-2 last:mb-0 space-y-1 pl-0 [&>li]:flex [&>li]:gap-2 [&>li]:items-start [&>li]:before:content-['·'] [&>li]:before:text-accent [&>li]:before:flex-shrink-0 [&>li]:before:mt-0.5">{children}</ul>,
+        ol: ({ children }) => <ol className="mb-2 last:mb-0 space-y-1 pl-5 list-decimal marker:text-accent">{children}</ol>,
+        li: ({ children }) => <li className="text-fg leading-relaxed">{children}</li>,
+        h1: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+        h2: ({ children }) => <div className="font-semibold text-fg mb-1 mt-2 first:mt-0">{children}</div>,
+        h3: ({ children }) => <div className="font-medium text-muted mb-1 mt-2 first:mt-0 text-xs uppercase tracking-wide">{children}</div>,
+      }}
+    >
+      {text}
+    </ReactMarkdown>
+  )
+}
 
 export default function RadgivarePage() {
   const [messages, setMessages] = useState<Message[]>([])
@@ -77,7 +98,7 @@ export default function RadgivarePage() {
             <div key={i} className={`max-w-[85%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
               m.role === 'user' ? 'bg-accent text-bg self-end' : 'bg-card border border-edge text-fg self-start'
             }`}>
-              {m.content}
+              {m.role === 'user' ? m.content : <AdvisorMarkdown text={m.content} />}
             </div>
           ))}
           {loading && (
