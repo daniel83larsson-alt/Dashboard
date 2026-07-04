@@ -23,7 +23,7 @@ export default async function AdminPage() {
     supabase.rpc('admin_activity_stats'),
   ])
 
-  type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean }
+  type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean; concept2_synced: boolean; garmin_synced: boolean }
   type ActivityStatsRow = { user_id: string; activity_count: number; days_synced: number; last_synced: string }
   type ProfileRow = { id: string; email: string; name: string | null; created_at: string; locked: boolean | null; flagged_attempts: number | null }
   const syncByUser = new Map<string, SyncRow>((syncStatus ?? []).map((s: SyncRow) => [s.user_id, s]))
@@ -45,6 +45,8 @@ export default async function AdminPage() {
             isSelf={p.id === user.id}
             hasConcept2={!!syncByUser.get(p.id)?.has_concept2}
             hasGarmin={!!syncByUser.get(p.id)?.has_garmin}
+            concept2Synced={!!syncByUser.get(p.id)?.concept2_synced}
+            garminSynced={!!syncByUser.get(p.id)?.garmin_synced}
             activityCount={statsByUser.get(p.id)?.activity_count ?? 0}
             daysSynced={statsByUser.get(p.id)?.days_synced ?? 0}
             lastSynced={statsByUser.get(p.id)?.last_synced ?? null}

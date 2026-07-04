@@ -108,9 +108,17 @@ create policy "Admin updates all profiles" on public.profiles
 -- ja/nej, aldrig själva access-tokens/lösenorden. Körs som security definer
 -- så den kan läsa concept2_tokens/coach_sessions trots att admin saknar
 -- direkt SELECT-rättighet där; kontrollen sker inuti funktionen.
+--
+-- has_concept2/has_garmin betyder bara "uppgifter sparade" (verifierade mot
+-- källan VID SPARANDET, men säger inget om just nu). concept2_synced/
+-- garmin_synced betyder "minst ett pass har faktiskt synkats" — Concept2-pass
+-- lagras med negativt strava_id, Garmin-pass med positivt/noll, så de går
+-- att skilja åt utan en egen källa-kolumn. Badgen i UI:t ska vara grön bara
+-- när BÅDA är sanna, inte bara "uppgifter sparade en gång".
 -- Kör vid uppdatering av en befintlig databas:
-create or replace function public.admin_all_sync_status()
-returns table(user_id uuid, has_concept2 boolean, has_garmin boolean)
+drop function if exists public.admin_all_sync_status();
+create function public.admin_all_sync_status()
+returns table(user_id uuid, has_concept2 boolean, has_garmin boolean, concept2_synced boolean, garmin_synced boolean)
 language plpgsql
 security definer
 set search_path = public
@@ -124,7 +132,9 @@ begin
   select
     p.id,
     exists(select 1 from public.concept2_tokens c where c.user_id = p.id),
-    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'garmin_credentials')
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'garmin_credentials'),
+    exists(select 1 from public.activities a where a.user_id = p.id and a.strava_id < 0),
+    exists(select 1 from public.activities a where a.user_id = p.id and a.strava_id >= 0)
   from public.profiles p;
 end;
 $$;

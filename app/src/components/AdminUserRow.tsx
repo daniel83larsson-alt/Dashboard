@@ -22,11 +22,26 @@ function fmtLastSynced(iso: string | null) {
   return new Date(iso).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 
+// Three states, not two: "–" (aldrig anslutet) is different from "◐" (uppgifter
+// sparade men inget synkat än) which is different from "✓" (faktiskt synkat
+// minst ett pass). Ett grönt bock ska bara betyda att det bevisligen fungerar.
+function syncBadge(connected: boolean, synced: boolean, label: string) {
+  if (synced) {
+    return <span className="text-[10px] px-1.5 py-0.5 rounded border text-accent border-accent/30 bg-accent/10">✓ {label}</span>
+  }
+  if (connected) {
+    return <span className="text-[10px] px-1.5 py-0.5 rounded border text-amber-400 border-amber-400/30 bg-amber-400/10">◐ {label}</span>
+  }
+  return <span className="text-[10px] px-1.5 py-0.5 rounded border text-muted border-edge">– {label}</span>
+}
+
 export default function AdminUserRow({
   profile,
   isSelf,
   hasConcept2,
   hasGarmin,
+  concept2Synced,
+  garminSynced,
   activityCount,
   daysSynced,
   lastSynced,
@@ -35,6 +50,8 @@ export default function AdminUserRow({
   isSelf: boolean
   hasConcept2: boolean
   hasGarmin: boolean
+  concept2Synced: boolean
+  garminSynced: boolean
   activityCount: number
   daysSynced: number
   lastSynced: string | null
@@ -96,12 +113,8 @@ export default function AdminUserRow({
             <div className="text-amber-400 text-[11px] mt-1">{profile.flagged_attempts} flaggade chattmeddelanden</div>
           )}
           <div className="flex gap-1.5 mt-2">
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${hasConcept2 ? 'text-accent border-accent/30 bg-accent/10' : 'text-muted border-edge'}`}>
-              {hasConcept2 ? '✓' : '–'} Concept2
-            </span>
-            <span className={`text-[10px] px-1.5 py-0.5 rounded border ${hasGarmin ? 'text-accent border-accent/30 bg-accent/10' : 'text-muted border-edge'}`}>
-              {hasGarmin ? '✓' : '–'} Garmin
-            </span>
+            {syncBadge(hasConcept2, concept2Synced, 'Concept2')}
+            {syncBadge(hasGarmin, garminSynced, 'Garmin')}
           </div>
           <div className="text-muted text-[11px] mt-1.5">
             {activityCount > 0
