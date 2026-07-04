@@ -7,6 +7,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Översikt', icon: 'home' },
   { href: '/dashboard/passlogg', label: 'Passlogg', icon: 'log' },
   { href: '/dashboard/rorlighet', label: 'Rörlighet', icon: 'stretch' },
+  { href: '/dashboard/rekord', label: 'Rekord', icon: 'trophy' },
   { href: '/dashboard/insikter', label: 'Insikter', icon: 'insight' },
   { href: '/dashboard/halsa', label: 'Hälsa', icon: 'heart' },
   { href: '/dashboard/grafer', label: 'Grafer', icon: 'chart' },

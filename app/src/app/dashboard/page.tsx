@@ -47,75 +47,6 @@ type Activity = {
   raw_data?: unknown
 }
 
-type PR = { value: number; unit: string; date: string; display: string; activityId: string }
-type SportPRs = { sport: string; totalDist: number; prs: { label: string; pr: PR }[] }
-
-// Same best-effort-window convention rowing PRs use (best distance covered
-// in ~20/30/45 min), generalized to any distance-based sport so each one
-// gets its own personal bests instead of only rowing having them.
-const TIME_WINDOWS = [
-  { label: '20 min', minSec: 1050, maxSec: 1350 },
-  { label: '30 min', minSec: 1620, maxSec: 1980 },
-  { label: '45 min', minSec: 2460, maxSec: 3000 },
-]
-
-// "Snabbaste X" benchmark distance per sport — rowing/running race over 5k,
-// cycling benchmarks are conventionally longer, swimming shorter.
-const BENCHMARK_DISTANCE: Record<string, { meters: number; label: string }> = {
-  Rowing: { meters: 5000, label: '5 000 m' },
-  Run: { meters: 5000, label: '5 km' },
-  TrailRun: { meters: 5000, label: '5 km' },
-  Walk: { meters: 5000, label: '5 km' },
-  Hike: { meters: 5000, label: '5 km' },
-  Ride: { meters: 20000, label: '20 km' },
-  VirtualRide: { meters: 20000, label: '20 km' },
-  Swim: { meters: 1000, label: '1 000 m' },
-}
-
-// Only sports where distance/pace PRs are meaningful — strength/yoga/etc.
-// don't fit this "personal best" shape and are left out.
-const PR_ELIGIBLE_SPORTS = new Set(Object.keys(BENCHMARK_DISTANCE))
-
-function computeSportPRs(acts: Activity[], sport: string): SportPRs {
-  const real = acts.filter(a => a.sport_type === sport && a.distance >= 200 && a.moving_time >= 60)
-  const prs: { label: string; pr: PR }[] = []
-
-  for (const w of TIME_WINDOWS) {
-    const inWindow = real.filter(a => a.moving_time >= w.minSec && a.moving_time <= w.maxSec)
-    if (!inWindow.length) continue
-    const best = inWindow.reduce((b, c) => c.distance > b.distance ? c : b)
-    const speedOrPace = fmtSpeedOrPace(sport, best.distance, best.moving_time)
-    prs.push({
-      label: `Bäst ${w.label}`,
-      pr: { value: best.distance, unit: 'm', date: best.start_date, activityId: best.id, display: `${fmtKm(best.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
-    })
-  }
-
-  const bench = BENCHMARK_DISTANCE[sport]
-  if (bench) {
-    const near = real.filter(a => a.distance >= bench.meters * 0.96 && a.distance <= bench.meters * 1.04)
-    if (near.length) {
-      const fastest = near.reduce((b, c) => c.moving_time < b.moving_time ? c : b)
-      const speedOrPace = fmtSpeedOrPace(sport, fastest.distance, fastest.moving_time)
-      prs.push({
-        label: `Snabbaste ${bench.label}`,
-        pr: { value: fastest.moving_time, unit: 's', date: fastest.start_date, activityId: fastest.id, display: `${fmtDur(fastest.moving_time)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
-      })
-    }
-  }
-
-  const totalDist = real.reduce((s, a) => s + a.distance, 0)
-  return { sport, totalDist, prs }
-}
-
-function computeAllSportPRs(acts: Activity[]): SportPRs[] {
-  const sports = [...new Set(acts.map(a => a.sport_type))].filter(s => PR_ELIGIBLE_SPORTS.has(s))
-  return sports
-    .map(sport => computeSportPRs(acts, sport))
-    .filter(s => s.prs.length > 0)
-    .sort((a, b) => b.totalDist - a.totalDist)
-}
-
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
@@ -188,8 +119,6 @@ export default async function DashboardPage() {
   const wk = totals(thisWeek)
   const mm = totals(thisMonth)
   const yy = totals(thisYear)
-
-  const sportPRs = computeAllSportPRs(activities)
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -539,39 +468,19 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Personliga rekord per sport ───────────────────────────────────── */}
-      {sportPRs.length > 0 && (
-        <div className="lg:col-span-2 lg:order-6">
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Personliga rekord</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-            {sportPRs.map(({ sport, prs }) => (
-              <div key={sport}>
-                <div className="text-xs text-muted mb-2 flex items-center gap-1.5">
-                  <span>{sportIcon(sport)}</span>
-                  <span className="capitalize">{sportLabel(sport)}</span>
-                </div>
-                <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-                  {prs.map(({ label, pr }) => (
-                    <a
-                      key={label}
-                      href={`/dashboard/passlogg/${pr.activityId}`}
-                      className="px-4 py-3 flex items-center justify-between hover:bg-bg transition-colors"
-                    >
-                      <div>
-                        <div className="text-sm font-medium">{label}</div>
-                        <div className="text-muted text-xs mt-0.5">
-                          {new Date(pr.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </div>
-                      </div>
-                      <div className="font-mono text-accent text-sm font-bold text-right">
-                        {pr.display}
-                      </div>
-                    </a>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
+      {/* ── Rekord (egen sida) ───────────────────────────────────────────────── */}
+      {activities.length > 0 && (
+        <div className="lg:order-6">
+          <a
+            href="/dashboard/rekord"
+            className="bg-card border border-edge rounded-2xl p-4 flex items-center justify-between hover:border-accent/40 transition-colors"
+          >
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🏆</span>
+              <span className="text-sm font-medium">Se alla rekord</span>
+            </div>
+            <span className="text-muted text-xs">Personliga rekord, längsta streak, mm →</span>
+          </a>
         </div>
       )}
 

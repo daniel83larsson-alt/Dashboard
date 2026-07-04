@@ -10,6 +10,7 @@ const PATHS: Record<string, string> = {
   close: 'M6 18L18 6M6 6l12 12',
   admin: 'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z',
   stretch: 'M12 2v6M9 5l3 3 3-3M12 22v-6M9 19l3-3 3 3M2 12h6M5 9l-3 3 3 3M16 12h6M19 9l3 3-3 3',
+  trophy: 'M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4zM7 5H4v2a3 3 0 003 3M17 5h3v2a3 3 0 01-3 3',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {
