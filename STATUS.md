@@ -10,6 +10,7 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 ## DL Trainer
 
 - ✅ **Rörlighet — ny sida för generat stretch/mobilitetspass.** Välj kroppsdel(ar) eller "hela kroppen", passet sätts ihop från Daniels egen forskningsgenomgång (21 övningar, statisk lista — inte AI-genererad, så säkerhetsvarningarna om t.ex. hängning i stång och foam roller-positionering aldrig kan formuleras om av misstag). Loggas som eget pass i Passlogg. Byggt, deployat, livetestat mot UAT-kontot (loggning verifierad, stör inte Passlogg/dashboard).
+- ✅ Uppföljning efter Daniels första riktiga pass: (1) avbockade övningar sparas nu strukturerat och syns som en checklista när man klickar in på passet — syntes inte alls innan. (2) Hittade och fixade en bugg på samma gång: passdetaljsidan trodde bara Concept2/Garmin fanns och märkte Rörlighetspass felaktigt som "Concept2". (3) Kalendern märker rörlighetsdagar med en egen färg + en "X/2 denna vecka"-räknare mot Daniels mål. Byggt, deployat, livetestat.
 
 - ✅ Jessika (ny användare) fick data som inte var hennes — spårat till Next.js router-cache/cookie-problem (inte RLS), fixat med hård navigation vid login/logout, verifierat.
 - ✅ Dubbla pass för Concept2 + Garmin — byggt ihopslagnings-logik istället för att pausa Concept2 (fanns instruktion: "Synka ihop det"). Fixat två äldre mekanismer som motverkade det (sync-garmin-filter, auto-cleanup).
