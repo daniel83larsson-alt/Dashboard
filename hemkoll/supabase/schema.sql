@@ -64,6 +64,18 @@ alter table public.hemkoll_house_profile add column if not exists basement_area_
 alter table public.hemkoll_house_profile add column if not exists smart_home_platform text;
 alter table public.hemkoll_house_profile add column if not exists heating_systems jsonb default '[]';
 
+-- Utökning 2: matchar fältdjupet i ett riktigt mäklarprospekt/Hemnet-annons
+-- (research 2026-07-04 — se STATUS.md). driftskostnad var tidigare inte alls
+-- fångad; sparas nu som en strukturerad uppdelning (samma kategorier som
+-- branschens egna exempel: värme, el, vatten/avlopp, sophämtning,
+-- försäkring, sotning, samfällighet, övrigt) istället för bara en totalsumma.
+alter table public.hemkoll_house_profile add column if not exists plot_area_sqm numeric;
+alter table public.hemkoll_house_profile add column if not exists rooms numeric;
+alter table public.hemkoll_house_profile add column if not exists building_type text;
+alter table public.hemkoll_house_profile add column if not exists assessed_value_sek numeric;
+alter table public.hemkoll_house_profile add column if not exists energy_performance_kwh_sqm numeric;
+alter table public.hemkoll_house_profile add column if not exists operating_cost_sek jsonb;
+
 create table if not exists public.hemkoll_advisor_sessions (
   user_id uuid references auth.users(id) on delete cascade primary key,
   messages jsonb default '[]',

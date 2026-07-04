@@ -9,21 +9,38 @@ type OngoingProject = { title: string | null; goal: string | null; estimated_cos
 type SolarPv = { capacity_kw: number | null; production_kwh_last_year: number | null; consumption_kwh_last_year: number | null; self_sufficiency_pct: number | null }
 type EvCharging = { annual_kwh: number | null; charger: string | null }
 type Extra = { solar_pv?: SolarPv | null; ev_charging?: EvCharging | null; renovations?: string[] | null; ongoing_projects?: OngoingProject[] | null; strategy_notes?: string | null } | null
+type OperatingCost = {
+  heating: number | null; electricity: number | null; water_sewage: number | null; waste: number | null
+  insurance: number | null; chimney_sweep: number | null; community_fee: number | null; other: number | null
+  total: number | null
+}
 
 type Profile = {
   address: string | null
   build_year: number | null
   living_area_sqm: number | null
   basement_area_sqm: number | null
+  plot_area_sqm: number | null
+  rooms: number | null
+  building_type: string | null
   heating_type: string | null
   energy_class: string | null
+  energy_performance_kwh_sqm: number | null
   purchase_price_sek: number | null
   purchase_year: number | null
+  assessed_value_sek: number | null
+  operating_cost_sek: OperatingCost | null
   smart_home_platform: string | null
   heating_systems: HeatingSystem[] | null
   source_url: string | null
   raw_extracted?: Record<string, unknown> | null
 } | null
+
+const OPERATING_COST_LABELS: Record<keyof OperatingCost, string> = {
+  heating: 'Värme', electricity: 'El', water_sewage: 'Vatten/avlopp', waste: 'Sophämtning',
+  insurance: 'Försäkring', chimney_sweep: 'Sotning', community_fee: 'Samfällighet/väg', other: 'Övrigt',
+  total: 'Totalt',
+}
 
 const sek = (v: number) => `${v.toLocaleString('sv-SE')} kr`
 
@@ -33,10 +50,15 @@ export default function HouseProfileCard({ profile }: { profile: Profile }) {
   const [buildYear, setBuildYear] = useState(profile?.build_year?.toString() ?? '')
   const [livingArea, setLivingArea] = useState(profile?.living_area_sqm?.toString() ?? '')
   const [basementArea, setBasementArea] = useState(profile?.basement_area_sqm?.toString() ?? '')
+  const [plotArea, setPlotArea] = useState(profile?.plot_area_sqm?.toString() ?? '')
+  const [rooms, setRooms] = useState(profile?.rooms?.toString() ?? '')
+  const [buildingType, setBuildingType] = useState(profile?.building_type ?? '')
   const [heatingType, setHeatingType] = useState(profile?.heating_type ?? '')
   const [energyClass, setEnergyClass] = useState(profile?.energy_class ?? '')
+  const [energyPerformance, setEnergyPerformance] = useState(profile?.energy_performance_kwh_sqm?.toString() ?? '')
   const [purchasePrice, setPurchasePrice] = useState(profile?.purchase_price_sek?.toString() ?? '')
   const [purchaseYear, setPurchaseYear] = useState(profile?.purchase_year?.toString() ?? '')
+  const [assessedValue, setAssessedValue] = useState(profile?.assessed_value_sek?.toString() ?? '')
   const [smartHome, setSmartHome] = useState(profile?.smart_home_platform ?? '')
   const [saving, setSaving] = useState(false)
   const router = useRouter()
@@ -53,10 +75,15 @@ export default function HouseProfileCard({ profile }: { profile: Profile }) {
       build_year: buildYear ? Number(buildYear) : null,
       living_area_sqm: livingArea ? Number(livingArea) : null,
       basement_area_sqm: basementArea ? Number(basementArea) : null,
+      plot_area_sqm: plotArea ? Number(plotArea) : null,
+      rooms: rooms ? Number(rooms) : null,
+      building_type: buildingType.trim() || null,
       heating_type: heatingType.trim() || null,
       energy_class: energyClass.trim() || null,
+      energy_performance_kwh_sqm: energyPerformance ? Number(energyPerformance) : null,
       purchase_price_sek: purchasePrice ? Number(purchasePrice) : null,
       purchase_year: purchaseYear ? Number(purchaseYear) : null,
+      assessed_value_sek: assessedValue ? Number(assessedValue) : null,
       smart_home_platform: smartHome.trim() || null,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' })
@@ -93,9 +120,33 @@ export default function HouseProfileCard({ profile }: { profile: Profile }) {
               className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
           </div>
           <div>
+            <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Tomtarea (m²)</label>
+            <input type="number" value={plotArea} onChange={e => setPlotArea(e.target.value)}
+              className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Antal rum</label>
+            <input type="number" value={rooms} onChange={e => setRooms(e.target.value)}
+              className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Bostadstyp</label>
+            <input value={buildingType} onChange={e => setBuildingType(e.target.value)} placeholder="T.ex. Villa"
+              className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent" />
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
             <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Energiklass</label>
             <input value={energyClass} onChange={e => setEnergyClass(e.target.value)} placeholder="T.ex. C"
               className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent" />
+          </div>
+          <div>
+            <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Energiprestanda (kWh/m²/år)</label>
+            <input type="number" value={energyPerformance} onChange={e => setEnergyPerformance(e.target.value)}
+              className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
           </div>
         </div>
         <div>
@@ -116,11 +167,16 @@ export default function HouseProfileCard({ profile }: { profile: Profile }) {
           </div>
         </div>
         <div>
+          <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Taxeringsvärde (kr)</label>
+          <input type="number" value={assessedValue} onChange={e => setAssessedValue(e.target.value)}
+            className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+        </div>
+        <div>
           <label className="text-muted text-xs uppercase tracking-wider mb-1 block">Smart hem-plattform</label>
           <input value={smartHome} onChange={e => setSmartHome(e.target.value)} placeholder="T.ex. Homey, Home Assistant"
             className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent" />
         </div>
-        <p className="text-muted text-xs">Flera uppvärmningssystem, solceller, renoveringar och projekt fylls i enklast via Importera (fritext funkar bra — klistra bara in vad du vet).</p>
+        <p className="text-muted text-xs">Flera uppvärmningssystem, driftskostnad, solceller, renoveringar och projekt fylls i enklast via Importera (fritext funkar bra — klistra bara in vad du vet).</p>
         <div className="flex gap-2">
           <button onClick={save} disabled={saving} className="bg-accent text-bg text-sm font-semibold px-4 py-2 rounded-xl disabled:opacity-50">
             {saving ? 'Sparar...' : 'Spara'}
@@ -141,15 +197,38 @@ export default function HouseProfileCard({ profile }: { profile: Profile }) {
         <>
           <div className="grid grid-cols-2 gap-3 text-sm mb-3">
             {profile?.address && <div><span className="text-muted text-xs block">Adress</span>{profile.address}</div>}
+            {profile?.building_type && <div><span className="text-muted text-xs block">Bostadstyp</span>{profile.building_type}</div>}
             {profile?.build_year && <div><span className="text-muted text-xs block">Byggår</span>{profile.build_year}</div>}
+            {profile?.rooms != null && <div><span className="text-muted text-xs block">Antal rum</span>{profile.rooms}</div>}
             {profile?.living_area_sqm != null && <div><span className="text-muted text-xs block">Boyta</span>{profile.living_area_sqm} m²{profile.basement_area_sqm != null && ` (varav ${profile.basement_area_sqm} m² källare)`}</div>}
+            {profile?.plot_area_sqm != null && <div><span className="text-muted text-xs block">Tomtarea</span>{profile.plot_area_sqm} m²</div>}
             {profile?.heating_type && <div><span className="text-muted text-xs block">Uppvärmning</span>{profile.heating_type}</div>}
-            {profile?.energy_class && <div><span className="text-muted text-xs block">Energiklass</span>{profile.energy_class}</div>}
+            {profile?.energy_class && (
+              <div><span className="text-muted text-xs block">Energiklass</span>{profile.energy_class}{profile.energy_performance_kwh_sqm != null && ` (${profile.energy_performance_kwh_sqm} kWh/m²/år)`}</div>
+            )}
             {profile?.purchase_price_sek != null && (
               <div><span className="text-muted text-xs block">Köpt</span>{sek(profile.purchase_price_sek)}{profile.purchase_year && ` (${profile.purchase_year})`}</div>
             )}
+            {profile?.assessed_value_sek != null && <div><span className="text-muted text-xs block">Taxeringsvärde</span>{sek(profile.assessed_value_sek)}</div>}
             {profile?.smart_home_platform && <div><span className="text-muted text-xs block">Smart hem</span>{profile.smart_home_platform}</div>}
           </div>
+
+          {profile?.operating_cost_sek && Object.values(profile.operating_cost_sek).some(v => v != null) && (
+            <div className="mb-3 pt-3 border-t border-edge">
+              <div className="text-muted text-xs uppercase tracking-wider mb-2">Driftskostnad per år</div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                {(Object.keys(OPERATING_COST_LABELS) as (keyof OperatingCost)[]).map(key => {
+                  const val = profile.operating_cost_sek?.[key]
+                  if (val == null) return null
+                  return (
+                    <div key={key} className={key === 'total' ? 'col-span-2 font-medium' : ''}>
+                      <span className="text-muted text-xs">{OPERATING_COST_LABELS[key]}: </span>{sek(val)}
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {heatingSystems.length > 0 && (
             <div className="mb-3 pt-3 border-t border-edge">

@@ -3,7 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-const EXTRACTION_SYSTEM = 'Du extraherar strukturerad husdata ur vad användaren skickar in — en bostadsannons, ett mäklarprospekt, ett besiktningsprotokoll eller bara fritext/anteckningar de klistrat in. Fånga så mycket som möjligt av: grundfakta (adress, byggår, boyta, källararea, köppris, köpår, energiklass), ALLA uppvärmningssystem som nämns var för sig (inte bara ett — många hus kombinerar t.ex. pelletspanna, solceller och vedkamin), smart hem-plattform, solcellsdata, elbilsladdning, tidigare renoveringar, och pågående/planerade projekt (med kostnad/besparing om det nämns). heating_type ska vara en kort sammanfattning i en mening; heating_systems ska lista varje system för sig. Svara ENDAST med JSON enligt schema. Sätt fält till null (eller tom lista) om de inte går att hitta i källan — gissa aldrig, hitta aldrig på siffror eller fakta som inte står i texten.'
+const EXTRACTION_SYSTEM = 'Du extraherar strukturerad husdata ur vad användaren skickar in — en bostadsannons, ett mäklarprospekt, ett besiktningsprotokoll eller bara fritext/anteckningar de klistrat in. Fånga så mycket som möjligt av: grundfakta (adress, byggår, boyta, biarea/källararea, tomtarea, antal rum, byggnadstyp t.ex. villa/radhus/kedjehus/parhus, köppris, köpår, taxeringsvärde, energiklass, energiprestanda i kWh/m²/år), driftskostnad uppdelad per kategori (värme, el, vatten/avlopp, sophämtning, försäkring, sotning, samfällighet/väg, övrigt) plus totalsumma om den anges, ALLA uppvärmningssystem som nämns var för sig (inte bara ett — många hus kombinerar t.ex. pelletspanna, solceller och vedkamin), smart hem-plattform, solcellsdata, elbilsladdning, tidigare renoveringar, och pågående/planerade projekt (med kostnad/besparing om det nämns). heating_type ska vara en kort sammanfattning i en mening; heating_systems ska lista varje system för sig. Svara ENDAST med JSON enligt schema. Sätt fält till null (eller tom lista) om de inte går att hitta i källan — gissa aldrig, hitta aldrig på siffror eller fakta som inte står i texten.'
 
 const RESPONSE_SCHEMA = {
   type: 'OBJECT',
@@ -12,10 +12,32 @@ const RESPONSE_SCHEMA = {
     build_year: { type: 'INTEGER', nullable: true },
     living_area_sqm: { type: 'NUMBER', nullable: true },
     basement_area_sqm: { type: 'NUMBER', nullable: true },
+    plot_area_sqm: { type: 'NUMBER', nullable: true },
+    rooms: { type: 'NUMBER', nullable: true, description: 'Antal rum, t.ex. 5 eller 4.5' },
+    building_type: { type: 'STRING', nullable: true, description: 'T.ex. villa, radhus, kedjehus, parhus' },
     heating_type: { type: 'STRING', nullable: true },
     energy_class: { type: 'STRING', nullable: true },
+    energy_performance_kwh_sqm: { type: 'NUMBER', nullable: true, description: 'Energiprestanda i kWh/m² och år, från energideklarationen' },
     purchase_price_sek: { type: 'INTEGER', nullable: true },
     purchase_year: { type: 'INTEGER', nullable: true },
+    assessed_value_sek: { type: 'INTEGER', nullable: true, description: 'Taxeringsvärde' },
+    operating_cost_sek: {
+      type: 'OBJECT',
+      nullable: true,
+      description: 'Driftskostnad per år, uppdelad per kategori. Sätt bara total om källan inte bryter ner den.',
+      properties: {
+        heating: { type: 'INTEGER', nullable: true },
+        electricity: { type: 'INTEGER', nullable: true },
+        water_sewage: { type: 'INTEGER', nullable: true },
+        waste: { type: 'INTEGER', nullable: true },
+        insurance: { type: 'INTEGER', nullable: true },
+        chimney_sweep: { type: 'INTEGER', nullable: true },
+        community_fee: { type: 'INTEGER', nullable: true },
+        other: { type: 'INTEGER', nullable: true },
+        total: { type: 'INTEGER', nullable: true },
+      },
+      required: ['heating', 'electricity', 'water_sewage', 'waste', 'insurance', 'chimney_sweep', 'community_fee', 'other', 'total'],
+    },
     smart_home_platform: { type: 'STRING', nullable: true },
     heating_systems: {
       type: 'ARRAY',
@@ -75,8 +97,9 @@ const RESPONSE_SCHEMA = {
     strategy_notes: { type: 'STRING', nullable: true, description: 'Ekonomiska principer eller strategi kring huset, om det nämns' },
   },
   required: [
-    'address', 'build_year', 'living_area_sqm', 'basement_area_sqm', 'heating_type', 'energy_class',
-    'purchase_price_sek', 'purchase_year', 'smart_home_platform', 'heating_systems', 'solar_pv',
+    'address', 'build_year', 'living_area_sqm', 'basement_area_sqm', 'plot_area_sqm', 'rooms', 'building_type',
+    'heating_type', 'energy_class', 'energy_performance_kwh_sqm', 'purchase_price_sek', 'purchase_year',
+    'assessed_value_sek', 'operating_cost_sek', 'smart_home_platform', 'heating_systems', 'solar_pv',
     'ev_charging', 'renovations', 'ongoing_projects', 'strategy_notes',
   ],
 }
@@ -250,12 +273,12 @@ export async function POST(request: NextRequest) {
       if (text.length < 200) {
         return NextResponse.json({ error: 'Sidan gav nästan ingen läsbar text (kräver ofta inloggning eller renderas med JS) — prova fritext eller fyll i manuellt istället' }, { status: 422 })
       }
-      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
+      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 3500)
     } else if (mode === 'text') {
       const text = (body.text as string)?.trim()
       if (!text) return NextResponse.json({ error: 'Text saknas' }, { status: 400 })
       if (text.length < 20) return NextResponse.json({ error: 'För kort text för att extrahera något ur' }, { status: 422 })
-      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text.slice(0, 15000)}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
+      extracted = await extractViaGemini(apiKey, [{ text: `Extrahera husdata ur texten nedan.\n\nTEXT:\n${text.slice(0, 15000)}` }], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 3500)
     } else if (mode === 'document') {
       const fileBase64 = body.fileBase64 as string
       const fileMimeType = body.fileMimeType as string
@@ -266,7 +289,7 @@ export async function POST(request: NextRequest) {
       extracted = await extractViaGemini(apiKey, [
         { text: 'Extrahera husdata ur det bifogade dokumentet.' },
         { inlineData: { mimeType: fileMimeType, data: fileBase64 } },
-      ], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 2500)
+      ], EXTRACTION_SYSTEM, RESPONSE_SCHEMA, 3500)
     } else {
       return NextResponse.json({ error: 'Okänt importläge' }, { status: 400 })
     }

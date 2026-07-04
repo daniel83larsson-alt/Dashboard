@@ -8,16 +8,27 @@ type HeatingSystem = { type: string | null; role: string | null; installed_year:
 type OngoingProject = { title: string | null; goal: string | null; estimated_cost_sek: number | null; expected_savings_sek: number | null; notes: string | null }
 type SolarPv = { capacity_kw: number | null; production_kwh_last_year: number | null; consumption_kwh_last_year: number | null; self_sufficiency_pct: number | null }
 type EvCharging = { annual_kwh: number | null; charger: string | null }
+type OperatingCost = {
+  heating: number | null; electricity: number | null; water_sewage: number | null; waste: number | null
+  insurance: number | null; chimney_sweep: number | null; community_fee: number | null; other: number | null
+  total: number | null
+}
 
 type Profile = {
   address: string | null
   build_year: number | null
   living_area_sqm: number | null
   basement_area_sqm: number | null
+  plot_area_sqm: number | null
+  rooms: number | null
+  building_type: string | null
   heating_type: string | null
   energy_class: string | null
+  energy_performance_kwh_sqm: number | null
   purchase_price_sek: number | null
   purchase_year: number | null
+  assessed_value_sek: number | null
+  operating_cost_sek: OperatingCost | null
   smart_home_platform: string | null
   heating_systems: HeatingSystem[] | null
   raw_extracted?: Record<string, unknown> | null
@@ -28,10 +39,16 @@ type Extracted = {
   build_year: number | null
   living_area_sqm: number | null
   basement_area_sqm: number | null
+  plot_area_sqm: number | null
+  rooms: number | null
+  building_type: string | null
   heating_type: string | null
   energy_class: string | null
+  energy_performance_kwh_sqm: number | null
   purchase_price_sek: number | null
   purchase_year: number | null
+  assessed_value_sek: number | null
+  operating_cost_sek: OperatingCost | null
   smart_home_platform: string | null
   heating_systems: HeatingSystem[] | null
   solar_pv: SolarPv | null
@@ -63,15 +80,26 @@ const TABS: { mode: Mode; label: string; icon: string }[] = [
 
 const sek = (v: unknown) => `${Number(v).toLocaleString('sv-SE')} kr`
 
+const OPERATING_COST_LABELS: Record<keyof OperatingCost, string> = {
+  heating: 'Värme', electricity: 'El', water_sewage: 'Vatten/avlopp', waste: 'Sophämtning',
+  insurance: 'Försäkring', chimney_sweep: 'Sotning', community_fee: 'Samfällighet/väg', other: 'Övrigt',
+  total: 'Totalt',
+}
+
 const FIELDS: { key: keyof Extracted; label: string; format?: (v: unknown) => string }[] = [
   { key: 'address', label: 'Adress' },
   { key: 'build_year', label: 'Byggår' },
+  { key: 'building_type', label: 'Bostadstyp' },
   { key: 'living_area_sqm', label: 'Boyta', format: v => `${v} m²` },
   { key: 'basement_area_sqm', label: 'Källararea', format: v => `${v} m²` },
+  { key: 'plot_area_sqm', label: 'Tomtarea', format: v => `${v} m²` },
+  { key: 'rooms', label: 'Antal rum' },
   { key: 'purchase_price_sek', label: 'Köppris', format: sek },
   { key: 'purchase_year', label: 'Köpår' },
+  { key: 'assessed_value_sek', label: 'Taxeringsvärde', format: sek },
   { key: 'heating_type', label: 'Uppvärmning (sammanfattning)' },
   { key: 'energy_class', label: 'Energiklass' },
+  { key: 'energy_performance_kwh_sqm', label: 'Energiprestanda', format: v => `${v} kWh/m²/år` },
   { key: 'smart_home_platform', label: 'Smart hem-plattform' },
 ]
 
@@ -102,6 +130,11 @@ function hasExtra(e: Extracted) {
   return !!(e.solar_pv || e.ev_charging || (e.renovations?.length) || (e.ongoing_projects?.length) || e.strategy_notes)
 }
 
+function hasOperatingCost(e: Extracted) {
+  const oc = e.operating_cost_sek
+  return !!oc && Object.values(oc).some(v => v != null)
+}
+
 export default function ImportPage() {
   const [mode, setMode] = useState<Mode>('link')
   const [url, setUrl] = useState('')
@@ -120,6 +153,7 @@ export default function ImportPage() {
   const [selected, setSelected] = useState<Record<string, boolean>>({})
   const [heatingSelected, setHeatingSelected] = useState(false)
   const [extraSelected, setExtraSelected] = useState(false)
+  const [operatingCostSelected, setOperatingCostSelected] = useState(false)
   const [committing, setCommitting] = useState(false)
 
   const [researching, setResearching] = useState(false)
@@ -182,6 +216,7 @@ export default function ImportPage() {
         setSelected(init)
         setHeatingSelected(!!ex.heating_systems?.length && !data.current?.heating_systems?.length)
         setExtraSelected(hasExtra(ex))
+        setOperatingCostSelected(hasOperatingCost(ex) && !data.current?.operating_cost_sek)
       } else {
         setError(data.error ?? 'Något gick fel')
       }
@@ -204,6 +239,9 @@ export default function ImportPage() {
     }
     if (heatingSelected && extracted.heating_systems?.length) {
       payload.heating_systems = extracted.heating_systems
+    }
+    if (operatingCostSelected && hasOperatingCost(extracted)) {
+      payload.operating_cost_sek = extracted.operating_cost_sek
     }
     if (selected.address && geo) {
       payload.raw_extracted = { ...(current?.raw_extracted ?? {}), lat: geo.lat, lng: geo.lng }
@@ -427,6 +465,34 @@ export default function ImportPage() {
             </div>
           )}
 
+          {hasOperatingCost(extracted) && (
+            <div className="mt-4 pt-4 border-t border-edge">
+              <label className="flex items-start gap-3 cursor-pointer mb-2">
+                <input
+                  type="checkbox"
+                  checked={operatingCostSelected}
+                  onChange={e => setOperatingCostSelected(e.target.checked)}
+                  className="mt-1"
+                />
+                <div className="flex-1 text-sm">
+                  <div className="text-muted text-xs mb-1">Driftskostnad per år — ersätter tidigare uppgift om vald</div>
+                  <div className="bg-bg border border-edge rounded-lg px-3 py-2 grid grid-cols-2 gap-x-4 gap-y-1">
+                    {(Object.keys(OPERATING_COST_LABELS) as (keyof OperatingCost)[]).map(key => {
+                      const val = extracted.operating_cost_sek?.[key]
+                      if (val == null) return null
+                      return (
+                        <div key={key} className={key === 'total' ? 'col-span-2 pt-1 mt-1 border-t border-edge font-medium' : ''}>
+                          <span className="text-muted text-xs">{OPERATING_COST_LABELS[key]}: </span>
+                          {sek(val)}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              </label>
+            </div>
+          )}
+
           {hasExtra(extracted) && (
             <div className="mt-4 pt-4 border-t border-edge">
               <label className="flex items-start gap-3 cursor-pointer mb-2">
@@ -496,7 +562,7 @@ export default function ImportPage() {
 
           <button
             onClick={commit}
-            disabled={committing || (!Object.values(selected).some(Boolean) && !heatingSelected && !extraSelected)}
+            disabled={committing || (!Object.values(selected).some(Boolean) && !heatingSelected && !extraSelected && !operatingCostSelected)}
             className="mt-4 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
           >
             {committing ? 'Sparar...' : 'Spara valt'}
