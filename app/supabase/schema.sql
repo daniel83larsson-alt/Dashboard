@@ -161,6 +161,33 @@ $$;
 revoke all on function public.admin_activity_stats() from public;
 grant execute on function public.admin_activity_stats() to authenticated;
 
+-- Admin: lämnar ut EN användares lagrade (krypterade) Garmin-inloggning, bara
+-- till servern — aldrig till klienten. Används av /api/admin/test-garmin för
+-- att verifiera att en specifik användares Garmin-koppling faktiskt går att
+-- logga in med, utan att admin själv någonsin ser lösenordet.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_get_garmin_credentials(target_user_id uuid)
+returns text
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return (
+    select messages->0->>'content'
+    from public.coach_sessions
+    where user_id = target_user_id and coach_id = 'garmin_credentials'
+    limit 1
+  );
+end;
+$$;
+revoke all on function public.admin_get_garmin_credentials(uuid) from public;
+grant execute on function public.admin_get_garmin_credentials(uuid) to authenticated;
+
 -- Auto-skapa profil vid signup
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public

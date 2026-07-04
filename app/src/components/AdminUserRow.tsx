@@ -40,6 +40,8 @@ export default function AdminUserRow({
   lastSynced: string | null
 }) {
   const [busy, setBusy] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<string | null>(null)
   const router = useRouter()
 
   async function toggleLock() {
@@ -48,6 +50,34 @@ export default function AdminUserRow({
     await supabase.from('profiles').update({ locked: !profile.locked }).eq('id', profile.id)
     setBusy(false)
     router.refresh()
+  }
+
+  async function testGarmin() {
+    setTesting(true)
+    setTestResult(null)
+    try {
+      const res = await fetch('/api/admin/test-garmin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: profile.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setTestResult(`⚠ ${data.error ?? 'Något gick fel'}`)
+      } else if (data.ok) {
+        const latest = data.preview?.[0]
+        setTestResult(`✓ Inloggning fungerar — hittade ${data.count} pass${latest ? `, senaste: ${latest.name} (${new Date(latest.startTimeLocal).toLocaleDateString('sv-SE')})` : ''}`)
+      } else if (data.reason === 'not_configured') {
+        setTestResult('– Ingen Garmin-koppling sparad för den här användaren')
+      } else if (data.reason === 'login_failed') {
+        setTestResult('⚠ Inloggningen mot Garmin misslyckas — troligen fel lösenord eller att Garmin kräver ny verifiering')
+      } else {
+        setTestResult(`⚠ ${data.reason ?? 'Okänt fel'}`)
+      }
+    } catch {
+      setTestResult('⚠ Nätverksfel')
+    }
+    setTesting(false)
   }
 
   return (
@@ -78,6 +108,18 @@ export default function AdminUserRow({
               ? `${activityCount} pass · ${daysSynced} dagar · senast synkat ${fmtLastSynced(lastSynced)}`
               : (hasConcept2 || hasGarmin) ? 'Anslutet men inget synkat än' : 'Inget synkat ännu'}
           </div>
+          {hasGarmin && (
+            <div className="mt-2">
+              <button
+                onClick={testGarmin}
+                disabled={testing}
+                className="text-[11px] px-2 py-1 rounded-md border border-edge text-muted hover:border-accent/40 hover:text-fg disabled:opacity-50"
+              >
+                {testing ? 'Testar...' : 'Testa Garmin-synk'}
+              </button>
+              {testResult && <div className="text-[11px] mt-1.5 text-fg">{testResult}</div>}
+            </div>
+          )}
         </div>
         {!isSelf && (
           <button
