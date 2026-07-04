@@ -9,6 +9,12 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
+    // Daniel asked to stop syncing his own passes (2026-07-04) — the admin
+    // account is excluded from sync entirely, everyone else unaffected.
+    if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
+      return NextResponse.json({ synced: 0, paused: true })
+    }
+
     const { data: tokenRow } = await supabase
       .from('concept2_tokens')
       .select('*')

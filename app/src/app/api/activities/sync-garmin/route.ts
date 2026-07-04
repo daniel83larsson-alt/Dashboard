@@ -21,6 +21,12 @@ const MAX_HISTORY_DAYS = 365
 const BACKFILL_BATCH_SIZE = 20
 const ACTIVITY_BACKFILL_BATCH_SIZE = 25 // older pass history — kept modest so a big lifetime history doesn't hammer Garmin in one sync
 
+// Pass history itself (not just wellness) is also capped at a year back —
+// older activities aren't useful for training analysis and just inflate
+// "days synced" indefinitely (Daniel's own account reached 650 days before
+// this cap existed).
+const ACTIVITY_HISTORY_MAX_DAYS = 365
+
 // HR-zone backfill: deliberately scoped to "this week + this month" for now
 // (not full history) and fetched a few at a time, since this hits Garmin's
 // unofficial per-activity zone endpoint once per pass — wider historical
@@ -47,6 +53,12 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+    // Daniel asked to stop syncing his own passes (2026-07-04) — the admin
+    // account is excluded from Garmin sync entirely, everyone else unaffected.
+    if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
+      return NextResponse.json({ synced: 0, paused: true })
+    }
 
     // Resolve credentials: user's own first, env vars as fallback
     const { data: credsRow } = await supabase
@@ -100,11 +112,18 @@ export async function POST() {
       fetchGarminSteps(garminEmail, garminPassword),
     ])
 
+    const activityHistoryCutoff = new Date()
+    activityHistoryCutoff.setDate(activityHistoryCutoff.getDate() - ACTIVITY_HISTORY_MAX_DAYS)
+    const oldestInBatch = backfillActivities.length
+      ? Math.min(...backfillActivities.map(a => new Date(a.startTimeLocal).getTime()))
+      : null
+    const reachedHistoryCutoff = oldestInBatch !== null && oldestInBatch < activityHistoryCutoff.getTime()
+
     const newCursor: ActivityBackfillCursor = activityCursor.done
       ? activityCursor
       : {
           offset: activityCursor.offset + backfillActivities.length,
-          done: backfillActivities.length < ACTIVITY_BACKFILL_BATCH_SIZE,
+          done: backfillActivities.length < ACTIVITY_BACKFILL_BATCH_SIZE || reachedHistoryCutoff,
         }
 
     await supabase.from('coach_sessions').upsert({
@@ -115,6 +134,7 @@ export async function POST() {
     }, { onConflict: 'user_id,coach_id' })
 
     const allGarminActivities = [...garminActivities, ...backfillActivities]
+      .filter(a => new Date(a.startTimeLocal).getTime() >= activityHistoryCutoff.getTime())
 
     // Build today's wellness snapshot
     const today = new Date().toISOString().slice(0, 10)
