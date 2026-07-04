@@ -16,12 +16,13 @@ export const SPORT_LABELS: Record<string, string> = {
   Elliptical: 'crosstrainer',
   Workout: 'träningspass',
   HIIT: 'HIIT',
+  Mobility: 'rörlighet',
 }
 
 export const SPORT_ICONS: Record<string, string> = {
   Rowing: '🚣', Run: '🏃', TrailRun: '🏔', Ride: '🚴', VirtualRide: '🚴',
   Walk: '🚶', Hike: '🥾', Swim: '🏊', WeightTraining: '🏋️', Workout: '💪',
-  HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️',
+  HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️', Mobility: '🤸',
 }
 
 export function sportLabel(sport: string): string {

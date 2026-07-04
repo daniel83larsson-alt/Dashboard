@@ -9,6 +9,7 @@ const PATHS: Record<string, string> = {
   menu: 'M4 6h16M4 12h16M4 18h16',
   close: 'M6 18L18 6M6 6l12 12',
   admin: 'M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6l8-4z',
+  stretch: 'M12 2v6M9 5l3 3 3-3M12 22v-6M9 19l3-3 3 3M2 12h6M5 9l-3 3 3 3M16 12h6M19 9l3 3-3 3',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {
