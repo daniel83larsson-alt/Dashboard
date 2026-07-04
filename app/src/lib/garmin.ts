@@ -158,6 +158,11 @@ export async function fetchGarminSleepFull(email?: string, password?: string, wa
     const data = await gc.getSleepData(sleepDate)
     if (!data?.dailySleepDTO) return null
     const d = data.dailySleepDTO
+    // Garmin returns an empty dailySleepDTO shell (all seconds fields
+    // absent/zero) for days with no real recorded sleep — without this
+    // guard that reads as "0 hours of sleep" instead of "no data", which
+    // silently fills the entire backfill window with fake zero-hour nights.
+    if (!d.sleepTimeSeconds) return null
     return {
       hours: (d.sleepTimeSeconds ?? 0) / 3600,
       deepHours: (d.deepSleepSeconds ?? 0) / 3600,

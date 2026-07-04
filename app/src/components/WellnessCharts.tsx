@@ -42,12 +42,28 @@ function shortDate(d: string) {
 // before the real, dense recent data. Cuts each chart's own leading/
 // trailing empty run rather than sharing one window across all metrics,
 // since coverage can differ per metric.
-function trimToDataRange<T>(rows: T[], hasValue: (row: T) => boolean): T[] {
-  const first = rows.findIndex(hasValue)
-  if (first === -1) return []
-  let last = rows.length - 1
-  while (last > first && !hasValue(rows[last])) last--
-  return rows.slice(first, last + 1)
+//
+// A handful of isolated old readings (leftover test syncs, a watch worn
+// once months before daily use started) can sit far before the real dense
+// history. Trimming only leading/trailing nulls leaves those as anchors,
+// so the chart still spans the whole empty gap between them and today.
+// Instead, walk backward from today through consecutive real readings and
+// stop at the first gap wider than MAX_GAP_DAYS — that's the start of the
+// actual "in use" window.
+const MAX_GAP_DAYS = 21
+
+function trimToDataRange<T extends { date: string }>(rows: T[], hasValue: (row: T) => boolean): T[] {
+  const idxs: number[] = []
+  rows.forEach((r, i) => { if (hasValue(r)) idxs.push(i) })
+  if (!idxs.length) return []
+  let start = idxs[idxs.length - 1]
+  for (let k = idxs.length - 1; k > 0; k--) {
+    const gapDays = (new Date(rows[idxs[k]].date).getTime() - new Date(rows[idxs[k - 1]].date).getTime()) / 86400000
+    if (gapDays > MAX_GAP_DAYS) break
+    start = idxs[k - 1]
+  }
+  const end = idxs[idxs.length - 1]
+  return rows.slice(start, end + 1)
 }
 
 export default function WellnessCharts({ history, showSummary = true }: Props) {
@@ -64,19 +80,17 @@ export default function WellnessCharts({ history, showSummary = true }: Props) {
 
   const latest = history[0]
 
-  const sleepData = trimToDataRange(
-    data.map(d => ({
+  const sleepData = trimToDataRange(data, d => d.deepSleepHours != null || d.remSleepHours != null || d.lightSleepHours != null)
+    .map(d => ({
       date: shortDate(d.date),
       Djup: d.deepSleepHours ? +d.deepSleepHours.toFixed(1) : null,
       REM: d.remSleepHours ? +d.remSleepHours.toFixed(1) : null,
       Lätt: d.lightSleepHours ? +d.lightSleepHours.toFixed(1) : null,
-    })),
-    d => d.Djup != null || d.REM != null || d.Lätt != null
-  )
-  const hrData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), HR: d.restingHR ?? null })), d => d.HR != null)
-  const stepsData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), Steg: d.steps ?? null })), d => d.Steg != null)
-  const hrvData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), HRV: d.hrv ? +d.hrv.toFixed(0) : null })), d => d.HRV != null)
-  const batteryData = trimToDataRange(data.map(d => ({ date: shortDate(d.date), Batteri: d.bodyBattery ?? null })), d => d.Batteri != null)
+    }))
+  const hrData = trimToDataRange(data, d => d.restingHR != null).map(d => ({ date: shortDate(d.date), HR: d.restingHR ?? null }))
+  const stepsData = trimToDataRange(data, d => d.steps != null).map(d => ({ date: shortDate(d.date), Steg: d.steps ?? null }))
+  const hrvData = trimToDataRange(data, d => d.hrv != null).map(d => ({ date: shortDate(d.date), HRV: d.hrv ? +d.hrv.toFixed(0) : null }))
+  const batteryData = trimToDataRange(data, d => d.bodyBattery != null).map(d => ({ date: shortDate(d.date), Batteri: d.bodyBattery ?? null }))
 
   const avgHR = hasHR ? Math.round(data.filter(d => d.restingHR).reduce((s, d) => s + d.restingHR!, 0) / data.filter(d => d.restingHR).length) : null
 
