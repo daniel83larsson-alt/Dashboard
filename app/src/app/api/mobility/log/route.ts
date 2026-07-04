@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { REGION_LABELS, Region } from '@/lib/mobility'
+
+type LoggedExercise = { id: string; name: string; region: Region; dose: string }
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { exerciseNames, movingTime } = await request.json()
-  if (!Array.isArray(exerciseNames) || exerciseNames.length === 0) {
+  const { exercises, movingTime } = await request.json() as { exercises: LoggedExercise[]; movingTime: number }
+  if (!Array.isArray(exercises) || exercises.length === 0) {
     return NextResponse.json({ error: 'Inga övningar angivna' }, { status: 400 })
   }
 
+  const regions = [...new Set(exercises.map(e => e.region))]
   const now = new Date()
   const row = {
     user_id: user.id,
@@ -21,12 +25,15 @@ export async function POST(request: NextRequest) {
     // column just for this one feature.
     strava_id: -Date.now(),
     sport_type: 'Mobility',
-    name: `Rörlighetspass (${exerciseNames.length} övningar)`,
+    name: `Rörlighetspass (${regions.map(r => REGION_LABELS[r]).join(', ')})`,
     distance: 0,
     moving_time: Math.round(movingTime) || 0,
     elapsed_time: Math.round(movingTime) || 0,
     start_date: now.toISOString(),
-    description: exerciseNames.join(', '),
+    description: exercises.map(e => e.name).join(', '),
+    // Structured so the pass-detail page can render an actual checklist of
+    // what was done, not just a comma-joined description string.
+    raw_data: { exercises },
   }
 
   const { error } = await supabase.from('activities').insert(row)

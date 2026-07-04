@@ -1,13 +1,20 @@
 'use client'
 
 import { useState } from 'react'
+import { startOfWeek } from '@/lib/dates'
+
+const MOBILITY_WEEKLY_GOAL = 2
 
 type Props = {
   trainedDates: string[] // ISO date strings
+  mobilityDates?: string[] // ISO date strings — subset of trainedDates, marked with a second color
 }
 
-export default function ActivityCalendar({ trainedDates }: Props) {
+export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: Props) {
   const today = new Date()
+  const weekStart = startOfWeek(today)
+  const mobilityThisWeek = mobilityDates.filter(d => new Date(d) >= weekStart).length
+  const mobilityGoalMet = mobilityThisWeek >= MOBILITY_WEEKLY_GOAL
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
 
@@ -22,6 +29,9 @@ export default function ActivityCalendar({ trainedDates }: Props) {
 
   const trained = new Set(
     trainedDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
+  )
+  const mobility = new Set(
+    mobilityDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
   )
 
   const cells: (number | null)[] = [
@@ -90,6 +100,7 @@ export default function ActivityCalendar({ trainedDates }: Props) {
               const dateStr = cellDate.toLocaleDateString('sv-SE')
               const isToday = isCurrentMonth && day === today.getDate()
               const hasTrained = trained.has(dateStr)
+              const hasMobility = mobility.has(dateStr)
               const isFuture = cellDate > today
 
               return (
@@ -104,6 +115,9 @@ export default function ActivityCalendar({ trainedDates }: Props) {
                     {hasTrained && (
                       <span className="absolute top-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-accent" />
                     )}
+                    {hasMobility && (
+                      <span className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-lcd" />
+                    )}
                     {day}
                   </div>
                 </div>
@@ -112,14 +126,21 @@ export default function ActivityCalendar({ trainedDates }: Props) {
           </div>
         </div>
         {/* Legend */}
-        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge">
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-edge flex-wrap">
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-accent" />
             <span className="text-xs text-muted">Tränat</span>
           </div>
           <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-lcd" />
+            <span className="text-xs text-muted">Rörlighet</span>
+          </div>
+          <div className="flex items-center gap-1.5">
             <div className="w-5 h-5 rounded-lg ring-1 ring-accent" />
             <span className="text-xs text-muted">Idag</span>
+          </div>
+          <div className={`ml-auto text-xs font-mono ${mobilityGoalMet ? 'text-lcd' : 'text-muted'}`}>
+            {mobilityGoalMet ? '✓ ' : ''}Rörlighet {mobilityThisWeek}/{MOBILITY_WEEKLY_GOAL} denna vecka
           </div>
         </div>
       </div>

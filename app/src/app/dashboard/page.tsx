@@ -607,7 +607,10 @@ export default async function DashboardPage() {
       {/* ── Kalender ──────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className="lg:col-span-3 lg:order-8">
-          <ActivityCalendar trainedDates={activities.map(a => a.start_date)} />
+          <ActivityCalendar
+            trainedDates={activities.map(a => a.start_date)}
+            mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
+          />
         </div>
       )}
 

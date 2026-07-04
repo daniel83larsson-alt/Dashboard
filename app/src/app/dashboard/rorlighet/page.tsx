@@ -76,7 +76,9 @@ export default function RorlighetPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          exerciseNames: generated.filter(e => checked.has(e.id)).map(e => e.name),
+          exercises: generated
+            .filter(e => checked.has(e.id))
+            .map(e => ({ id: e.id, name: e.name, region: e.region, dose: e.dose })),
           movingTime,
         }),
       })
