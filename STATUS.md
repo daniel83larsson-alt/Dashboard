@@ -15,6 +15,7 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 - ✅ Fråga: drar svar på engelska färre tokens än svenska? — besvarad.
 - 🔄 **Antal pass + dagar synkade per användare i admin.** Kod klar, byggd, pushad och deployad (verifierat live på dl-trainer.vercel.app). Visar t.ex. "42 pass · 18 dagar · senast synkat igår", eller "Anslutet men inget synkat än" / "Inget synkat ännu". Väntar på att SQL-funktionen körs i Supabase (se nedan) innan siffrorna syns.
 - 🔄 **Ny admin-knapp: "Testa Garmin-synk" per användare** (Fredrik-frågan). Verifierar att en specifik användares sparade Garmin-inloggning fortfarande fungerar genom att faktiskt logga in och hämta de 25 senaste passen — utan att jag eller du någonsin ser lösenordet (det dekrypteras bara server-side för testet). Kod klar, byggd, pushad, deployad. Väntar på samma SQL-fil som ovan (ny funktion `admin_get_garmin_credentials`) innan knappen fungerar.
+- ✅ Bra fångst från Daniel: Fredriks Garmin-badge visade grön bock trots att inget någonsin synkats — badgen betydde bara "uppgifter sparade", inte "fungerar". Fixat: tre lägen per källa (– aldrig anslutet, ◐ anslutet men aldrig synkat, ✓ faktiskt synkat minst ett pass). Byggt, pushat, deployat och verifierat live (commit-sha matchar aliaset). Kräver samma SQL-fil som ovan (uppdaterad `admin_all_sync_status`).
 
 ## Hemkoll (ny app)
 
