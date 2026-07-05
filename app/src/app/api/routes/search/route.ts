@@ -34,6 +34,39 @@ const OVERPASS_FILTERS: Record<ActivityKind, string[]> = {
 const MAX_RADIUS_M = 30000
 const MAX_ROUTES = 40
 
+export const maxDuration = 30
+
+// overpass-api.de load-balances across several backend mirrors; individual
+// mirrors intermittently return a bare Apache 406 under load (verified live:
+// same query succeeding and failing back-to-back with no change on our end).
+// A couple of retries clears this most of the time; maps.mail.ru's public
+// Overpass mirror is kept as a fallback and verified to return real data
+// (not just an empty/stale result) for the same query.
+const OVERPASS_ENDPOINTS = [
+  { url: 'https://overpass-api.de/api/interpreter', attempts: 2 },
+  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1 },
+]
+const FETCH_TIMEOUT_MS = 8000
+
+async function fetchOverpass(query: string): Promise<{ elements: OverpassElement[] } | null> {
+  for (const { url, attempts } of OVERPASS_ENDPOINTS) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: query,
+          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        })
+        if (res.ok) return await res.json() as { elements: OverpassElement[] }
+      } catch {
+        // network error or timeout — fall through to next attempt/endpoint
+      }
+    }
+  }
+  return null
+}
+
 function haversine(a: OverpassGeomPoint, b: OverpassGeomPoint) {
   const R = 6371
   const dLat = (b.lat - a.lat) * Math.PI / 180
@@ -74,15 +107,10 @@ out body;
 out geom;`
 
   try {
-    const res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain' },
-      body: query,
-    })
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Overpass svarade inte (troligen hög belastning just nu, försök igen om en stund)' }, { status: 502 })
+    const data = await fetchOverpass(query)
+    if (!data) {
+      return NextResponse.json({ error: 'OpenStreetMaps söktjänst är tillfälligt överbelastad — försök igen om en liten stund' }, { status: 502 })
     }
-    const data = await res.json() as { elements: OverpassElement[] }
     const elements = data.elements ?? []
 
     const wayGeomById = new Map<number, [number, number][]>()

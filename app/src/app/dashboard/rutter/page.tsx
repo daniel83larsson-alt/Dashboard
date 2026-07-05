@@ -37,11 +37,16 @@ export default function RutterPage() {
         setLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude, label: 'Min plats' })
         setLocating(false)
       },
-      () => {
-        setError('Kunde inte hämta din plats — sök på ort istället')
+      err => {
+        const messages: Record<number, string> = {
+          1: 'Platsdelning nekad — tillåt platsåtkomst för sidan i din webbläsares inställningar, eller sök på ort istället',
+          2: 'Kunde inte fastställa din plats just nu — sök på ort istället',
+          3: 'Det tog för lång tid att hämta din plats — försök igen eller sök på ort',
+        }
+        setError(messages[err.code] ?? 'Kunde inte hämta din plats — sök på ort istället')
         setLocating(false)
       },
-      { timeout: 10000 }
+      { timeout: 20000, maximumAge: 60000 }
     )
   }
 
