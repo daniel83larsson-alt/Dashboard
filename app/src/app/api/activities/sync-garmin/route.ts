@@ -54,11 +54,13 @@ export async function POST() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    // Daniel asked to stop syncing his own passes (2026-07-04) — the admin
-    // account is excluded from Garmin sync entirely, everyone else unaffected.
-    if (process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL) {
-      return NextResponse.json({ synced: 0, paused: true })
-    }
+    // Daniel asked to stop syncing his own training passes (2026-07-04) —
+    // but that meant activity history specifically ("650 dagar synkade"),
+    // not wellness. Sleep/resting HR/steps/body battery keep syncing
+    // normally for every account, admin included — a first attempt at this
+    // paused the whole route and silently went stale (caught when Daniel
+    // compared today's sleep against Garmin's own site).
+    const isAdminAccount = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
     // Resolve credentials: user's own first, env vars as fallback
     const { data: credsRow } = await supabase
@@ -101,10 +103,11 @@ export async function POST() {
       ? (() => { try { return JSON.parse(activityCursorRaw) } catch { return { offset: 100, done: false } } })()
       : { offset: 100, done: false }
 
-    // Fetch everything in parallel
+    // Fetch everything in parallel — activity fetches are skipped for the
+    // paused admin account, wellness fetches always run.
     const [garminActivities, backfillActivities, restingHR, sleep, steps] = await Promise.all([
-      fetchGarminActivities(100, garminEmail, garminPassword),
-      activityCursor.done
+      isAdminAccount ? Promise.resolve([]) : fetchGarminActivities(100, garminEmail, garminPassword),
+      isAdminAccount || activityCursor.done
         ? Promise.resolve([])
         : fetchGarminActivities(ACTIVITY_BACKFILL_BATCH_SIZE, garminEmail, garminPassword, activityCursor.offset),
       fetchGarminRestingHR(garminEmail, garminPassword),
@@ -126,12 +129,14 @@ export async function POST() {
           done: backfillActivities.length < ACTIVITY_BACKFILL_BATCH_SIZE || reachedHistoryCutoff,
         }
 
-    await supabase.from('coach_sessions').upsert({
-      user_id: user.id,
-      coach_id: 'garmin_activity_backfill',
-      messages: [{ role: 'system', content: JSON.stringify(newCursor) }],
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,coach_id' })
+    if (!isAdminAccount) {
+      await supabase.from('coach_sessions').upsert({
+        user_id: user.id,
+        coach_id: 'garmin_activity_backfill',
+        messages: [{ role: 'system', content: JSON.stringify(newCursor) }],
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,coach_id' })
+    }
 
     const allGarminActivities = [...garminActivities, ...backfillActivities]
       .filter(a => new Date(a.startTimeLocal).getTime() >= activityHistoryCutoff.getTime())
@@ -214,82 +219,92 @@ export async function POST() {
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id,coach_id' })
 
-    // Fetch already-synced Garmin activity ids so this sync doesn't re-upsert
-    // the same activity every time it runs
-    const { data: existing } = await supabase
-      .from('activities')
-      .select('strava_id')
-      .eq('user_id', user.id)
-      .gte('strava_id', 0)
-
-    const existingRows = existing ?? []
-
-    // Only skip a Garmin activity that's already been synced (same
-    // strava_id) — a Garmin row that happens to match an existing Concept2
-    // pass by distance/time is intentionally still inserted now, so both
-    // sources exist and get merged for display (Passlogg, dashboard,
-    // detail page) instead of the Concept2 row being the only survivor.
-    const toUpsert = allGarminActivities
-      .map(a => garminActivityToRow(a, user.id))
-      .filter(row => !existingRows.some(e => e.strava_id === row.strava_id))
-
-    if (toUpsert.length > 0) {
-      await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
-    }
-
-    const cleaned = await autoCleanupDuplicates(supabase, user.id)
-
-    // Self-heal previously-synced Garmin activities that fell back to the
-    // generic 'Workout' bucket under an older, narrower type mapping — the
-    // real Garmin typeKey is preserved in raw_data, so this re-derives the
-    // sport each sync without needing a one-off migration.
+    // Everything below is activity-specific (new passes, dedup cleanup,
+    // reclassification, HR-zone backfill) — none of it applies to the
+    // paused admin account since allGarminActivities is always empty there.
+    let toUpsertCount = 0
+    let cleaned = 0
     let reclassified = 0
-    const { data: unclassified } = await supabase
-      .from('activities')
-      .select('id, raw_data')
-      .eq('user_id', user.id)
-      .eq('sport_type', 'Workout')
-      .gte('strava_id', 0)
-    for (const row of unclassified ?? []) {
-      const typeKey = (row.raw_data as { activityType?: { typeKey?: string } } | null)?.activityType?.typeKey
-      if (!typeKey) continue
-      const newType = mapActivityType(typeKey)
-      if (newType !== 'Workout') {
-        await supabase.from('activities').update({ sport_type: newType }).eq('id', row.id)
-        reclassified++
-      }
-    }
-
-    // Gradual HR-zone backfill for this week + this month's Garmin passes —
-    // fetched a few at a time each sync rather than all at once.
-    const nowForZones = new Date()
-    const startOfThisMonth = new Date(nowForZones.getFullYear(), nowForZones.getMonth(), 1)
-    const sevenDaysAgo = new Date(nowForZones)
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-    const zoneSince = startOfThisMonth < sevenDaysAgo ? startOfThisMonth : sevenDaysAgo
-
-    const { data: zoneCandidates } = await supabase
-      .from('activities')
-      .select('id, strava_id, raw_data')
-      .eq('user_id', user.id)
-      .gte('strava_id', 0)
-      .gte('start_date', zoneSince.toISOString())
-
-    const missingZones = (zoneCandidates ?? []).filter(a => !(a.raw_data as { hrZones?: unknown } | null)?.hrZones)
-    const zoneBatch = missingZones.slice(0, ZONE_BACKFILL_BATCH_SIZE)
     let zonesBackfilled = 0
-    for (const row of zoneBatch) {
-      const zones = await fetchGarminHrZones(row.strava_id, garminEmail, garminPassword)
-      if (zones) {
-        const raw = (row.raw_data as Record<string, unknown> | null) ?? {}
-        await supabase.from('activities').update({ raw_data: { ...raw, hrZones: zones } }).eq('id', row.id)
-        zonesBackfilled++
+    let zonesRemaining = 0
+
+    if (!isAdminAccount) {
+      // Fetch already-synced Garmin activity ids so this sync doesn't re-upsert
+      // the same activity every time it runs
+      const { data: existing } = await supabase
+        .from('activities')
+        .select('strava_id')
+        .eq('user_id', user.id)
+        .gte('strava_id', 0)
+
+      const existingRows = existing ?? []
+
+      // Only skip a Garmin activity that's already been synced (same
+      // strava_id) — a Garmin row that happens to match an existing Concept2
+      // pass by distance/time is intentionally still inserted now, so both
+      // sources exist and get merged for display (Passlogg, dashboard,
+      // detail page) instead of the Concept2 row being the only survivor.
+      const toUpsert = allGarminActivities
+        .map(a => garminActivityToRow(a, user.id))
+        .filter(row => !existingRows.some(e => e.strava_id === row.strava_id))
+      toUpsertCount = toUpsert.length
+
+      if (toUpsert.length > 0) {
+        await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
       }
+
+      cleaned = await autoCleanupDuplicates(supabase, user.id)
+
+      // Self-heal previously-synced Garmin activities that fell back to the
+      // generic 'Workout' bucket under an older, narrower type mapping — the
+      // real Garmin typeKey is preserved in raw_data, so this re-derives the
+      // sport each sync without needing a one-off migration.
+      const { data: unclassified } = await supabase
+        .from('activities')
+        .select('id, raw_data')
+        .eq('user_id', user.id)
+        .eq('sport_type', 'Workout')
+        .gte('strava_id', 0)
+      for (const row of unclassified ?? []) {
+        const typeKey = (row.raw_data as { activityType?: { typeKey?: string } } | null)?.activityType?.typeKey
+        if (!typeKey) continue
+        const newType = mapActivityType(typeKey)
+        if (newType !== 'Workout') {
+          await supabase.from('activities').update({ sport_type: newType }).eq('id', row.id)
+          reclassified++
+        }
+      }
+
+      // Gradual HR-zone backfill for this week + this month's Garmin passes —
+      // fetched a few at a time each sync rather than all at once.
+      const nowForZones = new Date()
+      const startOfThisMonth = new Date(nowForZones.getFullYear(), nowForZones.getMonth(), 1)
+      const sevenDaysAgo = new Date(nowForZones)
+      sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+      const zoneSince = startOfThisMonth < sevenDaysAgo ? startOfThisMonth : sevenDaysAgo
+
+      const { data: zoneCandidates } = await supabase
+        .from('activities')
+        .select('id, strava_id, raw_data')
+        .eq('user_id', user.id)
+        .gte('strava_id', 0)
+        .gte('start_date', zoneSince.toISOString())
+
+      const missingZones = (zoneCandidates ?? []).filter(a => !(a.raw_data as { hrZones?: unknown } | null)?.hrZones)
+      const zoneBatch = missingZones.slice(0, ZONE_BACKFILL_BATCH_SIZE)
+      for (const row of zoneBatch) {
+        const zones = await fetchGarminHrZones(row.strava_id, garminEmail, garminPassword)
+        if (zones) {
+          const raw = (row.raw_data as Record<string, unknown> | null) ?? {}
+          await supabase.from('activities').update({ raw_data: { ...raw, hrZones: zones } }).eq('id', row.id)
+          zonesBackfilled++
+        }
+      }
+      zonesRemaining = missingZones.length - zoneBatch.length
     }
-    const zonesRemaining = missingZones.length - zoneBatch.length
 
     return NextResponse.json({
-      synced: toUpsert.length,
+      synced: toUpsertCount,
       wellness: todayWellness,
       backfilled: backfilled.length,
       remainingGaps,
