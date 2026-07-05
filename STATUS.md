@@ -7,9 +7,9 @@
 - [x] **CLAUDE.md uppdaterad till hela teamet** (Nova, Viktor, Robin, Noa tillagda) — verifierat: fil skriven till repo-roten, innehåll matchar Daniels uppladdade fil.
 - [x] **Scope för bokföringssiten klargjort** — målgrupp: enskild firma (Sverige). Kvittoflöde: AI-tolkning (OCR + Claude), simulerad i POC. Revisor-underlag: SIE-fil (svensk standard).
 - [x] **POC byggd** (`bokforing-poc/index.html`) — Maya. Inloggning (simulerad), kontoplan (förenklad BAS), kvittouppladdning → simulerad AI-tolkning → bokföring, transaktionslista, kontosaldon, SIE-export, revisor-godkännande-status. Data sparas i localStorage (POC-begränsning, tydligt kommunicerad i UI).
-- [ ] **Verifiera POC i webbläsare** — öppna filen och klicka igenom hela flödet innan den visas för Daniel som klar.
-- [ ] **Daniels validering av POC** — funkar det, känns det rätt?
-- [ ] **Loop-beslut (Noa)** — väntar på att Daniel pekar ut EN konkret deluppgift att köra som loop, med binärt stoppvillkor.
+- [x] **Verifiera POC i webbläsare** — automatiserat via Playwright-loop (Noa/Robin), stoppvillkor: skapa användare → mata in konto → ladda upp fake kvitto → AI-tolka → bokför → data överlever reload → generera SIE-fil. Alla 5 steg godkända på första riktiga körningen.
+- [ ] **Daniels validering av POC** — funkar det, känns det rätt? (tekniskt verifierat, men Daniels egen känsla för flödet återstår)
+- [x] **Loop-beslut (Noa)** — kört: engångs-verifieringsloop mot bokforing-poc/index.html, körd lokalt i scratchpad, ingen bugg hittad i appen.
 - [ ] **Arkitektur (Sam)** — ej påbörjad, väntar på godkänd POC.
 - [ ] **Produkt (Chris), Deploy (Jordan), Säkerhet (Riley)** — ej påbörjade.
 - [ ] **Affärsmodell/pricing (Nova)** och **sälj/landningssida (Viktor)** — ej diskuterat än.
