@@ -1,0 +1,14 @@
+services:
+  eufy-security-ws:
+    image: bropat/eufy-security-ws:latest
+    container_name: eufy-security-ws
+    network_mode: host
+    environment:
+      USERNAME: ${EUFY_USERNAME}
+      PASSWORD: ${EUFY_PASSWORD}
+      COUNTRY: ${EUFY_COUNTRY:-SE}
+      PORT: 3000
+      TRUSTED_DEVICE_NAME: dashboard-poc
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

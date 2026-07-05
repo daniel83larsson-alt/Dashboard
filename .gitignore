@@ -1,0 +1,4 @@
+.env
+eufy-integration/.env
+eufy-integration/data/
+test-clips/
