@@ -57,7 +57,7 @@ export async function POST() {
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
     const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
-      supabase.from('profiles').select('name, llm_api_key_encrypted').eq('id', user.id).single(),
+      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports').eq('id', user.id).single(),
       supabase.from('activities').select('start_date, distance, moving_time, average_heartrate, average_watts, sport_type')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
@@ -121,6 +121,8 @@ SÖMN: ${typeof wellness?.sleepHours === 'number' ? wellness.sleepHours.toFixed(
 STEG: ${wellness?.steps ?? 'saknas'} (7-dagarssnitt: ${avgSteps7 ? Math.round(avgSteps7) : 'saknas'}) | HRV: ${wellness?.hrv ?? 'saknas'} ms (7-dagarssnitt: ${avgHrv7 ? Math.round(avgHrv7) : 'saknas'}) | BODY BATTERY: ${wellness?.bodyBattery ?? 'saknas'}
 MÅL: ${(goals ?? []).map(g => g.title).join(' · ') || 'inga aktiva mål'}
 ${overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
+UTRUSTNING HEMMA: ${profile?.home_equipment?.length ? profile.home_equipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång i styrke-/rörlighetsförslag'}
+${profile?.selected_sports?.length ? `AKTIVITETER/SPORTER: ${profile.selected_sports.join(', ')}` : ''}
 ${userBio ? `BAKGRUND: ${userBio}` : ''}
 ${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE ÄNNU — endast Garmin-hälsodata (sömn/puls/steg) tillgänglig.'}`
 

@@ -300,3 +300,10 @@ end;
 $$;
 revoke all on function public.admin_list_profiles() from public;
 grant execute on function public.admin_list_profiles() to authenticated;
+
+-- Utrustning hemma + aktiviteter/sporter man utövar, så coach-teamets tips
+-- (Roddcoach, Styrkecoach m.fl.) kan utgå från vad som faktiskt finns
+-- tillgängligt istället för att gissa (Daniel: Jonas fick ett förslag om
+-- roddmaskin trots att han inte har en). selected_sports fanns redan i
+-- schemat men användes aldrig i koden — återanvänds nu för aktiviteter.
+alter table public.profiles add column if not exists home_equipment text[] default '{}';

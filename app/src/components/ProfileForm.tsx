@@ -14,6 +14,70 @@ type Profile = {
   locked?: boolean | null
   flagged_attempts?: number | null
   flag_log?: FlagEntry[] | null
+  home_equipment?: string[] | null
+  selected_sports?: string[] | null
+}
+
+// Common options as toggle chips — plus a free-text "annat" field for
+// anything not listed, so the coach team can ground equipment-specific
+// tips (e.g. Styrkecoach, Roddcoach) in what's actually available instead
+// of guessing (Daniel: Jonas fick ett förslag om roddmaskin han inte har).
+const COMMON_EQUIPMENT = ['Roddmaskin (Concept2)', 'Motionscykel/trainer', 'Löpband', 'Kettlebell', 'Skivstång & vikter', 'Hantlar', 'Motionsband', 'TRX/ringar', 'Yogamatta', 'Simbassäng tillgänglig']
+const COMMON_SPORTS = ['Rodd', 'Löpning', 'Cykling', 'Simning', 'Styrketräning', 'Yoga', 'Vandring', 'Längdskidor', 'Lagsport', 'Klättring']
+
+function ChipPicker({ label, options, selected, onToggle, onAddCustom }: {
+  label: string
+  options: string[]
+  selected: string[]
+  onToggle: (value: string) => void
+  onAddCustom: (value: string) => void
+}) {
+  const [custom, setCustom] = useState('')
+  const extra = selected.filter(s => !options.includes(s))
+
+  return (
+    <div>
+      <label className="text-muted text-xs block mb-2">{label}</label>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {[...options, ...extra].map(opt => {
+          const active = selected.includes(opt)
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onToggle(opt)}
+              className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                active ? 'bg-accent text-bg border-accent font-medium' : 'bg-bg border-edge text-muted hover:border-accent/40'
+              }`}
+            >
+              {opt}
+            </button>
+          )
+        })}
+      </div>
+      <div className="flex gap-2">
+        <input
+          value={custom}
+          onChange={e => setCustom(e.target.value)}
+          onKeyDown={e => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              if (custom.trim()) { onAddCustom(custom.trim()); setCustom('') }
+            }
+          }}
+          placeholder="Lägg till eget..."
+          className="flex-1 bg-bg border border-edge rounded-lg px-3 py-1.5 text-xs text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+        />
+        <button
+          type="button"
+          onClick={() => { if (custom.trim()) { onAddCustom(custom.trim()); setCustom('') } }}
+          className="text-xs bg-bg border border-edge px-3 py-1.5 rounded-lg text-fg hover:border-accent transition-colors"
+        >
+          Lägg till
+        </button>
+      </div>
+    </div>
+  )
 }
 
 const CONTEXT_PLACEHOLDER = `Beskriv dig själv, din situation och din träning — ju mer bakgrund, desto bättre feedback.
@@ -43,6 +107,8 @@ export default function ProfileForm({
   const [apiKey, setApiKey] = useState('')
   const [provider, setProvider] = useState(profile?.llm_provider ?? 'gemini')
   const [context, setContext] = useState(savedContext)
+  const [equipment, setEquipment] = useState<string[]>(profile?.home_equipment ?? [])
+  const [sports, setSports] = useState<string[]>(profile?.selected_sports ?? [])
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -60,7 +126,7 @@ export default function ProfileForm({
     setSaving(true)
     const supabase = createSupabaseClient()
 
-    await supabase.from('profiles').update({ name, llm_provider: provider }).eq('id', profile?.id ?? '')
+    await supabase.from('profiles').update({ name, llm_provider: provider, home_equipment: equipment, selected_sports: sports }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
       await fetch('/api/profile/save-llm-key', {
@@ -187,6 +253,28 @@ export default function ProfileForm({
           placeholder={CONTEXT_PLACEHOLDER}
           rows={7}
           className="w-full bg-bg border border-edge rounded-xl px-4 py-3 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors resize-none leading-relaxed"
+        />
+      </div>
+
+      {/* Equipment & sports */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Utrustning & aktiviteter</div>
+          <p className="text-muted text-xs">Vad du har hemma och vilka sporter du utövar — så coachens tips utgår från det som faktiskt finns tillgängligt istället för att gissa.</p>
+        </div>
+        <ChipPicker
+          label="Utrustning hemma"
+          options={COMMON_EQUIPMENT}
+          selected={equipment}
+          onToggle={v => setEquipment(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])}
+          onAddCustom={v => setEquipment(prev => prev.includes(v) ? prev : [...prev, v])}
+        />
+        <ChipPicker
+          label="Aktiviteter/sporter"
+          options={COMMON_SPORTS}
+          selected={sports}
+          onToggle={v => setSports(prev => prev.includes(v) ? prev.filter(x => x !== v) : [...prev, v])}
+          onAddCustom={v => setSports(prev => prev.includes(v) ? prev : [...prev, v])}
         />
       </div>
 

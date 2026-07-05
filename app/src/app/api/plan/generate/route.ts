@@ -21,7 +21,7 @@ export async function POST() {
     const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([
       supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }).limit(30),
       supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
-      supabase.from('profiles').select('name, llm_api_key_encrypted').eq('id', user.id).single(),
+      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports').eq('id', user.id).single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
 
@@ -65,6 +65,9 @@ SAMMANFATTNING:
 MÅL:
 ${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})${g.target_date ? ` — måldatum: ${g.target_date}` : ' — inget måldatum'}`).join('\n') : '- Inga specificerade mål'}
 ${overviewGoal ? `\nÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
+
+UTRUSTNING HEMMA: ${profile?.home_equipment?.length ? profile.home_equipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång, lägg bara in pass som går att göra med kroppsvikt eller det atleten faktiskt loggar pass med'}
+${profile?.selected_sports?.length ? `AKTIVITETER/SPORTER ATLETEN UTÖVAR: ${profile.selected_sports.join(', ')}` : ''}
 `
 
     const hasTargetedGoal = (goals ?? []).some(g => g.target_date)

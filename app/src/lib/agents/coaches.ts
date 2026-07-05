@@ -25,6 +25,8 @@ export type UserContext = {
   name: string
   userBio?: string
   overviewGoal?: string
+  homeEquipment?: string[]
+  activeSports?: string[]
   recentActivities: Array<{
     date: string
     distance: number
@@ -78,6 +80,8 @@ function compact(ctx: UserContext, sport: string): string {
 SPORTMIX (senaste ${ctx.recentActivities.length} pass): ${sportMix || 'okänd'}
 STATS: ${s?.totalSessions ?? '?'} pass tot | ${s?.sessionsThisWeek ?? '?'}/v | ${s?.sessionsThisMonth ?? '?'}/mån | ${s?.totalDistKm ?? '?'} km all time
 ${p ? `RODD-PB (endast rodd, ej andra sporter): 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}
+UTRUSTNING HEMMA: ${ctx.homeEquipment?.length ? ctx.homeEquipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång, föreslå bara kroppsviktsövningar eller allmänna tips om inget annat framgår av kontexten nedan'}
+${ctx.activeSports?.length ? `AKTIVITETER/SPORTER ANVÄNDAREN UTÖVAR: ${ctx.activeSports.join(', ')}` : ''}
 ${ctx.restingHR ? `Vilopuls: ${ctx.restingHR} bpm` : ''}${ctx.avgSleep ? ` | Sömn: ${ctx.avgSleep.toFixed(1)}h` : ''}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
 ${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
