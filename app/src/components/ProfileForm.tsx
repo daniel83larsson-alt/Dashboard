@@ -35,12 +35,16 @@ export default function ProfileForm({
   userEmail,
   hasConcept2,
   hasGarmin,
+  concept2Synced,
+  garminSynced,
   savedContext,
 }: {
   profile: Profile | null
   userEmail: string
   hasConcept2: boolean
   hasGarmin: boolean
+  concept2Synced: boolean
+  garminSynced: boolean
   savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
@@ -225,8 +229,8 @@ export default function ProfileForm({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <div className="text-sm text-fg flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent inline-block" />
-                Ansluten
+                <span className={`w-2 h-2 rounded-full inline-block ${concept2Synced ? 'bg-accent' : 'bg-amber-400'}`} />
+                {concept2Synced ? 'Ansluten' : 'Ansluten — väntar på första synk'}
               </div>
               {syncMsg && <div className="text-xs text-lcd mt-1">{syncMsg}</div>}
             </div>
@@ -264,8 +268,8 @@ export default function ProfileForm({
           <div className="flex items-center gap-3">
             <div className="flex-1">
               <div className="text-sm text-fg flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-accent inline-block" />
-                Ansluten
+                <span className={`w-2 h-2 rounded-full inline-block ${garminSynced ? 'bg-accent' : 'bg-amber-400'}`} />
+                {garminSynced ? 'Ansluten' : 'Ansluten — väntar på första synk'}
               </div>
               {garminMsg && <div className="text-xs text-lcd mt-1">{garminMsg}</div>}
             </div>
