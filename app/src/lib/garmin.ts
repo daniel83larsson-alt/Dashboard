@@ -103,6 +103,11 @@ export function mapActivityType(typeKey: string): string {
   if (key.includes('yoga')) return 'Yoga'
   if (key.includes('elliptical')) return 'Elliptical'
   if (key.includes('hiit')) return 'HIIT'
+  // Downhill/resort/backcountry first (checked before the generic 'ski'
+  // catch below) — cross-country, classic, skate, and roller-ski all fall
+  // through to NordicSki.
+  if (key.includes('resort_ski') || key.includes('backcountry_ski') || key.includes('alpine_ski')) return 'AlpineSki'
+  if (key.includes('ski')) return 'NordicSki'
 
   return 'Workout'
 }

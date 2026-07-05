@@ -63,7 +63,7 @@ function benchmarksForSport(sport: string) {
 
 // Only sports where distance/pace PRs are meaningful — strength/yoga/etc.
 // don't fit this "personal best" shape and are left out.
-const PR_ELIGIBLE_SPORTS = new Set(['Rowing', 'Run', 'TrailRun', 'Walk', 'Hike', 'Ride', 'VirtualRide', 'Swim'])
+const PR_ELIGIBLE_SPORTS = new Set(['Rowing', 'Run', 'TrailRun', 'Walk', 'Hike', 'Ride', 'VirtualRide', 'Swim', 'NordicSki'])
 
 function computeSportPRs(acts: Activity[], sport: string): SportPRs {
   const real = acts.filter(a => a.sport_type === sport && a.distance >= 200 && a.moving_time >= 60)
@@ -170,6 +170,23 @@ export default async function RekordPage() {
   const longest = longestSession(activities)
   const streak = longestStreak(activities)
 
+  const year = new Date().getFullYear()
+  const yearStart = new Date(year, 0, 1)
+  const thisYearActs = activities.filter(a => new Date(a.start_date) >= yearStart)
+  const yearDist = thisYearActs.reduce((s, a) => s + (a.distance ?? 0), 0)
+  const yearTime = thisYearActs.reduce((s, a) => s + (a.moving_time ?? 0), 0)
+  const allTimeDist = activities.reduce((s, a) => s + (a.distance ?? 0), 0)
+
+  const bySport = activities.reduce<Record<string, { count: number; dist: number; time: number }>>((acc, a) => {
+    const t = a.sport_type ?? 'Övrigt'
+    if (!acc[t]) acc[t] = { count: 0, dist: 0, time: 0 }
+    acc[t].count += 1
+    acc[t].dist += a.distance ?? 0
+    acc[t].time += a.moving_time ?? 0
+    return acc
+  }, {})
+  const sportBreakdown = Object.entries(bySport).sort((a, b) => b[1].dist - a[1].dist)
+
   if (activities.length === 0) {
     return (
       <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto space-y-6">
@@ -255,6 +272,59 @@ export default async function RekordPage() {
           </div>
         </div>
       )}
+
+      {/* ── Totalt & sportfördelning ─────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Totalt</h2>
+        <div className="grid grid-cols-2 gap-2 mb-2">
+          <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl">🏅</span>
+            <div>
+              <div className="font-mono text-accent text-sm font-bold">{(yearDist / 1000).toFixed(0)} km</div>
+              <div className="text-muted text-xs">totalt {year}, alla sporter</div>
+            </div>
+          </div>
+          <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl">⏱</span>
+            <div>
+              <div className="font-mono text-accent text-sm font-bold">{fmtDur(yearTime)}</div>
+              <div className="text-muted text-xs">träningstid {year}</div>
+            </div>
+          </div>
+          <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl">📅</span>
+            <div>
+              <div className="font-mono text-accent text-sm font-bold">{activities.length} pass</div>
+              <div className="text-muted text-xs">all time</div>
+            </div>
+          </div>
+          <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
+            <span className="text-2xl">🏅</span>
+            <div>
+              <div className="font-mono text-accent text-sm font-bold">{(allTimeDist / 1000).toFixed(0)} km</div>
+              <div className="text-muted text-xs">totalt all time</div>
+            </div>
+          </div>
+        </div>
+
+        {sportBreakdown.length > 1 && (
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <div className="text-xs text-muted mb-3">Sportfördelning all time</div>
+            <div className="flex flex-col gap-2">
+              {sportBreakdown.map(([type, s]) => (
+                <div key={type} className="flex items-center gap-3 bg-bg rounded-lg px-3 py-2">
+                  <span className="text-lg flex-shrink-0">{sportIcon(type)}</span>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs text-fg capitalize">{sportLabel(type)}</div>
+                    <div className="text-[10px] text-muted">{s.count} pass · {fmtDur(s.time)}</div>
+                  </div>
+                  <span className="font-mono text-xs text-accent font-bold flex-shrink-0">{fmtKm(s.dist)}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

@@ -17,12 +17,15 @@ export const SPORT_LABELS: Record<string, string> = {
   Workout: 'träningspass',
   HIIT: 'HIIT',
   Mobility: 'rörlighet',
+  NordicSki: 'längdskidor',
+  AlpineSki: 'utförsåkning',
 }
 
 export const SPORT_ICONS: Record<string, string> = {
   Rowing: '🚣', Run: '🏃', TrailRun: '🏔', Ride: '🚴', VirtualRide: '🚴',
   Walk: '🚶', Hike: '🥾', Swim: '🏊', WeightTraining: '🏋️', Workout: '💪',
   HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️', Mobility: '🤸',
+  NordicSki: '🎿', AlpineSki: '⛷️',
 }
 
 export function sportLabel(sport: string): string {
@@ -57,7 +60,7 @@ export function fmtSpeedOrPace(sportType: string, distance: number, movingTime: 
     const kmh = (distance / 1000) / (movingTime / 3600)
     return { label: 'Snitthastighet', value: `${kmh.toFixed(1)} km/h` }
   }
-  if (isRunOrWalk(sportType)) {
+  if (isRunOrWalk(sportType) || sportType === 'NordicSki') {
     const secPerKm = movingTime / (distance / 1000)
     return { label: 'Snittempo', value: `${fmtMinSec(secPerKm)}/km` }
   }

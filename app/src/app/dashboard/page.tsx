@@ -390,68 +390,6 @@ export default async function DashboardPage() {
             ))}
           </div>
 
-          {/* Sport breakdown — only show if there are multiple types */}
-          {(() => {
-            const byType = activities.reduce<Record<string, { count: number; dist: number; time: number }>>((acc, a) => {
-              const t = a.sport_type ?? 'Övrigt'
-              if (!acc[t]) acc[t] = { count: 0, dist: 0, time: 0 }
-              acc[t].count += 1
-              acc[t].dist += a.distance ?? 0
-              acc[t].time += a.moving_time ?? 0
-              return acc
-            }, {})
-            const types = Object.entries(byType).sort((a, b) => b[1].dist - a[1].dist)
-            if (types.length <= 1) return null
-            return (
-              <div className="bg-card border border-edge rounded-2xl p-4 mt-2">
-                <div className="text-xs text-muted mb-3">Sportfördelning all time</div>
-                <div className="flex flex-col gap-2">
-                  {types.map(([type, s]) => (
-                    <div key={type} className="flex items-center gap-3 bg-bg rounded-lg px-3 py-2">
-                      <span className="text-lg flex-shrink-0">{sportIcon(type)}</span>
-                      <div className="flex-1 min-w-0">
-                        <div className="text-xs text-fg capitalize">{sportLabel(type)}</div>
-                        <div className="text-[10px] text-muted">{s.count} pass · {fmtDur(s.time)}</div>
-                      </div>
-                      <span className="font-mono text-xs text-accent font-bold flex-shrink-0">{fmtKm(s.dist)}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })()}
-
-          {/* Extra fun stats */}
-          <div className="grid grid-cols-2 gap-2 mt-2">
-            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">🏅</span>
-              <div>
-                <div className="font-mono text-accent text-sm font-bold">{(yy.dist / 1000).toFixed(0)} km</div>
-                <div className="text-muted text-xs">totalt {y}, alla sporter</div>
-              </div>
-            </div>
-            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">⏱</span>
-              <div>
-                <div className="font-mono text-accent text-sm font-bold">{fmtDur(yy.time)}</div>
-                <div className="text-muted text-xs">träningstid {y}</div>
-              </div>
-            </div>
-            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">📅</span>
-              <div>
-                <div className="font-mono text-accent text-sm font-bold">{activities.length} pass</div>
-                <div className="text-muted text-xs">all time</div>
-              </div>
-            </div>
-            <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
-              <span className="text-2xl">🏅</span>
-              <div>
-                <div className="font-mono text-accent text-sm font-bold">{(activities.reduce((s, a) => s + (a.distance ?? 0), 0) / 1000).toFixed(0)} km</div>
-                <div className="text-muted text-xs">totalt all time</div>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
