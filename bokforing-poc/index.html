@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Bokio Lite — Bokföring för enskild firma</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
+  --accent:#22c55e;--blue:#4f8ef7;--yellow:#f59e0b;--red:#ef4444;--purple:#a855f7;
+  --text:#e2e8f0;--muted:#64748b;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+button,input,select{font-family:inherit;font-size:inherit}
+::placeholder{color:var(--muted)}
+img{max-width:100%}
+
+/* ── LOGIN ── */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:100%;max-width:380px}
+.login-logo{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px}
+.login-card h1{font-size:20px;margin-bottom:4px}
+.login-card p{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
+.field input:focus{border-color:var(--accent)}
+.btn{background:var(--accent);color:#0b1a10;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent}
+.btn:hover{filter:brightness(1.08)}
+.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn.small{width:auto;padding:8px 14px;font-size:13px}
+.btn.danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.login-note{margin-top:18px;font-size:11px;color:var(--muted);line-height:1.5;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+
+/* ── APP SHELL ── */
+.app{display:none;min-height:100vh;flex-direction:column}
+.app.on{display:flex}
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 20px;flex-shrink:0}
+.tb-logo{width:32px;height:32px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tb-name{font-weight:700;font-size:14px}
+.tb-sub{font-size:11px;color:var(--muted)}
+.tb-spacer{flex:1}
+.demo-pill{font-size:11px;background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:5px 10px;border-radius:99px;font-weight:600}
+
+.tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;overflow-x:auto}
+.tab{padding:14px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tab:hover{color:var(--text)}
+.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.content{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto}
+
+.section{margin-bottom:26px}
+.stitle{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
+h2.page-title{font-size:20px;margin-bottom:4px}
+.page-desc{font-size:13px;color:var(--muted);margin-bottom:20px}
+
+.cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card .k{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.card .v{font-size:22px;font-weight:800}
+.card .v.pos{color:var(--accent)}
+.card .v.neg{color:var(--red)}
+
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel-pad{padding:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+td{padding:11px 14px;border-bottom:1px solid var(--border)}
+tr:last-child td{border-bottom:none}
+.badge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:700;white-space:nowrap}
+.bgreen{background:rgba(34,197,94,.15);color:var(--accent)}
+.byellow{background:rgba(245,158,11,.15);color:var(--yellow)}
+.bred{background:rgba(239,68,68,.15);color:var(--red)}
+.bblue{background:rgba(79,142,247,.15);color:var(--blue)}
+.bgray{background:rgba(100,116,139,.15);color:var(--muted)}
+.amt-pos{color:var(--accent);font-weight:700}
+.amt-neg{color:var(--text);font-weight:700}
+.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 8px}
+.icon-btn:hover{color:var(--red)}
+.empty{padding:40px 20px;text-align:center;color:var(--muted)}
+.empty .ei{font-size:36px;margin-bottom:10px}
+
+/* ── UPLOAD / RECEIPTS ── */
+.upload-box{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .15s}
+.upload-box:hover{border-color:var(--accent)}
+.upload-box .ui{font-size:32px;margin-bottom:8px}
+.upload-box .ut{font-weight:700;font-size:14px;margin-bottom:4px}
+.upload-box .us{font-size:12px;color:var(--muted)}
+#fileInput{display:none}
+
+.receipt-row{display:flex;gap:14px;align-items:center;padding:14px;border-bottom:1px solid var(--border)}
+.receipt-row:last-child{border-bottom:none}
+.receipt-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--bg);flex-shrink:0;border:1px solid var(--border)}
+.receipt-info{flex:1;min-width:0}
+.receipt-name{font-size:13px;font-weight:600}
+.receipt-meta{font-size:11px;color:var(--muted);margin-top:2px}
+
+.parse-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px}
+.parse-form .ai-tag{font-size:11px;color:var(--purple);font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.parsing{display:flex;align-items:center;gap:10px;padding:16px;color:var(--muted);font-size:13px}
+
+.form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
+.form-row .field{flex:1;min-width:120px;margin-bottom:0}
+select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
+
+.sie-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--muted);max-height:180px;overflow:auto;white-space:pre;margin-top:12px}
+.status-line{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.status-line:last-child{border-bottom:none}
+
+@media (max-width:720px){
+  .cards{grid-template-columns:repeat(2,1fr)}
+  .content{padding:16px}
+  table{font-size:12px}
+  th,td{padding:8px 10px}
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap" id="loginScreen">
+  <div class="login-card">
+    <div class="login-logo">📒</div>
+    <h1 id="loginTitle">Logga in</h1>
+    <p>Bokföring för enskild firma — mata in konton, ladda upp kvitton, få underlag klart för revisorn.</p>
+    <div class="field">
+      <label>E-post</label>
+      <input type="email" id="loginEmail" placeholder="du@foretag.se"/>
+    </div>
+    <div class="field">
+      <label>Lösenord</label>
+      <input type="password" id="loginPass" placeholder="••••••••"/>
+    </div>
+    <div class="field" id="companyField">
+      <label>Företagsnamn</label>
+      <input type="text" id="loginCompany" placeholder="T.ex. Larsson Konsult AB"/>
+    </div>
+    <button class="btn" onclick="doLogin()">Logga in</button>
+    <div class="login-note">🔒 Detta är en POC. Inloggningen är simulerad och all data sparas just nu lokalt i din webbläsare — inte online. I produktversionen sparas allt krypterat i molnet med riktig autentisering.</div>
+  </div>
+</div>
+
+<div class="app" id="appScreen">
+  <div class="topbar">
+    <div class="tb-logo">📒</div>
+    <div>
+      <div class="tb-name" id="companyNameDisplay">Mitt företag</div>
+      <div class="tb-sub">Enskild firma · Bokföring</div>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="demo-pill">POC — data sparas lokalt</div>
+    <button class="btn secondary small" onclick="logout()" style="margin-left:12px">Logga ut</button>
+  </div>
+
+  <div class="tabs">
+    <div class="tab" data-tab="oversikt">Översikt</div>
+    <div class="tab" data-tab="kvitton">Kvitton</div>
+    <div class="tab" data-tab="transaktioner">Transaktioner</div>
+    <div class="tab" data-tab="konton">Konton</div>
+    <div class="tab" data-tab="revisor">Revisor</div>
+  </div>
+
+  <div class="content" id="content"></div>
+</div>
+
+<input type="file" id="fileInput" accept="image/*,.pdf" onchange="onFileSelected(event)"/>
+
+<script>
+/* ===================== DATA ===================== */
+const KONTOPLAN = [
+  {kod:'1930', namn:'Företagskonto (bank)'},
+  {kod:'1510', namn:'Kundfordringar'},
+  {kod:'2013', namn:'Egna uttag'},
+  {kod:'2018', namn:'Egna insättningar'},
+  {kod:'2440', namn:'Leverantörsskulder'},
+  {kod:'2611', namn:'Utgående moms 25%'},
+  {kod:'2641', namn:'Ingående moms'},
+  {kod:'3001', namn:'Försäljning tjänster'},
+  {kod:'4010', namn:'Inköp av varor'},
+  {kod:'5010', namn:'Lokalhyra'},
+  {kod:'5020', namn:'El'},
+  {kod:'5410', namn:'Förbrukningsinventarier'},
+  {kod:'6110', namn:'Kontorsmateriel'},
+  {kod:'6212', namn:'Mobiltelefon'},
+  {kod:'6230', namn:'Datakommunikation/internet'},
+  {kod:'6250', namn:'Bilkostnader'},
+  {kod:'6420', namn:'Redovisning/revisor'},
+  {kod:'6570', namn:'Bankkostnader'},
+  {kod:'8310', namn:'Ränteintäkter'},
+];
+const kontoNamn = kod => (KONTOPLAN.find(k=>k.kod===kod)||{}).namn || '';
+
+const VENDOR_GUESSES = [
+  {namn:'ICA Maxi', konto:'6110', typ:'kostnad', min:80, max:900},
+  {namn:'Telia', konto:'6212', typ:'kostnad', min:199, max:599},
+  {namn:'OKQ8', konto:'6250', typ:'kostnad', min:400, max:1200},
+  {namn:'Elgiganten', konto:'5410', typ:'kostnad', min:300, max:4500},
+  {namn:'Fortum', konto:'5020', typ:'kostnad', min:500, max:2200},
+  {namn:'Bahnhof', konto:'6230', typ:'kostnad', min:299, max:499},
+  {namn:'Kund AB', konto:'3001', typ:'intakt', min:2000, max:25000},
+];
+
+let state = {
+  session:null,
+  company:'Mitt företag',
+  transactions:[],
+  receipts:[],
+  periods:[],
+};
+
+function loadState(){
+  const raw = localStorage.getItem('bf_state');
+  if(raw){ try{ state = Object.assign(state, JSON.parse(raw)); }catch(e){} }
+}
+function saveState(){
+  localStorage.setItem('bf_state', JSON.stringify(state));
+}
+
+/* ===================== AUTH ===================== */
+function doLogin(){
+  const email = document.getElementById('loginEmail').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const company = document.getElementById('loginCompany').value.trim();
+  if(!email || !pass){ alert('Fyll i e-post och lösenord.'); return; }
+  if(!state.company || state.company==='Mitt företag'){
+    if(!company){ alert('Ange företagsnamn.'); return; }
+    state.company = company;
+  }
+  state.session = {email};
+  saveState();
+  showApp();
+}
+function logout(){
+  state.session = null;
+  saveState();
+  document.getElementById('appScreen').classList.remove('on');
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+function showApp(){
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').classList.add('on');
+  document.getElementById('companyNameDisplay').textContent = state.company;
+  if(state.company && state.company!=='Mitt företag'){
+    document.getElementById('companyField').style.display='none';
+  }
+  switchTab('oversikt');
+}
+
+/* ===================== TABS ===================== */
+let activeTab = 'oversikt';
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click', ()=>switchTab(t.dataset.tab));
+});
+function switchTab(name){
+  activeTab = name;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on', t.dataset.tab===name));
+  render();
+}
+
+/* ===================== HELPERS ===================== */
+const fmt = n => n.toLocaleString('sv-SE', {minimumFractionDigits:0, maximumFractionDigits:0}) + ' kr';
+const todayStr = () => new Date().toISOString().slice(0,10);
+function currentMonthLabel(){
+  const d = new Date();
+  return d.toLocaleDateString('sv-SE', {month:'long', year:'numeric'});
+}
+function monthKey(dateStr){ return dateStr.slice(0,7); }
+
+/* ===================== RENDER ===================== */
+function render(){
+  const c = document.getElementById('content');
+  if(activeTab==='oversikt') c.innerHTML = renderOversikt();
+  else if(activeTab==='kvitton') c.innerHTML = renderKvitton();
+  else if(activeTab==='transaktioner') c.innerHTML = renderTransaktioner();
+  else if(activeTab==='konton') c.innerHTML = renderKonton();
+  else if(activeTab==='revisor') c.innerHTML = renderRevisor();
+}
+
+function renderOversikt(){
+  const mk = monthKey(todayStr());
+  const monthTx = state.transactions.filter(t=>monthKey(t.datum)===mk);
+  const intakter = monthTx.filter(t=>t.typ==='intakt').reduce((s,t)=>s+t.belopp,0);
+  const kostnader = monthTx.filter(t=>t.typ==='kostnad').reduce((s,t)=>s+t.belopp,0);
+  const resultat = intakter - kostnader;
+  const obehandlade = state.receipts.filter(r=>r.status==='pending').length;
+
+  return `
+    <h2 class="page-title">Översikt</h2>
+    <div class="page-desc">${currentMonthLabel()}</div>
+    <div class="cards">
+      <div class="card"><div class="k">Intäkter</div><div class="v pos">${fmt(intakter)}</div></div>
+      <div class="card"><div class="k">Kostnader</div><div class="v">${fmt(kostnader)}</div></div>
+      <div class="card"><div class="k">Resultat</div><div class="v ${resultat>=0?'pos':'neg'}">${fmt(resultat)}</div></div>
+      <div class="card"><div class="k">Obehandlade kvitton</div><div class="v ${obehandlade>0?'neg':''}">${obehandlade}</div></div>
+    </div>
+    <div class="section">
+      <div class="stitle">Senaste transaktioner</div>
+      <div class="panel">
+        ${state.transactions.slice(-5).reverse().map(rowTx).join('') || emptyBlock('📄','Inga transaktioner ännu','Ladda upp ett kvitto eller lägg till en transaktion manuellt.')}
+      </div>
+    </div>
+  `;
+}
+
+function rowTx(t){
+  return `<div class="status-line">
+    <div>
+      <div style="font-weight:600;font-size:13px">${t.beskrivning}</div>
+      <div style="font-size:11px;color:var(--muted)">${t.datum} · ${t.konto} ${kontoNamn(t.konto)}</div>
+    </div>
+    <div class="${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'-'}${fmt(t.belopp)}</div>
+  </div>`;
+}
+
+function emptyBlock(icon,title,sub){
+  return `<div class="empty"><div class="ei">${icon}</div><div style="font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:12px">${sub}</div></div>`;
+}
+
+/* ---- Kvitton ---- */
+function renderKvitton(){
+  return `
+    <h2 class="page-title">Kvitton</h2>
+    <div class="page-desc">Ladda upp ett kvitto så tolkar AI:n det automatiskt — du bekräftar innan det bokförs.</div>
+    <div class="section">
+      <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+        <div class="ui">📤</div>
+        <div class="ut">Ladda upp kvitto</div>
+        <div class="us">JPG, PNG eller PDF</div>
+      </div>
+    </div>
+    <div class="section">
+      <div class="stitle">Uppladdade kvitton</div>
+      <div class="panel">
+        ${state.receipts.slice().reverse().map(receiptRow).join('') || emptyBlock('🧾','Inga kvitton uppladdade','Klicka ovan för att ladda upp ditt första kvitto.')}
+      </div>
+    </div>
+  `;
+}
+
+function receiptRow(r){
+  let inner = '';
+  if(r.status==='parsing'){
+    inner = `<div class="parsing"><span class="spinner"></span> AI läser kvittot...</div>`;
+  } else if(r.status==='pending'){
+    inner = `<button class="btn small" style="margin-left:auto" onclick="parseReceipt('${r.id}')">Tolka med AI</button>`;
+  } else if(r.status==='parsed'){
+    inner = renderParseForm(r);
+  } else if(r.status==='bokford'){
+    inner = `<span class="badge bgreen">Bokförd</span>`;
+  }
+  return `<div class="receipt-row" id="receipt-${r.id}" style="flex-wrap:wrap">
+    <img class="receipt-thumb" src="${r.thumb}" onerror="this.style.display='none'"/>
+    <div class="receipt-info">
+      <div class="receipt-name">${r.filename}</div>
+      <div class="receipt-meta">Uppladdad ${r.uploadedAt}</div>
+    </div>
+    ${r.status!=='parsed' ? inner : ''}
+    ${r.status==='parsed' ? `<div style="flex-basis:100%">${inner}</div>` : ''}
+  </div>`;
+}
+
+function renderParseForm(r){
+  const p = r.parsed;
+  return `
+  <div class="parse-form">
+    <div class="ai-tag">✨ AI-tolkning (simulerad i POC) — kontrollera och justera vid behov</div>
+    <div class="form-row">
+      <div class="field"><label>Leverantör / beskrivning</label><input id="pf-desc-${r.id}" value="${p.beskrivning}"/></div>
+      <div class="field"><label>Datum</label><input type="date" id="pf-date-${r.id}" value="${p.datum}"/></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>Belopp (inkl. moms)</label><input type="number" id="pf-amt-${r.id}" value="${p.belopp}"/></div>
+      <div class="field">
+        <label>Konto</label>
+        <select id="pf-konto-${r.id}">
+          ${KONTOPLAN.map(k=>`<option value="${k.kod}" ${k.kod===p.konto?'selected':''}>${k.kod} — ${k.namn}</option>`).join('')}
+        </select>
+      </div>
+      <div class="field">
+        <label>Typ</label>
+        <select id="pf-typ-${r.id}">
+          <option value="kostnad" ${p.typ==='kostnad'?'selected':''}>Kostnad</option>
+          <option value="intakt" ${p.typ==='intakt'?'selected':''}>Intäkt</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn small" onclick="confirmReceipt('${r.id}')">✓ Bokför</button>
+  </div>`;
+}
+
+function onFileSelected(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ev=>{
+    const r = {
+      id: 'r'+Date.now(),
+      filename: file.name,
+      thumb: ev.target.result,
+      uploadedAt: new Date().toLocaleString('sv-SE'),
+      status: 'pending',
+      parsed: null,
+    };
+    state.receipts.push(r);
+    saveState();
+    render();
+  };
+  reader.readAsDataURL(file);
+  e.target.value = '';
+}
+
+function parseReceipt(id){
+  const r = state.receipts.find(x=>x.id===id);
+  r.status = 'parsing';
+  render();
+  setTimeout(()=>{
+    const guess = VENDOR_GUESSES[Math.floor(Math.random()*VENDOR_GUESSES.length)];
+    const belopp = Math.round((guess.min + Math.random()*(guess.max-guess.min))/10)*10;
+    r.parsed = {
+      beskrivning: guess.namn,
+      datum: todayStr(),
+      belopp: belopp,
+      konto: guess.konto,
+      typ: guess.typ,
+    };
+    r.status = 'parsed';
+    saveState();
+    render();
+  }, 1400);
+}
+
+function confirmReceipt(id){
+  const r = state.receipts.find(x=>x.id===id);
+  const tx = {
+    id: 't'+Date.now(),
+    beskrivning: document.getElementById(`pf-desc-${id}`).value || r.parsed.beskrivning,
+    datum: document.getElementById(`pf-date-${id}`).value || r.parsed.datum,
+    belopp: Number(document.getElementById(`pf-amt-${id}`).value) || r.parsed.belopp,
+    konto: document.getElementById(`pf-konto-${id}`).value,
+    typ: document.getElementById(`pf-typ-${id}`).value,
+    kalla: 'kvitto',
+    receiptId: id,
+  };
+  state.transactions.push(tx);
+  r.status = 'bokford';
+  saveState();
+  render();
+}
+
+/* ---- Transaktioner ---- */
+function renderTransaktioner(){
+  const rows = state.transactions.slice().reverse().map(t=>`
+    <tr>
+      <td>${t.datum}</td>
+      <td>${t.beskrivning}</td>
+      <td>${t.konto} <span style="color:var(--muted);font-size:11px">${kontoNamn(t.konto)}</span></td>
+      <td><span class="badge ${t.typ==='intakt'?'bgreen':'bblue'}">${t.typ==='intakt'?'Intäkt':'Kostnad'}</span></td>
+      <td class="${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'-'}${fmt(t.belopp)}</td>
+      <td><span class="badge bgray">${t.kalla==='kvitto'?'Från kvitto':'Manuell'}</span></td>
+      <td><button class="icon-btn" onclick="deleteTx('${t.id}')" title="Ta bort">✕</button></td>
+    </tr>
+  `).join('');
+
+  return `
+    <h2 class="page-title">Transaktioner</h2>
+    <div class="page-desc">Alla bokförda poster. Kvitton bokförs automatiskt hit, eller lägg till manuellt.</div>
+    <div class="section panel panel-pad">
+      <div class="stitle" style="margin-bottom:14px">Lägg till manuellt</div>
+      <div class="form-row">
+        <div class="field"><label>Beskrivning</label><input id="mtx-desc" placeholder="T.ex. Konsultarvode"/></div>
+        <div class="field"><label>Datum</label><input type="date" id="mtx-date" value="${todayStr()}"/></div>
+        <div class="field"><label>Belopp</label><input type="number" id="mtx-amt" placeholder="0"/></div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Konto</label>
+          <select id="mtx-konto">${KONTOPLAN.map(k=>`<option value="${k.kod}">${k.kod} — ${k.namn}</option>`).join('')}</select>
+        </div>
+        <div class="field">
+          <label>Typ</label>
+          <select id="mtx-typ"><option value="kostnad">Kostnad</option><option value="intakt">Intäkt</option></select>
+        </div>
+      </div>
+      <button class="btn small" onclick="addManualTx()">+ Lägg till transaktion</button>
+    </div>
+    <div class="section">
+      <div class="panel">
+        ${state.transactions.length ? `
+        <table>
+          <thead><tr><th>Datum</th><th>Beskrivning</th><th>Konto</th><th>Typ</th><th>Belopp</th><th>Källa</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>` : emptyBlock('📋','Inga transaktioner ännu','Lägg till en manuellt ovan eller bokför ett kvitto.')}
+      </div>
+    </div>
+  `;
+}
+
+function addManualTx(){
+  const desc = document.getElementById('mtx-desc').value.trim();
+  const amt = Number(document.getElementById('mtx-amt').value);
+  if(!desc || !amt){ alert('Fyll i beskrivning och belopp.'); return; }
+  state.transactions.push({
+    id: 't'+Date.now(),
+    beskrivning: desc,
+    datum: document.getElementById('mtx-date').value || todayStr(),
+    belopp: amt,
+    konto: document.getElementById('mtx-konto').value,
+    typ: document.getElementById('mtx-typ').value,
+    kalla: 'manuell',
+  });
+  saveState();
+  render();
+}
+function deleteTx(id){
+  state.transactions = state.transactions.filter(t=>t.id!==id);
+  saveState();
+  render();
+}
+
+/* ---- Konton ---- */
+function renderKonton(){
+  const rows = KONTOPLAN.map(k=>{
+    const txs = state.transactions.filter(t=>t.konto===k.kod);
+    if(!txs.length) return null;
+    const sum = txs.reduce((s,t)=> s + (t.typ==='intakt'? t.belopp : -t.belopp), 0);
+    return `<tr>
+      <td>${k.kod}</td>
+      <td>${k.namn}</td>
+      <td>${txs.length}</td>
+      <td class="${sum>=0?'amt-pos':'amt-neg'}">${fmt(Math.abs(sum))}${sum<0?' (kostnad)':''}</td>
+    </tr>`;
+  }).filter(Boolean).join('');
+
+  return `
+    <h2 class="page-title">Konton</h2>
+    <div class="page-desc">BAS-kontoplan (förenklad för enskild firma) med saldo per konto.</div>
+    <div class="panel">
+      ${rows ? `<table>
+        <thead><tr><th>Konto</th><th>Namn</th><th>Antal poster</th><th>Saldo</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>` : emptyBlock('📊','Inga konton med aktivitet ännu','Bokför en transaktion så dyker kontot upp här.')}
+    </div>
+  `;
+}
+
+/* ---- Revisor ---- */
+function buildSIE(){
+  const mk = monthKey(todayStr());
+  const monthTx = state.transactions.filter(t=>monthKey(t.datum)===mk);
+  const today = todayStr().replace(/-/g,'');
+  let sie = '';
+  sie += '#FLAGGA 0\n';
+  sie += '#PROGRAM "Bokio Lite POC" 1.0\n';
+  sie += '#FORMAT PC8\n';
+  sie += `#GEN ${today}\n`;
+  sie += `#FNAMN "${state.company}"\n`;
+  KONTOPLAN.forEach(k=>{ sie += `#KONTO ${k.kod} "${k.namn}"\n`; });
+  sie += '\n';
+  monthTx.forEach((t,i)=>{
+    const belopp = t.typ==='intakt' ? -t.belopp : t.belopp;
+    sie += `#VER A ${i+1} ${t.datum.replace(/-/g,'')} "${t.beskrivning}"\n`;
+    sie += '{\n';
+    sie += `  #TRANS ${t.konto} {} ${belopp.toFixed(2)}\n`;
+    sie += `  #TRANS 1930 {} ${(-belopp).toFixed(2)}\n`;
+    sie += '}\n';
+  });
+  return sie;
+}
+
+function renderRevisor(){
+  const mk = monthKey(todayStr());
+  const monthTx = state.transactions.filter(t=>monthKey(t.datum)===mk);
+  const intakter = monthTx.filter(t=>t.typ==='intakt').reduce((s,t)=>s+t.belopp,0);
+  const kostnader = monthTx.filter(t=>t.typ==='kostnad').reduce((s,t)=>s+t.belopp,0);
+  const period = state.periods.find(p=>p.key===mk);
+
+  return `
+    <h2 class="page-title">Underlag till revisorn</h2>
+    <div class="page-desc">${currentMonthLabel()} — samla ihop periodens bokföring och skicka som SIE-fil.</div>
+    <div class="cards" style="grid-template-columns:repeat(3,1fr)">
+      <div class="card"><div class="k">Transaktioner denna period</div><div class="v">${monthTx.length}</div></div>
+      <div class="card"><div class="k">Intäkter</div><div class="v pos">${fmt(intakter)}</div></div>
+      <div class="card"><div class="k">Kostnader</div><div class="v">${fmt(kostnader)}</div></div>
+    </div>
+    <div class="panel panel-pad section">
+      <div class="stitle">Status för ${currentMonthLabel()}</div>
+      <div class="status-line">
+        <div>
+          <div style="font-weight:600">Bokföring</div>
+          <div style="font-size:12px;color:var(--muted)">${monthTx.length} poster bokförda</div>
+        </div>
+        <span class="badge ${monthTx.length?'bgreen':'bgray'}">${monthTx.length?'Klar':'Tomt'}</span>
+      </div>
+      <div class="status-line">
+        <div>
+          <div style="font-weight:600">SIE-fil</div>
+          <div style="font-size:12px;color:var(--muted)">${period ? 'Genererad '+period.generatedAt : 'Inte genererad än'}</div>
+        </div>
+        ${period ? '<span class="badge bblue">Genererad</span>' : ''}
+      </div>
+      <div class="status-line">
+        <div>
+          <div style="font-weight:600">Revisorgodkännande</div>
+          <div style="font-size:12px;color:var(--muted)">${period && period.godkand ? 'Godkänd '+period.godkandAt : 'Väntar'}</div>
+        </div>
+        <span class="badge ${period && period.godkand ? 'bgreen' : 'byellow'}">${period && period.godkand ? 'Godkänd' : 'Väntar'}</span>
+      </div>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn small" onclick="generateSIE()">📄 Generera SIE-fil</button>
+        ${period && !period.godkand ? `<button class="btn secondary small" onclick="markApproved()">✓ Markera som godkänd av revisor</button>` : ''}
+      </div>
+      ${period ? `<div class="sie-block">${period.preview}</div>` : ''}
+    </div>
+    <div class="login-note">ℹ️ I POC:en laddas SIE-filen ner till din dator och "godkännande" simuleras här. I produktversionen skickas filen säkert till revisorns egen inloggning, som godkänner direkt i portalen.</div>
+  `;
+}
+
+function generateSIE(){
+  const sie = buildSIE();
+  const mk = monthKey(todayStr());
+  let period = state.periods.find(p=>p.key===mk);
+  const now = new Date().toLocaleString('sv-SE');
+  if(!period){
+    period = {key:mk, generatedAt:now, godkand:false, preview:sie};
+    state.periods.push(period);
+  } else {
+    period.generatedAt = now;
+    period.preview = sie;
+  }
+  saveState();
+
+  const blob = new Blob([sie], {type:'text/plain;charset=iso-8859-1'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `bokforing_${mk}.sie`;
+  a.click();
+  URL.revokeObjectURL(url);
+  render();
+}
+
+function markApproved(){
+  const mk = monthKey(todayStr());
+  const period = state.periods.find(p=>p.key===mk);
+  if(period){
+    period.godkand = true;
+    period.godkandAt = new Date().toLocaleString('sv-SE');
+    saveState();
+    render();
+  }
+}
+
+/* ===================== INIT ===================== */
+loadState();
+if(state.session){
+  showApp();
+} else {
+  document.getElementById('loginScreen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
