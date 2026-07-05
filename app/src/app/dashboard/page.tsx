@@ -5,6 +5,7 @@ import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek } from '@/lib/dates'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
+import OnboardingWizard from '@/components/OnboardingWizard'
 import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
@@ -55,7 +56,7 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }] = await Promise.all([
-    supabase.from('profiles').select('name').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
@@ -127,6 +128,24 @@ export default async function DashboardPage() {
   const hour = now.getHours()
   const greeting = hour < 10 ? 'God morgon' : hour < 18 ? 'Hej' : 'God kväll'
 
+  // Onboarding: goals OR context missing means the coach team is working
+  // blind (see the equipment/sports feature — a user got advice that
+  // assumed gear they didn't have). The light checklist below always
+  // shows a way in; after a month with still nothing filled in, the
+  // wizard also opens itself once with an explanation, throttled to at
+  // most once every 14 days so it doesn't nag on every visit.
+  const hasGoalsInfo = (goals ?? []).length > 0 || overviewGoal.trim().length > 0
+  const hasContextInfo = userBio.trim().length > 0
+  const needsOnboarding = !hasGoalsInfo || !hasContextInfo
+  const accountAgeDays = profile?.created_at ? (now.getTime() - new Date(profile.created_at).getTime()) / 86400000 : 0
+  const promptedRecently = profile?.last_onboarding_prompt_at
+    ? (now.getTime() - new Date(profile.last_onboarding_prompt_at).getTime()) / 86400000 < 14
+    : false
+  const showInterview = needsOnboarding && accountAgeDays >= 30 && !promptedRecently
+  if (showInterview) {
+    await supabase.from('profiles').update({ last_onboarding_prompt_at: now.toISOString() }).eq('id', user.id)
+  }
+
   const savedPlan = (planRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? null
 
   // Latest team insights, for a short desktop-sidebar teaser — reuses
@@ -156,14 +175,14 @@ export default async function DashboardPage() {
       {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
       {(() => {
         const hasActivities = activities.length > 0
-        const hasGoals = (goals ?? []).length > 0 || overviewGoal.trim().length > 0
-        const hasContext = userBio.trim().length > 0
-        if (hasActivities && hasGoals && hasContext) return null
+        const hasEquipmentInfo = (profile?.home_equipment?.length ?? 0) > 0 || (profile?.selected_sports?.length ?? 0) > 0
+        if (hasActivities && hasGoalsInfo && hasContextInfo) return null
 
         const steps = [
           { done: hasActivities, label: 'Anslut en träningskälla', hint: 'Concept2 eller Garmin' },
-          { done: hasGoals, label: 'Sätt ett mål', hint: 'styr veckoplanen och coachens råd' },
-          { done: hasContext, label: 'Berätta om dig själv', hint: 'jobb, situation, personlighet — under "Om dig"' },
+          { done: hasGoalsInfo, label: 'Sätt ett mål', hint: 'styr veckoplanen och coachens råd' },
+          { done: hasContextInfo, label: 'Berätta om dig själv', hint: 'jobb, situation, personlighet' },
+          { done: hasEquipmentInfo, label: 'Ange utrustning & aktiviteter', hint: 'så tipsen utgår från det du faktiskt har' },
         ]
 
         return (
@@ -182,9 +201,13 @@ export default async function DashboardPage() {
                 </div>
               ))}
             </div>
-            <a href="/dashboard/profil" className="inline-block mt-3 text-xs text-accent hover:underline">
-              Gå till Profil →
-            </a>
+            <OnboardingWizard
+              autoOpen={showInterview}
+              initialOverview={overviewGoal}
+              initialContext={userBio}
+              initialEquipment={profile?.home_equipment ?? []}
+              initialSports={profile?.selected_sports ?? []}
+            />
           </div>
         )
       })()}

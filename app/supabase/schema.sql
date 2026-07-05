@@ -307,3 +307,10 @@ grant execute on function public.admin_list_profiles() to authenticated;
 -- roddmaskin trots att han inte har en). selected_sports fanns redan i
 -- schemat men användes aldrig i koden — återanvänds nu för aktiviteter.
 alter table public.profiles add column if not exists home_equipment text[] default '{}';
+
+-- Onboarding-påminnelse + "intervju efter 1 månad utan ifyllt" (Daniel:
+-- feedback från en användare som saknade mål/kontext). dismissed_at
+-- snoozar den lätta förstasides-banderollen; last_onboarding_prompt_at
+-- styr hur ofta den mer påstridiga intervju-rutan får dyka upp igen.
+alter table public.profiles add column if not exists onboarding_dismissed_at timestamptz;
+alter table public.profiles add column if not exists last_onboarding_prompt_at timestamptz;
