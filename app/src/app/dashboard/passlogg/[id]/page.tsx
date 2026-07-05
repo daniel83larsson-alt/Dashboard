@@ -3,7 +3,7 @@ import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
 import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
-import { isFuzzyMatch } from '@/lib/duplicates'
+import { bestMergePartner } from '@/lib/duplicates'
 import { REGION_LABELS, Region } from '@/lib/mobility'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
@@ -95,7 +95,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         .gte('start_date', windowStart.toISOString())
         .lte('start_date', windowEnd.toISOString())
 
-  const partner = (sameDayActivities ?? []).find(cand => isFuzzyMatch(activity, cand)) ?? null
+  const partner = bestMergePartner(activity, sameDayActivities ?? [])
   const partnerIsGarmin = partner ? partner.strava_id >= 0 : false
   const partnerRaw = (partner?.raw_data ?? {}) as Record<string, unknown>
 

@@ -9,6 +9,7 @@ export type ActivityRow = {
   average_heartrate: number | null
   description: string | null
   created_at?: string
+  raw_data?: unknown
 }
 
 // Exported so the activity-detail page can find the matching Garmin/Concept2
@@ -58,29 +59,88 @@ export function suggestKeepId(group: ActivityRow[]): string {
   ).id
 }
 
+// Used only for merging a Concept2+Garmin pair for display (Passlogg list,
+// dashboard stats, Rekord, the detail page) — NOT for the same-source
+// duplicate-cleanup flow above, which needs isFuzzyMatch's tighter 5%
+// tolerance since a false positive there risks deleting a real, distinct
+// session. Interval-style Concept2 workouts (e.g. "4x3:00/2:00r") are
+// recorded very differently by each source: Concept2's own total often
+// excludes rest time entirely while Garmin's moving-time includes some of
+// it, producing 20-30% swings in distance/duration for what's genuinely
+// the same session — a looser tolerance is needed here specifically, with
+// a small absolute floor so a few seconds of jitter on very short passes
+// doesn't block the merge.
+export function isMergeCandidate(a: ActivityRow, b: ActivityRow): boolean {
+  if (a.id === b.id) return false
+  if (a.sport_type !== b.sport_type) return false
+  if (a.start_date.slice(0, 10) !== b.start_date.slice(0, 10)) return false
+  if ((a.strava_id >= 0) === (b.strava_id >= 0)) return false // must be opposite sources
+
+  const distOk = a.distance > 0 && b.distance > 0
+    ? Math.abs(a.distance - b.distance) / Math.max(a.distance, b.distance) < 0.3
+    : a.distance === b.distance
+
+  const timeDiff = Math.abs(a.moving_time - b.moving_time)
+  const timeOk = a.moving_time > 0 && b.moving_time > 0
+    ? timeDiff / Math.max(a.moving_time, b.moving_time) < 0.35 || timeDiff <= 10
+    : a.moving_time === b.moving_time
+
+  return distOk && timeOk
+}
+
+// Among all merge candidates for a single activity, pick the one whose
+// distance is closest. Distance is the more stable signal when a day has
+// more than one real session from each source (e.g. a short test pull and
+// a real workout both logged twice) — moving_time is exactly what the
+// rest-time accounting difference above throws off, so it can't reliably
+// tell two same-day sessions apart the way distance can.
+export function bestMergePartner<T extends ActivityRow>(a: T, candidates: T[]): T | null {
+  const matches = candidates.filter(b => isMergeCandidate(a, b))
+  if (!matches.length) return null
+  return matches.reduce((best, cur) =>
+    Math.abs(cur.distance - a.distance) < Math.abs(best.distance - a.distance) ? cur : best
+  )
+}
+
 export type MergedPair<T extends ActivityRow> = { primary: T; partner: T }
 
 // Splits activities into a) genuine Concept2+Garmin pairs for the SAME
 // session, which should be treated as one pass everywhere distance/time
 // gets summed or counted, and b) everything else (unmatched activities,
 // plus same-source duplicate groups — those are real dupes to delete via
-// DuplicateCleanup, not two complementary sources to merge). Only exact
-// 1-Garmin + 1-Concept2 groups are merged; anything ambiguous (3+ way ties,
-// two Garmin rows, etc.) is left alone rather than guessed at.
+// DuplicateCleanup, not two complementary sources to merge). Groups by
+// day+sport first, then greedily pairs each Concept2 row with its
+// closest-by-distance unclaimed Garmin row within that group — needed
+// because a single day can have more than one real session per sport
+// (see isMergeCandidate), so pairing can't just assume one candidate each.
 export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { singles: T[]; pairs: MergedPair<T>[] } {
-  const groups = findDuplicateGroups(activities)
   const merged = new Set<string>()
   const pairs: MergedPair<T>[] = []
 
-  for (const group of groups) {
-    const garmin = group.filter(a => a.strava_id >= 0)
+  const byDaySport = new Map<string, T[]>()
+  for (const a of activities) {
+    const key = `${a.start_date.slice(0, 10)}|${a.sport_type}`
+    const arr = byDaySport.get(key) ?? []
+    arr.push(a)
+    byDaySport.set(key, arr)
+  }
+
+  for (const group of byDaySport.values()) {
     const concept2 = group.filter(a => a.strava_id < 0)
-    if (garmin.length === 1 && concept2.length === 1) {
-      const primary = activities.find(a => a.id === concept2[0].id)!
-      const partner = activities.find(a => a.id === garmin[0].id)!
-      pairs.push({ primary, partner })
-      merged.add(primary.id)
-      merged.add(partner.id)
+    const garmin = group.filter(a => a.strava_id >= 0)
+    const candidates = concept2
+      .flatMap(c => garmin.filter(g => isMergeCandidate(c, g)).map(g => ({ c, g, distDiff: Math.abs(c.distance - g.distance) })))
+      .sort((x, y) => x.distDiff - y.distDiff)
+
+    const usedC = new Set<string>()
+    const usedG = new Set<string>()
+    for (const { c, g } of candidates) {
+      if (usedC.has(c.id) || usedG.has(g.id)) continue
+      pairs.push({ primary: c, partner: g })
+      usedC.add(c.id)
+      usedG.add(g.id)
+      merged.add(c.id)
+      merged.add(g.id)
     }
   }
 
@@ -92,8 +152,26 @@ export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { sing
 // don't double a workout that happened to sync from two sources. Keeps the
 // caller's original ordering (callers rely on this already being sorted by
 // start_date, e.g. activities[0] as "latest pass").
+//
+// Concept2 never has HR-zone data (only Garmin's watch does) — so the
+// kept Concept2 row is patched with the dropped Garmin partner's hrZones
+// before being returned. Without this, "Veckans pulszoner" silently lost
+// zone data for every single merged pair, since aggregateZones only ever
+// sees the surviving row's own raw_data.
 export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
   const { pairs } = splitMergedPairs(activities)
   const dropped = new Set(pairs.map(p => p.partner.id))
-  return activities.filter(a => !dropped.has(a.id))
+  const zonesByPrimaryId = new Map<string, unknown>()
+  for (const p of pairs) {
+    const primaryZones = (p.primary.raw_data as { hrZones?: unknown } | null)?.hrZones
+    const partnerZones = (p.partner.raw_data as { hrZones?: unknown } | null)?.hrZones
+    if (!primaryZones && partnerZones) zonesByPrimaryId.set(p.primary.id, partnerZones)
+  }
+  return activities
+    .filter(a => !dropped.has(a.id))
+    .map(a => {
+      const zones = zonesByPrimaryId.get(a.id)
+      if (!zones) return a
+      return { ...a, raw_data: { ...(a.raw_data as object ?? {}), hrZones: zones } } as T
+    })
 }
