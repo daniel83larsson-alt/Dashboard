@@ -276,3 +276,110 @@ create policy "owners read their company's receipt files"
 create policy "owners upload their company's receipt files"
   on storage.objects for insert
   with check (bucket_id = 'receipts' and owns_company(((storage.foldername(name))[1])::uuid));
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- ADMIN: anropslogg + översikt (Daniel: "vill kunna administrera och ha
+-- lite koll" innan han bokför något själv). Loggar bara det enda anropet
+-- här som kostar pengar/kan slå i en extern gräns -- AI-kvittotolkning.
+-- Samma mönster som app/ (DL Trainer): en admin-gated security-definer-
+-- funktion per vy, ingen bred SELECT-policy som läcker data.
+-- ─────────────────────────────────────────────────────────────────────────
+
+create table if not exists public.api_call_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  route text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists api_call_log_user_created_idx on public.api_call_log (user_id, created_at desc);
+
+alter table public.api_call_log enable row level security;
+create policy "users log their own calls" on public.api_call_log
+  for insert with check (auth.uid() = user_id);
+
+-- Admin: en rad per registrerat konto (företag + ägarens e-post), inte
+-- bara bokförda -- så Daniel ser vem som skapat konto även innan de bokfört
+-- något.
+create or replace function public.admin_list_companies()
+returns table(user_id uuid, email text, company_id uuid, company_name text, company_created_at timestamptz, user_created_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select u.id, u.email::text, c.id, c.name, c.created_at, u.created_at
+  from auth.users u
+  left join public.companies c on c.user_id = u.id
+  order by u.created_at desc;
+end;
+$$;
+revoke all on function public.admin_list_companies() from public;
+grant execute on function public.admin_list_companies() to authenticated;
+
+-- Admin: antal loggade AI-tolkningsanrop idag och senaste 7 dagarna per
+-- användare.
+create or replace function public.admin_api_call_stats()
+returns table(user_id uuid, calls_today bigint, calls_7d bigint)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    l.user_id,
+    count(*) filter (where l.created_at >= date_trunc('day', now()))::bigint,
+    count(*) filter (where l.created_at >= now() - interval '7 days')::bigint
+  from public.api_call_log l
+  group by l.user_id;
+end;
+$$;
+revoke all on function public.admin_api_call_stats() from public;
+grant execute on function public.admin_api_call_stats() to authenticated;
+
+-- Admin: senaste 10 händelserna (nya konton + nya bokförda verifikat) i en
+-- gemensam, tidssorterad lista.
+create or replace function public.admin_recent_events()
+returns table(event_type text, user_id uuid, email text, label text, occurred_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not is_admin() then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select * from (
+    (
+      select 'signup'::text as event_type, u.id as user_id, u.email::text, 'Nytt konto'::text as label, u.created_at as occurred_at
+      from auth.users u
+      order by u.created_at desc
+      limit 10
+    )
+    union all
+    (
+      select 'voucher'::text as event_type, c.user_id, u.email::text, v.description as label, v.created_at as occurred_at
+      from public.vouchers v
+      join public.companies c on c.id = v.company_id
+      join auth.users u on u.id = c.user_id
+      order by v.created_at desc
+      limit 10
+    )
+  ) combined
+  order by occurred_at desc
+  limit 10;
+end;
+$$;
+revoke all on function public.admin_recent_events() from public;
+grant execute on function public.admin_recent_events() to authenticated;

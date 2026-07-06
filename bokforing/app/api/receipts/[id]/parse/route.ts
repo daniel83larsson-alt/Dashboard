@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireCompanyContext } from "@/lib/company";
 import { parseReceiptWithAI } from "@/lib/ai-receipt";
+import { logApiCall } from "@/lib/log-api-call";
 import type { BasAccount } from "@/lib/supabase-types";
 
 // A real receipt photo (several MB) takes Gemini well over Vercel's default
@@ -14,7 +15,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { supabase, companyId } = await requireCompanyContext();
+  const { supabase, companyId, user } = await requireCompanyContext();
+  logApiCall(supabase, user.id, "receipt_parse");
 
   const { data: receipt } = await supabase
     .from("receipts")
