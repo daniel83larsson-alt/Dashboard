@@ -380,7 +380,7 @@ begin
       select 'signup'::text as event_type, p.id as user_id, p.email, p.name, 'Nytt konto'::text as label, p.created_at as occurred_at
       from public.profiles p
       order by p.created_at desc
-      limit 30
+      limit 10
     )
     union all
     (
@@ -388,11 +388,11 @@ begin
       from public.activities a
       join public.profiles p on p.id = a.user_id
       order by a.created_at desc
-      limit 30
+      limit 10
     )
   ) combined
   order by occurred_at desc
-  limit 30;
+  limit 10;
 end;
 $$;
 revoke all on function public.admin_recent_events() from public;
