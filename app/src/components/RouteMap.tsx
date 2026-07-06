@@ -18,6 +18,23 @@ const markerIcon = L.icon({
 const ACCENT = '#ccd400'
 const MUTED = '#6b7280'
 
+function pinIcon(color: string, label: string) {
+  return L.divIcon({
+    className: '',
+    html: `<div style="
+      width:22px;height:22px;border-radius:50% 50% 50% 0;
+      background:${color};transform:rotate(-45deg);
+      border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.5);
+      display:flex;align-items:center;justify-content:center;
+    "><span style="transform:rotate(45deg);color:#fff;font-size:10px;font-weight:700;">${label}</span></div>`,
+    iconSize: [22, 22],
+    iconAnchor: [11, 22],
+    popupAnchor: [0, -22],
+  })
+}
+const startIcon = pinIcon('#16a34a', 'S')
+const endIcon = pinIcon('#dc2626', 'M')
+
 function Recenter({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap()
   useEffect(() => { map.setView([lat, lng], map.getZoom()) }, [lat, lng, map])
@@ -50,6 +67,11 @@ export default function RouteMap({
   selectedId: number | null
   onSelect: (id: number) => void
 }) {
+  const selectedRoute = routes.find(r => r.id === selectedId)
+  const selectedPoints = selectedRoute?.path.flat() ?? []
+  const start = selectedPoints[0]
+  const end = selectedPoints[selectedPoints.length - 1]
+
   return (
     <div className="rounded-2xl overflow-hidden border border-edge" style={{ height: 420 }}>
       <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ height: '100%', width: '100%' }}>
@@ -78,6 +100,12 @@ export default function RouteMap({
             </Polyline>
           ))
         ))}
+        {start && end && (
+          <>
+            <Marker position={start} icon={startIcon}><Popup>Start</Popup></Marker>
+            <Marker position={end} icon={endIcon}><Popup>Mål</Popup></Marker>
+          </>
+        )}
       </MapContainer>
     </div>
   )
