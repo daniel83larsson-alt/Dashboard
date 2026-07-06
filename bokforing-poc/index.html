@@ -6,108 +6,147 @@
 <title>Bokio Lite — Bokföring för enskild firma</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── TOKENS ── light (ledger paper) is the default expression of the subject ── */
 :root{
-  --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
-  --accent:#22c55e;--blue:#4f8ef7;--yellow:#f59e0b;--red:#ef4444;--purple:#a855f7;
-  --text:#e2e8f0;--muted:#64748b;
+  --bg:#EDF1EE;--surface:#FFFFFF;--surface-2:#E1E8E3;--border:#CBD6CF;
+  --text:#132019;--text-muted:#5D6E67;
+  --accent:#1B6E5C;--accent-strong:#125347;--on-accent:#F3FBF8;
+  --pos:#1B6E5C;--warn:#B9791F;--crit:#B14A3B;
+  --ledger-line:rgba(19,32,25,.045);
+  --shadow:0 1px 2px rgba(18,32,25,.07);
 }
-html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0D1512;--surface:#152019;--surface-2:#1B2822;--border:#28362F;
+    --text:#E7EFEA;--text-muted:#8AA098;
+    --accent:#4FBF9F;--accent-strong:#3AA187;--on-accent:#06231C;
+    --pos:#4FBF9F;--warn:#D9A24A;--crit:#E2776A;
+    --ledger-line:rgba(231,239,234,.045);
+    --shadow:0 1px 2px rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0D1512;--surface:#152019;--surface-2:#1B2822;--border:#28362F;
+  --text:#E7EFEA;--text-muted:#8AA098;
+  --accent:#4FBF9F;--accent-strong:#3AA187;--on-accent:#06231C;
+  --pos:#4FBF9F;--warn:#D9A24A;--crit:#E2776A;
+  --ledger-line:rgba(231,239,234,.045);
+  --shadow:0 1px 2px rgba(0,0,0,.3);
+}
+:root[data-theme="light"]{
+  --bg:#EDF1EE;--surface:#FFFFFF;--surface-2:#E1E8E3;--border:#CBD6CF;
+  --text:#132019;--text-muted:#5D6E67;
+  --accent:#1B6E5C;--accent-strong:#125347;--on-accent:#F3FBF8;
+  --pos:#1B6E5C;--warn:#B9791F;--crit:#B14A3B;
+  --ledger-line:rgba(19,32,25,.045);
+  --shadow:0 1px 2px rgba(18,32,25,.07);
+}
+
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:15px;-webkit-font-smoothing:antialiased}
 button,input,select{font-family:inherit;font-size:inherit}
-::placeholder{color:var(--muted)}
+::placeholder{color:var(--text-muted)}
 img{max-width:100%}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:ui-monospace,'SF Mono','Cascadia Code',Consolas,monospace;font-variant-numeric:tabular-nums}
+@media (prefers-reduced-motion:reduce){ *{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important} }
+
+/* ── LOGO MARK (monogram, no emoji) ── */
+.mark{background:var(--accent);color:var(--on-accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-weight:800;font-family:ui-monospace,'SF Mono',Consolas,monospace;letter-spacing:-.02em;flex-shrink:0}
 
 /* ── LOGIN ── */
 .login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.login-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:36px 32px;width:100%;max-width:380px}
-.login-logo{width:48px;height:48px;background:var(--accent);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px;margin-bottom:18px}
-.login-card h1{font-size:20px;margin-bottom:4px}
-.login-card p{font-size:13px;color:var(--muted);margin-bottom:24px;line-height:1.5}
+.login-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:36px 32px;width:100%;max-width:380px;box-shadow:var(--shadow)}
+.login-card .mark{width:44px;height:44px;font-size:18px;margin-bottom:18px}
+.login-card h1{font-size:20px;margin-bottom:4px;text-wrap:balance}
+.login-card p{font-size:13px;color:var(--text-muted);margin-bottom:24px;line-height:1.55}
 .field{margin-bottom:14px}
-.field label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.field label{display:block;font-size:11px;color:var(--text-muted);margin-bottom:6px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .field input{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
 .field input:focus{border-color:var(--accent)}
-.btn{background:var(--accent);color:#0b1a10;border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent}
-.btn:hover{filter:brightness(1.08)}
-.btn.secondary{background:var(--bg);color:var(--text);border:1px solid var(--border)}
+.btn{background:var(--accent);color:var(--on-accent);border:none;border-radius:8px;padding:11px;font-size:14px;font-weight:700;cursor:pointer;width:100%;-webkit-tap-highlight-color:transparent}
+.btn:hover{background:var(--accent-strong)}
+.btn.secondary{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn.secondary:hover{background:var(--surface-2)}
 .btn.small{width:auto;padding:8px 14px;font-size:13px}
-.btn.danger{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
-.login-note{margin-top:18px;font-size:11px;color:var(--muted);line-height:1.5;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px}
+.callout{margin-top:18px;font-size:12px;color:var(--text-muted);line-height:1.55;background:var(--surface-2);border-radius:8px;padding:12px 14px}
+.callout .eyebrow{display:block;font-size:10px;font-weight:800;color:var(--accent-strong);text-transform:uppercase;letter-spacing:.08em;margin-bottom:5px}
 
 /* ── APP SHELL ── */
 .app{display:none;min-height:100vh;flex-direction:column}
 .app.on{display:flex}
 .topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 20px;flex-shrink:0}
-.tb-logo{width:32px;height:32px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tb-logo{width:32px;height:32px;font-size:14px}
 .tb-name{font-weight:700;font-size:14px}
-.tb-sub{font-size:11px;color:var(--muted)}
+.tb-sub{font-size:11px;color:var(--text-muted)}
 .tb-spacer{flex:1}
-.demo-pill{font-size:11px;background:rgba(245,158,11,.12);color:var(--yellow);border:1px solid rgba(245,158,11,.3);padding:5px 10px;border-radius:99px;font-weight:600}
+.demo-pill{font-size:11px;background:var(--surface-2);color:var(--text-muted);padding:5px 10px;border-radius:6px;font-weight:600}
 
 .tabs{display:flex;gap:2px;padding:0 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;overflow-x:auto}
-.tab{padding:14px 14px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
+.tab{padding:14px 14px;font-size:13px;font-weight:600;color:var(--text-muted);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;-webkit-tap-highlight-color:transparent}
 .tab:hover{color:var(--text)}
-.tab.on{color:var(--accent);border-bottom-color:var(--accent)}
-.content{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto}
+.tab.on{color:var(--accent-strong);border-bottom-color:var(--accent)}
+.content{flex:1;padding:24px;max-width:1000px;width:100%;margin:0 auto;background-image:repeating-linear-gradient(to bottom, transparent 0 39px, var(--ledger-line) 39px 40px)}
 
 .section{margin-bottom:26px}
-.stitle{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:12px}
-h2.page-title{font-size:20px;margin-bottom:4px}
-.page-desc{font-size:13px;color:var(--muted);margin-bottom:20px}
+.stitle{font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
+h2.page-title{font-size:21px;margin-bottom:4px;text-wrap:balance;font-weight:800}
+.page-desc{font-size:13px;color:var(--text-muted);margin-bottom:20px;max-width:60ch}
 
 .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:22px}
-.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
-.card .k{font-size:11px;color:var(--muted);margin-bottom:6px;font-weight:600}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:var(--shadow)}
+.card .k{font-size:11px;color:var(--text-muted);margin-bottom:8px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
 .card .v{font-size:22px;font-weight:800}
-.card .v.pos{color:var(--accent)}
-.card .v.neg{color:var(--red)}
+.card .v.pos{color:var(--pos)}
+.card .v.neg{color:var(--crit)}
 
-.panel{background:var(--surface);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.panel{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;box-shadow:var(--shadow)}
 .panel-pad{padding:18px}
 table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:10px 14px;color:var(--muted);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid var(--border)}
+th{text-align:left;padding:10px 14px;color:var(--text-muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid var(--border)}
 td{padding:11px 14px;border-bottom:1px solid var(--border)}
 tr:last-child td{border-bottom:none}
-.badge{font-size:10px;padding:3px 9px;border-radius:99px;font-weight:700;white-space:nowrap}
-.bgreen{background:rgba(34,197,94,.15);color:var(--accent)}
-.byellow{background:rgba(245,158,11,.15);color:var(--yellow)}
-.bred{background:rgba(239,68,68,.15);color:var(--red)}
-.bblue{background:rgba(79,142,247,.15);color:var(--blue)}
-.bgray{background:rgba(100,116,139,.15);color:var(--muted)}
-.amt-pos{color:var(--accent);font-weight:700}
+.badge{font-size:10px;padding:3px 9px;border-radius:5px;font-weight:700;white-space:nowrap}
+.bpos{background:rgba(27,110,92,.13);color:var(--accent-strong)}
+.bwarn{background:rgba(185,121,31,.15);color:var(--warn)}
+.bcrit{background:rgba(177,74,59,.15);color:var(--crit)}
+.bneutral{background:var(--surface-2);color:var(--text-muted)}
+.amt-pos{color:var(--pos);font-weight:700}
 .amt-neg{color:var(--text);font-weight:700}
-.icon-btn{background:none;border:none;color:var(--muted);cursor:pointer;font-size:15px;padding:4px 8px}
-.icon-btn:hover{color:var(--red)}
-.empty{padding:40px 20px;text-align:center;color:var(--muted)}
-.empty .ei{font-size:36px;margin-bottom:10px}
+.icon-btn{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px;padding:4px 8px;line-height:1}
+.icon-btn:hover{color:var(--crit)}
+.empty{padding:44px 20px;text-align:center}
+.empty .et{font-weight:700;margin-bottom:4px}
+.empty .es{font-size:12px;color:var(--text-muted)}
 
 /* ── UPLOAD / RECEIPTS ── */
-.upload-box{border:2px dashed var(--border);border-radius:12px;padding:32px 20px;text-align:center;cursor:pointer;transition:border-color .15s}
-.upload-box:hover{border-color:var(--accent)}
-.upload-box .ui{font-size:32px;margin-bottom:8px}
+.upload-box{border:1.5px dashed var(--border);border-radius:10px;padding:30px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.upload-box:hover{border-color:var(--accent);background:var(--surface-2)}
 .upload-box .ut{font-weight:700;font-size:14px;margin-bottom:4px}
-.upload-box .us{font-size:12px;color:var(--muted)}
+.upload-box .us{font-size:12px;color:var(--text-muted)}
 #fileInput{display:none}
 
 .receipt-row{display:flex;gap:14px;align-items:center;padding:14px;border-bottom:1px solid var(--border)}
 .receipt-row:last-child{border-bottom:none}
-.receipt-thumb{width:52px;height:52px;border-radius:8px;object-fit:cover;background:var(--bg);flex-shrink:0;border:1px solid var(--border)}
+.receipt-thumb{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--surface-2);flex-shrink:0;border:1px solid var(--border)}
 .receipt-info{flex:1;min-width:0}
 .receipt-name{font-size:13px;font-weight:600}
-.receipt-meta{font-size:11px;color:var(--muted);margin-top:2px}
+.receipt-meta{font-size:11px;color:var(--text-muted);margin-top:2px}
 
-.parse-form{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px;margin-top:12px}
-.parse-form .ai-tag{font-size:11px;color:var(--purple);font-weight:700;margin-bottom:10px;display:flex;align-items:center;gap:6px}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
+.parse-form{background:var(--surface-2);border-radius:8px;padding:16px;margin-top:12px}
+.ai-tag{font-size:11px;color:var(--accent-strong);font-weight:800;margin-bottom:12px;display:flex;align-items:center;gap:7px;text-transform:uppercase;letter-spacing:.05em}
+.ai-tag .dot{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;display:inline-block}
 @keyframes spin{to{transform:rotate(360deg)}}
-.parsing{display:flex;align-items:center;gap:10px;padding:16px;color:var(--muted);font-size:13px}
+.parsing{display:flex;align-items:center;gap:10px;padding:16px;color:var(--text-muted);font-size:13px}
 
 .form-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .form-row .field{flex:1;min-width:120px;margin-bottom:0}
 select{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);outline:none}
 
-.sie-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:'SF Mono',Consolas,monospace;font-size:11px;color:var(--muted);max-height:180px;overflow:auto;white-space:pre;margin-top:12px}
-.status-line{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)}
+.sie-block{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:14px;font-family:ui-monospace,'SF Mono',Consolas,monospace;font-size:11px;color:var(--text-muted);max-height:180px;overflow:auto;white-space:pre;margin-top:12px}
+.status-line{display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border);gap:12px}
 .status-line:last-child{border-bottom:none}
 
 @media (max-width:720px){
@@ -122,7 +161,7 @@ select{width:100%;background:var(--bg);border:1px solid var(--border);border-rad
 
 <div class="login-wrap" id="loginScreen">
   <div class="login-card">
-    <div class="login-logo">📒</div>
+    <div class="mark">Bf</div>
     <h1 id="loginTitle">Logga in</h1>
     <p>Bokföring för enskild firma — mata in konton, ladda upp kvitton, få underlag klart för revisorn.</p>
     <div class="field">
@@ -138,13 +177,13 @@ select{width:100%;background:var(--bg);border:1px solid var(--border);border-rad
       <input type="text" id="loginCompany" placeholder="T.ex. Larsson Konsult AB"/>
     </div>
     <button class="btn" onclick="doLogin()">Logga in</button>
-    <div class="login-note">🔒 Detta är en POC. Inloggningen är simulerad och all data sparas just nu lokalt i din webbläsare — inte online. I produktversionen sparas allt krypterat i molnet med riktig autentisering.</div>
+    <div class="callout"><span class="eyebrow">POC</span>Inloggningen är simulerad och all data sparas just nu lokalt i din webbläsare — inte online. I produktversionen sparas allt krypterat i molnet med riktig autentisering.</div>
   </div>
 </div>
 
 <div class="app" id="appScreen">
   <div class="topbar">
-    <div class="tb-logo">📒</div>
+    <div class="mark tb-logo">Bf</div>
     <div>
       <div class="tb-name" id="companyNameDisplay">Mitt företag</div>
       <div class="tb-sub">Enskild firma · Bokföring</div>
@@ -290,32 +329,32 @@ function renderOversikt(){
     <h2 class="page-title">Översikt</h2>
     <div class="page-desc">${currentMonthLabel()}</div>
     <div class="cards">
-      <div class="card"><div class="k">Intäkter</div><div class="v pos">${fmt(intakter)}</div></div>
-      <div class="card"><div class="k">Kostnader</div><div class="v">${fmt(kostnader)}</div></div>
-      <div class="card"><div class="k">Resultat</div><div class="v ${resultat>=0?'pos':'neg'}">${fmt(resultat)}</div></div>
-      <div class="card"><div class="k">Obehandlade kvitton</div><div class="v ${obehandlade>0?'neg':''}">${obehandlade}</div></div>
+      <div class="card"><div class="k">Intäkter</div><div class="v pos mono">${fmt(intakter)}</div></div>
+      <div class="card"><div class="k">Kostnader</div><div class="v mono">${fmt(kostnader)}</div></div>
+      <div class="card"><div class="k">Resultat</div><div class="v mono ${resultat>=0?'pos':'neg'}">${fmt(resultat)}</div></div>
+      <div class="card"><div class="k">Obehandlade kvitton</div><div class="v mono ${obehandlade>0?'neg':''}">${obehandlade}</div></div>
     </div>
     <div class="section">
       <div class="stitle">Senaste transaktioner</div>
       <div class="panel">
-        ${state.transactions.slice(-5).reverse().map(rowTx).join('') || emptyBlock('📄','Inga transaktioner ännu','Ladda upp ett kvitto eller lägg till en transaktion manuellt.')}
+        ${state.transactions.slice(-5).reverse().map(rowTx).join('') || emptyBlock('Inga transaktioner ännu','Ladda upp ett kvitto eller lägg till en transaktion manuellt.')}
       </div>
     </div>
   `;
 }
 
 function rowTx(t){
-  return `<div class="status-line">
+  return `<div class="status-line" style="padding:14px 18px">
     <div>
       <div style="font-weight:600;font-size:13px">${t.beskrivning}</div>
-      <div style="font-size:11px;color:var(--muted)">${t.datum} · ${t.konto} ${kontoNamn(t.konto)}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${t.datum} · ${t.konto} ${kontoNamn(t.konto)}</div>
     </div>
-    <div class="${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'-'}${fmt(t.belopp)}</div>
+    <div class="mono ${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'−'}${fmt(t.belopp)}</div>
   </div>`;
 }
 
-function emptyBlock(icon,title,sub){
-  return `<div class="empty"><div class="ei">${icon}</div><div style="font-weight:700;margin-bottom:4px">${title}</div><div style="font-size:12px">${sub}</div></div>`;
+function emptyBlock(title,sub){
+  return `<div class="empty"><div class="et">${title}</div><div class="es">${sub}</div></div>`;
 }
 
 /* ---- Kvitton ---- */
@@ -325,15 +364,14 @@ function renderKvitton(){
     <div class="page-desc">Ladda upp ett kvitto så tolkar AI:n det automatiskt — du bekräftar innan det bokförs.</div>
     <div class="section">
       <div class="upload-box" onclick="document.getElementById('fileInput').click()">
-        <div class="ui">📤</div>
         <div class="ut">Ladda upp kvitto</div>
-        <div class="us">JPG, PNG eller PDF</div>
+        <div class="us">JPG, PNG eller PDF — eller ta en bild direkt med mobilen</div>
       </div>
     </div>
     <div class="section">
       <div class="stitle">Uppladdade kvitton</div>
       <div class="panel">
-        ${state.receipts.slice().reverse().map(receiptRow).join('') || emptyBlock('🧾','Inga kvitton uppladdade','Klicka ovan för att ladda upp ditt första kvitto.')}
+        ${state.receipts.slice().reverse().map(receiptRow).join('') || emptyBlock('Inga kvitton uppladdade','Klicka ovan för att ladda upp ditt första kvitto.')}
       </div>
     </div>
   `;
@@ -348,7 +386,7 @@ function receiptRow(r){
   } else if(r.status==='parsed'){
     inner = renderParseForm(r);
   } else if(r.status==='bokford'){
-    inner = `<span class="badge bgreen">Bokförd</span>`;
+    inner = `<span class="badge bpos">Bokförd</span>`;
   }
   return `<div class="receipt-row" id="receipt-${r.id}" style="flex-wrap:wrap">
     <img class="receipt-thumb" src="${r.thumb}" onerror="this.style.display='none'"/>
@@ -365,13 +403,13 @@ function renderParseForm(r){
   const p = r.parsed;
   return `
   <div class="parse-form">
-    <div class="ai-tag">✨ AI-tolkning (simulerad i POC) — kontrollera och justera vid behov</div>
+    <div class="ai-tag"><span class="dot"></span>AI-förslag (simulerad i POC) — kontrollera och justera vid behov</div>
     <div class="form-row">
       <div class="field"><label>Leverantör / beskrivning</label><input id="pf-desc-${r.id}" value="${p.beskrivning}"/></div>
       <div class="field"><label>Datum</label><input type="date" id="pf-date-${r.id}" value="${p.datum}"/></div>
     </div>
     <div class="form-row">
-      <div class="field"><label>Belopp (inkl. moms)</label><input type="number" id="pf-amt-${r.id}" value="${p.belopp}"/></div>
+      <div class="field"><label>Belopp (inkl. moms)</label><input class="mono" type="number" id="pf-amt-${r.id}" value="${p.belopp}"/></div>
       <div class="field">
         <label>Konto</label>
         <select id="pf-konto-${r.id}">
@@ -386,7 +424,7 @@ function renderParseForm(r){
         </select>
       </div>
     </div>
-    <button class="btn small" onclick="confirmReceipt('${r.id}')">✓ Bokför</button>
+    <button class="btn small" onclick="confirmReceipt('${r.id}')">Bokför</button>
   </div>`;
 }
 
@@ -453,13 +491,13 @@ function confirmReceipt(id){
 function renderTransaktioner(){
   const rows = state.transactions.slice().reverse().map(t=>`
     <tr>
-      <td>${t.datum}</td>
+      <td class="mono">${t.datum}</td>
       <td>${t.beskrivning}</td>
-      <td>${t.konto} <span style="color:var(--muted);font-size:11px">${kontoNamn(t.konto)}</span></td>
-      <td><span class="badge ${t.typ==='intakt'?'bgreen':'bblue'}">${t.typ==='intakt'?'Intäkt':'Kostnad'}</span></td>
-      <td class="${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'-'}${fmt(t.belopp)}</td>
-      <td><span class="badge bgray">${t.kalla==='kvitto'?'Från kvitto':'Manuell'}</span></td>
-      <td><button class="icon-btn" onclick="deleteTx('${t.id}')" title="Ta bort">✕</button></td>
+      <td><span class="mono">${t.konto}</span> <span style="color:var(--text-muted);font-size:11px">${kontoNamn(t.konto)}</span></td>
+      <td><span class="badge ${t.typ==='intakt'?'bpos':'bneutral'}">${t.typ==='intakt'?'Intäkt':'Kostnad'}</span></td>
+      <td class="mono ${t.typ==='intakt'?'amt-pos':'amt-neg'}">${t.typ==='intakt'?'+':'−'}${fmt(t.belopp)}</td>
+      <td><span class="badge bneutral">${t.kalla==='kvitto'?'Från kvitto':'Manuell'}</span></td>
+      <td><button class="icon-btn" onclick="deleteTx('${t.id}')" title="Ta bort">×</button></td>
     </tr>
   `).join('');
 
@@ -471,7 +509,7 @@ function renderTransaktioner(){
       <div class="form-row">
         <div class="field"><label>Beskrivning</label><input id="mtx-desc" placeholder="T.ex. Konsultarvode"/></div>
         <div class="field"><label>Datum</label><input type="date" id="mtx-date" value="${todayStr()}"/></div>
-        <div class="field"><label>Belopp</label><input type="number" id="mtx-amt" placeholder="0"/></div>
+        <div class="field"><label>Belopp</label><input class="mono" type="number" id="mtx-amt" placeholder="0"/></div>
       </div>
       <div class="form-row">
         <div class="field">
@@ -483,15 +521,17 @@ function renderTransaktioner(){
           <select id="mtx-typ"><option value="kostnad">Kostnad</option><option value="intakt">Intäkt</option></select>
         </div>
       </div>
-      <button class="btn small" onclick="addManualTx()">+ Lägg till transaktion</button>
+      <button class="btn small" onclick="addManualTx()">Lägg till transaktion</button>
     </div>
     <div class="section">
       <div class="panel">
         ${state.transactions.length ? `
+        <div style="overflow-x:auto">
         <table>
           <thead><tr><th>Datum</th><th>Beskrivning</th><th>Konto</th><th>Typ</th><th>Belopp</th><th>Källa</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
-        </table>` : emptyBlock('📋','Inga transaktioner ännu','Lägg till en manuellt ovan eller bokför ett kvitto.')}
+        </table>
+        </div>` : emptyBlock('Inga transaktioner ännu','Lägg till en manuellt ovan eller bokför ett kvitto.')}
       </div>
     </div>
   `;
@@ -526,10 +566,10 @@ function renderKonton(){
     if(!txs.length) return null;
     const sum = txs.reduce((s,t)=> s + (t.typ==='intakt'? t.belopp : -t.belopp), 0);
     return `<tr>
-      <td>${k.kod}</td>
+      <td class="mono">${k.kod}</td>
       <td>${k.namn}</td>
-      <td>${txs.length}</td>
-      <td class="${sum>=0?'amt-pos':'amt-neg'}">${fmt(Math.abs(sum))}${sum<0?' (kostnad)':''}</td>
+      <td class="mono">${txs.length}</td>
+      <td class="mono ${sum>=0?'amt-pos':'amt-neg'}">${fmt(Math.abs(sum))}${sum<0?' (kostnad)':''}</td>
     </tr>`;
   }).filter(Boolean).join('');
 
@@ -537,10 +577,10 @@ function renderKonton(){
     <h2 class="page-title">Konton</h2>
     <div class="page-desc">BAS-kontoplan (förenklad för enskild firma) med saldo per konto.</div>
     <div class="panel">
-      ${rows ? `<table>
+      ${rows ? `<div style="overflow-x:auto"><table>
         <thead><tr><th>Konto</th><th>Namn</th><th>Antal poster</th><th>Saldo</th></tr></thead>
         <tbody>${rows}</tbody>
-      </table>` : emptyBlock('📊','Inga konton med aktivitet ännu','Bokför en transaktion så dyker kontot upp här.')}
+      </table></div>` : emptyBlock('Inga konton med aktivitet ännu','Bokför en transaktion så dyker kontot upp här.')}
     </div>
   `;
 }
@@ -580,40 +620,40 @@ function renderRevisor(){
     <h2 class="page-title">Underlag till revisorn</h2>
     <div class="page-desc">${currentMonthLabel()} — samla ihop periodens bokföring och skicka som SIE-fil.</div>
     <div class="cards" style="grid-template-columns:repeat(3,1fr)">
-      <div class="card"><div class="k">Transaktioner denna period</div><div class="v">${monthTx.length}</div></div>
-      <div class="card"><div class="k">Intäkter</div><div class="v pos">${fmt(intakter)}</div></div>
-      <div class="card"><div class="k">Kostnader</div><div class="v">${fmt(kostnader)}</div></div>
+      <div class="card"><div class="k">Transaktioner denna period</div><div class="v mono">${monthTx.length}</div></div>
+      <div class="card"><div class="k">Intäkter</div><div class="v pos mono">${fmt(intakter)}</div></div>
+      <div class="card"><div class="k">Kostnader</div><div class="v mono">${fmt(kostnader)}</div></div>
     </div>
     <div class="panel panel-pad section">
       <div class="stitle">Status för ${currentMonthLabel()}</div>
       <div class="status-line">
         <div>
           <div style="font-weight:600">Bokföring</div>
-          <div style="font-size:12px;color:var(--muted)">${monthTx.length} poster bokförda</div>
+          <div style="font-size:12px;color:var(--text-muted)">${monthTx.length} poster bokförda</div>
         </div>
-        <span class="badge ${monthTx.length?'bgreen':'bgray'}">${monthTx.length?'Klar':'Tomt'}</span>
+        <span class="badge ${monthTx.length?'bpos':'bneutral'}">${monthTx.length?'Klar':'Tomt'}</span>
       </div>
       <div class="status-line">
         <div>
           <div style="font-weight:600">SIE-fil</div>
-          <div style="font-size:12px;color:var(--muted)">${period ? 'Genererad '+period.generatedAt : 'Inte genererad än'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${period ? 'Genererad '+period.generatedAt : 'Inte genererad än'}</div>
         </div>
-        ${period ? '<span class="badge bblue">Genererad</span>' : ''}
+        ${period ? '<span class="badge bneutral">Genererad</span>' : ''}
       </div>
       <div class="status-line">
         <div>
           <div style="font-weight:600">Revisorgodkännande</div>
-          <div style="font-size:12px;color:var(--muted)">${period && period.godkand ? 'Godkänd '+period.godkandAt : 'Väntar'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${period && period.godkand ? 'Godkänd '+period.godkandAt : 'Väntar'}</div>
         </div>
-        <span class="badge ${period && period.godkand ? 'bgreen' : 'byellow'}">${period && period.godkand ? 'Godkänd' : 'Väntar'}</span>
+        <span class="badge ${period && period.godkand ? 'bpos' : 'bwarn'}">${period && period.godkand ? 'Godkänd' : 'Väntar'}</span>
       </div>
       <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn small" onclick="generateSIE()">📄 Generera SIE-fil</button>
-        ${period && !period.godkand ? `<button class="btn secondary small" onclick="markApproved()">✓ Markera som godkänd av revisor</button>` : ''}
+        <button class="btn small" onclick="generateSIE()">Generera SIE-fil</button>
+        ${period && !period.godkand ? `<button class="btn secondary small" onclick="markApproved()">Markera som godkänd av revisor</button>` : ''}
       </div>
       ${period ? `<div class="sie-block">${period.preview}</div>` : ''}
     </div>
-    <div class="login-note">ℹ️ I POC:en laddas SIE-filen ner till din dator och "godkännande" simuleras här. I produktversionen skickas filen säkert till revisorns egen inloggning, som godkänner direkt i portalen.</div>
+    <div class="callout"><span class="eyebrow">POC</span>SIE-filen laddas ner till din dator och "godkännande" simuleras här. I produktversionen skickas filen säkert till revisorns egen inloggning, som godkänner direkt i portalen.</div>
   `;
 }
 
