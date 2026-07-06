@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import RouteMapLoader from '@/components/RouteMapLoader'
 import type { ActivityKind, RouteResult } from '@/app/api/routes/search/route'
 
@@ -24,6 +24,15 @@ export default function RutterPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const mapRef = useRef<HTMLDivElement>(null)
+
+  function selectRoute(id: number) {
+    setSelectedId(id)
+    // On mobile the map sits above this list in a stacked layout — scroll it
+    // into view so picking a route actually shows it, not just highlights it
+    // off-screen.
+    mapRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  }
 
   function useMyLocation() {
     if (!navigator.geolocation) {
@@ -179,12 +188,12 @@ export default function RutterPage() {
 
       {location && routes && routes.length > 0 && (
         <div className="lg:grid lg:grid-cols-3 lg:gap-6 space-y-4 lg:space-y-0">
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2" ref={mapRef}>
             <RouteMapLoader
               center={{ lat: location.lat, lng: location.lng }}
               routes={routes}
               selectedId={selectedId}
-              onSelect={setSelectedId}
+              onSelect={selectRoute}
             />
           </div>
           <div className="bg-card border border-edge rounded-2xl divide-y divide-edge max-h-[420px] overflow-y-auto">
@@ -192,7 +201,7 @@ export default function RutterPage() {
               <button
                 key={r.id}
                 type="button"
-                onClick={() => setSelectedId(r.id)}
+                onClick={() => selectRoute(r.id)}
                 className={`w-full text-left px-4 py-3 flex items-center justify-between hover:bg-bg transition-colors ${
                   selectedId === r.id ? 'bg-bg' : ''
                 }`}

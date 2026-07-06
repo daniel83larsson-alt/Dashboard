@@ -24,6 +24,21 @@ function Recenter({ lat, lng }: { lat: number; lng: number }) {
   return null
 }
 
+// A selected route can lie anywhere within the (up to 30km) search radius,
+// so the fixed initial zoom/center often doesn't actually show it — fly the
+// view to the route's own bounds whenever the selection changes.
+function FitSelection({ routes, selectedId }: { routes: RouteResult[]; selectedId: number | null }) {
+  const map = useMap()
+  useEffect(() => {
+    if (selectedId == null) return
+    const route = routes.find(r => r.id === selectedId)
+    const points = route?.path.flat()
+    if (!points?.length) return
+    map.flyToBounds(L.latLngBounds(points), { padding: [48, 48], maxZoom: 15 })
+  }, [selectedId, routes, map])
+  return null
+}
+
 export default function RouteMap({
   center,
   routes,
@@ -43,6 +58,7 @@ export default function RouteMap({
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
         <Recenter lat={center.lat} lng={center.lng} />
+        <FitSelection routes={routes} selectedId={selectedId} />
         <Marker position={[center.lat, center.lng]} icon={markerIcon}>
           <Popup>Sökcentrum</Popup>
         </Marker>
