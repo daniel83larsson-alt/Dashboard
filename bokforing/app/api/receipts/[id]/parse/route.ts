@@ -3,6 +3,12 @@ import { requireCompanyContext } from "@/lib/company";
 import { parseReceiptWithAI } from "@/lib/ai-receipt";
 import type { BasAccount } from "@/lib/supabase-types";
 
+// A real receipt photo (several MB) takes Gemini well over Vercel's default
+// serverless timeout to analyze -- verified locally at 20-30s for a 2MB
+// image. Without this, the platform kills the function before Gemini
+// responds and the browser sees a bare 502 with no application error.
+export const maxDuration = 60;
+
 export async function POST(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -41,6 +47,7 @@ export async function POST(
 
     return NextResponse.json({ suggestion });
   } catch (err) {
+    console.error("Receipt parse error:", err);
     return NextResponse.json(
       { error: err instanceof Error ? err.message : "AI-tolkningen misslyckades." },
       { status: 502 }

@@ -46,12 +46,19 @@ export async function parseReceiptWithAI(
             ],
           },
         ],
+        // This is a structured-extraction task, not reasoning -- thinking
+        // tokens add cost/latency for no benefit here, and were observed to
+        // occasionally crowd out the actual JSON answer within the output
+        // budget. Disabling it also stretches a free-tier daily quota further.
+        generationConfig: { thinkingConfig: { thinkingBudget: 0 } },
       }),
     }
   );
 
   if (!res.ok) {
-    throw new Error(`Gemini svarade med fel (${res.status}).`);
+    const errBody = await res.json().catch(() => null);
+    const detail = errBody?.error?.message ?? `HTTP ${res.status}`;
+    throw new Error(`Gemini svarade med fel: ${detail}`);
   }
 
   const body = await res.json();

@@ -125,7 +125,7 @@ function ReceiptRow({
   const [form, setForm] = useState(() => ({
     beskrivning: receipt.ai_suggestion?.beskrivning ?? "",
     datum: receipt.ai_suggestion?.datum ?? today(),
-    belopp: receipt.ai_suggestion?.belopp ?? 0,
+    belopp: receipt.ai_suggestion?.belopp ? String(receipt.ai_suggestion.belopp) : "",
     konto: receipt.ai_suggestion?.konto ?? "",
     typ: receipt.ai_suggestion?.typ ?? "kostnad",
   }));
@@ -196,8 +196,10 @@ function ReceiptRow({
               <input
                 className="mono"
                 type="number"
+                step="0.01"
+                placeholder="0"
                 value={form.belopp}
-                onChange={(e) => setForm((f) => ({ ...f, belopp: Number(e.target.value) }))}
+                onChange={(e) => setForm((f) => ({ ...f, belopp: e.target.value }))}
               />
             </div>
             <div className="field">
