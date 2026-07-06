@@ -1,0 +1,350 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0f1712;
+  --card: #182319;
+  --card-2: #1f2c22;
+  --edge: #2c3d30;
+  --accent: #6fae5c;
+  --accent-strong: #86c470;
+  --on-accent: #0f1712;
+  --lcd: #a9c79a;
+  --muted: #8a9b85;
+  --fg: #eaf1e6;
+  --crit: #d98a5f;
+  --pos: #86c470;
+  --shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  --ledger-line: rgba(255, 255, 255, 0.02);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-lcd: var(--lcd);
+  --color-muted: var(--muted);
+  --color-fg: var(--fg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@layer components {
+  .mark {
+    background: var(--accent);
+    color: var(--on-accent);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  .login-wrap {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .login-card {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 14px;
+    padding: 36px 32px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow);
+  }
+  .login-card .mark {
+    width: 44px;
+    height: 44px;
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+  .login-card h1 {
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .login-card p {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 24px;
+    line-height: 1.55;
+  }
+  .field {
+    margin-bottom: 14px;
+  }
+  .field label {
+    display: block;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 6px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--edge);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--fg);
+    outline: none;
+  }
+  .field input:focus {
+    border-color: var(--accent);
+  }
+  .btn {
+    background: var(--accent);
+    color: var(--on-accent);
+    border: none;
+    border-radius: 8px;
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+  }
+  .btn:hover {
+    background: var(--accent-strong);
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn.secondary {
+    background: transparent;
+    color: var(--fg);
+    border: 1px solid var(--edge);
+  }
+  .btn.small {
+    width: auto;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+  .callout {
+    margin-top: 18px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.55;
+    background: var(--card-2);
+    border-radius: 8px;
+    padding: 12px 14px;
+  }
+  .callout.error {
+    background: rgba(217, 138, 95, 0.14);
+    color: var(--crit);
+  }
+  .auth-switch {
+    text-align: center;
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 16px;
+  }
+  .auth-switch a {
+    color: var(--accent-strong);
+    font-weight: 700;
+  }
+
+  .app-shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  .topbar {
+    height: 58px;
+    background: var(--card);
+    border-bottom: 1px solid var(--edge);
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 0 20px;
+    flex-shrink: 0;
+  }
+  .tb-logo {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+  .tb-name {
+    font-weight: 700;
+    font-size: 14px;
+  }
+  .tb-spacer {
+    flex: 1;
+  }
+  .tabs {
+    display: flex;
+    gap: 4px;
+    padding: 0 20px;
+    border-bottom: 1px solid var(--edge);
+    background: var(--card);
+    overflow-x: auto;
+  }
+  .tab {
+    padding: 12px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    white-space: nowrap;
+  }
+  .tab.on {
+    color: var(--accent-strong);
+    border-bottom-color: var(--accent);
+  }
+  .content {
+    flex: 1;
+    padding: 24px;
+    max-width: 900px;
+    width: 100%;
+    margin: 0 auto;
+  }
+  .section {
+    margin-bottom: 26px;
+  }
+  .stitle {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 12px;
+  }
+  h1.page-title {
+    font-size: 22px;
+    margin-bottom: 4px;
+    font-weight: 800;
+  }
+  .page-desc {
+    font-size: 13px;
+    color: var(--muted);
+    margin-bottom: 20px;
+    max-width: 60ch;
+  }
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    padding: 16px;
+  }
+  .card .k {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .card .v {
+    font-size: 26px;
+    font-weight: 800;
+    margin-top: 4px;
+  }
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .status-line {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--edge);
+  }
+  .status-line:last-child {
+    border-bottom: none;
+  }
+  .empty {
+    padding: 40px 20px;
+    text-align: center;
+  }
+  .empty .et {
+    font-weight: 600;
+    font-size: 14px;
+  }
+  .empty .es {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .upload-box {
+    width: 100%;
+    border: 2px dashed var(--edge);
+    border-radius: 14px;
+    padding: 40px 20px;
+    text-align: center;
+    background: var(--card);
+    cursor: pointer;
+  }
+  .upload-box:hover {
+    border-color: var(--accent);
+  }
+  .upload-box .ut {
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .upload-box .us {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+  .result-card {
+    background: var(--card);
+    border: 1px solid var(--accent);
+    border-radius: 14px;
+    padding: 20px;
+    text-align: center;
+  }
+  .result-card img {
+    width: 100%;
+    max-width: 260px;
+    border-radius: 10px;
+    margin: 0 auto 14px;
+    display: block;
+  }
+  .result-species {
+    font-size: 18px;
+    font-weight: 800;
+  }
+  .result-score {
+    font-size: 32px;
+    font-weight: 900;
+    color: var(--accent-strong);
+    margin-top: 6px;
+  }
+  .rank-badge {
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: var(--card-2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .rank-badge.top {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+}
