@@ -189,7 +189,7 @@ select{width:100%;background:var(--bg);border:1px solid var(--border);border-rad
       <div class="tb-sub">Enskild firma · Bokföring</div>
     </div>
     <div class="tb-spacer"></div>
-    <div class="demo-pill">POC — data sparas lokalt</div>
+    <div class="demo-pill" id="storagePill">POC — data sparas lokalt</div>
     <button class="btn secondary small" onclick="logout()" style="margin-left:12px">Logga ut</button>
   </div>
 
@@ -249,12 +249,22 @@ let state = {
   periods:[],
 };
 
+let storageAvailable = true;
 function loadState(){
-  const raw = localStorage.getItem('bf_state');
-  if(raw){ try{ state = Object.assign(state, JSON.parse(raw)); }catch(e){} }
+  try{
+    const raw = localStorage.getItem('bf_state');
+    if(raw){ state = Object.assign(state, JSON.parse(raw)); }
+  }catch(e){
+    storageAvailable = false;
+  }
 }
 function saveState(){
-  localStorage.setItem('bf_state', JSON.stringify(state));
+  if(!storageAvailable) return;
+  try{
+    localStorage.setItem('bf_state', JSON.stringify(state));
+  }catch(e){
+    storageAvailable = false;
+  }
 }
 
 /* ===================== AUTH ===================== */
@@ -694,6 +704,9 @@ function markApproved(){
 
 /* ===================== INIT ===================== */
 loadState();
+if(!storageAvailable){
+  document.getElementById('storagePill').textContent = 'Demo — sparas bara under detta besök';
+}
 if(state.session){
   showApp();
 } else {
