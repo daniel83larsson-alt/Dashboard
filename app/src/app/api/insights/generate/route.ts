@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
@@ -55,6 +56,7 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logApiCall(supabase, user.id, 'insights_generate')
 
     const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
       supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports').eq('id', user.id).single(),

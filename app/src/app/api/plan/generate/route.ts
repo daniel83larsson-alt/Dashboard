@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
@@ -17,6 +18,7 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logApiCall(supabase, user.id, 'plan_generate')
 
     const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([
       supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }).limit(30),

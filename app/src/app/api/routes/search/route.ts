@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { logApiCall } from '@/lib/log-api-call'
 
 export type ActivityKind = 'hiking' | 'running' | 'cycling'
 
@@ -81,6 +82,7 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  logApiCall(supabase, user.id, 'routes_search')
 
   const params = request.nextUrl.searchParams
   const lat = parseFloat(params.get('lat') ?? '')

@@ -6,6 +6,7 @@ import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { fmtMinSec } from '@/lib/sport'
+import { logApiCall } from '@/lib/log-api-call'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -67,6 +68,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logApiCall(supabase, user.id, 'coach')
 
     const { coachId, message, sport } = await request.json()
     const coach = getCoachById(coachId as CoachId)

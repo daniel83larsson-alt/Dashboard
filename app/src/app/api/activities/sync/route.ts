@@ -2,12 +2,14 @@ import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { fetchConcept2Results, refreshConcept2Token, concept2ResultToActivity } from '@/lib/concept2'
 import { autoCleanupDuplicates } from '@/lib/duplicates-cleanup'
+import { logApiCall } from '@/lib/log-api-call'
 
 export async function POST() {
   try {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logApiCall(supabase, user.id, 'concept2_sync')
 
     const { data: tokenRow } = await supabase
       .from('concept2_tokens')

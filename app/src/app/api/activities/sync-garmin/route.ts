@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { logApiCall } from '@/lib/log-api-call'
 import {
   fetchGarminActivities,
   garminActivityToRow,
@@ -53,6 +54,7 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    logApiCall(supabase, user.id, 'garmin_sync')
 
     // Daniel: "allt nytt ska synkas, men behöver inte synka mer data bakåt
     // i tiden... 650 dagar är ok för mig, så sliter vi inte på Garmin

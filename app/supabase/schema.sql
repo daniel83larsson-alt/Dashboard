@@ -314,3 +314,86 @@ alter table public.profiles add column if not exists home_equipment text[] defau
 -- styr hur ofta den mer påstridiga intervju-rutan får dyka upp igen.
 alter table public.profiles add column if not exists onboarding_dismissed_at timestamptz;
 alter table public.profiles add column if not exists last_onboarding_prompt_at timestamptz;
+
+-- Anropslogg för admin-missbrukskoll (Daniel: "koll på antal anrop per dag
+-- per användare, ifall någon missbrukar"). Loggar bara de anrop som kostar
+-- pengar eller kan träffa en extern tjänsts gräns — AI (coach/insikter/plan),
+-- Garmin/Concept2-synk, Rutter-sök. Vanlig sidnavigering loggas inte.
+-- Kör vid uppdatering av en befintlig databas:
+create table if not exists public.api_call_log (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  route text not null,
+  created_at timestamptz not null default now()
+);
+create index if not exists api_call_log_user_created_idx on public.api_call_log (user_id, created_at desc);
+
+alter table public.api_call_log enable row level security;
+-- En användare får bara logga sina egna anrop (och aldrig läsa loggen
+-- direkt — det sker bara via admin_api_call_stats() nedan).
+create policy "users log their own calls" on public.api_call_log
+  for insert with check (auth.uid() = user_id);
+
+-- Admin: antal loggade anrop idag och senaste 7 dagarna per användare.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_api_call_stats()
+returns table(user_id uuid, calls_today bigint, calls_7d bigint)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    l.user_id,
+    count(*) filter (where l.created_at >= date_trunc('day', now()))::bigint,
+    count(*) filter (where l.created_at >= now() - interval '7 days')::bigint
+  from public.api_call_log l
+  group by l.user_id;
+end;
+$$;
+revoke all on function public.admin_api_call_stats() from public;
+grant execute on function public.admin_api_call_stats() to authenticated;
+
+-- Admin: senaste händelser (nya registreringar + nya loggade pass) i en
+-- gemensam, tidssorterad lista, så Daniel snabbt kan se "vem gjorde vad
+-- nyss" utan att gå igenom varje användarrad för sig.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_recent_events()
+returns table(event_type text, user_id uuid, email text, name text, label text, occurred_at timestamptz)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select * from (
+    (
+      select 'signup'::text as event_type, p.id as user_id, p.email, p.name, 'Nytt konto'::text as label, p.created_at as occurred_at
+      from public.profiles p
+      order by p.created_at desc
+      limit 30
+    )
+    union all
+    (
+      select 'activity'::text as event_type, a.user_id, p.email, p.name, a.name as label, a.created_at as occurred_at
+      from public.activities a
+      join public.profiles p on p.id = a.user_id
+      order by a.created_at desc
+      limit 30
+    )
+  ) combined
+  order by occurred_at desc
+  limit 30;
+end;
+$$;
+revoke all on function public.admin_recent_events() from public;
+grant execute on function public.admin_recent_events() to authenticated;

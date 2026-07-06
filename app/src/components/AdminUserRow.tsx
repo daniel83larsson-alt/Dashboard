@@ -45,6 +45,8 @@ export default function AdminUserRow({
   activityCount,
   daysSynced,
   lastSynced,
+  callsToday,
+  calls7d,
 }: {
   profile: Profile
   isSelf: boolean
@@ -55,6 +57,8 @@ export default function AdminUserRow({
   activityCount: number
   daysSynced: number
   lastSynced: string | null
+  callsToday: number
+  calls7d: number
 }) {
   const [busy, setBusy] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -121,6 +125,12 @@ export default function AdminUserRow({
               ? `${activityCount} pass · ${daysSynced} dagar · senast synkat ${fmtLastSynced(lastSynced)}`
               : (hasConcept2 || hasGarmin) ? 'Anslutet men inget synkat än' : 'Inget synkat ännu'}
           </div>
+          {(callsToday > 0 || calls7d > 0) && (
+            <div className={`text-[11px] mt-1 ${callsToday >= 20 ? 'text-amber-400' : 'text-muted'}`}>
+              {callsToday} anrop idag · {calls7d} senaste 7 dagarna
+              {callsToday >= 20 && ' — ovanligt högt'}
+            </div>
+          )}
           {hasGarmin && (
             <div className="mt-2">
               <button
