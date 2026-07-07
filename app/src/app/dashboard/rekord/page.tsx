@@ -1,7 +1,8 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
+import { sportLabel, sportIcon } from '@/lib/sport'
 import { startOfWeek } from '@/lib/dates'
 import { dedupeForStats } from '@/lib/duplicates'
+import { computeAllSportPRs, longestSession, type Activity } from '@/lib/records'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -16,91 +17,6 @@ function fmtDur(s: number) {
 
 function fmtDateShort(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })
-}
-
-type Activity = {
-  id: string
-  strava_id: number
-  start_date: string
-  distance: number
-  moving_time: number
-  name: string
-  sport_type: string
-}
-
-type PR = { value: number; unit: string; date: string; display: string; activityId: string }
-type SportPRs = { sport: string; totalDist: number; prs: { label: string; pr: PR }[] }
-
-// Same best-effort-window convention rowing PRs use (best distance covered
-// in ~20/30/45 min), generalized to any distance-based sport so each one
-// gets its own personal bests instead of only rowing having them.
-const TIME_WINDOWS = [
-  { label: '20 min', minSec: 1050, maxSec: 1350 },
-  { label: '30 min', minSec: 1620, maxSec: 1980 },
-  { label: '45 min', minSec: 2460, maxSec: 3000 },
-]
-
-// Standard race-style benchmark distances, applied the same way to every
-// distance-eligible sport rather than one bespoke distance per sport —
-// Daniel asked for "snabbast 1/3/5/10km" across the board.
-const UNIVERSAL_BENCHMARKS: { meters: number; label: string }[] = [
-  { meters: 1000, label: '1 km' },
-  { meters: 3000, label: '3 km' },
-  { meters: 5000, label: '5 km' },
-  { meters: 10000, label: '10 km' },
-]
-
-// Cycling PRs conventionally go longer than the universal set — kept as an
-// addition rather than a replacement.
-const EXTRA_BENCHMARKS: Record<string, { meters: number; label: string }[]> = {
-  Ride: [{ meters: 20000, label: '20 km' }],
-  VirtualRide: [{ meters: 20000, label: '20 km' }],
-}
-
-function benchmarksForSport(sport: string) {
-  return [...UNIVERSAL_BENCHMARKS, ...(EXTRA_BENCHMARKS[sport] ?? [])]
-}
-
-// Only sports where distance/pace PRs are meaningful — strength/yoga/etc.
-// don't fit this "personal best" shape and are left out.
-const PR_ELIGIBLE_SPORTS = new Set(['Rowing', 'Run', 'TrailRun', 'Walk', 'Hike', 'Ride', 'VirtualRide', 'Swim', 'NordicSki'])
-
-function computeSportPRs(acts: Activity[], sport: string): SportPRs {
-  const real = acts.filter(a => a.sport_type === sport && a.distance >= 200 && a.moving_time >= 60)
-  const prs: { label: string; pr: PR }[] = []
-
-  for (const w of TIME_WINDOWS) {
-    const inWindow = real.filter(a => a.moving_time >= w.minSec && a.moving_time <= w.maxSec)
-    if (!inWindow.length) continue
-    const best = inWindow.reduce((b, c) => c.distance > b.distance ? c : b)
-    const speedOrPace = fmtSpeedOrPace(sport, best.distance, best.moving_time)
-    prs.push({
-      label: `Bäst ${w.label}`,
-      pr: { value: best.distance, unit: 'm', date: best.start_date, activityId: best.id, display: `${fmtKm(best.distance)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
-    })
-  }
-
-  for (const bench of benchmarksForSport(sport)) {
-    const near = real.filter(a => a.distance >= bench.meters * 0.96 && a.distance <= bench.meters * 1.04)
-    if (!near.length) continue
-    const fastest = near.reduce((b, c) => c.moving_time < b.moving_time ? c : b)
-    const speedOrPace = fmtSpeedOrPace(sport, fastest.distance, fastest.moving_time)
-    prs.push({
-      label: `Snabbaste ${bench.label}`,
-      pr: { value: fastest.moving_time, unit: 's', date: fastest.start_date, activityId: fastest.id, display: `${fmtDur(fastest.moving_time)}${speedOrPace ? ` · ${speedOrPace.value}` : ''}` },
-    })
-  }
-
-  const totalDist = real.reduce((s, a) => s + a.distance, 0)
-  return { sport, totalDist, prs }
-}
-
-function computeAllSportPRs(acts: Activity[]): SportPRs[] {
-  const sports = [...new Set(acts.map(a => a.sport_type))].filter(s => PR_ELIGIBLE_SPORTS.has(s))
-  return sports
-    .map(sport => computeSportPRs(acts, sport))
-    .filter(s => s.prs.length > 0)
-    .sort((a, b) => b.totalDist - a.totalDist)
 }
 
 // ── Global (cross-sport) records ────────────────────────────────────────────
@@ -121,12 +37,6 @@ function biggestWeek(acts: Activity[]): WeekAgg | null {
     if (!best || w.count > best.count || (w.count === best.count && w.distance > best.distance)) best = w
   }
   return best
-}
-
-function longestSession(acts: Activity[]): Activity | null {
-  const valid = acts.filter(a => a.moving_time >= 60)
-  if (!valid.length) return null
-  return valid.reduce((b, c) => c.moving_time > b.moving_time ? c : b)
 }
 
 type Streak = { days: number; start: string; end: string }

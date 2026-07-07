@@ -11,6 +11,7 @@ import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
 import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '@/lib/streaks'
+import { newRecordsForLatest } from '@/lib/records'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 
@@ -99,6 +100,7 @@ export default async function DashboardPage() {
   const activities: Activity[] = dedupeForStats(allActivities ?? [])
   const latest = activities[0] ?? null
   const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
+  const latestRecords = latest ? newRecordsForLatest(latest, activities.slice(1)) : []
 
   const dailyStreak = currentDailyStreak(activities)
   const weeklyStreak = currentWeeklyStreak(activities)
@@ -261,6 +263,16 @@ export default async function DashboardPage() {
               <span className="capitalize">{sportLabel(latest.sport_type)}</span>
             </span>
           </div>
+
+          {latestRecords.length > 0 && (
+            <a
+              href="/dashboard/rekord"
+              className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 mb-3 hover:border-amber-500/50 transition-colors"
+            >
+              <span className="text-lg">🏅</span>
+              <span className="text-xs text-amber-400 font-medium">Nytt rekord: {latestRecords.join(' · ')}</span>
+            </a>
+          )}
 
           <div className="grid grid-cols-3 gap-2 mb-3">
             <div className="bg-bg rounded-xl p-3">
