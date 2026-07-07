@@ -99,6 +99,10 @@ export default async function DashboardPage() {
   // when a pair is found.
   const activities: Activity[] = dedupeForStats(allActivities ?? [])
   const latest = activities[0] ?? null
+  const { data: latestKudosRow } = latest
+    ? await supabase.rpc('kudos_received', { target_activity_id: latest.id }).single()
+    : { data: null }
+  const latestKudos = (latestKudosRow as { kudos_count: number; giver_names: string[] } | null) ?? { kudos_count: 0, giver_names: [] }
   const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
   const latestRecords = latest ? newRecordsForLatest(latest, activities.slice(1)) : []
 
@@ -272,6 +276,15 @@ export default async function DashboardPage() {
               <span className="text-lg">🏅</span>
               <span className="text-xs text-amber-400 font-medium">Nytt rekord: {latestRecords.join(' · ')}</span>
             </a>
+          )}
+
+          {latestKudos.kudos_count > 0 && (
+            <div className="flex items-center gap-2 bg-accent/10 border border-accent/30 rounded-xl px-3 py-2 mb-3">
+              <span className="text-lg">👍</span>
+              <span className="text-xs text-accent font-medium">
+                {latestKudos.giver_names.join(', ')} gav tummen upp för det här passet
+              </span>
+            </div>
           )}
 
           <div className="grid grid-cols-3 gap-2 mb-3">
@@ -537,7 +550,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Vänners träningspass ──────────────────────────────────────────────── */}
-      <FriendFeed feed={friendFeed ?? []} />
+      <FriendFeed feed={friendFeed ?? []} userId={user.id} />
     </div>
   )
 }

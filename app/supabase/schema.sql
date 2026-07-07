@@ -518,3 +518,106 @@ as $$
 $$;
 revoke all on function public.friend_activity_feed() from public;
 grant execute on function public.friend_activity_feed() to authenticated;
+
+-- Daniel: "'like' på en väns pass, så personen får se det på sin sida
+-- ('tumme upp av kompis')." One kudos per (activity, giver) — can only
+-- kudos an activity belonging to someone you actually follow (mirrors the
+-- same visibility rule as the feed itself), and never your own activity.
+create table public.activity_kudos (
+  id uuid default gen_random_uuid() primary key,
+  activity_id uuid references public.activities(id) on delete cascade not null,
+  giver_id uuid references public.profiles(id) on delete cascade not null,
+  created_at timestamptz default now(),
+  unique (activity_id, giver_id)
+);
+alter table public.activity_kudos enable row level security;
+
+-- A plain `(select user_id from public.activities where id = ...)` inside a
+-- policy runs under the CALLER's RLS on activities — which blocks it for
+-- everyone except the activity's own owner, making any policy that embeds
+-- it silently un-satisfiable for a follower kudos-ing someone else's
+-- activity. Bypass with a narrow SECURITY DEFINER lookup instead.
+create or replace function public.activity_owner(target_activity_id uuid)
+returns uuid
+language sql
+security definer
+set search_path = public
+stable
+as $$
+  select user_id from public.activities where id = target_activity_id;
+$$;
+revoke all on function public.activity_owner(uuid) from public;
+grant execute on function public.activity_owner(uuid) to authenticated;
+
+create policy "Giver or activity owner can see a kudos row" on public.activity_kudos
+  for select using (
+    auth.uid() = giver_id
+    or auth.uid() = public.activity_owner(activity_id)
+  );
+
+create policy "Can only kudos a followed friend's activity" on public.activity_kudos
+  for insert with check (
+    auth.uid() = giver_id
+    and giver_id != public.activity_owner(activity_id)
+    and exists (
+      select 1 from public.follows f
+      where f.follower_id = auth.uid()
+        and f.followee_id = public.activity_owner(activity_id)
+        and f.status = 'accepted'
+    )
+  );
+
+create policy "Giver can remove own kudos" on public.activity_kudos
+  for delete using (auth.uid() = giver_id);
+
+-- friend_activity_feed() now also reports a kudos count and whether the
+-- caller has already liked each entry, so the feed can render a toggleable
+-- "gilla" button without a second round trip.
+drop function public.friend_activity_feed();
+create function public.friend_activity_feed()
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  activity_name text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz,
+  kudos_count bigint,
+  liked_by_me boolean
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.name, a.distance, a.moving_time, a.start_date,
+    (select count(*) from public.activity_kudos k where k.activity_id = a.id),
+    exists(select 1 from public.activity_kudos k2 where k2.activity_id = a.id and k2.giver_id = auth.uid())
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  join public.follows f on f.followee_id = a.user_id and f.follower_id = auth.uid() and f.status = 'accepted'
+  order by a.start_date desc
+  limit 10;
+$$;
+revoke all on function public.friend_activity_feed() from public;
+grant execute on function public.friend_activity_feed() to authenticated;
+
+-- "Den personen får upp på sin sida" — who liked MY activity. Only the
+-- activity's own owner can call this successfully (returns an empty/zero
+-- row for anyone else since the where-clause never matches).
+create or replace function public.kudos_received(target_activity_id uuid)
+returns table(kudos_count bigint, giver_names text[])
+language sql
+security definer
+set search_path = public
+as $$
+  select count(*), coalesce(array_agg(coalesce(p.name, split_part(p.email, '@', 1)) order by k.created_at), '{}')
+  from public.activity_kudos k
+  join public.profiles p on p.id = k.giver_id
+  join public.activities a on a.id = k.activity_id
+  where k.activity_id = target_activity_id and a.user_id = auth.uid();
+$$;
+revoke all on function public.kudos_received(uuid) from public;
+grant execute on function public.kudos_received(uuid) to authenticated;
