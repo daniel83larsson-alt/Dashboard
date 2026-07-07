@@ -229,6 +229,31 @@ export async function fetchGarminHrZones(activityId: number, email: string, pass
   }
 }
 
+// Per-activity GPS route. Same unofficial-endpoint approach as
+// fetchGarminHrZones above — connect.garmin.com's own web UI calls this
+// endpoint for the activity detail map, reverse-engineered by the wider
+// Garmin-API community as returning geoPolylineDTO.polyline: [{lat, lon}].
+// Unofficial: shape may drift, hence the defensive parsing and
+// null-on-any-failure.
+export async function fetchGarminPolyline(activityId: number, email: string, password: string): Promise<[number, number][] | null> {
+  try {
+    const gc = await getGarminClient(email, password)
+    const data = await gc.get<unknown>(`https://connectapi.garmin.com/activity-service/activity/${activityId}/details`)
+    const dto = (data as Record<string, unknown> | null)?.geoPolylineDTO as Record<string, unknown> | undefined
+    const points = dto?.polyline
+    if (!Array.isArray(points)) return null
+    const coords = points
+      .map((p) => {
+        const pt = p as Record<string, unknown>
+        return [pt.lat, pt.lon] as [unknown, unknown]
+      })
+      .filter((p): p is [number, number] => typeof p[0] === 'number' && typeof p[1] === 'number')
+    return coords.length > 1 ? coords : null
+  } catch {
+    return null
+  }
+}
+
 // Fetch a full DayWellness snapshot for an arbitrary past date.
 export async function fetchGarminDayWellness(
   date: Date,

@@ -220,8 +220,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
       {hasCoords && (
         <div>
           <div className="text-xs text-muted uppercase tracking-wider mb-3">Startplats</div>
-          <ActivityMapLoader lat={lat!} lng={lng!} label={activity.name} />
-          <p className="text-muted text-[10px] mt-1.5">Visar startpunkt — full GPS-rutt stöds inte ännu</p>
+          <ActivityMapLoader lat={lat!} lng={lng!} label={activity.name} activityId={garminActivityId} />
         </div>
       )}
 
