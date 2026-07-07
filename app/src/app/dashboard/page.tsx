@@ -11,6 +11,8 @@ import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
 import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '@/lib/streaks'
+import FriendFeed from '@/components/FriendFeed'
+import FriendRequestBadge from '@/components/FriendRequestBadge'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +58,7 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
@@ -66,6 +68,8 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
+    supabase.rpc('friend_activity_feed'),
+    supabase.rpc('pending_follow_requests'),
   ])
 
   const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -175,7 +179,10 @@ export default async function DashboardPage() {
               : 'Inga pass denna veckan ännu'}
           </p>
         </div>
-        <SyncAllButton />
+        <div className="flex items-center gap-2">
+          <FriendRequestBadge count={pendingRequests?.length ?? 0} />
+          <SyncAllButton />
+        </div>
       </div>
 
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
@@ -516,6 +523,9 @@ export default async function DashboardPage() {
       </div>
 
       </div>
+
+      {/* ── Vänners träningspass ──────────────────────────────────────────────── */}
+      <FriendFeed feed={friendFeed ?? []} />
     </div>
   )
 }

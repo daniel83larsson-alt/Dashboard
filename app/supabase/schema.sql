@@ -402,3 +402,119 @@ grant execute on function public.admin_recent_events() to authenticated;
 -- under Profil, defaults to the 10 000 that was already hardcoded into the
 -- Översikt/Hälsa steg-progressbars before this existed.
 alter table public.profiles add column if not exists daily_step_goal integer not null default 10000;
+
+-- Daniel: "söka vänner, följ dem, de godkänner, se deras aktivitetslogg."
+-- Asymmetric follow model (like Strava), not mutual friending: follower_id
+-- sends a request, followee_id must accept before the follower can see
+-- their activity feed. profiles RLS ("auth.uid() = id") means one user can
+-- never directly read another's row, so search/list of other users' names
+-- all go through narrow SECURITY DEFINER functions below that return only
+-- a name (never email) and only what the calling user is entitled to see.
+create table public.follows (
+  id uuid default gen_random_uuid() primary key,
+  follower_id uuid references public.profiles(id) on delete cascade not null,
+  followee_id uuid references public.profiles(id) on delete cascade not null,
+  status text not null default 'pending' check (status in ('pending', 'accepted')),
+  created_at timestamptz default now(),
+  responded_at timestamptz,
+  unique (follower_id, followee_id),
+  check (follower_id != followee_id)
+);
+alter table public.follows enable row level security;
+
+create policy "See own follow rows" on public.follows
+  for select using (auth.uid() = follower_id or auth.uid() = followee_id);
+
+create policy "Send own follow request" on public.follows
+  for insert with check (auth.uid() = follower_id and status = 'pending');
+
+create policy "Followee accepts a request" on public.follows
+  for update using (auth.uid() = followee_id)
+  with check (auth.uid() = followee_id and status = 'accepted');
+
+create policy "Either side can remove a follow row" on public.follows
+  for delete using (auth.uid() = follower_id or auth.uid() = followee_id);
+
+-- Search other users by (partial) name to send a follow request. Never
+-- returns email. Requires at least 2 characters to avoid a cheap full scan
+-- turning into a browsable directory.
+create or replace function public.search_profiles(query text)
+returns table(id uuid, name text)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.id, p.name
+  from public.profiles p
+  where p.id != auth.uid()
+    and p.name is not null
+    and length(query) >= 2
+    and p.name ilike '%' || query || '%'
+  order by p.name
+  limit 20;
+$$;
+revoke all on function public.search_profiles(text) from public;
+grant execute on function public.search_profiles(text) to authenticated;
+
+-- Everyone I follow (pending or accepted), with their display name, so the
+-- Profil page can show request status without ever reading others' rows
+-- directly.
+create or replace function public.my_follows()
+returns table(id uuid, followee_id uuid, followee_name text, status text, created_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  select f.id, f.followee_id, coalesce(p.name, split_part(p.email, '@', 1)), f.status, f.created_at
+  from public.follows f
+  join public.profiles p on p.id = f.followee_id
+  where f.follower_id = auth.uid()
+  order by f.created_at desc;
+$$;
+revoke all on function public.my_follows() from public;
+grant execute on function public.my_follows() to authenticated;
+
+-- Incoming follow requests still waiting for my approval.
+create or replace function public.pending_follow_requests()
+returns table(id uuid, follower_id uuid, follower_name text, created_at timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  select f.id, f.follower_id, coalesce(p.name, split_part(p.email, '@', 1)), f.created_at
+  from public.follows f
+  join public.profiles p on p.id = f.follower_id
+  where f.followee_id = auth.uid() and f.status = 'pending'
+  order by f.created_at asc;
+$$;
+revoke all on function public.pending_follow_requests() from public;
+grant execute on function public.pending_follow_requests() to authenticated;
+
+-- Combined chronological feed of the last 10 activities across everyone
+-- I follow (accepted only) — the "mina vänners träningspass" log on
+-- Översikt. Security-definer so it doesn't need a broad new RLS select
+-- policy on activities; the follows join already scopes it to auth.uid().
+create or replace function public.friend_activity_feed()
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  activity_name text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.name, a.distance, a.moving_time, a.start_date
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  join public.follows f on f.followee_id = a.user_id and f.follower_id = auth.uid() and f.status = 'accepted'
+  order by a.start_date desc
+  limit 10;
+$$;
+revoke all on function public.friend_activity_feed() from public;
+grant execute on function public.friend_activity_feed() to authenticated;

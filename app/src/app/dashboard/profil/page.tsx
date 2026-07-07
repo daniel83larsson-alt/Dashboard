@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import ProfileForm from '@/components/ProfileForm'
 import GoalsCard from '@/components/GoalsCard'
+import FriendsCard from '@/components/FriendsCard'
 
 export default async function ProfilPage({
   searchParams,
@@ -12,7 +13,7 @@ export default async function ProfilPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: c2token }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }] = await Promise.all([
+  const [{ data: profile }, { data: c2token }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('concept2_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
@@ -25,6 +26,8 @@ export default async function ProfilPage({
     // "fungerar" was misleading there too; this page had the same gap).
     supabase.from('activities').select('id').eq('user_id', user.id).lt('strava_id', 0).limit(1).maybeSingle(),
     supabase.from('activities').select('id').eq('user_id', user.id).gte('strava_id', 0).limit(1).maybeSingle(),
+    supabase.rpc('pending_follow_requests'),
+    supabase.rpc('my_follows'),
   ])
 
   const savedContext = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -52,6 +55,13 @@ export default async function ProfilPage({
       )}
       <div className="mb-4">
         <GoalsCard goals={goals ?? []} savedOverview={savedOverview} />
+      </div>
+      <div className="mb-4">
+        <FriendsCard
+          userId={user.id}
+          initialPendingRequests={pendingRequests ?? []}
+          initialMyFollows={myFollows ?? []}
+        />
       </div>
       <ProfileForm
         profile={profile}
