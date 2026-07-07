@@ -10,6 +10,7 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
+import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '@/lib/streaks'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -56,7 +57,7 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }] = await Promise.all([
-    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
@@ -86,6 +87,7 @@ export default async function DashboardPage() {
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const wellnessStore: WellnessStore | null = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
   const wellness: DayWellness | null = wellnessStore?.history?.[0] ?? null
+  const stepGoal = profile?.daily_step_goal ?? 10000
 
   // Concept2 + Garmin can both sync the same real session — count it once
   // in every stat/PR below, not twice, using the more precise Concept2 row
@@ -93,6 +95,10 @@ export default async function DashboardPage() {
   const activities: Activity[] = dedupeForStats(allActivities ?? [])
   const latest = activities[0] ?? null
   const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
+
+  const dailyStreak = currentDailyStreak(activities)
+  const weeklyStreak = currentWeeklyStreak(activities)
+  const stepStreak = currentStepGoalStreak(wellnessStore?.history ?? [], stepGoal)
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
@@ -171,6 +177,26 @@ export default async function DashboardPage() {
         </div>
         <SyncAllButton />
       </div>
+
+      {/* ── Streaks ───────────────────────────────────────────────────────────── */}
+      {activities.length > 0 && (
+        <div className={`grid gap-2 ${(wellnessStore?.history?.length ?? 0) > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {dailyStreak}</div>
+            <div className="text-muted text-xs mt-1">{dailyStreak === 1 ? 'dag i rad' : 'dagar i rad'}</div>
+          </div>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {weeklyStreak}</div>
+            <div className="text-muted text-xs mt-1">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</div>
+          </div>
+          {(wellnessStore?.history?.length ?? 0) > 0 && (
+            <div className="bg-card border border-edge rounded-2xl p-4">
+              <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {stepStreak}</div>
+              <div className="text-muted text-xs mt-1">{stepStreak === 1 ? 'dag med stegmål' : 'dagar med stegmål'}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
       {(() => {
@@ -360,10 +386,10 @@ export default async function DashboardPage() {
                 <div className="mt-2 h-1.5 bg-bg rounded-full overflow-hidden">
                   <div
                     className="h-full bg-accent rounded-full transition-all"
-                    style={{ width: `${Math.min((wellness.steps / 10000) * 100, 100)}%` }}
+                    style={{ width: `${Math.min((wellness.steps / stepGoal) * 100, 100)}%` }}
                   />
                 </div>
-                <div className="text-[10px] text-muted mt-1">{Math.round((wellness.steps / 10000) * 100)}% av 10 000</div>
+                <div className="text-[10px] text-muted mt-1">{Math.round((wellness.steps / stepGoal) * 100)}% av {stepGoal.toLocaleString('sv-SE')}</div>
               </div>
             )}
             {wellness.bodyBattery != null && (

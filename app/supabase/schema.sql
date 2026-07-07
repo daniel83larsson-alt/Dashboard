@@ -397,3 +397,8 @@ end;
 $$;
 revoke all on function public.admin_recent_events() from public;
 grant execute on function public.admin_recent_events() to authenticated;
+
+-- Daniel: "kunna sätta ett stegmål per dag, och streak på det" — settable
+-- under Profil, defaults to the 10 000 that was already hardcoded into the
+-- Översikt/Hälsa steg-progressbars before this existed.
+alter table public.profiles add column if not exists daily_step_goal integer not null default 10000;

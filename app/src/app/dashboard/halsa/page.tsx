@@ -7,10 +7,12 @@ export default async function HalsaPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: wellnessRow }, { data: healthInsightRow }] = await Promise.all([
+  const [{ data: wellnessRow }, { data: healthInsightRow }, { data: profile }] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
+    supabase.from('profiles').select('daily_step_goal').eq('id', user.id).single(),
   ])
+  const stepGoal = profile?.daily_step_goal ?? 10000
 
   const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
@@ -123,9 +125,9 @@ export default async function HalsaPage() {
                     <div className="font-mono text-accent text-2xl font-bold leading-none">{latest.steps.toLocaleString('sv-SE')}</div>
                     <div className="text-muted text-xs mt-1">Steg</div>
                     <div className="mt-2 h-1.5 bg-bg rounded-full overflow-hidden">
-                      <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min((latest.steps / 10000) * 100, 100)}%` }} />
+                      <div className="h-full bg-accent rounded-full" style={{ width: `${Math.min((latest.steps / stepGoal) * 100, 100)}%` }} />
                     </div>
-                    <div className="text-[10px] text-muted mt-1">{Math.round((latest.steps / 10000) * 100)}% av 10 000</div>
+                    <div className="text-[10px] text-muted mt-1">{Math.round((latest.steps / stepGoal) * 100)}% av {stepGoal.toLocaleString('sv-SE')}</div>
                   </div>
                 )}
                 {latest.hrv != null && (
