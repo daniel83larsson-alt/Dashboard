@@ -22,10 +22,15 @@
   --font-mono: var(--font-jb);
 }
 
-body {
+html, body {
   background: var(--bg);
   color: var(--fg);
   font-family: var(--font-space), system-ui, sans-serif;
+  /* Guards against mobile Safari's layout viewport getting stuck wider
+     than the device after a transient overflow from stray long content
+     (e.g. an unbroken long email/test value) - it doesn't auto-shrink
+     back until the user pinch-zooms. No page needs horizontal scroll. */
+  overflow-x: hidden;
 }
 
 * {

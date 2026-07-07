@@ -21,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
   return (
     <div className="min-h-screen bg-bg flex">
       <SideNav userName={userName} isAdmin={isAdmin} />
-      <main className="flex-1 flex flex-col pb-20 md:pb-0 md:ml-56 min-h-screen">
+      <main className="flex-1 min-w-0 flex flex-col pb-20 md:pb-0 md:ml-56 min-h-screen">
         {children}
       </main>
       <BottomNav isAdmin={isAdmin} />
