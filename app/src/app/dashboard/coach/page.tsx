@@ -80,7 +80,7 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="flex flex-col h-[100dvh] md:h-screen pb-20 md:pb-0">
+    <div className="fixed inset-0 md:left-56 flex flex-col pb-20 md:pb-0">
       {/* Header */}
       <div className="border-b border-edge bg-bg flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
