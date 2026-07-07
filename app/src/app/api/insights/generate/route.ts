@@ -16,7 +16,7 @@ type AgentInsights = { data: string; recovery: string; mental: string; strength:
 // requests, at the cost of each perspective being generated in the same
 // pass rather than fully independently.
 async function askAgentTeam(apiKey: string, question: string): Promise<AgentInsights> {
-  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker, återhämtnings- och belastningsspecialist, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: 3-5 meningar, svenska, konkret, gå direkt på sak — utom "summary" som är huvudcoachens syntes i 4-6 meningar (fetstil/punktlistor tillåtet där).`
+  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker, återhämtnings- och belastningsspecialist, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.`
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
@@ -25,7 +25,7 @@ async function askAgentTeam(apiKey: string, question: string): Promise<AgentInsi
       contents: [{ role: 'user', parts: [{ text: question }] }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
-        maxOutputTokens: 1600,
+        maxOutputTokens: 900,
         thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
         responseSchema: {
@@ -137,26 +137,26 @@ ${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE
 Ge teamets bedömning av datan ovan, ett fält per roll:
 
 data (Dataanalytiker): ${hasActivities
-      ? 'Identifiera 2-3 konkreta trender eller avvikelser i träningsdatan. Vad säger pulsdata, distans eller tidsfördelning om utvecklingen? Lyft specifika siffror. Hoppa över sammanfattning av grundstatistik.'
-      : 'Inga träningspass är loggade än, men det finns hälsodata från Garmin. Analysera sömn-, steg- och pulstrender — vad säger de om vardagsaktivitet och återhämtningsbas inför att börja träna strukturerat?'}
+      ? 'Identifiera EN tydlig trend eller avvikelse i träningsdatan, med en konkret siffra.'
+      : 'Inga träningspass är loggade än, men det finns hälsodata från Garmin. Vad säger sömn-, steg- eller pulstrenden om återhämtningsbasen inför att börja träna strukturerat?'}
 
 recovery (Återhämtningsspecialist, fokusera ENBART på återhämtning): ${hasActivities
-      ? 'Bedöm belastningsbalansen och återhämtningsstatus. Finns tecken på underrecovery eller överträning? Vad indikerar vilopuls och sömn? Ge ett konkret råd.'
-      : 'Bedöm återhämtningsbasen utifrån sömn, vilopuls och HRV (inga träningspass loggade än). Är kroppen i ett bra läge för att börja träna? Ge ett konkret råd.'}
+      ? 'Bedöm återhämtningsstatus utifrån vilopuls och sömn, och ge ETT konkret råd.'
+      : 'Bedöm återhämtningsbasen utifrån sömn, vilopuls och HRV (inga träningspass loggade än), och ge ETT konkret råd.'}
 
 mental (Mentalcoach, fokusera ENBART på det mentala): ${hasActivities
-      ? 'Vad avslöjar träningsbeteendet om mentalt tillstånd, motivation och konsekvens? Ge ett konkret mentalt verktyg eller tankesätt att använda nästa vecka.'
-      : 'Inga pass är loggade än. Ge ett konkret mentalt verktyg eller lågtröskel-tankesätt för att komma igång med strukturerad träning.'}
+      ? 'Ge ETT konkret mentalt verktyg för nästa vecka, utifrån träningsbeteendet.'
+      : 'Inga pass är loggade än. Ge ETT konkret, lågtröskel mentalt verktyg för att komma igång.'}
 
 strength (Styrkecoach för kompletterande träning, KONKRETA övningar): ${hasActivities
-      ? 'Föreslå ett kompletterande styrkepass som passar atletens nuvarande träningsbelastning. Namnge 3-4 övningar med sets och reps.'
-      : 'Inga pass är loggade än. Föreslå ett enkelt, lågtröskel startprogram (3-4 övningar, sets/reps).'}
+      ? 'Namnge 2-3 kompletterande styrkeövningar (med sets/reps) som passar nuvarande träningsbelastning.'
+      : 'Inga pass är loggade än. Namnge 2-3 enkla startövningar med sets/reps.'}
 
 mobility (Rörlighets-/stretchcoach, KONKRETA övningar): ${hasActivities
-      ? 'Baserat på vilken typ av träning atleten kör, vilka muskelgrupper/leder riskerar att bli stela eller obalanserade? Föreslå 3-4 konkreta stretch-/rörlighetsövningar med namn och hur länge/ofta de bör göras.'
-      : 'Inga pass är loggade än. Föreslå 3-4 generella rörlighetsövningar som bra vanor att bygga in, med namn och hur länge/ofta.'}
+      ? 'Namnge 2-3 rörlighets-/stretchövningar (med hur länge/ofta) för de muskelgrupper träningen belastar mest.'
+      : 'Inga pass är loggade än. Namnge 2-3 generella rörlighetsövningar med hur länge/ofta.'}
 
-summary (Huvudcoach): Läs de fem bedömningarna du själv precis formulerat och sammanfatta det viktigaste för atleten. Vad är det enda viktigaste fokusområdet just nu? Ge 2-3 konkreta prioriteringar för de kommande 2 veckorna.`
+summary (Huvudcoach): Läs de fem bedömningarna du själv precis formulerat. Vad är den ENA viktigaste prioriteringen för atleten just nu?`
 
     const { data, recovery, mental, strength, mobility, summary } = await askAgentTeam(apiKey, question)
 
