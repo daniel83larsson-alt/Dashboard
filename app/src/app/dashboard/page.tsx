@@ -14,6 +14,7 @@ import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '
 import { newRecordsForLatest } from '@/lib/records'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
+import InstallAppButton from '@/components/InstallAppButton'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -187,6 +188,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <FriendRequestBadge count={pendingRequests?.length ?? 0} />
+          <InstallAppButton />
           <SyncAllButton />
         </div>
       </div>
