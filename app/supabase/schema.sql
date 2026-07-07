@@ -621,3 +621,83 @@ as $$
 $$;
 revoke all on function public.kudos_received(uuid) from public;
 grant execute on function public.kudos_received(uuid) to authenticated;
+
+-- Daniel: "nyhetsbrev till alla användare — nyheter i appen + lite
+-- personligt, via Resend." Sent manually from an admin-only page, not on a
+-- schedule — Daniel reviews the "nyheter i appen" text and hits send
+-- himself each time.
+alter table public.profiles add column if not exists newsletter_opt_out boolean not null default false;
+
+create table public.newsletter_log (
+  id bigint generated always as identity primary key,
+  subject text not null,
+  sent_count integer not null,
+  sent_at timestamptz default now()
+);
+alter table public.newsletter_log enable row level security;
+create policy "Admin only" on public.newsletter_log
+  for all using (lower(auth.jwt() ->> 'email') = lower('daniel83larsson@gmail.com'));
+
+-- Who to send to (opted-out users excluded) — email is needed here (unlike
+-- the other admin_* functions above) because this is what actually
+-- addresses the message, not just a label shown in an admin table.
+create or replace function public.admin_newsletter_recipients()
+returns table(id uuid, email text, name text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select p.id, p.email, p.name
+  from public.profiles p
+  where p.newsletter_opt_out = false
+  order by p.created_at asc;
+end;
+$$;
+revoke all on function public.admin_newsletter_recipients() from public;
+grant execute on function public.admin_newsletter_recipients() to authenticated;
+
+-- Raw recent activities across ALL users (60 days — enough window for the
+-- existing streak-calculation code in lib/streaks.ts to run correctly),
+-- so the newsletter's personal section can reuse that exact same tested
+-- logic in the sending route instead of re-implementing streaks in SQL.
+create or replace function public.admin_recent_activities_for_newsletter()
+returns table(user_id uuid, id uuid, start_date timestamptz, distance numeric, moving_time integer, sport_type text)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select a.user_id, a.id, a.start_date, a.distance, a.moving_time, a.sport_type
+  from public.activities a
+  where a.start_date >= now() - interval '60 days'
+  order by a.start_date desc;
+end;
+$$;
+revoke all on function public.admin_recent_activities_for_newsletter() from public;
+grant execute on function public.admin_recent_activities_for_newsletter() to authenticated;
+
+-- Public unsubscribe link needs no auth — anyone holding this specific
+-- user's id (a 122-bit random uuid, not guessable/enumerable) can opt that
+-- one profile out. Same acceptable-risk shape as a typical transactional
+-- unsubscribe link.
+create or replace function public.unsubscribe_newsletter(target_user_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.profiles set newsletter_opt_out = true where id = target_user_id;
+$$;
+revoke all on function public.unsubscribe_newsletter(uuid) from public;
+grant execute on function public.unsubscribe_newsletter(uuid) to anon, authenticated;

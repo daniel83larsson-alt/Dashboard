@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import AdminUserRow from '@/components/AdminUserRow'
+import NewsletterSender from '@/components/NewsletterSender'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
@@ -17,12 +18,13 @@ export default async function AdminPage() {
     )
   }
 
-  const [{ data: profiles }, { data: syncStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }] = await Promise.all([
+  const [{ data: profiles }, { data: syncStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }, { data: newsletterRecipients }] = await Promise.all([
     supabase.rpc('admin_list_profiles'),
     supabase.rpc('admin_all_sync_status'),
     supabase.rpc('admin_activity_stats'),
     supabase.rpc('admin_api_call_stats'),
     supabase.rpc('admin_recent_events'),
+    supabase.rpc('admin_newsletter_recipients'),
   ])
 
   type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean; concept2_synced: boolean; garmin_synced: boolean }
@@ -42,6 +44,8 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-semibold">Admin</h1>
         <p className="text-muted text-sm mt-1">{profileRows.length} registrerade användare</p>
       </div>
+
+      <NewsletterSender recipientCount={(newsletterRecipients ?? []).length} />
 
       {eventRows.length > 0 && (
         <div className="mb-6">
