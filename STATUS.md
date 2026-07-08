@@ -51,6 +51,12 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 - ⏳ Projekt med budget + tips från flera agenter — inte påbörjat, behöver avgränsas till ett konkret, verifierbart mål innan bygge.
 - 🧊 Fastighetsregister/energideklaration via Boverket/Lantmäteriet — kräver BankID-signerat avtal/konto, inte en snabb integration. Väntar på beslut om det är värt att göra just nu.
 
+## Teknisk skuld (Sam)
+
+Genvägar, provisoriska lösningar och kända begränsningar — inte buggar, men saker att göra om senare.
+
+- 🧊 **Bokföring: `check_voucher_balances`-triggern blockerar ALL radering av verifikatrader**, inte bara oavsiktlig radering från app-koden — även legitima admin-raderingar (t.ex. GDPR-radering av ett helt företag) stoppas idag. Ingen brådska, men måste lösas innan en sådan radering någonsin behöver göras.
+
 ## Process
 
 - ✅ Den här filen — statuslista så du kan se vad som är klart/pågår/inte påbörjat, och stämma av innan något kallas klart.
