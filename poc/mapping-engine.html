@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>iCore — Mapping Engine</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--surface2:#222538;--border:#2a2d3e;
+  --accent:#4f8ef7;--green:#22c55e;--yellow:#f59e0b;--red:#ef4444;--purple:#a855f7;
+  --text:#e2e8f0;--muted:#64748b;
+}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);font-size:14px;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit}
+::placeholder{color:var(--muted)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.mono{font-family:'SF Mono',Consolas,monospace;font-variant-numeric:tabular-nums}
+
+/* ── SHELL ── */
+.topbar{height:58px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:14px;padding:0 24px;flex-shrink:0;position:sticky;top:0;z-index:20}
+.tb-icon{width:30px;height:30px;background:var(--purple);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:800;color:#fff;flex-shrink:0}
+.tb-titles{display:flex;flex-direction:column;line-height:1.25}
+.tb-name{font-weight:700;font-size:14px}
+.tb-sub{font-size:11px;color:var(--muted)}
+.tb-spacer{flex:1}
+.tb-module{font-size:11px;background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.3);padding:5px 10px;border-radius:99px;font-weight:600}
+
+.shell{max-width:1240px;margin:0 auto;padding:28px 24px 80px}
+.stitle{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:4px}
+.step-title{font-size:19px;font-weight:800;margin-bottom:4px}
+.step-desc{font-size:13px;color:var(--muted);margin-bottom:18px;max-width:70ch;line-height:1.5}
+.section{margin-bottom:36px}
+
+/* ── IMPORT CARDS ── */
+.import-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.import-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px}
+.import-card .ic-label{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.import-card input[type=text]{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);outline:none;font-weight:600}
+.import-card input[type=text]:focus{border-color:var(--accent)}
+.import-card textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 11px;color:var(--text);outline:none;resize:vertical;min-height:150px;font-family:'SF Mono',Consolas,monospace;font-size:11.5px;line-height:1.6}
+.import-card textarea:focus{border-color:var(--accent)}
+.ic-foot{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.ic-count{font-size:11px;color:var(--muted)}
+.ic-count b{color:var(--text)}
+
+.im-picker{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;display:flex;align-items:center;gap:14px;margin-top:16px;flex-wrap:wrap}
+.im-picker .lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.im-chip{padding:8px 14px;border-radius:8px;border:1px solid var(--border);background:var(--bg);font-size:12.5px;font-weight:600;color:var(--muted);cursor:pointer;transition:all .12s}
+.im-chip:hover{border-color:var(--accent)}
+.im-chip.on{background:rgba(79,142,247,.12);border-color:var(--accent);color:var(--accent)}
+.im-chip.soon{opacity:.4;cursor:not-allowed}
+.im-fields-preview{font-size:11px;color:var(--muted);margin-left:auto}
+
+.btn{background:var(--accent);color:#fff;border:none;border-radius:8px;padding:11px 18px;font-size:13px;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .12s}
+.btn:hover{background:#3d7de6}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.secondary{background:var(--surface2);color:var(--text);border:1px solid var(--border)}
+.btn.secondary:hover{background:var(--border)}
+.btn.small{padding:7px 12px;font-size:12px}
+.generate-row{display:flex;justify-content:center;margin-top:22px}
+
+/* ── RESULT ── */
+#resultSection{display:none}
+#resultSection.show{display:block}
+.summary-bar{display:flex;align-items:center;gap:16px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 20px;margin-bottom:20px;flex-wrap:wrap}
+.grade{display:flex;align-items:center;gap:12px}
+.grade-ring{width:52px;height:52px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex-shrink:0;background:conic-gradient(var(--green) calc(var(--pct) * 1%), var(--surface2) 0)}
+.grade-ring span{width:40px;height:40px;border-radius:50%;background:var(--surface);display:flex;align-items:center;justify-content:center}
+.grade-text{line-height:1.35}
+.grade-text b{font-size:14px}
+.grade-text div{font-size:11.5px;color:var(--muted)}
+.summary-spacer{flex:1}
+.view-toggle{display:flex;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:3px;gap:2px}
+.view-toggle button{background:none;border:none;color:var(--muted);padding:7px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer}
+.view-toggle button.on{background:var(--accent);color:#fff}
+
+/* ── TECHNICAL CANVAS ── */
+.canvas-wrap{position:relative;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;overflow:hidden}
+.canvas{position:relative;display:flex;gap:64px;z-index:2}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;gap:8px}
+.col-head{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px;display:flex;align-items:center;gap:8px}
+.col-head .dot{width:7px;height:7px;border-radius:50%}
+.field-row{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:12.5px;cursor:pointer;transition:border-color .12s,background .12s;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.field-row:hover{border-color:var(--accent)}
+.field-row.active{border-color:var(--accent);background:rgba(79,142,247,.09)}
+.field-row .fname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.field-row .ftype{font-size:10px;color:var(--muted);flex-shrink:0}
+.field-row.unmapped{border-style:dashed;opacity:.75}
+.field-row .conf-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cg{background:var(--green)}.cy{background:var(--yellow)}.cr{background:var(--muted)}
+.extra-hint{font-size:10.5px;color:var(--muted);padding:6px 2px 0;line-height:1.5}
+svg.overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.overlay path{fill:none;stroke-width:1.6;transition:stroke-width .12s,opacity .12s}
+.overlay path.dim{opacity:.15}
+.overlay path.hi{stroke-width:2.6}
+
+.detail-panel{margin-top:18px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px 16px;font-size:12.5px;display:none}
+.detail-panel.show{display:block}
+.detail-panel .dp-title{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.trace{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.trace .tv{background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-family:'SF Mono',Consolas,monospace;font-size:11.5px}
+.trace .arrow{color:var(--muted)}
+.transform-badge{font-size:10px;background:rgba(168,85,247,.12);color:var(--purple);border:1px solid rgba(168,85,247,.3);padding:2px 8px;border-radius:99px;margin-left:6px}
+
+/* ── EXPORT ── */
+.export-toggle-row{display:flex;justify-content:flex-end;margin-top:14px;gap:8px}
+#exportPanel{display:none;margin-top:14px;background:var(--bg);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+#exportPanel.show{display:block}
+#exportPanel .ep-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);background:var(--surface2)}
+#exportPanel .ep-head span{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+#exportPanel pre{margin:0;padding:16px;font-size:11.5px;line-height:1.6;overflow:auto;max-height:320px;color:#c9d4e8}
+
+/* ── SALES VIEW ── */
+#salesView{display:none}
+#salesView.show{display:block}
+.sales-flow{display:flex;align-items:center;justify-content:center;gap:22px;padding:40px 20px;flex-wrap:wrap}
+.sales-box{background:var(--bg);border:1px solid var(--border);border-radius:14px;padding:26px 30px;text-align:center;min-width:180px}
+.sales-box .sb-icon{font-size:26px;margin-bottom:10px}
+.sales-box .sb-name{font-weight:700;font-size:14px;margin-bottom:4px}
+.sales-box .sb-sub{font-size:11px;color:var(--muted)}
+.sales-box.mid{border-color:var(--accent);background:rgba(79,142,247,.08)}
+.sales-arrow{font-size:22px;color:var(--muted)}
+.sales-pct{text-align:center;padding:0 0 30px}
+.sales-pct .num{font-size:52px;font-weight:800;color:var(--green);line-height:1}
+.sales-pct .lbl{font-size:13px;color:var(--muted);margin-top:6px}
+.sales-points{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;max-width:760px;margin:0 auto;padding-bottom:10px}
+.sales-point{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:16px}
+.sales-point .sp-t{font-weight:700;font-size:13px;margin-bottom:4px}
+.sales-point .sp-d{font-size:11.5px;color:var(--muted);line-height:1.5}
+
+@media (max-width:860px){
+  .import-grid{grid-template-columns:1fr}
+  .canvas{flex-direction:column;gap:28px}
+  .sales-points{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="tb-icon">iC</div>
+  <div class="tb-titles">
+    <div class="tb-name">iCore</div>
+    <div class="tb-sub">Integration Portal</div>
+  </div>
+  <div class="tb-spacer"></div>
+  <div class="tb-module">Mapping Engine · POC</div>
+</div>
+
+<div class="shell">
+
+  <!-- STEP 1: IMPORT -->
+  <div class="section">
+    <div class="stitle">Steg 1–2</div>
+    <div class="step-title">Källa, mål och mellanformat</div>
+    <div class="step-desc">Klistra in schemat för käll- och målsystemet (samma fältstruktur som i er swagger.json). Ingen kod skrivs här — motorn tolkar strukturen direkt.</div>
+
+    <div class="import-grid">
+      <div class="import-card">
+        <div class="ic-label">Källsystem</div>
+        <input type="text" id="sourceName" value="Ordersystem A (REST)"/>
+        <textarea id="sourceSchema" spellcheck="false"></textarea>
+        <div class="ic-foot">
+          <div class="ic-count">Fält hittade: <b id="sourceCount">–</b></div>
+          <button class="btn secondary small" onclick="loadExample('source')">Ladda exempel</button>
+        </div>
+      </div>
+      <div class="import-card">
+        <div class="ic-label">Målsystem</div>
+        <input type="text" id="targetName" value="TMS-system B (REST)"/>
+        <textarea id="targetSchema" spellcheck="false"></textarea>
+        <div class="ic-foot">
+          <div class="ic-count">Fält hittade: <b id="targetCount">–</b></div>
+          <button class="btn secondary small" onclick="loadExample('target')">Ladda exempel</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="im-picker">
+      <div class="lbl">IM-modell</div>
+      <div class="im-chip on" id="imChipOrder" onclick="selectIM('order')">📦 Order</div>
+      <div class="im-chip soon">🚚 Sändning (kommer snart)</div>
+      <div class="im-chip soon">🧾 Faktura (kommer snart)</div>
+      <div class="im-fields-preview" id="imPreview"></div>
+    </div>
+
+    <div class="generate-row">
+      <button class="btn" id="generateBtn" onclick="generateMapping()">Generera mappning →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: RESULT -->
+  <div class="section" id="resultSection">
+    <div class="stitle">Steg 3</div>
+    <div class="step-title">Mappning &amp; visualisering</div>
+    <div class="step-desc">AI:n har föreslagit mappningar mot IM-modellen på båda sidor. Klicka ett fält för att se hur ett exempelvärde flödar genom kedjan.</div>
+
+    <div class="summary-bar">
+      <div class="grade">
+        <div class="grade-ring" id="gradeRing" style="--pct:0"><span id="gradeNum">–</span></div>
+        <div class="grade-text">
+          <b id="gradeHeadline">–</b>
+          <div id="gradeSub">–</div>
+        </div>
+      </div>
+      <div class="summary-spacer"></div>
+      <div class="view-toggle">
+        <button id="viewTechBtn" class="on" onclick="setView('tech')">Teknisk vy</button>
+        <button id="viewSalesBtn" onclick="setView('sales')">Säljvy</button>
+      </div>
+    </div>
+
+    <!-- TECHNICAL VIEW -->
+    <div id="techView">
+      <div class="canvas-wrap">
+        <div class="canvas" id="canvas">
+          <svg class="overlay" id="overlay"></svg>
+          <div class="col" id="colSource">
+            <div class="col-head"><span class="dot" style="background:var(--accent)"></span><span id="colSourceLabel">Källa</span></div>
+          </div>
+          <div class="col" id="colIM">
+            <div class="col-head"><span class="dot" style="background:var(--purple)"></span>IM · Order</div>
+          </div>
+          <div class="col" id="colTarget">
+            <div class="col-head"><span class="dot" style="background:var(--accent)"></span><span id="colTargetLabel">Mål</span></div>
+          </div>
+        </div>
+        <div class="detail-panel" id="detailPanel">
+          <div class="dp-title">Exempelvärde genom kedjan</div>
+          <div class="trace" id="traceRow"></div>
+        </div>
+      </div>
+      <div class="export-toggle-row">
+        <button class="btn secondary small" id="exportToggleBtn" onclick="toggleExport()">Visa mappningsregel (JSON)</button>
+      </div>
+      <div id="exportPanel">
+        <div class="ep-head"><span>Mappningsregel — data, inte kod</span><button class="btn secondary small" onclick="copyExport()">Kopiera</button></div>
+        <pre id="exportCode" class="mono"></pre>
+      </div>
+    </div>
+
+    <!-- SALES VIEW -->
+    <div id="salesView">
+      <div class="canvas-wrap">
+        <div class="sales-pct">
+          <div class="num" id="salesPct">–</div>
+          <div class="lbl">automatiskt mappat, utan en rad kod</div>
+        </div>
+        <div class="sales-flow">
+          <div class="sales-box"><div class="sb-icon">🗄️</div><div class="sb-name" id="salesSourceName">Källsystem</div><div class="sb-sub">REST / Swagger</div></div>
+          <div class="sales-arrow">→</div>
+          <div class="sales-box mid"><div class="sb-icon">📦</div><div class="sb-name">iCore IM</div><div class="sb-sub">Standardformat</div></div>
+          <div class="sales-arrow">→</div>
+          <div class="sales-box"><div class="sb-icon">🗄️</div><div class="sb-name" id="salesTargetName">Målsystem</div><div class="sb-sub">REST / Swagger</div></div>
+        </div>
+        <div class="sales-points">
+          <div class="sales-point"><div class="sp-t">Ingen kod skriven</div><div class="sp-d">Mappningen är en regel, inte ett skript — ingen XSLT att underhålla.</div></div>
+          <div class="sales-point"><div class="sp-t">Klar spec på minuter</div><div class="sp-d">Det som tog dagar att dokumentera manuellt syns här direkt.</div></div>
+          <div class="sales-point"><div class="sp-t">Återanvänds per system</div><div class="sp-d">Nästa system mappas bara mot IM — aldrig mot alla befintliga.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== IM MODEL ===================== */
+const IM_ORDER = {
+  id: 'string',
+  customerName: 'string',
+  date: 'string',
+  deliveryAddress: { street: 'string', postalCode: 'string', city: 'string' },
+  lines: [{ sku: 'string', quantity: 'number', unitPrice: 'number' }],
+};
+
+const EXAMPLES = {
+  source: {
+    orderRef: 'string',
+    customerName: 'string',
+    orderDate: 'string',
+    shipTo: { street: 'string', zip: 'string', city: 'string' },
+    items: [{ itemSku: 'string', qty: 'number', price: 'number', discountCode: 'string' }],
+  },
+  target: {
+    ordernummer: 'string',
+    kund: { namn: 'string' },
+    datum: 'string',
+    leverans: { gata: 'string', postnummer: 'string', ort: 'string' },
+    rader: [{ artikelnr: 'string', antal: 'number', styckpris: 'number', viktKg: 'number' }],
+  },
+};
+
+const SAMPLE_VALUES = {
+  orderRef: 'SE-100293', customerName: 'Nordic Lager AB', orderDate: '2026-07-11',
+  'shipTo.street': 'Hamngatan 4', 'shipTo.zip': '41103', 'shipTo.city': 'Göteborg',
+  'items[].itemSku': 'ART-4471', 'items[].qty': '12', 'items[].price': '249.00', 'items[].discountCode': 'SOMMAR10',
+};
+
+/* ===================== TOKENIZE + MATCH ===================== */
+const SYN = {
+  id:['id','ref','nummer','number','num'],
+  customer:['customer','kund','client'],
+  name:['name','namn'],
+  date:['date','datum'],
+  delivery:['delivery','leverans','ship','shipto','shipping','address','adress'],
+  street:['street','gata'],
+  postal:['zip','postnummer','postal','postcode'],
+  city:['city','ort','stad'],
+  line:['items','rader','lines','rows'],
+  sku:['sku','artikelnr','itemsku','artikel','item'],
+  qty:['qty','quantity','antal'],
+  price:['price','pris','styckpris','unitprice'],
+};
+const TOKEN_TO_GROUP = {};
+Object.entries(SYN).forEach(([g, words]) => words.forEach(w => TOKEN_TO_GROUP[w] = g));
+
+// Real fields are often compound words with no delimiter to split on
+// ("ordernummer", "styckpris") — an exact-word dictionary lookup misses
+// those. Falling back to a substring scan against the same synonym list
+// lets the matcher generalize instead of needing every compound spelled
+// out by hand.
+function groupFor(token) {
+  if (TOKEN_TO_GROUP[token]) return TOKEN_TO_GROUP[token];
+  for (const [group, words] of Object.entries(SYN)) {
+    for (const w of words) {
+      if (w.length >= 3 && (token.includes(w) || w.includes(token))) return group;
+    }
+  }
+  return token;
+}
+
+function tokenize(path) {
+  return path
+    .replace(/\[\]/g, '')
+    .split(/[.\_]/)
+    .flatMap(seg => seg.replace(/([a-z])([A-Z])/g, '$1 $2').toLowerCase().split(' '))
+    .filter(Boolean)
+    .map(groupFor);
+}
+
+function score(pathA, pathB) {
+  const a = new Set(tokenize(pathA));
+  const b = new Set(tokenize(pathB));
+  const inter = [...a].filter(t => b.has(t)).length;
+  const union = new Set([...a, ...b]).size;
+  let s = union ? inter / union : 0;
+  const arrA = pathA.includes('[]'), arrB = pathB.includes('[]');
+  if (arrA === arrB) s += 0.08; else s -= 0.15;
+  return Math.max(0, Math.min(1, s));
+}
+
+/* ===================== SCHEMA FLATTENING ===================== */
+function flatten(obj, prefix = '') {
+  let out = [];
+  for (const key in obj) {
+    const val = obj[key];
+    const path = prefix ? `${prefix}.${key}` : key;
+    if (Array.isArray(val)) {
+      out = out.concat(flatten(val[0], `${path}[]`));
+    } else if (typeof val === 'object' && val !== null) {
+      out = out.concat(flatten(val, path));
+    } else {
+      out.push({ path, type: val });
+    }
+  }
+  return out;
+}
+
+/* ===================== STATE ===================== */
+let state = { sourceFields: [], targetFields: [], imFields: [], matches: [], sourceName: '', targetName: '' };
+
+function loadExample(which) {
+  document.getElementById(which === 'source' ? 'sourceSchema' : 'targetSchema').value =
+    JSON.stringify(EXAMPLES[which], null, 2);
+  parseSchema(which);
+}
+
+function parseSchema(which) {
+  const ta = document.getElementById(which === 'source' ? 'sourceSchema' : 'targetSchema');
+  const countEl = document.getElementById(which === 'source' ? 'sourceCount' : 'targetCount');
+  try {
+    const obj = JSON.parse(ta.value || '{}');
+    const fields = flatten(obj);
+    countEl.textContent = fields.length;
+    return fields;
+  } catch (e) {
+    countEl.textContent = 'ogiltig JSON';
+    return [];
+  }
+}
+
+function selectIM(kind) {
+  document.getElementById('imChipOrder').classList.add('on');
+  renderIMPreview();
+}
+function renderIMPreview() {
+  const fields = flatten(IM_ORDER);
+  document.getElementById('imPreview').textContent = fields.length + ' fält i IM-modellen';
+}
+
+/* ===================== GENERATE MAPPING ===================== */
+function generateMapping() {
+  const sourceFields = parseSchema('source');
+  const targetFields = parseSchema('target');
+  if (!sourceFields.length || !targetFields.length) {
+    alert('Klistra in eller ladda ett exempel för både källa och mål först.');
+    return;
+  }
+  const imFields = flatten(IM_ORDER);
+
+  const matches = imFields.map(im => {
+    let bestSrc = { field: null, score: 0 };
+    sourceFields.forEach(sf => { const s = score(sf.path, im.path); if (s > bestSrc.score) bestSrc = { field: sf, score: s }; });
+    let bestTgt = { field: null, score: 0 };
+    targetFields.forEach(tf => { const s = score(tf.path, im.path); if (s > bestTgt.score) bestTgt = { field: tf, score: s }; });
+    return { im, source: bestSrc, target: bestTgt };
+  });
+
+  state = {
+    sourceFields, targetFields, imFields, matches,
+    sourceName: document.getElementById('sourceName').value || 'Källsystem',
+    targetName: document.getElementById('targetName').value || 'Målsystem',
+  };
+
+  renderResult();
+  document.getElementById('resultSection').classList.add('show');
+  document.getElementById('resultSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function tier(s) { return s >= 0.6 ? 'hi' : s >= 0.35 ? 'mid' : 'lo'; }
+
+/* ===================== RENDER: TECHNICAL VIEW ===================== */
+function renderResult() {
+  document.getElementById('colSourceLabel').textContent = state.sourceName;
+  document.getElementById('colTargetLabel').textContent = state.targetName;
+  document.getElementById('salesSourceName').textContent = state.sourceName;
+  document.getElementById('salesTargetName').textContent = state.targetName;
+
+  const colSource = document.getElementById('colSource');
+  const colIM = document.getElementById('colIM');
+  const colTarget = document.getElementById('colTarget');
+  [colSource, colIM, colTarget].forEach(c => { while (c.children.length > 1) c.removeChild(c.lastChild); });
+
+  const usedSource = new Set(state.matches.filter(m => tier(m.source.score) !== 'lo').map(m => m.source.field?.path));
+  const usedTarget = new Set(state.matches.filter(m => tier(m.target.score) !== 'lo').map(m => m.target.field?.path));
+
+  state.matches.forEach(m => {
+    const t = tier(Math.max(m.source.score, m.target.score));
+    const row = document.createElement('div');
+    row.className = 'field-row' + (t === 'lo' ? ' unmapped' : '');
+    row.id = 'im-' + cssSafe(m.im.path);
+    row.innerHTML = `<span class="fname">${m.im.path}</span><span class="conf-dot ${t === 'hi' ? 'cg' : t === 'mid' ? 'cy' : 'cr'}"></span>`;
+    row.onclick = () => inspect(m);
+    colIM.appendChild(row);
+  });
+
+  state.sourceFields.forEach(f => {
+    const row = document.createElement('div');
+    const mapped = usedSource.has(f.path);
+    row.className = 'field-row' + (mapped ? '' : ' unmapped');
+    row.id = 'src-' + cssSafe(f.path);
+    row.innerHTML = `<span class="fname">${f.path}</span><span class="ftype">${f.type}</span>`;
+    row.onclick = () => { const m = state.matches.find(x => x.source.field?.path === f.path); if (m) inspect(m); };
+    colSource.appendChild(row);
+  });
+  if (state.sourceFields.some(f => !usedSource.has(f.path))) {
+    const hint = document.createElement('div');
+    hint.className = 'extra-hint';
+    hint.textContent = 'Streckad = inget IM-fält matchar. Lägg till i IM-modellen vid behov.';
+    colSource.appendChild(hint);
+  }
+
+  state.targetFields.forEach(f => {
+    const row = document.createElement('div');
+    const mapped = usedTarget.has(f.path);
+    row.className = 'field-row' + (mapped ? '' : ' unmapped');
+    row.id = 'tgt-' + cssSafe(f.path);
+    row.innerHTML = `<span class="fname">${f.path}</span><span class="ftype">${f.type}</span>`;
+    row.onclick = () => { const m = state.matches.find(x => x.target.field?.path === f.path); if (m) inspect(m); };
+    colTarget.appendChild(row);
+  });
+  if (state.targetFields.some(f => !usedTarget.has(f.path))) {
+    const hint = document.createElement('div');
+    hint.className = 'extra-hint';
+    hint.textContent = 'Streckad = inget IM-fält matchar. Lägg till i IM-modellen vid behov.';
+    colTarget.appendChild(hint);
+  }
+
+  const total = state.matches.length;
+  const good = state.matches.filter(m => tier(m.source.score) !== 'lo' && tier(m.target.score) !== 'lo').length;
+  const pct = Math.round((good / total) * 100);
+  document.getElementById('gradeRing').style.setProperty('--pct', pct);
+  document.getElementById('gradeNum').textContent = pct + '%';
+  document.getElementById('gradeHeadline').textContent = `${good} av ${total} fält automatiskt mappade genomgående`;
+  document.getElementById('gradeSub').textContent = (total - good) > 0
+    ? `${total - good} fält behöver granskas manuellt`
+    : 'Allt mappat — redo att exportera';
+  document.getElementById('salesPct').textContent = pct + '%';
+
+  document.getElementById('detailPanel').classList.remove('show');
+  buildExport();
+  requestAnimationFrame(drawLines);
+}
+
+function cssSafe(p) { return p.replace(/[^a-zA-Z0-9]/g, '_'); }
+
+function inspect(m) {
+  document.querySelectorAll('.field-row').forEach(r => r.classList.remove('active'));
+  document.querySelectorAll('.overlay path').forEach(p => p.classList.add('dim'));
+  if (m.source.field) document.getElementById('src-' + cssSafe(m.source.field.path))?.classList.add('active');
+  document.getElementById('im-' + cssSafe(m.im.path))?.classList.add('active');
+  if (m.target.field) document.getElementById('tgt-' + cssSafe(m.target.field.path))?.classList.add('active');
+  document.querySelectorAll(`.overlay path[data-im="${cssSafe(m.im.path)}"]`).forEach(p => { p.classList.remove('dim'); p.classList.add('hi'); });
+
+  const panel = document.getElementById('detailPanel');
+  panel.classList.add('show');
+  const srcVal = m.source.field ? (SAMPLE_VALUES[m.source.field.path] || '—') : '—';
+  const transform = m.im.path === 'date' ? '<span class="transform-badge">format: ISO-8601</span>' : '';
+  document.getElementById('traceRow').innerHTML = `
+    <div class="tv">${m.source.field ? m.source.field.path : 'inget källfält'}<br><span style="color:var(--muted)">${srcVal}</span></div>
+    <div class="arrow">→</div>
+    <div class="tv">${m.im.path}${transform}<br><span style="color:var(--muted)">${srcVal}</span></div>
+    <div class="arrow">→</div>
+    <div class="tv">${m.target.field ? m.target.field.path : 'inget målfält'}<br><span style="color:var(--muted)">${srcVal}</span></div>
+  `;
+}
+
+function drawLines() {
+  const svg = document.getElementById('overlay');
+  const wrap = document.getElementById('canvas');
+  const wrapRect = wrap.getBoundingClientRect();
+  svg.setAttribute('width', wrapRect.width);
+  svg.setAttribute('height', wrapRect.height);
+  svg.innerHTML = '';
+
+  state.matches.forEach(m => {
+    const imEl = document.getElementById('im-' + cssSafe(m.im.path));
+    if (!imEl) return;
+    const imRect = imEl.getBoundingClientRect();
+    const imY = imRect.top - wrapRect.top + imRect.height / 2;
+    const imLeftX = imRect.left - wrapRect.left;
+    const imRightX = imRect.right - wrapRect.left;
+
+    if (m.source.field && tier(m.source.score) !== 'lo') {
+      const el = document.getElementById('src-' + cssSafe(m.source.field.path));
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const y = r.top - wrapRect.top + r.height / 2;
+        const x = r.right - wrapRect.left;
+        drawPath(svg, x, y, imLeftX, imY, colorFor(tier(m.source.score)), m.im.path);
+      }
+    }
+    if (m.target.field && tier(m.target.score) !== 'lo') {
+      const el = document.getElementById('tgt-' + cssSafe(m.target.field.path));
+      if (el) {
+        const r = el.getBoundingClientRect();
+        const y = r.top - wrapRect.top + r.height / 2;
+        const x = r.left - wrapRect.left;
+        drawPath(svg, imRightX, imY, x, y, colorFor(tier(m.target.score)), m.im.path);
+      }
+    }
+  });
+}
+function colorFor(t) { return t === 'hi' ? '#22c55e' : t === 'mid' ? '#f59e0b' : '#64748b'; }
+function drawPath(svg, x1, y1, x2, y2, color, imKey) {
+  const midX = (x1 + x2) / 2;
+  const d = `M ${x1} ${y1} C ${midX} ${y1}, ${midX} ${y2}, ${x2} ${y2}`;
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('stroke', color);
+  path.setAttribute('data-im', cssSafe(imKey));
+  svg.appendChild(path);
+}
+window.addEventListener('resize', () => { if (state.matches.length) drawLines(); });
+
+/* ===================== EXPORT ===================== */
+function buildExport() {
+  const rules = state.matches.map(m => ({
+    im: m.im.path,
+    source: m.source.field ? m.source.field.path : null,
+    target: m.target.field ? m.target.field.path : null,
+    confidence: { source: round2(m.source.score), target: round2(m.target.score) },
+    transform: m.im.path === 'date' ? 'date:iso8601' : null,
+  }));
+  document.getElementById('exportCode').textContent = JSON.stringify(rules, null, 2);
+}
+function round2(n) { return Math.round(n * 100) / 100; }
+function toggleExport() {
+  const p = document.getElementById('exportPanel');
+  p.classList.toggle('show');
+  document.getElementById('exportToggleBtn').textContent = p.classList.contains('show') ? 'Dölj mappningsregel' : 'Visa mappningsregel (JSON)';
+}
+function copyExport() {
+  const text = document.getElementById('exportCode').textContent;
+  const ta = document.createElement('textarea');
+  ta.value = text; document.body.appendChild(ta); ta.select();
+  try { document.execCommand('copy'); } catch (e) {}
+  navigator.clipboard?.writeText(text).catch(() => {});
+  document.body.removeChild(ta);
+}
+
+/* ===================== VIEW TOGGLE ===================== */
+function setView(v) {
+  document.getElementById('viewTechBtn').classList.toggle('on', v === 'tech');
+  document.getElementById('viewSalesBtn').classList.toggle('on', v === 'sales');
+  document.getElementById('techView').style.display = v === 'tech' ? '' : 'none';
+  document.getElementById('salesView').classList.toggle('show', v === 'sales');
+  if (v === 'tech') requestAnimationFrame(drawLines);
+}
+
+/* ===================== INIT ===================== */
+renderIMPreview();
+loadExample('source');
+loadExample('target');
+</script>
+</body>
+</html>
