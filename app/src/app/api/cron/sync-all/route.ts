@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
+import { sendPushToUser } from '@/lib/push'
 
 export const maxDuration = 60 // Vercel Hobby plan's hard cap — every user's sync below runs in parallel to fit inside it
 
@@ -51,9 +52,27 @@ export async function GET(request: NextRequest) {
     return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
   })
 
+  // One notification per user summarizing everything the whole run found for
+  // them, not one per source — nobody wants two separate pings because they
+  // happen to have both Garmin and Concept2 connected.
+  const newPassesByUser = new Map<string, number>()
+  for (const r of [...garmin, ...concept2]) {
+    if (r.ok && r.synced) newPassesByUser.set(r.userId, (newPassesByUser.get(r.userId) ?? 0) + r.synced)
+  }
+  await Promise.allSettled(
+    [...newPassesByUser.entries()].map(([userId, count]) =>
+      sendPushToUser(supabase, userId, {
+        title: count === 1 ? 'Nytt pass synkat' : `${count} nya pass synkade`,
+        body: count === 1 ? 'Ett nytt pass hämtades från Garmin/Concept2 idag.' : `${count} nya pass hämtades från Garmin/Concept2 idag.`,
+        url: '/dashboard/passlogg',
+      })
+    )
+  )
+
   return NextResponse.json({
     ranAt: new Date().toISOString(),
     garmin: { total: garmin.length, ok: garmin.filter(r => r.ok).length, results: garmin },
     concept2: { total: concept2.length, ok: concept2.filter(r => r.ok).length, results: concept2 },
+    notified: newPassesByUser.size,
   })
 }

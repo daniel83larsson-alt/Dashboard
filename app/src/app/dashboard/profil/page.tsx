@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import ProfileForm from '@/components/ProfileForm'
 import GoalsCard from '@/components/GoalsCard'
 import FriendsCard from '@/components/FriendsCard'
+import NotificationSettings from '@/components/NotificationSettings'
 
 export default async function ProfilPage({
   searchParams,
@@ -53,6 +54,9 @@ export default async function ProfilPage({
           Kunde inte ansluta Concept2. Försök igen.
         </div>
       )}
+      <div className="mb-4">
+        <NotificationSettings />
+      </div>
       <div className="mb-4">
         <GoalsCard goals={goals ?? []} savedOverview={savedOverview} />
       </div>

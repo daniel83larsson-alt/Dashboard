@@ -709,3 +709,19 @@ grant execute on function public.unsubscribe_newsletter(uuid) to anon, authentic
 -- Garmin/Concept2-synced passes that don't go through this calculator.
 alter table public.profiles add column if not exists weight_kg numeric;
 alter table public.activities add column if not exists calories integer;
+
+-- Web Push subscriptions (one row per device/browser a user has enabled
+-- notifications on) — needed for the four notification triggers Daniel
+-- asked for: kudos, new record, streak reminder, daily sync results.
+create table public.push_subscriptions (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade,
+  endpoint text not null unique,
+  p256dh text not null,
+  auth text not null,
+  created_at timestamptz default now()
+);
+alter table public.push_subscriptions enable row level security;
+create policy "Users manage own push subscriptions" on public.push_subscriptions
+  for all using (auth.uid() = user_id);
+create index push_subscriptions_user on public.push_subscriptions(user_id);
