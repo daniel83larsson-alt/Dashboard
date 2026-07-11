@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
 
-export const maxDuration = 300 // Vercel cron allows longer than the default 10s — one run covers every connected user
+export const maxDuration = 60 // Vercel Hobby plan's hard cap — every user's sync below runs in parallel to fit inside it
 
 // Runs once a day (see vercel.json) so activity + wellness data stays fresh
 // even for users who don't open the app that day, instead of only syncing
@@ -27,29 +27,29 @@ export async function GET(request: NextRequest) {
 
   const emailByUserId = new Map((authUsers?.users ?? []).map(u => [u.id, u.email]))
 
-  const garmin: Array<{ userId: string; ok: boolean; error?: string; synced?: number }> = []
-  for (const row of garminRows ?? []) {
-    try {
-      const result = await syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id))
-      garmin.push({ userId: row.user_id, ok: true, synced: result.synced })
-    } catch (err) {
-      // A not-configured/expired-login failure for one user must never stop
-      // the rest of the run — each user's sync is fully independent.
-      const isConfigError = err instanceof GarminNotConfiguredError
-      garmin.push({ userId: row.user_id, ok: false, error: isConfigError ? 'not_configured' : (err instanceof Error ? err.message : String(err)) })
-    }
-  }
+  // Each user's sync hits a different Garmin/Concept2 account, so there's no
+  // shared rate limit forcing these to run one at a time — running them in
+  // parallel is what keeps the whole job inside Vercel Hobby's 60s cap as
+  // the user count grows, instead of stacking each user's sync time.
+  const garminSettled = await Promise.allSettled(
+    (garminRows ?? []).map(row => syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id)))
+  )
+  const garmin = garminSettled.map((r, i) => {
+    const userId = (garminRows ?? [])[i].user_id
+    if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
+    const isConfigError = r.reason instanceof GarminNotConfiguredError
+    return { userId, ok: false, error: isConfigError ? 'not_configured' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
+  })
 
-  const concept2: Array<{ userId: string; ok: boolean; error?: string; synced?: number }> = []
-  for (const row of c2Rows ?? []) {
-    try {
-      const result = await syncConcept2ForUser(supabase, row.user_id)
-      concept2.push({ userId: row.user_id, ok: true, synced: result.synced })
-    } catch (err) {
-      const isConfigError = err instanceof Concept2NotConnectedError
-      concept2.push({ userId: row.user_id, ok: false, error: isConfigError ? 'not_connected' : (err instanceof Error ? err.message : String(err)) })
-    }
-  }
+  const c2Settled = await Promise.allSettled(
+    (c2Rows ?? []).map(row => syncConcept2ForUser(supabase, row.user_id))
+  )
+  const concept2 = c2Settled.map((r, i) => {
+    const userId = (c2Rows ?? [])[i].user_id
+    if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
+    const isConfigError = r.reason instanceof Concept2NotConnectedError
+    return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
+  })
 
   return NextResponse.json({
     ranAt: new Date().toISOString(),
