@@ -701,3 +701,11 @@ as $$
 $$;
 revoke all on function public.unsubscribe_newsletter(uuid) from public;
 grant execute on function public.unsubscribe_newsletter(uuid) to anon, authenticated;
+
+-- Manual pass logging ("Logga ditt pass") — needs body weight for the
+-- MET-based calorie estimate, and activities needs somewhere to store the
+-- resulting number. Both nullable: weight is optional (falls back to a
+-- population-average estimate), calories stays empty for
+-- Garmin/Concept2-synced passes that don't go through this calculator.
+alter table public.profiles add column if not exists weight_kg numeric;
+alter table public.activities add column if not exists calories integer;

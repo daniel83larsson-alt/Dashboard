@@ -44,6 +44,16 @@ export function isRunOrWalk(sport: string): boolean {
   return sport === 'Run' || sport === 'TrailRun' || sport === 'Walk' || sport === 'Hike'
 }
 
+// Sports where distance is a meaningful, normally-tracked number — used by
+// the manual pass logger to only ask for distance when it makes sense
+// (nobody measures km of weight training or yoga).
+const DISTANCE_SPORTS = new Set([
+  'Run', 'TrailRun', 'Ride', 'VirtualRide', 'Walk', 'Hike', 'Swim', 'Rowing', 'NordicSki', 'AlpineSki',
+])
+export function usesDistance(sport: string): boolean {
+  return DISTANCE_SPORTS.has(sport)
+}
+
 // Rounds to whole seconds and carries into minutes so e.g. 119.6s renders as
 // "2:00" rather than "1:60".
 export function fmtMinSec(totalSeconds: number): string {

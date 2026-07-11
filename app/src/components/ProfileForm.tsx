@@ -18,6 +18,7 @@ type Profile = {
   home_equipment?: string[] | null
   selected_sports?: string[] | null
   daily_step_goal?: number | null
+  weight_kg?: number | null
 }
 
 
@@ -55,6 +56,7 @@ export default function ProfileForm({
   const [equipment, setEquipment] = useState<string[]>(profile?.home_equipment ?? [])
   const [sports, setSports] = useState<string[]>(profile?.selected_sports ?? [])
   const [stepGoal, setStepGoal] = useState(profile?.daily_step_goal ?? 10000)
+  const [weightKg, setWeightKg] = useState(profile?.weight_kg?.toString() ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -72,7 +74,15 @@ export default function ProfileForm({
     setSaving(true)
     const supabase = createSupabaseClient()
 
-    await supabase.from('profiles').update({ name, llm_provider: provider, home_equipment: equipment, selected_sports: sports, daily_step_goal: stepGoal }).eq('id', profile?.id ?? '')
+    const parsedWeight = parseFloat(weightKg)
+    await supabase.from('profiles').update({
+      name,
+      llm_provider: provider,
+      home_equipment: equipment,
+      selected_sports: sports,
+      daily_step_goal: stepGoal,
+      weight_kg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
+    }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
       await fetch('/api/profile/save-llm-key', {
@@ -196,6 +206,21 @@ export default function ProfileForm({
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
           <p className="text-muted text-xs mt-1.5">Styr steg-progressbaren och steg-streaken på Översikt.</p>
+        </div>
+        <div>
+          <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>
+          <input
+            type="number"
+            min={20}
+            max={300}
+            step={0.5}
+            inputMode="decimal"
+            value={weightKg}
+            onChange={e => setWeightKg(e.target.value)}
+            placeholder="t.ex. 78"
+            className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+          />
+          <p className="text-muted text-xs mt-1.5">Används för att räkna ut kalorier när du loggar ett pass manuellt.</p>
         </div>
       </div>
 

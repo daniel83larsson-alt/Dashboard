@@ -12,6 +12,7 @@ const PATHS: Record<string, string> = {
   stretch: 'M12 2v6M9 5l3 3 3-3M12 22v-6M9 19l3-3 3 3M2 12h6M5 9l-3 3 3 3M16 12h6M19 9l3 3-3 3',
   trophy: 'M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4zM7 5H4v2a3 3 0 003 3M17 5h3v2a3 3 0 01-3 3',
   route: 'M5 20l2-9 5 3 5-9 2 9M5 20a2 2 0 100-4 2 2 0 000 4zM19 11a2 2 0 100-4 2 2 0 000 4z',
+  plus: 'M12 8v8M8 12h8',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {
@@ -19,6 +20,13 @@ export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string;
     return (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
         <circle cx="12" cy="12" r="10" /><path d={PATHS.insight} />
+      </svg>
+    )
+  }
+  if (icon === 'plus') {
+    return (
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className={className}>
+        <circle cx="12" cy="12" r="9" /><path d={PATHS.plus} />
       </svg>
     )
   }
