@@ -725,3 +725,36 @@ alter table public.push_subscriptions enable row level security;
 create policy "Users manage own push subscriptions" on public.push_subscriptions
   for all using (auth.uid() = user_id);
 create index push_subscriptions_user on public.push_subscriptions(user_id);
+
+-- SÄKERHETSFIX: connected_accounts (skydd mot att koppla någon annans
+-- redan anslutna Garmin/Concept2-konto) infördes 5 juli, men konton som
+-- kopplades INNAN dess registrerades aldrig i den — så systemet hade ingen
+-- aning om att t.ex. Daniels egen Garmin-inloggning redan var upptagen.
+-- Det gjorde det möjligt för en ny användare att av misstag koppla samma
+-- Garmin-konto till sitt eget DL Trainer-konto utan att bli stoppad
+-- (upptäckt när Connys nya konto fick Daniels riktiga Garmin-data).
+-- Den här funktionen låter admin registrera en redan verifierad, befintlig
+-- koppling i efterhand — skiljer sig från claim_connected_account() genom
+-- att den INTE kräver att målanvändaren är inloggad (körs av admin, en gång,
+-- för konton som kopplades innan skyddet fanns) och aldrig hanterar själva
+-- lösenordet/token, bara det redan verifierade external_id.
+create or replace function public.admin_backfill_connected_account(
+  target_user_id uuid, p_provider text, p_external_id text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  insert into public.connected_accounts (provider, external_id, user_id)
+  values (p_provider, lower(p_external_id), target_user_id)
+  on conflict (provider, external_id) do nothing;
+end;
+$$;
+revoke all on function public.admin_backfill_connected_account(uuid, text, text) from public;
+grant execute on function public.admin_backfill_connected_account(uuid, text, text) to authenticated;
