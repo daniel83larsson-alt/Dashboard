@@ -1,5 +1,5 @@
 import { requireCompanyContext } from "@/lib/company";
-import type { Voucher, VoucherLine } from "@/lib/supabase-types";
+import type { BasAccount, Voucher, VoucherLine } from "@/lib/supabase-types";
 
 export const dynamic = "force-dynamic";
 
@@ -21,12 +21,16 @@ export default async function OversiktPage() {
     .toISOString()
     .slice(0, 10);
 
-  const { data: monthVouchers } = await supabase
-    .from("vouchers")
-    .select("*, voucher_lines(*)")
-    .eq("fiscal_year_id", fiscalYear.id)
-    .gte("voucher_date", monthStart)
-    .lte("voucher_date", monthEnd);
+  const [{ data: monthVouchers }, { data: accounts }] = await Promise.all([
+    supabase
+      .from("vouchers")
+      .select("*, voucher_lines(*)")
+      .eq("fiscal_year_id", fiscalYear.id)
+      .gte("voucher_date", monthStart)
+      .lte("voucher_date", monthEnd),
+    supabase.from("bas_accounts").select("*"),
+  ]);
+  const accountName = new Map(((accounts ?? []) as BasAccount[]).map((a) => [a.code, a.name]));
 
   // Revenue accounts (3xxx) normally grow on credit, expense accounts
   // (4-6xxx) normally grow on debit — but a correction voucher (see
@@ -37,13 +41,33 @@ export default async function OversiktPage() {
   // of returning to the original amount.
   let intakter = 0;
   let kostnader = 0;
+  const intaktByAccount = new Map<string, number>();
+  const kostnadByAccount = new Map<string, number>();
   for (const v of (monthVouchers ?? []) as (Voucher & { voucher_lines: VoucherLine[] })[]) {
     for (const line of v.voucher_lines) {
-      if (line.account_code.startsWith("3")) intakter += Number(line.credit) - Number(line.debit);
-      if (["4", "5", "6"].includes(line.account_code[0])) kostnader += Number(line.debit) - Number(line.credit);
+      if (line.account_code.startsWith("3")) {
+        const net = Number(line.credit) - Number(line.debit);
+        intakter += net;
+        intaktByAccount.set(line.account_code, (intaktByAccount.get(line.account_code) ?? 0) + net);
+      }
+      if (["4", "5", "6"].includes(line.account_code[0])) {
+        const net = Number(line.debit) - Number(line.credit);
+        kostnader += net;
+        kostnadByAccount.set(line.account_code, (kostnadByAccount.get(line.account_code) ?? 0) + net);
+      }
     }
   }
   const resultat = intakter - kostnader;
+
+  // Fully netted-out accounts (e.g. booked then corrected within the same
+  // month) shouldn't clutter the breakdown with a 0 kr line.
+  const toBreakdown = (m: Map<string, number>) =>
+    [...m.entries()]
+      .filter(([, net]) => Math.round(net) !== 0)
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .map(([code, net]) => ({ code, name: accountName.get(code) ?? code, net }));
+  const intaktBreakdown = toBreakdown(intaktByAccount);
+  const kostnadBreakdown = toBreakdown(kostnadByAccount);
 
   const { count: obehandlade } = await supabase
     .from("receipts")
@@ -66,10 +90,50 @@ export default async function OversiktPage() {
         <div className="card">
           <div className="k">Intäkter</div>
           <div className="v pos mono">{fmt(intakter)}</div>
+          {intaktBreakdown.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 11, color: "var(--muted)", cursor: "pointer" }}>
+                Visa konton ({intaktBreakdown.length})
+              </summary>
+              <div style={{ marginTop: 8 }}>
+                {intaktBreakdown.map((row) => (
+                  <div
+                    key={row.code}
+                    style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, padding: "4px 0" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>
+                      {row.code} — {row.name}
+                    </span>
+                    <span className="mono">{fmt(row.net)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
         <div className="card">
           <div className="k">Kostnader</div>
           <div className="v mono">{fmt(kostnader)}</div>
+          {kostnadBreakdown.length > 0 && (
+            <details style={{ marginTop: 10 }}>
+              <summary style={{ fontSize: 11, color: "var(--muted)", cursor: "pointer" }}>
+                Visa konton ({kostnadBreakdown.length})
+              </summary>
+              <div style={{ marginTop: 8 }}>
+                {kostnadBreakdown.map((row) => (
+                  <div
+                    key={row.code}
+                    style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 12, padding: "4px 0" }}
+                  >
+                    <span style={{ color: "var(--muted)" }}>
+                      {row.code} — {row.name}
+                    </span>
+                    <span className="mono">{fmt(row.net)}</span>
+                  </div>
+                ))}
+              </div>
+            </details>
+          )}
         </div>
         <div className="card">
           <div className="k">Resultat</div>
