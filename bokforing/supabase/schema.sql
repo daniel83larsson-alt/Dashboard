@@ -76,6 +76,7 @@ insert into bas_accounts (code, name, vat_default) values
   ('2611', 'Utgående moms 25%', null),
   ('2641', 'Ingående moms', null),
   ('3001', 'Försäljning tjänster', 25),
+  ('3002', 'Försäljning varor', 25),
   ('4010', 'Inköp av varor', 25),
   ('5010', 'Lokalhyra', 0),
   ('5020', 'El', 25),
