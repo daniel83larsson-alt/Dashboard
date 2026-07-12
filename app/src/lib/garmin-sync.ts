@@ -7,6 +7,7 @@ import {
   fetchGarminSteps,
   fetchGarminDayWellness,
   fetchGarminHrZones,
+  fetchGarminVo2max,
   mapActivityType,
 } from './garmin'
 import { decrypt } from './encrypt'
@@ -96,7 +97,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     ? (() => { try { return JSON.parse(activityCursorRaw) } catch { return { offset: 100, done: false } } })()
     : { offset: 100, done: false }
 
-  const [garminActivities, backfillActivities, restingHR, sleep, steps] = await Promise.all([
+  const [garminActivities, backfillActivities, restingHR, sleep, steps, vo2max] = await Promise.all([
     fetchGarminActivities(100, garminEmail, garminPassword),
     isAdminAccount || activityCursor.done
       ? Promise.resolve([])
@@ -104,7 +105,19 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     fetchGarminRestingHR(garminEmail, garminPassword),
     fetchGarminSleepFull(garminEmail, garminPassword),
     fetchGarminSteps(garminEmail, garminPassword),
+    fetchGarminVo2max(garminEmail, garminPassword),
   ])
+
+  // Only overwrite when Garmin actually returned something — a watch that
+  // has never computed VO2max (or a transient fetch failure) leaves
+  // whatever was stored before untouched rather than blanking it out.
+  if (vo2max) {
+    await supabase.from('profiles').update({
+      vo2max_value: vo2max.value,
+      vo2max_source: 'garmin',
+      vo2max_date: vo2max.date,
+    }).eq('id', userId)
+  }
 
   const activityHistoryCutoff = new Date()
   activityHistoryCutoff.setDate(activityHistoryCutoff.getDate() - ACTIVITY_HISTORY_MAX_DAYS)

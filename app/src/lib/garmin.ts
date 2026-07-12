@@ -264,6 +264,40 @@ export async function fetchGarminPolyline(activityId: number, email: string, pas
   }
 }
 
+// VO2max — same unofficial-endpoint approach as fetchGarminHrZones/
+// fetchGarminPolyline above. Garmin only returns a real value here for
+// devices/plans that actually compute it (some watches never do — the
+// caller must handle a null result as "no Garmin value", not an error).
+// Queries a 2-week window and returns the most recent day that actually has
+// a value, along with the calendar date it refers to, so a stale reading
+// is never presented as current.
+export async function fetchGarminVo2max(email?: string, password?: string): Promise<{ value: number; date: string } | null> {
+  try {
+    const gc = await getGarminClient(email, password)
+    const until = new Date()
+    const from = new Date(until)
+    from.setDate(from.getDate() - 14)
+    const fmt = (d: Date) => d.toISOString().slice(0, 10)
+    const data = await gc.get<unknown>(
+      `https://connectapi.garmin.com/metrics-service/metrics/maxmet/daily/${fmt(from)}/${fmt(until)}`
+    )
+    if (!Array.isArray(data)) return null
+    const withValue = data
+      .map((d) => d as Record<string, unknown>)
+      .map((d) => {
+        const generic = d.generic as Record<string, unknown> | undefined
+        const value = (generic?.vo2MaxPreciseValue ?? generic?.vo2MaxValue) as number | undefined
+        const date = d.calendarDate as string | undefined
+        return value && date ? { value, date } : null
+      })
+      .filter((d): d is { value: number; date: string } => d !== null)
+      .sort((a, b) => b.date.localeCompare(a.date))
+    return withValue[0] ?? null
+  } catch {
+    return null
+  }
+}
+
 // Fetch a full DayWellness snapshot for an arbitrary past date.
 export async function fetchGarminDayWellness(
   date: Date,

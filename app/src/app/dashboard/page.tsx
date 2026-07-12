@@ -12,6 +12,7 @@ import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
 import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '@/lib/streaks'
 import { newRecordsForLatest } from '@/lib/records'
+import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import InstallAppButton from '@/components/InstallAppButton'
@@ -61,7 +62,7 @@ export default async function DashboardPage() {
   if (!user) return null
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }] = await Promise.all([
-    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
@@ -141,6 +142,18 @@ export default async function DashboardPage() {
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
 
+  // ── Training load ──────────────────────────────────────────────────────────
+  // Personal-max-HR proxy: highest max_heartrate ever actually recorded,
+  // since we don't collect age/a real max-HR test. Resting HR comes from
+  // today's synced wellness (falls back to null → flat-intensity load below).
+  const nextWeekStart = new Date(weekStart)
+  nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+  const personalMaxHR = activities.reduce((m, a) => a.max_heartrate && a.max_heartrate > m ? a.max_heartrate : m, 0) || null
+  const restingHRForLoad = wellness?.restingHR ?? null
+  const weekLoad = weeklyLoad(activities, restingHRForLoad, personalMaxHR, weekStart, nextWeekStart)
+  const loadGoal = profile?.weekly_load_goal ?? rollingBaselineLoad(activities, restingHRForLoad, personalMaxHR, now)
+  const loadPct = loadGoal ? Math.round((weekLoad / loadGoal) * 100) : null
+
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
   const greeting = hour < 10 ? 'God morgon' : hour < 18 ? 'Hej' : 'God kväll'
@@ -210,6 +223,28 @@ export default async function DashboardPage() {
               <div className="text-muted text-xs mt-1">{stepStreak === 1 ? 'dag med stegmål' : 'dagar med stegmål'}</div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── Veckobelastning ───────────────────────────────────────────────────── */}
+      {activities.length > 0 && weekLoad > 0 && loadGoal != null && (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-muted uppercase tracking-wider">Veckobelastning</div>
+            <div className="text-xs text-muted">
+              {profile?.weekly_load_goal ? 'mot ditt mål' : 'mot ditt eget snitt'}
+            </div>
+          </div>
+          <div className="h-2.5 bg-bg rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full ${loadPct !== null && loadPct > 130 ? 'bg-amber-500' : 'bg-accent'}`}
+              style={{ width: `${Math.min(loadPct ?? 0, 100)}%` }}
+            />
+          </div>
+          <div className="text-muted text-xs mt-1.5">
+            {loadPct}% denna vecka
+            {loadPct !== null && loadPct > 130 && ' · klart mer än vanligt, tänk på återhämtning'}
+          </div>
         </div>
       )}
 

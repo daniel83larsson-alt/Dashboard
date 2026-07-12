@@ -1,18 +1,38 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessCharts'
 import HealthInsightCard from '@/components/HealthInsightCard'
+import { bestVo2maxEstimate } from '@/lib/vo2max'
+
+const VO2MAX_LOOKBACK_DAYS = 90
 
 export default async function HalsaPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: wellnessRow }, { data: healthInsightRow }, { data: profile }] = await Promise.all([
+  const now = new Date()
+  const ninetyDaysAgo = new Date(now.getTime() - VO2MAX_LOOKBACK_DAYS * 86400000).toISOString()
+
+  const [{ data: wellnessRow }, { data: healthInsightRow }, { data: profile }, { data: recentRuns }] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
-    supabase.from('profiles').select('daily_step_goal').eq('id', user.id).single(),
+    supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date').eq('id', user.id).single(),
+    supabase.from('activities').select('sport_type, distance, moving_time, start_date')
+      .eq('user_id', user.id).in('sport_type', ['Run', 'TrailRun']).gte('start_date', ninetyDaysAgo),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
+
+  // Prefer Garmin's own already-computed value; fall back to our own
+  // estimate from the best qualifying recent run when Garmin doesn't have
+  // one (some watches never compute it) — always tagged with its source
+  // and the date it refers to, never presented as a single unlabeled number.
+  const vo2max = profile?.vo2max_source === 'garmin' && profile?.vo2max_value
+    ? { value: profile.vo2max_value, source: 'garmin' as const, date: profile.vo2max_date as string }
+    : (() => {
+        const est = bestVo2maxEstimate(recentRuns ?? [], VO2MAX_LOOKBACK_DAYS)
+        return est ? { value: est.vo2max, source: 'estimated' as const, date: est.date } : null
+      })()
+  const vo2maxDaysOld = vo2max ? Math.floor((now.getTime() - new Date(vo2max.date).getTime()) / 86400000) : null
 
   const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
@@ -48,6 +68,29 @@ export default async function HalsaPage() {
           </div>
         )}
       </div>
+
+      {/* VO2max — always its own card regardless of Garmin wellness sync,
+          since the estimated fallback only needs synced runs, not wellness
+          history. Source + date always shown so it's never mistaken for a
+          fresher number than it is. */}
+      {vo2max && (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <div className="font-mono text-lcd text-3xl font-bold leading-none">{vo2max.value}</div>
+              <div className="text-muted text-xs mt-1">VO2max (ml/kg/min)</div>
+            </div>
+            <span className={`text-[10px] px-2 py-1 rounded-lg flex-shrink-0 ${vo2max.source === 'garmin' ? 'bg-accent/10 text-accent' : 'bg-bg text-muted'}`}>
+              {vo2max.source === 'garmin' ? 'Från Garmin' : 'Eget estimat'}
+            </span>
+          </div>
+          <p className="text-muted text-[11px] mt-2">
+            {vo2max.source === 'garmin'
+              ? `Uppmätt av din klocka ${new Date(vo2max.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}${vo2maxDaysOld && vo2maxDaysOld > 60 ? ` — ${vo2maxDaysOld} dagar sedan, kan vara inaktuellt` : ''}.`
+              : `Uppskattat från ditt bästa löppass ${new Date(vo2max.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })} (din klocka räknar inte ut VO2max själv, eller inget Garmin anslutet). Mindre exakt än ett riktigt uppmätt värde.`}
+          </p>
+        </div>
+      )}
 
       {history.length === 0 ? (
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">

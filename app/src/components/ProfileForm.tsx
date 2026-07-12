@@ -19,6 +19,7 @@ type Profile = {
   selected_sports?: string[] | null
   daily_step_goal?: number | null
   weight_kg?: number | null
+  weekly_load_goal?: number | null
 }
 
 
@@ -57,6 +58,7 @@ export default function ProfileForm({
   const [sports, setSports] = useState<string[]>(profile?.selected_sports ?? [])
   const [stepGoal, setStepGoal] = useState(profile?.daily_step_goal ?? 10000)
   const [weightKg, setWeightKg] = useState(profile?.weight_kg?.toString() ?? '')
+  const [loadGoal, setLoadGoal] = useState(profile?.weekly_load_goal?.toString() ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -75,6 +77,7 @@ export default function ProfileForm({
     const supabase = createSupabaseClient()
 
     const parsedWeight = parseFloat(weightKg)
+    const parsedLoadGoal = parseFloat(loadGoal)
     await supabase.from('profiles').update({
       name,
       llm_provider: provider,
@@ -82,6 +85,7 @@ export default function ProfileForm({
       selected_sports: sports,
       daily_step_goal: stepGoal,
       weight_kg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
+      weekly_load_goal: loadGoal.trim() && !Number.isNaN(parsedLoadGoal) ? parsedLoadGoal : null,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -206,6 +210,19 @@ export default function ProfileForm({
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
           <p className="text-muted text-xs mt-1.5">Styr steg-progressbaren och steg-streaken på Översikt.</p>
+        </div>
+        <div>
+          <label className="text-muted text-xs block mb-1.5">Veckomål träningsbelastning (valfritt)</label>
+          <input
+            type="number"
+            min={0}
+            step={10}
+            placeholder="Auto — ditt eget snitt senaste 8 veckorna"
+            value={loadGoal}
+            onChange={e => setLoadGoal(e.target.value)}
+            className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+          />
+          <p className="text-muted text-xs mt-1.5">Styr belastningsbaren på Översikt. Lämna tomt för att jämföra mot ditt eget snitt istället för ett fast mål.</p>
         </div>
         <div>
           <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>

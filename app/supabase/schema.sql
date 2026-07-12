@@ -758,3 +758,21 @@ end;
 $$;
 revoke all on function public.admin_backfill_connected_account(uuid, text, text) from public;
 grant execute on function public.admin_backfill_connected_account(uuid, text, text) to authenticated;
+
+-- VO2max — either Garmin's own already-computed value (fetched via the same
+-- unofficial-endpoint pattern as HR zones/GPS routes, with the date it
+-- refers to so a stale reading is visible) or, when Garmin doesn't provide
+-- one (e.g. no supporting watch), a value we estimate ourselves from the
+-- user's best recent qualifying run. vo2max_date is Garmin's calendarDate
+-- for the 'garmin' source, or the date of the qualifying run for
+-- 'estimated' — always shown alongside the number so it's clear how fresh
+-- it is.
+alter table public.profiles add column if not exists vo2max_value numeric;
+alter table public.profiles add column if not exists vo2max_source text check (vo2max_source in ('garmin', 'estimated'));
+alter table public.profiles add column if not exists vo2max_date date;
+
+-- Weekly training load goal (optional) — how close to it you are is shown
+-- on Översikt. Left null means "no explicit goal set", in which case the UI
+-- compares against the user's own rolling recent average instead of forcing
+-- a number on someone who hasn't thought about one yet.
+alter table public.profiles add column if not exists weekly_load_goal numeric;
