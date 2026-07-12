@@ -28,12 +28,19 @@ export default async function OversiktPage() {
     .gte("voucher_date", monthStart)
     .lte("voucher_date", monthEnd);
 
+  // Revenue accounts (3xxx) normally grow on credit, expense accounts
+  // (4-6xxx) normally grow on debit — but a correction voucher (see
+  // "Rätta" on Transaktioner) posts the exact reverse, and a second
+  // correction reverses that again. Summing only the "normal" side meant
+  // a correction's reversal was silently dropped instead of netting out,
+  // so correcting a transaction and correcting it back doubled it instead
+  // of returning to the original amount.
   let intakter = 0;
   let kostnader = 0;
   for (const v of (monthVouchers ?? []) as (Voucher & { voucher_lines: VoucherLine[] })[]) {
     for (const line of v.voucher_lines) {
-      if (line.account_code.startsWith("3")) intakter += Number(line.credit);
-      if (["4", "5", "6"].includes(line.account_code[0])) kostnader += Number(line.debit);
+      if (line.account_code.startsWith("3")) intakter += Number(line.credit) - Number(line.debit);
+      if (["4", "5", "6"].includes(line.account_code[0])) kostnader += Number(line.debit) - Number(line.credit);
     }
   }
   const resultat = intakter - kostnader;

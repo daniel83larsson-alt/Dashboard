@@ -15,12 +15,15 @@ export default async function RevisorPage() {
     .eq("company_id", companyId)
     .eq("fiscal_year_id", fiscalYear.id);
 
+  // Same netting as Översikt — a correction voucher reverses debit/credit
+  // on the original line, and must be subtracted, not just ignored, or a
+  // corrected-and-recorrected transaction gets counted twice.
   let intakter = 0;
   let kostnader = 0;
   for (const v of (vouchers ?? []) as (Voucher & { voucher_lines: VoucherLine[] })[]) {
     for (const line of v.voucher_lines) {
-      if (line.account_code.startsWith("3")) intakter += Number(line.credit);
-      if (["4", "5", "6"].includes(line.account_code[0])) kostnader += Number(line.debit);
+      if (line.account_code.startsWith("3")) intakter += Number(line.credit) - Number(line.debit);
+      if (["4", "5", "6"].includes(line.account_code[0])) kostnader += Number(line.debit) - Number(line.credit);
     }
   }
 
