@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { decrypt } from '@/lib/encrypt'
 
 // One-time remediation: connected_accounts (the duplicate-connection guard)
@@ -10,11 +11,17 @@ import { decrypt } from '@/lib/encrypt'
 // connection retroactively. Never returns or logs the decrypted
 // credentials themselves, only the fact that a row was backfilled.
 export async function POST() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const sessionClient = await createSupabaseServerClient()
+  const { data: { user } } = await sessionClient.auth.getUser()
   if (!user || user.email !== process.env.ADMIN_EMAIL) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  // Reading every user's credentials needs the admin client — the
+  // session client is correctly RLS-limited to the admin's own rows, which
+  // isn't enough for a backfill across everyone. The RPC call itself stays
+  // gated by admin_backfill_connected_account()'s own auth.jwt() check.
+  const supabase = createSupabaseAdminClient()
 
   const results: Array<{ userId: string; provider: string; ok: boolean; error?: string }> = []
 
@@ -28,7 +35,10 @@ export async function POST() {
       const stored = (row.messages as Array<{ role: string; content: string }>)[0]?.content
       const plain = stored.length > 100 && !stored.startsWith('{') ? decrypt(stored) : stored
       const { email } = JSON.parse(plain) as { email: string }
-      const { error } = await supabase.rpc('admin_backfill_connected_account', {
+      // The RPC's own admin check reads auth.jwt() — that only exists on a
+      // real user session, so this call must go through sessionClient
+      // (the admin's own JWT), not the service-role admin client.
+      const { error } = await sessionClient.rpc('admin_backfill_connected_account', {
         target_user_id: row.user_id,
         p_provider: 'garmin',
         p_external_id: email.trim(),
@@ -44,7 +54,7 @@ export async function POST() {
     .select('user_id, concept2_user_id')
 
   for (const row of c2Rows ?? []) {
-    const { error } = await supabase.rpc('admin_backfill_connected_account', {
+    const { error } = await sessionClient.rpc('admin_backfill_connected_account', {
       target_user_id: row.user_id,
       p_provider: 'concept2',
       p_external_id: String(row.concept2_user_id),
