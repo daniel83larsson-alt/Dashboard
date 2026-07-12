@@ -59,6 +59,7 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 Genvägar, provisoriska lösningar och kända begränsningar — inte buggar, men saker att göra om senare.
 
 - 🧊 **Bokföring: `check_voucher_balances`-triggern blockerar ALL radering av verifikatrader**, inte bara oavsiktlig radering från app-koden — även legitima admin-raderingar (t.ex. GDPR-radering av ett helt företag) stoppas idag. Ingen brådska, men måste lösas innan en sådan radering någonsin behöver göras.
+- 🧊 **DL Trainer: Connys `garmin_credentials`-rad försvann efter att ha fungerat en gång.** Verifierat direkt mot databasen: hans konto har riktig, färsk Garmin-wellnessdata (sömn/puls/steg t.o.m. 12 juli) — vilket bara kan ha hämtats om inloggningen var sparad och giltig vid det tillfället — men raden finns inte längre, och admin-panelen visar honom därför som "ej ansluten". Sökt igenom hela kodbasen efter allt som skriver till `garmin_credentials`: ingenting raderar den någonsin, ingen dubblettanvändare hittades. Orsaken är okänd. Om samma sak händer en användare till bör det utredas som en riktig bugg, inte bara åtgärdas igen.
 
 ## Process
 
