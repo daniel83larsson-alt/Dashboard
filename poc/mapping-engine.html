@@ -134,6 +134,60 @@ svg.overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-e
   .canvas{flex-direction:column;gap:28px}
   .sales-points{grid-template-columns:1fr}
 }
+
+/* ── PAGE TABS ── */
+.page-tabs{background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:58px;z-index:19}
+.page-tabs-inner{max-width:1240px;margin:0 auto;padding:0 24px;display:flex;gap:4px}
+.page-tab{background:none;border:none;color:var(--muted);padding:13px 4px;margin-right:22px;font-size:13px;font-weight:700;cursor:pointer;border-bottom:2px solid transparent}
+.page-tab:hover{color:var(--text)}
+.page-tab.on{color:var(--text);border-bottom-color:var(--accent)}
+
+/* ── STAT STRIP ── */
+.stat-strip{display:grid;grid-template-columns:1fr 1fr 1fr 2fr;gap:12px;margin-bottom:28px}
+.stat-cell{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px}
+.stat-num{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums}
+.stat-lbl{font-size:11.5px;color:var(--muted);margin-top:2px}
+.stat-cell.wide .stat-num{color:var(--green)}
+
+/* ── HUB DIAGRAM ── */
+.hub-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:26px;margin-bottom:28px}
+.hub-canvas{position:relative;width:100%;max-width:640px;height:560px;margin:0 auto}
+.hub-canvas svg.overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}
+.hub-canvas svg.overlay path{fill:none;stroke:var(--border);stroke-width:1.4;transition:stroke .15s,stroke-width .15s,opacity .15s}
+.hub-canvas svg.overlay path.on{stroke:var(--accent);stroke-width:2.2}
+.hub-canvas svg.overlay path.dim{opacity:.12}
+.hub-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:118px;height:118px;border-radius:50%;background:rgba(79,142,247,.12);border:1.5px solid var(--accent);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:2;text-align:center}
+.hub-center-icon{font-size:22px}
+.hub-center-name{font-weight:800;font-size:12.5px;margin-top:2px}
+.hub-center-sub{font-size:10px;color:var(--muted)}
+.hub-node{position:absolute;transform:translate(-50%,-50%);z-index:2;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:9px 12px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;min-width:104px}
+.hub-node:hover,.hub-node.active{border-color:var(--accent);background:rgba(79,142,247,.08)}
+.hub-node .hn-name{font-weight:700;font-size:11.5px;white-space:nowrap}
+.hub-node .hn-count{font-size:10px;color:var(--muted);margin-top:2px}
+.hub-legend{text-align:center;font-size:11px;color:var(--muted);margin-top:14px;display:flex;align-items:center;justify-content:center;gap:6px}
+.lg-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-right:5px}
+
+/* ── MATRIX ── */
+.matrix-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px}
+.matrix-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:14px}
+.matrix-scroll{overflow-x:auto}
+table.matrix{border-collapse:collapse;font-size:12.5px;width:100%}
+table.matrix th,table.matrix td{padding:9px 10px;text-align:center;white-space:nowrap}
+table.matrix thead th{color:var(--muted);font-weight:700;font-size:10.5px;border-bottom:1px solid var(--border);cursor:pointer;writing-mode:vertical-rl;transform:rotate(180deg);height:110px;vertical-align:bottom;padding-bottom:10px;transition:color .15s}
+table.matrix thead th:hover,table.matrix thead th.active{color:var(--accent)}
+table.matrix thead th:first-child{writing-mode:horizontal-tb;transform:none;vertical-align:middle;text-align:left}
+table.matrix thead th:last-child{writing-mode:horizontal-tb;transform:none;vertical-align:middle;text-align:center;height:auto;font-size:10.5px}
+table.matrix tbody th{text-align:left;font-weight:600;color:var(--text);border-bottom:1px solid var(--border);cursor:pointer;transition:color .15s}
+table.matrix tbody th:hover,table.matrix tbody th.active{color:var(--accent)}
+table.matrix tbody td{border-bottom:1px solid var(--border)}
+.mx-dot{width:11px;height:11px;border-radius:50%;background:var(--green);display:inline-block;opacity:.85;transition:opacity .15s,transform .15s}
+.mx-cell.dim .mx-dot{opacity:.1}
+.mx-row-total,.mx-col-total{color:var(--muted);font-size:11px;font-weight:700}
+
+@media (max-width:860px){
+  .stat-strip{grid-template-columns:1fr 1fr}
+  .hub-canvas{height:640px}
+}
 </style>
 </head>
 <body>
@@ -148,7 +202,52 @@ svg.overlay{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-e
   <div class="tb-module">Mapping Engine · POC</div>
 </div>
 
-<div class="shell">
+<div class="page-tabs">
+  <div class="page-tabs-inner">
+    <button class="page-tab on" id="pageTabOverview" onclick="setPageView('overview')">Portföljöversikt</button>
+    <button class="page-tab" id="pageTabBuilder" onclick="setPageView('builder')">Ny integration</button>
+  </div>
+</div>
+
+<!-- ===================== OVERVIEW ===================== -->
+<div class="shell" id="overviewView">
+  <div class="section">
+    <div class="stitle">Driftläge</div>
+    <div class="step-title">Alla kunder, alla system — ett IM i mitten</div>
+    <div class="step-desc">Så ser det ut när fler kunder ansluts: varje system mappas mot IM en gång, oavsett hur många kunder som sedan använder det.</div>
+
+    <div class="stat-strip">
+      <div class="stat-cell"><div class="stat-num" id="statSystems">–</div><div class="stat-lbl">systemintegrationer</div></div>
+      <div class="stat-cell"><div class="stat-num" id="statCustomers">–</div><div class="stat-lbl">kunder</div></div>
+      <div class="stat-cell"><div class="stat-num" id="statConnections">–</div><div class="stat-lbl">aktiva kopplingar</div></div>
+      <div class="stat-cell wide"><div class="stat-num" id="statMappings">–</div><div class="stat-lbl" id="statMappingsLbl">mappningar totalt — inte en per kundkoppling</div></div>
+    </div>
+
+    <div class="hub-wrap">
+      <div class="hub-canvas" id="hubCanvas">
+        <svg class="overlay" id="hubOverlay"></svg>
+        <div class="hub-center" id="hubCenter">
+          <div class="hub-center-icon">📦</div>
+          <div class="hub-center-name">iCore IM</div>
+          <div class="hub-center-sub" id="hubCenterSub">8 system</div>
+        </div>
+      </div>
+      <div class="hub-legend">
+        <span><i class="lg-dot" style="background:var(--accent)"></i>System · storlek = antal kunder</span>
+      </div>
+    </div>
+
+    <div class="matrix-wrap">
+      <div class="matrix-title">Kund × system</div>
+      <div class="matrix-scroll">
+        <table class="matrix" id="matrixTable"></table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== BUILDER ===================== -->
+<div class="shell" id="builderView" style="display:none">
 
   <!-- STEP 1: IMPORT -->
   <div class="section">
@@ -610,10 +709,147 @@ function setView(v) {
   if (v === 'tech') requestAnimationFrame(drawLines);
 }
 
+/* ===================== PAGE TABS ===================== */
+function setPageView(v) {
+  document.getElementById('pageTabOverview').classList.toggle('on', v === 'overview');
+  document.getElementById('pageTabBuilder').classList.toggle('on', v === 'builder');
+  document.getElementById('overviewView').style.display = v === 'overview' ? '' : 'none';
+  document.getElementById('builderView').style.display = v === 'builder' ? '' : 'none';
+  if (v === 'overview') requestAnimationFrame(drawHubLines);
+}
+
+/* ===================== OVERVIEW: PORTFOLIO DATA ===================== */
+const SYSTEMS = [
+  { id: 'bc', name: 'Business Central', icon: '🧮' },
+  { id: 'wms', name: 'Ongoing WMS', icon: '📦' },
+  { id: 'tms', name: 'Consignor TMS', icon: '🚚' },
+  { id: 'fortnox', name: 'Fortnox', icon: '💳' },
+  { id: 'shopify', name: 'Shopify', icon: '🛒' },
+  { id: 'sap', name: 'SAP', icon: '🏭' },
+  { id: 'edi', name: 'CargoNet EDI', icon: '📡' },
+  { id: 'visma', name: 'Visma', icon: '📒' },
+];
+
+const CUSTOMERS = [
+  { name: 'Nordic Lager AB', systems: ['bc', 'wms', 'tms', 'fortnox'] },
+  { name: 'Baltic Freight', systems: ['fortnox', 'tms', 'shopify'] },
+  { name: 'Kungsvägen Logistik', systems: ['sap', 'wms', 'edi'] },
+  { name: 'Polar Distribution', systems: ['shopify', 'wms', 'fortnox', 'bc'] },
+  { name: 'Sydhamn Terminal', systems: ['bc', 'edi', 'visma'] },
+  { name: 'Vinter Cargo', systems: ['visma', 'tms', 'sap', 'wms'] },
+];
+
+function renderOverview() {
+  const totalConnections = CUSTOMERS.reduce((s, c) => s + c.systems.length, 0);
+  const totalMappings = SYSTEMS.length * 2; // in + ut, en gång per system
+
+  document.getElementById('statSystems').textContent = SYSTEMS.length;
+  document.getElementById('statCustomers').textContent = CUSTOMERS.length;
+  document.getElementById('statConnections').textContent = totalConnections;
+  document.getElementById('statMappings').textContent = totalMappings;
+  document.getElementById('statMappingsLbl').textContent =
+    `mappningar totalt (${SYSTEMS.length} system × in/ut) — inte ${totalConnections} egna punkt-till-punkt-integrationer`;
+  document.getElementById('hubCenterSub').textContent = SYSTEMS.length + ' system';
+
+  renderHub();
+  renderMatrix();
+}
+
+function customerCountFor(sysId) {
+  return CUSTOMERS.filter(c => c.systems.includes(sysId)).length;
+}
+
+function renderHub() {
+  const canvas = document.getElementById('hubCanvas');
+  document.querySelectorAll('.hub-node').forEach(n => n.remove());
+  const cx = 50, cy = 50, r = 41; // percent of canvas box
+  SYSTEMS.forEach((sys, i) => {
+    const angle = (i / SYSTEMS.length) * 2 * Math.PI - Math.PI / 2;
+    const x = cx + r * Math.cos(angle);
+    const y = cy + r * Math.sin(angle);
+    const count = customerCountFor(sys.id);
+    const node = document.createElement('div');
+    node.className = 'hub-node';
+    node.id = 'hub-' + sys.id;
+    node.dataset.sys = sys.id;
+    node.style.left = x + '%';
+    node.style.top = y + '%';
+    node.innerHTML = `<div class="hn-name">${sys.icon} ${sys.name}</div><div class="hn-count">${count} kund${count === 1 ? '' : 'er'}</div>`;
+    node.onclick = () => highlightSystem(sys.id);
+    canvas.appendChild(node);
+  });
+  requestAnimationFrame(drawHubLines);
+}
+
+function drawHubLines() {
+  const svg = document.getElementById('hubOverlay');
+  const wrap = document.getElementById('hubCanvas');
+  if (!wrap) return;
+  const wrapRect = wrap.getBoundingClientRect();
+  if (!wrapRect.width) return;
+  svg.setAttribute('width', wrapRect.width);
+  svg.setAttribute('height', wrapRect.height);
+  svg.innerHTML = '';
+  const center = document.getElementById('hubCenter').getBoundingClientRect();
+  const ccx = center.left + center.width / 2 - wrapRect.left;
+  const ccy = center.top + center.height / 2 - wrapRect.top;
+
+  SYSTEMS.forEach(sys => {
+    const el = document.getElementById('hub-' + sys.id);
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const x = r.left + r.width / 2 - wrapRect.left;
+    const y = r.top + r.height / 2 - wrapRect.top;
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', `M ${ccx} ${ccy} L ${x} ${y}`);
+    path.setAttribute('data-sys', sys.id);
+    svg.appendChild(path);
+  });
+}
+window.addEventListener('resize', () => { if (document.getElementById('overviewView').style.display !== 'none') drawHubLines(); });
+
+let activeHighlight = null;
+function highlightSystem(sysId) {
+  activeHighlight = activeHighlight === sysId ? null : sysId;
+  document.querySelectorAll('.hub-node').forEach(n => n.classList.toggle('active', n.id === 'hub-' + activeHighlight));
+  document.querySelectorAll('#hubOverlay path').forEach(p => {
+    const match = p.getAttribute('data-sys') === activeHighlight;
+    p.classList.toggle('on', !!activeHighlight && match);
+    p.classList.toggle('dim', !!activeHighlight && !match);
+  });
+  document.querySelectorAll('table.matrix thead th').forEach(th => th.classList.toggle('active', th.dataset.sys === activeHighlight));
+  document.querySelectorAll('table.matrix tbody td').forEach(td => td.classList.toggle('dim', !!activeHighlight && td.dataset.sys !== activeHighlight));
+}
+
+let activeCustomer = null;
+function highlightCustomer(name) {
+  activeCustomer = activeCustomer === name ? null : name;
+  document.querySelectorAll('table.matrix tbody th').forEach(th => th.classList.toggle('active', th.textContent === activeCustomer));
+  document.querySelectorAll('table.matrix tbody tr').forEach(tr => tr.classList.toggle('dim', false));
+  document.querySelectorAll('table.matrix tbody td.mx-cell').forEach(td => {
+    td.classList.toggle('dim', !!activeCustomer && td.closest('tr').dataset.customer !== activeCustomer);
+  });
+}
+
+function renderMatrix() {
+  const table = document.getElementById('matrixTable');
+  let thead = '<thead><tr><th></th>' + SYSTEMS.map(s => `<th data-sys="${s.id}" onclick="highlightSystem('${s.id}')">${s.icon} ${s.name}</th>`).join('') + '<th>System/kund</th></tr></thead>';
+  let rows = CUSTOMERS.map(c => {
+    const cells = SYSTEMS.map(s => {
+      const on = c.systems.includes(s.id);
+      return `<td class="${on ? 'mx-cell' : ''}" data-sys="${s.id}">${on ? '<span class="mx-dot"></span>' : ''}</td>`;
+    }).join('');
+    return `<tr data-customer="${c.name}"><th onclick="highlightCustomer('${c.name.replace(/'/g, "\\'")}')">${c.name}</th>${cells}<td class="mx-row-total">${c.systems.length}</td></tr>`;
+  }).join('');
+  const totalsRow = '<tr><th>Kunder/system</th>' + SYSTEMS.map(s => `<td class="mx-col-total">${customerCountFor(s.id)}</td>`).join('') + '<td></td></tr>';
+  table.innerHTML = thead + '<tbody>' + rows + totalsRow + '</tbody>';
+}
+
 /* ===================== INIT ===================== */
 renderIMPreview();
 loadExample('source');
 loadExample('target');
+renderOverview();
 </script>
 </body>
 </html>
