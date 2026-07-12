@@ -128,11 +128,21 @@ export type SleepSummary = {
   restingHR: number | null
 }
 
+// Fields Garmin's actual (unofficial) response includes that the
+// garmin-connect package's own types don't declare.
+type GarminHRExtra = { restingHeartRate?: number }
+type GarminSleepExtra = {
+  avgOvernightHrv?: number
+  hrvStatus?: string
+  bodyBatteryChange?: number
+  restingHeartRate?: number
+}
+
 export async function fetchGarminRestingHR(email?: string, password?: string, forDate?: Date): Promise<number | null> {
   try {
     const gc = await getGarminClient(email, password)
     const hr = await gc.getHeartRate(forDate ?? new Date())
-    return (hr as any)?.restingHeartRate ?? null
+    return (hr as GarminHRExtra | undefined)?.restingHeartRate ?? null
   } catch {
     return null
   }
@@ -174,10 +184,10 @@ export async function fetchGarminSleepFull(email?: string, password?: string, wa
       remHours: (d.remSleepSeconds ?? 0) / 3600,
       lightHours: (d.lightSleepSeconds ?? 0) / 3600,
       awakeHours: (d.awakeSleepSeconds ?? 0) / 3600,
-      hrv: (data as any).avgOvernightHrv ?? null,
-      hrvStatus: (data as any).hrvStatus ?? null,
-      bodyBattery: (data as any).bodyBatteryChange ?? null,
-      restingHR: (data as any).restingHeartRate ?? null,
+      hrv: (data as GarminSleepExtra).avgOvernightHrv ?? null,
+      hrvStatus: (data as GarminSleepExtra).hrvStatus ?? null,
+      bodyBattery: (data as GarminSleepExtra).bodyBatteryChange ?? null,
+      restingHR: (data as GarminSleepExtra).restingHeartRate ?? null,
     }
   } catch {
     return null

@@ -338,7 +338,7 @@ export default async function DashboardPage() {
           <p className="text-muted text-sm mb-4">Anslut en träningskälla under Profil för att komma igång:</p>
           <div className="flex flex-col gap-2 text-left max-w-xs mx-auto mb-4">
             <div className="bg-bg rounded-xl px-3 py-2.5 text-xs text-muted">
-              <span className="text-fg font-medium">1. Concept2</span> — för roddpass, klicka "Anslut Concept2" och logga in
+              <span className="text-fg font-medium">1. Concept2</span> — för roddpass, klicka &quot;Anslut Concept2&quot; och logga in
             </div>
             <div className="bg-bg rounded-xl px-3 py-2.5 text-xs text-muted">
               <span className="text-fg font-medium">2. Garmin</span> — för alla aktiviteter + hälsodata, ange din vanliga Garmin-inloggning

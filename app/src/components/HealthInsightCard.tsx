@@ -9,6 +9,9 @@ export default function HealthInsightCard({ savedInsight }: { savedInsight: Heal
   const [insight, setInsight] = useState<HealthInsight | null>(savedInsight)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Date.now() can't be called directly during render (React treats it as
+  // impure) — a lazy initializer runs it once outside the render body itself.
+  const [now] = useState<number>(() => Date.now())
   const router = useRouter()
 
   async function generate() {
@@ -29,7 +32,7 @@ export default function HealthInsightCard({ savedInsight }: { savedInsight: Heal
     setLoading(false)
   }
 
-  const age = insight ? Math.floor((Date.now() - new Date(insight.generatedAt).getTime()) / 3600000) : null
+  const age = insight ? Math.floor((now - new Date(insight.generatedAt).getTime()) / 3600000) : null
 
   return (
     <div className="bg-card border border-edge rounded-2xl p-4">

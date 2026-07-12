@@ -60,6 +60,9 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
   const [insight, setInsight] = useState<Insight | null>(savedInsight)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  // Date.now() can't be called directly during render (React treats it as
+  // impure) — a lazy initializer runs it once outside the render body itself.
+  const [now] = useState<number>(() => Date.now())
   const router = useRouter()
 
   async function generate() {
@@ -80,7 +83,7 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
     setLoading(false)
   }
 
-  const age = insight ? Math.floor((Date.now() - new Date(insight.generatedAt).getTime()) / 3600000) : null
+  const age = insight ? Math.floor((now - new Date(insight.generatedAt).getTime()) / 3600000) : null
   const isStale = age !== null && age >= 24
 
   return (
