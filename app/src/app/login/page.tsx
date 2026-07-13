@@ -12,6 +12,22 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
 
+  async function tryDemo() {
+    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL
+    const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD
+    if (!demoEmail || !demoPassword) return
+    setLoading(true)
+    setError('')
+    const supabase = createSupabaseClient()
+    const { error } = await supabase.auth.signInWithPassword({ email: demoEmail, password: demoPassword })
+    if (error) {
+      setError('Demo-kontot är tillfälligt otillgängligt, försök igen om en stund.')
+      setLoading(false)
+    } else {
+      window.location.href = '/dashboard'
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
@@ -125,6 +141,16 @@ export default function LoginPage() {
             {loading ? '...' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
           </button>
         </form>
+
+        {process.env.NEXT_PUBLIC_DEMO_EMAIL && (
+          <button
+            onClick={tryDemo}
+            disabled={loading}
+            className="w-full bg-card border border-edge text-fg font-medium py-3 rounded-xl mt-3 disabled:opacity-50 hover:border-accent transition-colors text-sm"
+          >
+            🔍 Prova demo (ingen inloggning behövs)
+          </button>
+        )}
       </div>
     </div>
   )

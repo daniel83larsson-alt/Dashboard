@@ -4,6 +4,7 @@ import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
+import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { fmtSpeedOrPace, sportLabel, fmtMinSec } from '@/lib/sport'
 
 function fmtDur(s: number) {
@@ -18,6 +19,7 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
     logApiCall(supabase, user.id, 'plan_generate')
 
     const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([

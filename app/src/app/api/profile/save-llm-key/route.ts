@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { encrypt } from '@/lib/encrypt'
+import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 
 // Own LLM API keys used to be written straight from the client with no
 // encryption despite the column name implying it — moved server-side so we
@@ -10,6 +11,7 @@ export async function POST(request: NextRequest) {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
 
     const { apiKey } = await request.json()
     if (typeof apiKey !== 'string' || !apiKey.trim()) {

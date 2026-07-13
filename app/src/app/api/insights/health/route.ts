@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
+import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -49,6 +50,7 @@ export async function POST() {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
     logApiCall(supabase, user.id, 'insights_health')
 
     const [{ data: profile }, { data: wellnessRow }] = await Promise.all([

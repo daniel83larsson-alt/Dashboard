@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import AdminUserRow from '@/components/AdminUserRow'
 import NewsletterSender from '@/components/NewsletterSender'
+import DemoResetButton from '@/components/DemoResetButton'
 
 export default async function AdminPage() {
   const supabase = await createSupabaseServerClient()
@@ -46,6 +47,7 @@ export default async function AdminPage() {
       </div>
 
       <NewsletterSender recipientCount={(newsletterRecipients ?? []).length} />
+      <DemoResetButton />
 
       {eventRows.length > 0 && (
         <div className="mb-6">

@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { GarminConnect } from 'garmin-connect'
 import { encrypt } from '@/lib/encrypt'
+import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 
 export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
 
     const { email, password } = await request.json()
     if (!email?.trim() || !password?.trim()) {

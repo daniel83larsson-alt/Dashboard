@@ -49,6 +49,11 @@ export default async function ProfilPage({
           Det här Concept2-kontot är redan anslutet till en annan DL Trainer-profil. Varje person behöver sitt eget Concept2-konto.
         </div>
       )}
+      {error === 'demo_blocked' && (
+        <div className="mb-4 bg-card border border-amber-500/30 rounded-2xl p-4 text-sm text-fg">
+          Det här är demo-kontot — skapa ett eget konto för att ansluta en riktig träningskälla.
+        </div>
+      )}
       {(error === 'concept2_auth' || error === 'concept2_failed') && (
         <div className="mb-4 bg-card border border-amber-500/30 rounded-2xl p-4 text-sm text-fg">
           Kunde inte ansluta Concept2. Försök igen.
