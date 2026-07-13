@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>iCore Containers — versionerade, git-styrda byggstenar</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--blue2:#3d8bff;--teal:#00c9a7;--purple:#7c5cbf;
+  --orange:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.08);--shadow-lg:0 8px 40px rgba(0,0,0,.12);
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+a{color:inherit}
+.mono{font-family:'SF Mono',Consolas,monospace}
+
+.wrap{max-width:860px;margin:0 auto;padding:0 24px}
+
+/* ── HERO ── */
+.hero{background:var(--navy);color:#fff;padding:76px 0 64px}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(30,111,255,.15);color:#7ea8ff;border:1px solid rgba(30,111,255,.35);padding:6px 13px;border-radius:99px;margin-bottom:22px}
+h1.h-title{font-size:clamp(28px,4.4vw,42px);font-weight:800;line-height:1.15;letter-spacing:-.01em;max-width:16ch}
+h1.h-title span{color:var(--teal)}
+.h-sub{font-size:16px;color:#b6c2d9;margin-top:18px;max-width:60ch;line-height:1.6}
+.hero-stats{display:flex;gap:34px;margin-top:38px;flex-wrap:wrap}
+.hs-num{font-size:24px;font-weight:800;color:var(--teal)}
+.hs-lbl{font-size:12px;color:#93a3bf;margin-top:2px}
+
+/* ── SECTIONS ── */
+section{padding:56px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+h2.s-title{font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-.01em;max-width:26ch;text-wrap:balance}
+.s-desc{font-size:15px;color:var(--gray600);margin-top:12px;max-width:65ch}
+
+/* ── PROBLEM CARDS ── */
+.problem-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:28px}
+.problem-card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow)}
+.problem-card .pc-icon{font-size:20px;margin-bottom:10px}
+.problem-card h3{font-size:14.5px;font-weight:700;margin-bottom:6px}
+.problem-card p{font-size:13px;color:var(--gray600);line-height:1.55}
+
+/* ── STEPS ── */
+.steps{margin-top:34px;position:relative}
+.step{display:grid;grid-template-columns:52px 1fr;gap:20px;position:relative;padding-bottom:34px}
+.step:last-child{padding-bottom:0}
+.step:not(:last-child)::before{content:'';position:absolute;left:25px;top:52px;bottom:-4px;width:2px;background:var(--gray200)}
+.step-num{width:52px;height:52px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:18px;flex-shrink:0;z-index:1}
+.step-body{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:20px 24px;box-shadow:var(--shadow)}
+.step-body h3{font-size:16px;font-weight:800;margin-bottom:6px}
+.step-body p{font-size:13.5px;color:var(--gray600);line-height:1.6}
+.step-body .step-code{margin-top:12px;background:var(--navy);color:#c9d4e8;border-radius:8px;padding:12px 14px;font-size:12px;line-height:1.7;overflow-x:auto;white-space:pre}
+.step-tag{display:inline-block;font-size:10.5px;font-weight:700;background:var(--gray100);color:var(--gray600);padding:3px 9px;border-radius:99px;margin-top:10px;margin-right:6px}
+
+/* ── FLOW DIAGRAM ── */
+.flow{margin-top:30px;background:var(--navy);border-radius:16px;padding:32px 28px;overflow-x:auto}
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:640px}
+.flow-box{background:var(--navy3);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:14px 16px;flex:1;text-align:center}
+.flow-box .fb-t{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:6px}
+.flow-box .fb-n{font-size:12.5px;font-weight:700;color:#fff;line-height:1.4}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:16px;padding:0 8px;flex-shrink:0}
+.flow-caption{text-align:center;color:#93a3bf;font-size:11.5px;margin-top:16px}
+
+/* ── VALUE GRID ── */
+.value-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-top:28px}
+.value-card{padding:20px;border-radius:var(--radius);background:var(--gray50);border:1px solid var(--gray200)}
+.value-card .vc-icon{font-size:18px;margin-bottom:8px}
+.value-card h3{font-size:14px;font-weight:700;margin-bottom:5px}
+.value-card p{font-size:12.5px;color:var(--gray600);line-height:1.55}
+
+/* ── STATUS ── */
+.status-list{margin-top:26px;display:flex;flex-direction:column;gap:10px}
+.status-row{display:flex;align-items:flex-start;gap:12px;background:var(--white);border:1px solid var(--gray200);border-radius:10px;padding:14px 16px}
+.status-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.sd-done{background:var(--green)}
+.sd-todo{background:var(--orange)}
+.status-row .sr-t{font-size:13.5px;font-weight:700}
+.status-row .sr-d{font-size:12.5px;color:var(--gray600);margin-top:2px}
+.status-row code{background:var(--gray100);padding:1px 6px;border-radius:5px;font-size:11.5px}
+
+/* ── FOOTER CTA ── */
+.cta{background:var(--navy);color:#fff;padding:56px 0;text-align:center}
+.cta h2{font-size:22px;font-weight:800;margin-bottom:10px}
+.cta p{color:#b6c2d9;font-size:14px;max-width:52ch;margin:0 auto}
+.cta .tag-teal{margin-top:20px;display:inline-block}
+
+@media (max-width:640px){
+  .problem-grid,.value-grid{grid-template-columns:1fr}
+  .step{grid-template-columns:40px 1fr;gap:14px}
+  .step-num{width:40px;height:40px;font-size:14px}
+  .step:not(:last-child)::before{left:19px}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">iCore · Arkitekturförslag</div>
+    <h1 class="h-title">Från oversedda skript till en <span>spårbar plattform</span></h1>
+    <p class="h-sub">iCore kan redan köra och kompilera skript — men saknar versionshistorik. Container-modellen löser det genom att göra varje skript, API-klient och databasintegration till en git-styrd, versionerad, testbar byggsten.</p>
+    <div class="hero-stats">
+      <div><div class="hs-num">5</div><div class="hs-lbl">konkreta byggstenar</div></div>
+      <div><div class="hs-num">1</div><div class="hs-lbl">gemensamt kontrakt, tre containertyper</div></div>
+      <div><div class="hs-num">0</div><div class="hs-lbl">skarpa flöden ändras utan medvetet steg</div></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Läget idag</div>
+    <h2 class="s-title">Skript körs — men ingen vet vilken version</h2>
+    <p class="s-desc">iCore har redan ett eget gränssnitt med runtime och kan köra och kompilera skript. Det som saknas är historik och spårbarhet — och en säker väg att låta fler (och AI) bidra med kod utan att riskera skarpa kundflöden.</p>
+    <div class="problem-grid">
+      <div class="problem-card">
+        <div class="pc-icon">🕳️</div>
+        <h3>Ingen versionshistorik</h3>
+        <p>Går inte att se vad som ändrades, när, eller av vem — och inte att rulla tillbaka en ändring som visar sig fel.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">🧵</div>
+        <h3>Allt sitter ihop</h3>
+        <p>Utan tydliga gränser mellan stegen riskerar en ändring i ett skript att påverka fler kunder än den var tänkt för.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">🙈</div>
+        <h3>Ingen spårbarhet per fil</h3>
+        <p>Går inte att i efterhand svara på "vilken kod bearbetade just den här ordern" — viktigt vid felsökning och kundfrågor.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">🚫</div>
+        <h3>Svårt att låta fler bidra</h3>
+        <p>Utan versionering och tester vågar man inte öppna upp för att fler utvecklare — eller en AI — skriver kod som körs skarpt.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Lösningen</div>
+    <h2 class="s-title">Fem byggstenar som hänger ihop</h2>
+    <p class="s-desc">Inget av det här är exotiskt — det är etablerade mönster (Git som sanningskälla, Claim Check för stora meddelanden) satta ihop för just den här plattformen.</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <h3>📦 Container — en gemensam entitet för alla sorters skript</h3>
+          <p>API-klient, mappningsskript, databas-skrivare, förädlingssteg — alla blir en Container med samma hölje (git-adress, version, byggprocess, manifest), även om körningen skiljer sig under huven.</p>
+          <span class="step-tag">api-klient</span><span class="step-tag">mappningsskript</span><span class="step-tag">databas-skrivare</span><span class="step-tag">förädling</span>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <h3>🌱 Grund-repo — reglerna kommer med från start</h3>
+          <p>Ett nytt skript skapas inte från ett tomt blad. Det ärver en mall med iCores SDK inbyggd: hämta indata, trigga nästa event, samt det typade kontraktet för vad datan faktiskt innehåller.</p>
+          <div class="step-code">hämtaIndata(event)      // GET /events/{id}/fil + /kontext
+triggraNastaEvent(...)  // POST /events</div>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <h3>📨 Event + Claim Check — pekare, inte payload</h3>
+          <p>iCore skapar ett event ("mappa order") som pekar ut komponent och filnamn — inte filen själv. Skriptet hämtar hem det den behöver via API när den faktiskt ska bearbeta det. Håller event lätta även när filerna är stora.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <h3>✅ Bygg och testa ≠ aktivera</h3>
+          <p>Varje commit byggs och testas automatiskt — men blir bara <em>tillgänglig</em> i katalogen. Att en kunds pipeline faktiskt börjar använda en ny version är alltid ett eget, medvetet steg. Det är brytpunkten som gör allt annat säkert.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body">
+          <h3>🤖 LLM-redigering — samma skyddsräcken, ny författare</h3>
+          <p>En LLM (iCores egen, eller en kunds/partners) kan föreslå kod på en egen gren. Samma tester, samma granskning, samma medvetna aktiveringssteg som när en människa skriver koden — bara källan till förslaget som skiljer sig.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Så ser det ut i drift</div>
+    <h2 class="s-title">Ett event, en hämtning, ett nytt event</h2>
+    <p class="s-desc">Samma mönster upprepas genom hela kedjan — varje steg vaknar på ett event, hämtar det den behöver, och lämnar av ett nytt event åt nästa steg.</p>
+    <div class="flow">
+      <div class="flow-row">
+        <div class="flow-box"><div class="fb-t">Event</div><div class="fb-n">"mappa order"<br>komponent + filnamn</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">Hämta</div><div class="fb-n">GET fil + kontext</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">Bearbeta</div><div class="fb-n">Containerns kod kör</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">Nytt event</div><div class="fb-n">"ny fil skapad"<br>för kund</div></div>
+      </div>
+      <div class="flow-caption">Nästa steg i kedjan vaknar på det sista eventet — samma mönster igen.</div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Vad det ger</div>
+    <h2 class="s-title">Löser dagens problem, öppnar för nästa</h2>
+    <div class="value-grid">
+      <div class="value-card"><div class="vc-icon">🕐</div><h3>Versionshistorik på riktigt</h3><p>Löser det konkreta problemet ni har idag — gratis via git, ingen egen historikmodell att bygga och underhålla.</p></div>
+      <div class="value-card"><div class="vc-icon">🔍</div><h3>Spårbarhet per fil</h3><p>Varje event pekar ut exakt vilken komponent och version som bearbetade en specifik order — svarar på supportfrågor direkt.</p></div>
+      <div class="value-card"><div class="vc-icon">🔒</div><h3>Säkert att ändra en sak</h3><p>En kunds pipeline pekar på en specifik version. Byt förädlingssteget för en kund utan att röra någon annans.</p></div>
+      <div class="value-card"><div class="vc-icon">⚡</div><h3>Snabbare att bygga nytt</h3><p>Nya integrationer återanvänder befintliga Containers istället för att byggas från grunden varje gång.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Var vi står</div>
+    <h2 class="s-title">Vad som redan finns — och vad som återstår</h2>
+    <p class="s-desc">Det här är ett arkitekturförslag under utforskning, inte ett färdigt beslut. Vi vet ännu inte i detalj hur iCores runtime och event-API faktiskt är byggda idag.</p>
+    <div class="status-list">
+      <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Referenskod för själva stegkontraktet</div><div class="sr-d"><code>poc/icore-step-contract/</code> — typat, byggt och testat (4 tester, körs med <code>npm test</code>). Visar hur två versioner av samma steg kan dela kontrakt.</div></div></div>
+      <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Klickbar pipeline-vy</div><div class="sr-d">Fem-stegskedjan (Inbound → Mappning → Förädling → Mappning → Outbound) och versionsjämförelsen finns som en interaktiv mockup i Mapping Engine-POC:n.</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Exakt hur iCores event-API ser ut idag</div><div class="sr-d">Fält, autentisering, felhantering — behöver bekräftas mot den riktiga plattformen innan SDK:n i grund-repot kan bli mer än ett förslag.</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Var byggsteget faktiskt körs</div><div class="sr-d">Egen byggtjänst, eller något iCore redan har för att "kompilera skript" idag som vi kan bygga vidare på?</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Åtkomstmodell för externa LLM:er</div><div class="sr-d">Läs-och-kopiera eller skriv-tillbaka till samma Container — påverkar hur hård sandlådan behöver vara från start.</div></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>Nästa steg</h2>
+    <p>Mer underlag om hur iCore faktiskt fungerar idag, så vi kan gå från arkitekturförslag till en konkret plan — grund-repo, event-API och byggtjänst.</p>
+  </div>
+</div>
+
+</body>
+</html>
