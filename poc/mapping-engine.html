@@ -188,6 +188,40 @@ table.matrix tbody td{border-bottom:1px solid var(--border)}
   .stat-strip{grid-template-columns:1fr 1fr}
   .hub-canvas{height:640px}
 }
+
+/* ── PIPELINE (STEPS) ── */
+.pipeline-picker{display:flex;align-items:center;gap:12px;margin-bottom:22px}
+.pipeline-picker .lbl{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+.pipeline-picker select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 12px;color:var(--text);outline:none;font-weight:600}
+
+.pipeline-row{display:flex;align-items:stretch;gap:0;overflow-x:auto;padding:6px 2px 18px}
+.pipe-block{background:var(--surface);border:1.5px solid var(--border);border-radius:12px;padding:16px 18px;min-width:168px;cursor:pointer;transition:border-color .15s,background .15s;flex-shrink:0}
+.pipe-block:hover{border-color:var(--accent)}
+.pipe-block.active{border-color:var(--accent);background:rgba(79,142,247,.08)}
+.pipe-block .pb-kind{font-size:9.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:6px}
+.pipe-block .pb-icon{font-size:20px;margin-bottom:6px}
+.pipe-block .pb-name{font-weight:700;font-size:13px;margin-bottom:8px}
+.pipe-block .pb-foot{display:flex;align-items:center;gap:6px}
+.pipe-block .pb-version{font-size:10px;background:var(--bg);border:1px solid var(--border);padding:2px 7px;border-radius:99px;color:var(--muted);font-family:'SF Mono',Consolas,monospace}
+.pipe-status{width:7px;height:7px;border-radius:50%;background:var(--green);flex-shrink:0}
+.pipe-arrow{display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:16px;padding:0 10px;flex-shrink:0}
+
+.pipeline-detail{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px}
+.pd-empty{color:var(--muted);font-size:12.5px;text-align:center;padding:20px 0}
+.pd-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px}
+.pd-title{font-size:15px;font-weight:800}
+.pd-sub{font-size:11.5px;color:var(--muted);margin-top:2px}
+.pd-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.pd-card{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px}
+.pd-card .pdc-t{font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px}
+.pd-code{font-family:'SF Mono',Consolas,monospace;font-size:11.5px;line-height:1.7;color:#c9d4e8;white-space:pre}
+.pd-run{font-size:12px;color:var(--text)}
+.pd-run .ok{color:var(--green);font-weight:700}
+.pd-compare{margin-top:16px;background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:14px;display:none}
+.pd-compare.show{display:block}
+.pd-compare-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.pd-compare-val{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-family:'SF Mono',Consolas,monospace;font-size:12.5px}
+.pd-compare-diff{color:var(--green);font-weight:700;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -206,6 +240,7 @@ table.matrix tbody td{border-bottom:1px solid var(--border)}
   <div class="page-tabs-inner">
     <button class="page-tab on" id="pageTabOverview" onclick="setPageView('overview')">Portföljöversikt</button>
     <button class="page-tab" id="pageTabBuilder" onclick="setPageView('builder')">Ny integration</button>
+    <button class="page-tab" id="pageTabPipeline" onclick="setPageView('pipeline')">Pipeline (steg)</button>
   </div>
 </div>
 
@@ -362,6 +397,26 @@ table.matrix tbody td{border-bottom:1px solid var(--border)}
     </div>
   </div>
 
+</div>
+
+<!-- ===================== PIPELINE (STEPS) ===================== -->
+<div class="shell" id="pipelineView" style="display:none">
+  <div class="section">
+    <div class="stitle">Driftläge · en kunds kedja</div>
+    <div class="step-title">Fem oberoende steg, inte en integration</div>
+    <div class="step-desc">Varje block är ett eget versionerat skript med ett fast kontrakt. Byt ut ett — t.ex. förädlingssteget — utan att röra mappningsstegen bredvid.</div>
+
+    <div class="pipeline-picker">
+      <div class="lbl">Kund</div>
+      <select id="pipelineCustomer" onchange="renderPipeline()"></select>
+    </div>
+
+    <div class="pipeline-row" id="pipelineRow"></div>
+
+    <div class="pipeline-detail" id="pipelineDetail">
+      <div class="pd-empty">Klicka på ett steg ovan för att se dess kontrakt, version och senaste körning.</div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -607,11 +662,13 @@ function cssSafe(p) { return p.replace(/[^a-zA-Z0-9]/g, '_'); }
 
 function inspect(m) {
   document.querySelectorAll('.field-row').forEach(r => r.classList.remove('active'));
-  document.querySelectorAll('.overlay path').forEach(p => p.classList.add('dim'));
+  // Scoped to #overlay (not the shared .overlay class) so this never
+  // reaches into the portfolio hub's SVG, which reuses the same class.
+  document.querySelectorAll('#overlay path').forEach(p => p.classList.add('dim'));
   if (m.source.field) document.getElementById('src-' + cssSafe(m.source.field.path))?.classList.add('active');
   document.getElementById('im-' + cssSafe(m.im.path))?.classList.add('active');
   if (m.target.field) document.getElementById('tgt-' + cssSafe(m.target.field.path))?.classList.add('active');
-  document.querySelectorAll(`.overlay path[data-im="${cssSafe(m.im.path)}"]`).forEach(p => { p.classList.remove('dim'); p.classList.add('hi'); });
+  document.querySelectorAll(`#overlay path[data-im="${cssSafe(m.im.path)}"]`).forEach(p => { p.classList.remove('dim'); p.classList.add('hi'); });
 
   const panel = document.getElementById('detailPanel');
   panel.classList.add('show');
@@ -713,9 +770,107 @@ function setView(v) {
 function setPageView(v) {
   document.getElementById('pageTabOverview').classList.toggle('on', v === 'overview');
   document.getElementById('pageTabBuilder').classList.toggle('on', v === 'builder');
+  document.getElementById('pageTabPipeline').classList.toggle('on', v === 'pipeline');
   document.getElementById('overviewView').style.display = v === 'overview' ? '' : 'none';
   document.getElementById('builderView').style.display = v === 'builder' ? '' : 'none';
+  document.getElementById('pipelineView').style.display = v === 'pipeline' ? '' : 'none';
   if (v === 'overview') requestAnimationFrame(drawHubLines);
+  if (v === 'pipeline' && !document.getElementById('pipelineCustomer').options.length) renderPipeline();
+}
+
+/* ===================== PIPELINE (STEPS) ===================== */
+const PIPELINE_STEPS = [
+  {
+    id: 'inbound', kind: 'Inbound', name: 'Ordersystem A', icon: '📥', version: 'v1.4.0', lastRun: '214 ms',
+    contract: 'type Input  = HttpRequest\ntype Output = SourceOrder',
+    desc: 'Hämtar nya order via webhook från källsystemet och validerar mot dess eget schema innan nästa steg.',
+  },
+  {
+    id: 'map-in', kind: 'Mappning', name: 'Källa → IM', icon: '🔀', version: 'v1.0.0', lastRun: '8 ms',
+    contract: 'type Input  = SourceOrder\ntype Output = OrderIM',
+    desc: 'Deklarativ mappningsregel (JSON), samma sorts regel som byggs i fliken "Ny integration". Ingen kod.',
+  },
+  {
+    id: 'enrich', kind: 'Förädling', name: 'Fraktkalkyl', icon: '🧮', version: 'v1.0.0', lastRun: '32 ms',
+    contract: 'type Input  = OrderIM\ntype Output = OrderIM & { freightCost: number }',
+    desc: 'Beräknar fraktkostnad utifrån antal rader och leveranszon. Riktig kod — det enda steget som behöver det.',
+    hasV2: true,
+  },
+  {
+    id: 'map-out', kind: 'Mappning', name: 'IM → Mål', icon: '🔀', version: 'v1.0.0', lastRun: '6 ms',
+    contract: 'type Input  = OrderIM & { freightCost: number }\ntype Output = TargetOrder',
+    desc: 'Samma mappningsmotor som steget in, spegelvänd mot målsystemets fält.',
+  },
+  {
+    id: 'outbound', kind: 'Outbound', name: 'TMS-system B', icon: '📤', version: 'v1.2.0', lastRun: '187 ms',
+    contract: 'type Input  = TargetOrder\ntype Output = HttpResponse',
+    desc: 'Skickar den färdiga ordern till målsystemets API och kvitterar mottagandet.',
+  },
+];
+
+let activePipeStep = null;
+
+function renderPipeline() {
+  const sel = document.getElementById('pipelineCustomer');
+  if (!sel.options.length) {
+    sel.innerHTML = CUSTOMERS.map(c => `<option>${c.name}</option>`).join('');
+  }
+
+  const row = document.getElementById('pipelineRow');
+  row.innerHTML = PIPELINE_STEPS.map((s, i) => `
+    ${i > 0 ? '<div class="pipe-arrow">→</div>' : ''}
+    <div class="pipe-block" id="pipe-${s.id}" onclick="selectPipeStep('${s.id}')">
+      <div class="pb-kind">${s.kind}</div>
+      <div class="pb-icon">${s.icon}</div>
+      <div class="pb-name">${s.name}</div>
+      <div class="pb-foot"><span class="pipe-status"></span><span class="pb-version">${s.version}</span></div>
+    </div>
+  `).join('');
+}
+
+function selectPipeStep(id) {
+  activePipeStep = id;
+  document.querySelectorAll('.pipe-block').forEach(b => b.classList.toggle('active', b.id === 'pipe-' + id));
+  const s = PIPELINE_STEPS.find(x => x.id === id);
+  const panel = document.getElementById('pipelineDetail');
+  panel.innerHTML = `
+    <div class="pd-head">
+      <div>
+        <div class="pd-title">${s.icon} ${s.name}</div>
+        <div class="pd-sub">${s.kind} · ${document.getElementById('pipelineCustomer').value}</div>
+      </div>
+      <span class="pb-version" style="font-size:11px;padding:4px 10px">${s.version}</span>
+    </div>
+    <div class="pd-grid">
+      <div class="pd-card">
+        <div class="pdc-t">Kontrakt</div>
+        <div class="pd-code">${s.contract}</div>
+      </div>
+      <div class="pd-card">
+        <div class="pdc-t">Senaste körning</div>
+        <div class="pd-run"><span class="ok">● OK</span> · ${s.lastRun} · idag 12:04:31</div>
+        <div style="margin-top:10px;font-size:12px;color:var(--muted);line-height:1.5">${s.desc}</div>
+        ${s.hasV2 ? '<button class="btn secondary small" style="margin-top:12px" onclick="compareVersions()">Testa v2.1.0 mot samma exempel</button>' : ''}
+      </div>
+    </div>
+    <div class="pd-compare" id="pdCompare"></div>
+  `;
+}
+
+function compareVersions() {
+  const box = document.getElementById('pdCompare');
+  box.classList.add('show');
+  box.innerHTML = `
+    <div class="pdc-t">Jämförelse — samma exempelorder genom båda versionerna</div>
+    <div class="pd-compare-row" style="margin-top:10px">
+      <div class="pd-compare-val">v1.0.0 → freightCost: 214 kr</div>
+      <span style="color:var(--muted)">vs</span>
+      <div class="pd-compare-val">v2.1.0 → freightCost: 198 kr</div>
+      <span class="pd-compare-diff">−7,5 %</span>
+    </div>
+    <div style="margin-top:12px;font-size:11.5px;color:var(--muted);line-height:1.5">v2 räknar frakt per leveranszon istället för en schablon per rad. Mappningsstegen runt omkring är opåverkade — bara det här blocket byts.</div>
+    <button class="btn small" style="margin-top:12px;width:auto" onclick="alert('POC: skulle satt v2.1.0 som aktiv version för den här kunden.')">Sätt v2.1.0 som aktiv för ${document.getElementById('pipelineCustomer').value}</button>
+  `;
 }
 
 /* ===================== OVERVIEW: PORTFOLIO DATA ===================== */

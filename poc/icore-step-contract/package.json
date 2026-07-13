@@ -1,0 +1,15 @@
+{
+  "name": "icore-step-contract-example",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Reference implementation of the modular pipeline step contract discussed for the iCore developer tool: Inbound -> Mapping -> Foradling -> Mapping -> Outbound, each step independently versioned and testable.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test dist/steps/*.test.js"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^5.7.0"
+  }
+}
