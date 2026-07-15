@@ -102,13 +102,13 @@ h2.s-title{font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-.01em;
 
 <div class="hero">
   <div class="wrap">
-    <div class="eyebrow">iCore · Arkitekturförslag</div>
-    <h1 class="h-title">Från oversedda skript till en <span>spårbar plattform</span></h1>
-    <p class="h-sub">iCore kan redan köra och kompilera skript — men saknar versionshistorik. Container-modellen löser det genom att göra varje skript, API-klient och databasintegration till en git-styrd, versionerad, testbar byggsten.</p>
+    <div class="eyebrow">iCore · Snabbt utvecklarverktygsskifte</div>
+    <h1 class="h-title">Vårt utvecklarverktyg blev <span>osynligt för AI</span> — nu blir det ett problem</h1>
+    <p class="h-sub">Den gamla low-code-developern var bra så länge alla kodade själva. Nu tar alla andra hjälp av AI för att koda snabbare — och vår egen, stängda miljö går inte att koppla en LLM till. Det går inte att patcha bort. Det går att byta ut snabbt, utan att kasta det som faktiskt fungerar.</p>
     <div class="hero-stats">
-      <div><div class="hs-num">5</div><div class="hs-lbl">konkreta byggstenar</div></div>
-      <div><div class="hs-num">1</div><div class="hs-lbl">gemensamt kontrakt, tre containertyper</div></div>
-      <div><div class="hs-num">0</div><div class="hs-lbl">skarpa flöden ändras utan medvetet steg</div></div>
+      <div><div class="hs-num">Dagar</div><div class="hs-lbl">inte veckor, om vi kör "anropa som tjänst"-vägen</div></div>
+      <div><div class="hs-num">0</div><div class="hs-lbl">ny kompileringsteknik krävs i själva iCore</div></div>
+      <div><div class="hs-num">1</div><div class="hs-lbl">sak byts (författarytan) — körmotorn rör vi inte</div></div>
     </div>
   </div>
 </div>
@@ -116,23 +116,23 @@ h2.s-title{font-size:clamp(22px,3vw,28px);font-weight:800;letter-spacing:-.01em;
 <section>
   <div class="wrap">
     <div class="s-eyebrow">Läget idag</div>
-    <h2 class="s-title">Skript körs — men ingen vet vilken version</h2>
-    <p class="s-desc">iCore har redan ett eget gränssnitt med runtime och kan köra och kompilera skript. Det som saknas är historik och spårbarhet — och en säker väg att låta fler (och AI) bidra med kod utan att riskera skarpa kundflöden.</p>
+    <h2 class="s-title">Bra verktyg för ett läge som inte finns längre</h2>
+    <p class="s-desc">Den gamla developern är gammal men okej — problemet är inte att den är dålig, det är att världen bytte spelplan under den. Låg-kod var rätt när en människa skulle skriva allt själv. Nu förväntas kod skrivas <em>med</em> AI, och det är just det den gamla miljön aldrig kan göra.</p>
     <div class="problem-grid">
+      <div class="problem-card">
+        <div class="pc-icon">🚪</div>
+        <h3>Stängd för alla LLM:er</h3>
+        <p>Ingen fil-baserad, git-baserad ingång — varken vår egen AI, en framtida AI, eller en kunds egen kan komma åt koden utan en skräddarsydd integration som måste byggas om varje gång verktygen byts.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">🐌</div>
+        <h3>Blir bara segare, aldrig snabbare</h3>
+        <p>Alla andra utvecklingsmiljöer blir snabbare av AI-stöd. Vår blir relativt sett långsammare för var månad som går, utan att något i den själv försämrats.</p>
+      </div>
       <div class="problem-card">
         <div class="pc-icon">🕳️</div>
         <h3>Ingen versionshistorik</h3>
-        <p>Går inte att se vad som ändrades, när, eller av vem — och inte att rulla tillbaka en ändring som visar sig fel.</p>
-      </div>
-      <div class="problem-card">
-        <div class="pc-icon">🧵</div>
-        <h3>Allt sitter ihop</h3>
-        <p>Utan tydliga gränser mellan stegen riskerar en ändring i ett skript att påverka fler kunder än den var tänkt för.</p>
-      </div>
-      <div class="problem-card">
-        <div class="pc-icon">🙈</div>
-        <h3>Ingen spårbarhet per fil</h3>
-        <p>Går inte att i efterhand svara på "vilken kod bearbetade just den här ordern" — viktigt vid felsökning och kundfrågor.</p>
+        <p>Går inte att se vad som ändrades, när, eller av vem — och inte att rulla tillbaka en ändring som visar sig fel. Symptom av samma grundproblem.</p>
       </div>
       <div class="problem-card">
         <div class="pc-icon">🚫</div>
@@ -218,6 +218,51 @@ triggraNastaEvent(...)  // POST /events</div>
 
 <section class="alt">
   <div class="wrap">
+    <div class="s-eyebrow">Den tekniska frågan alla ställer sig</div>
+    <h2 class="s-title">Hur får .NET att köra ett skript? Genom att aldrig försöka.</h2>
+    <p class="s-desc">Det finns en svår väg och en snabb väg. Skillnaden avgör om det här tar veckor eller dagar.</p>
+
+    <div class="value-grid" style="margin-top:26px">
+      <div class="value-card" style="border-color:#fecaca;background:#fef2f2">
+        <div class="vc-icon">🐢</div>
+        <h3>Svår väg — kompilera inuti iCore</h3>
+        <p>En hostad Roslyn-motor eller en inbäddad JS-motor i .NET-processen. Riktigt teknikarbete: isolering, minneshantering, säkerhet. Veckor till månader.</p>
+      </div>
+      <div class="value-card" style="border-color:#bbf7d0;background:#f0fdf4">
+        <div class="vc-icon">🚀</div>
+        <h3>Snabb väg — anropa som en tjänst</h3>
+        <p>Skriptet byggs och körs som sin egen lilla containeriserade tjänst. .NET pratar med den via ett vanligt HTTP-anrop eller en kö — exakt det ni redan gör med alla andra API:er. Dagar.</p>
+      </div>
+    </div>
+
+    <p class="s-desc" style="margin-top:24px"><strong>Konkret i Azure:</strong></p>
+    <div class="problem-grid" style="margin-top:14px">
+      <div class="problem-card">
+        <div class="pc-icon">📦</div>
+        <h3>Azure Container Apps</h3>
+        <p>Kör containern byggd från skriptets git-repo. Har <strong>inbyggda revisions</strong> — flera versioner sida vid sida med trafikstyrning. I praktiken halva "byt version per kund" gratis, som plattformsfunktion.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">⚡</div>
+        <h3>Azure Functions</h3>
+        <p>Enklare för korta, stateless steg som mappning och förädling — triggas av ett event/kö, kör, är klar. Ingen uppkoppling att hålla vid liv.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">☎️</div>
+        <h3>.NET-sidan</h3>
+        <p>Ett vanligt <code>HttpClient</code>-anrop eller ett meddelande på Service Bus. Noll ny kompileringsteknik krävs i själva iCore-plattformen.</p>
+      </div>
+      <div class="problem-card">
+        <div class="pc-icon">🗣️</div>
+        <h3>Språkfrågan</h3>
+        <p>JavaScript/TypeScript (det vi redan byggt och testat) eller C# (samma språk som resten av iCore) — spelar ingen roll för .NET-sidan när det bara är ett API-anrop. Väljs av vad som är minst omställning för teamet.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
     <div class="s-eyebrow">Vad det ger</div>
     <h2 class="s-title">Löser dagens problem, öppnar för nästa</h2>
     <div class="value-grid">
@@ -229,7 +274,7 @@ triggraNastaEvent(...)  // POST /events</div>
   </div>
 </section>
 
-<section>
+<section class="alt">
   <div class="wrap">
     <div class="s-eyebrow">Var vi står</div>
     <h2 class="s-title">Vad som redan finns — och vad som återstår</h2>
@@ -238,7 +283,8 @@ triggraNastaEvent(...)  // POST /events</div>
       <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Referenskod för själva stegkontraktet</div><div class="sr-d"><code>poc/icore-step-contract/</code> — typat, byggt och testat (4 tester, körs med <code>npm test</code>). Visar hur två versioner av samma steg kan dela kontrakt.</div></div></div>
       <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Klickbar pipeline-vy</div><div class="sr-d">Fem-stegskedjan (Inbound → Mappning → Förädling → Mappning → Outbound) och versionsjämförelsen finns som en interaktiv mockup i Mapping Engine-POC:n.</div></div></div>
       <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Exakt hur iCores event-API ser ut idag</div><div class="sr-d">Fält, autentisering, felhantering — behöver bekräftas mot den riktiga plattformen innan SDK:n i grund-repot kan bli mer än ett förslag.</div></div></div>
-      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Var byggsteget faktiskt körs</div><div class="sr-d">Egen byggtjänst, eller något iCore redan har för att "kompilera skript" idag som vi kan bygga vidare på?</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Var byggsteget faktiskt körs</div><div class="sr-d">Azure Container Apps/Functions är förslaget — behöver bekräftas mot vad ni redan har i er Azure-miljö idag.</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">JavaScript/TypeScript eller C# för skripten</div><div class="sr-d">Spelar ingen roll för .NET-sidan (bara ett API-anrop) — men avgör hur mycket av dagens low-code-skript som går att återanvända rakt av.</div></div></div>
       <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">Åtkomstmodell för externa LLM:er</div><div class="sr-d">Läs-och-kopiera eller skriv-tillbaka till samma Container — påverkar hur hård sandlådan behöver vara från start.</div></div></div>
     </div>
   </div>
@@ -246,8 +292,8 @@ triggraNastaEvent(...)  // POST /events</div>
 
 <div class="cta">
   <div class="wrap">
-    <h2>Nästa steg</h2>
-    <p>Mer underlag om hur iCore faktiskt fungerar idag, så vi kan gå från arkitekturförslag till en konkret plan — grund-repo, event-API och byggtjänst.</p>
+    <h2>Nästa steg — snabbast möjliga väg</h2>
+    <p>Bekräfta byggväg (Azure Container Apps/Functions) och skriptspråk, så kan ett första riktigt skript köras genom kedjan inom dagar, inte veckor — utan att röra körmotorn ni redan litar på.</p>
   </div>
 </div>
 
