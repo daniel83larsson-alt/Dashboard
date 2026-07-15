@@ -23,7 +23,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     if (activity.strava_id >= 0) return NextResponse.json({ detail: null }) // Garmin, not Concept2
 
     const raw = (activity.raw_data ?? {}) as Record<string, unknown>
-    if (Array.isArray(raw.split) && raw.split.length > 0) {
+    const cachedWorkout = raw.workout as { splits?: unknown[] } | undefined
+    if (Array.isArray(cachedWorkout?.splits) && cachedWorkout.splits.length > 0) {
       return NextResponse.json({ detail: raw })
     }
 

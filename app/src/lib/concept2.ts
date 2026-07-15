@@ -97,13 +97,20 @@ export type Concept2Result = {
   pace: number
   stroke_rate?: number
   heart_rate?: { average?: number; ending?: number }
-  split?: {
-    distance: number
-    time: number
-    pace: number
-    stroke_rate?: number
-    heart_rate?: number
-  }[]
+  // Concept2's actual detail-endpoint response nests per-split data under
+  // workout.splits — NOT a top-level "split" field. (Confirmed against a
+  // real result: the field genuinely doesn't exist at top level, so a
+  // previous version of this type that assumed it silently never matched
+  // anything real.)
+  workout?: {
+    splits?: {
+      type: string
+      distance: number
+      time: number
+      stroke_rate?: number
+      heart_rate?: { min?: number; average?: number; max?: number; ending?: number }
+    }[]
+  }
   watts?: number
 }
 

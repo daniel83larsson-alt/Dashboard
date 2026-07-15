@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { zonesToSummary, type HrZone } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 
-type C2Split = { distance: number; time: number; pace: number; stroke_rate?: number; heart_rate?: number }
+type C2Split = { type?: string; distance: number; time: number; stroke_rate?: number; heart_rate?: { average?: number } }
 
 function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
@@ -43,7 +43,7 @@ export default function ActivityEnrichment({ garminActivityId, concept2ActivityI
           concept2ActivityId
             ? fetch(`/api/activities/${concept2ActivityId}/concept2-detail`)
                 .then(r => r.json())
-                .then(data => { if (!cancelled) setSplits(data.detail?.split ?? null) })
+                .then(data => { if (!cancelled) setSplits(data.detail?.workout?.splits ?? null) })
             : Promise.resolve(),
         ])
       } catch {
@@ -100,7 +100,7 @@ export default function ActivityEnrichment({ garminActivityId, concept2ActivityI
                     <td className="px-4 py-2 font-mono">{fmtDur(s.time / 10)}</td>
                     <td className="px-4 py-2 font-mono text-lcd">{fmtPace(s.time / 10, s.distance)}</td>
                     <td className="px-4 py-2 font-mono">{s.stroke_rate ?? '--'}</td>
-                    <td className="px-4 py-2 font-mono">{s.heart_rate ?? '--'}</td>
+                    <td className="px-4 py-2 font-mono">{s.heart_rate?.average ?? '--'}</td>
                   </tr>
                 ))}
               </tbody>
