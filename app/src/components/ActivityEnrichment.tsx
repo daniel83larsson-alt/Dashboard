@@ -80,7 +80,7 @@ export default function ActivityEnrichment({ garminActivityId, concept2ActivityI
       {hasSplits && (
         <div>
           <div className="text-xs text-muted uppercase tracking-wider mb-3">Delsträckor</div>
-          <div className="bg-card border border-edge rounded-2xl overflow-hidden">
+          <div className="bg-card border border-edge rounded-2xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="text-muted text-xs border-b border-edge">
@@ -96,9 +96,9 @@ export default function ActivityEnrichment({ garminActivityId, concept2ActivityI
                 {splits!.map((s, i) => (
                   <tr key={i} className="border-b border-edge last:border-0">
                     <td className="px-4 py-2 text-muted">{i + 1}</td>
-                    <td className="px-4 py-2 font-mono">{s.distance}m</td>
-                    <td className="px-4 py-2 font-mono">{fmtDur(s.time / 10)}</td>
-                    <td className="px-4 py-2 font-mono text-lcd">{fmtPace(s.time / 10, s.distance)}</td>
+                    <td className="px-4 py-2 font-mono whitespace-nowrap">{s.distance}m</td>
+                    <td className="px-4 py-2 font-mono whitespace-nowrap">{fmtDur(s.time / 10)}</td>
+                    <td className="px-4 py-2 font-mono text-lcd whitespace-nowrap">{fmtPace(s.time / 10, s.distance)}</td>
                     <td className="px-4 py-2 font-mono">{s.stroke_rate ?? '--'}</td>
                     <td className="px-4 py-2 font-mono">{s.heart_rate?.average ?? '--'}</td>
                   </tr>
