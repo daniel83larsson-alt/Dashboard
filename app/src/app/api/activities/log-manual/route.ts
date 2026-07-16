@@ -8,11 +8,12 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  const { sportType, movingTime, distance, startDate } = await request.json() as {
+  const { sportType, movingTime, distance, startDate, name } = await request.json() as {
     sportType: string
     movingTime: number
     distance: number
     startDate: string
+    name?: string
   }
 
   if (!SPORT_LABELS[sportType]) return NextResponse.json({ error: 'Okänd träningstyp' }, { status: 400 })
@@ -35,7 +36,12 @@ export async function POST(request: NextRequest) {
     // used by the mobility logger.
     strava_id: -Date.now(),
     sport_type: sportType,
-    name: SPORT_LABELS[sportType] ? `${SPORT_LABELS[sportType][0].toUpperCase()}${SPORT_LABELS[sportType].slice(1)}` : sportType,
+    // An optional exercise summary (e.g. "5x10 Clean and Press") from the
+    // kettlebell picker overrides the generic sport-label name — capped and
+    // trimmed since it's free text from the client.
+    name: name?.trim()
+      ? name.trim().slice(0, 200)
+      : (SPORT_LABELS[sportType] ? `${SPORT_LABELS[sportType][0].toUpperCase()}${SPORT_LABELS[sportType].slice(1)}` : sportType),
     distance: Math.max(0, distance || 0),
     moving_time: Math.round(movingTime),
     elapsed_time: Math.round(movingTime),

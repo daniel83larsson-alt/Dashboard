@@ -6,8 +6,12 @@ import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 
 const SPORT_ORDER = [
   'Run', 'TrailRun', 'Walk', 'Hike', 'Ride', 'VirtualRide', 'Swim', 'Rowing',
-  'NordicSki', 'AlpineSki', 'WeightTraining', 'HIIT', 'Elliptical', 'Yoga', 'Mobility', 'Workout',
+  'NordicSki', 'AlpineSki', 'WeightTraining', 'Kettlebell', 'HIIT', 'Elliptical', 'Yoga', 'Mobility', 'Workout',
 ]
+
+// The 5-6 most common kettlebell movements — good enough to cover a normal
+// session without turning this into a full exercise database.
+const KETTLEBELL_EXERCISES = ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft']
 
 function nowForInput(): string {
   const d = new Date()
@@ -23,10 +27,27 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
+  const [exercises, setExercises] = useState<Record<string, { sets: string; reps: string }>>({})
 
   const movingTime = (parseFloat(minutes) || 0) * 60
   const distance = (parseFloat(km) || 0) * 1000
   const weight = weightKg ?? DEFAULT_WEIGHT_KG
+
+  function toggleExercise(name: string) {
+    setExercises(prev => {
+      const next = { ...prev }
+      if (next[name]) delete next[name]
+      else next[name] = { sets: '3', reps: '10' }
+      return next
+    })
+  }
+
+  const exerciseSummary = useMemo(() => {
+    return Object.entries(exercises)
+      .filter(([, v]) => v.sets && v.reps)
+      .map(([name, v]) => `${v.sets}x${v.reps} ${name}`)
+      .join(', ')
+  }, [exercises])
 
   const estimatedCalories = useMemo(() => {
     if (!sport || movingTime <= 0) return 0
@@ -46,6 +67,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
           movingTime,
           distance,
           startDate: new Date(startDate).toISOString(),
+          name: sport === 'Kettlebell' && exerciseSummary ? exerciseSummary : undefined,
         }),
       })
       const data = await res.json()
@@ -55,6 +77,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
         setMinutes('')
         setKm('')
         setStartDate(nowForInput())
+        setExercises({})
       } else {
         setError(data.error ?? 'Något gick fel')
       }
@@ -95,6 +118,51 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
             ))}
           </div>
         </div>
+
+        {sport === 'Kettlebell' && (
+          <div>
+            <div className="text-sm font-medium mb-3">Övningar (valfritt)</div>
+            <div className="flex flex-col gap-2">
+              {KETTLEBELL_EXERCISES.map(name => {
+                const picked = exercises[name]
+                return (
+                  <div key={name} className={`border rounded-xl px-3 py-2.5 transition-colors ${picked ? 'border-accent/30 bg-accent/5' : 'border-edge'}`}>
+                    <button
+                      onClick={() => toggleExercise(name)}
+                      className="w-full flex items-center justify-between text-sm"
+                    >
+                      <span className={picked ? 'text-accent font-medium' : 'text-fg'}>{name}</span>
+                      <span className={`text-xs ${picked ? 'text-accent' : 'text-muted'}`}>{picked ? '✓' : '+ Lägg till'}</span>
+                    </button>
+                    {picked && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <input
+                          type="number"
+                          min={1}
+                          inputMode="numeric"
+                          value={picked.sets}
+                          onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], sets: e.target.value } }))}
+                          className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
+                        />
+                        <span className="text-muted text-xs">set ×</span>
+                        <input
+                          type="number"
+                          min={1}
+                          inputMode="numeric"
+                          value={picked.reps}
+                          onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], reps: e.target.value } }))}
+                          className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
+                        />
+                        <span className="text-muted text-xs">reps</span>
+                      </div>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+            {exerciseSummary && <p className="text-muted text-xs mt-2">{exerciseSummary}</p>}
+          </div>
+        )}
 
         {sport && (
           <>

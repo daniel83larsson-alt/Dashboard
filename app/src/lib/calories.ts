@@ -14,6 +14,10 @@ const MET_BY_SPORT: Record<string, number> = {
   Swim: 8,
   Rowing: 7,
   WeightTraining: 5,
+  // Ballistic full-body movements (swings, cleans, snatches) push this
+  // notably higher than static weight training — Compendium of Physical
+  // Activities lists vigorous kettlebell circuits around MET 8.
+  Kettlebell: 8,
   Yoga: 3,
   Elliptical: 5.5,
   Workout: 6,
