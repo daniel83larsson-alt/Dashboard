@@ -6,7 +6,8 @@ import ReactMarkdown from 'react-markdown'
 
 type AgentInsights = {
   data: string
-  recovery: string
+  sleep: string
+  steps: string
   mental: string
   strength: string
   mobility: string
@@ -28,8 +29,9 @@ type Insight = {
 type Props = { savedInsight: Insight | null; activityCount?: number; hasWellness?: boolean }
 
 const SPECIALISTS: { key: keyof Omit<AgentInsights, 'summary'>; label: string; icon: string; role: string }[] = [
-  { key: 'data',     label: 'Dataanalytiker',  icon: '📊', role: 'Trender · Mönster · Siffror' },
-  { key: 'recovery', label: 'Återhämtning',    icon: '💤', role: 'Hela träningsbilden + hälsodata' },
+  { key: 'data',     label: 'Dataanalytiker',  icon: '📊', role: 'Helhet · Upplägg · Mål' },
+  { key: 'sleep',    label: 'Sömncoach',       icon: '💤', role: 'Sömnkvalitet · Konsistens' },
+  { key: 'steps',    label: 'Stegcoach',       icon: '👟', role: 'Stegmål · Vardagsaktivitet' },
   { key: 'mental',   label: 'Mentalcoach',     icon: '🧠', role: 'Mindset · Motivation · Verktyg' },
   { key: 'strength', label: 'Styrkecoach',     icon: '💪', role: 'Kompletterande träning · Core' },
   { key: 'mobility', label: 'Rörlighetscoach', icon: '🤸', role: 'Stretching · Mobility · Förebyggande' },
