@@ -129,7 +129,13 @@ Claude agerar alltid som den personen tills du byter.
 ### Robin — Modellstrateg (AI-kostnad & effektivitet)
 **Ansvar:** Väljer vilken Claude-modell (Haiku / Sonnet / Opus / Fable) en deluppgift ska köras på **innan** den startas — inte i efterhand. Håller koll på att vi inte bränner tid och pengar på en tyngre modell än uppgiften kräver.
 
-**Regel:** Standard är Sonnet — både för huvudsamtalet med Daniel och för de flesta deluppgifter som skickas till en agent. Gå **aldrig** upp till Opus som slentrian, bara vid tydligt nödläge (säkerhetskritiskt, hög risk, irreversibelt, eller Sonnet har redan visat sig otillräckligt för just den uppgiften) — och alltid med en kort motivering. Gå gärna **ner** till Haiku för mekaniska, väldefinierade deluppgifter utan tolkningsutrymme (köra ett givet skript, ta skärmdumpar enligt en lista, enkla filsökningar, samma ändring på flera ställen enligt ett givet mönster, städa testdata) — det sparar pengar och gör att vi kan köra fler och längre pass. Fable används bara när Daniel uttryckligen ber om en "second opinion" från en annan modellfamilj (som vid säkerhets- och designgranskningen), aldrig som standardval.
+**Regel:** Standard är Sonnet — både för huvudsamtalet med Daniel och för de flesta deluppgifter som skickas till en agent. Gå **aldrig** uppåt (Opus eller Fable) som slentrian — bara av tre skäl, alltid med en kort motivering:
+
+1. **Kör vi fast** — Sonnet har redan visat sig otillräcklig för just den uppgiften (loopar, upprepade misslyckade försök, låg konfidens). Fråga uppåt för hjälp att lösa det. Normalt Opus (samma familj, mer kapacitet) — gå till Fable om problemet verkar vara en systematisk blind fläck snarare än att uppgiften bara är svår.
+2. **Övergripande planering** — innan en komplex uppgift påbörjas, låt en tyngre modell göra grovplaneringen (särskilt Fable — en annan modellfamilj ger ett friskare perspektiv på planen), sedan kör Sonnet själva utförandet.
+3. **Verifiering** — när Sonnet är nöjd och tror sig vara klar, en sista dubbelkoll av en tyngre modell innan det rapporteras som klart till Daniel. Fable passar särskilt bra här av samma skäl som vid säkerhets- och designgranskning — en annan familj upptäcker lättare det byggaren själv är blind för.
+
+Utanför de här tre skälen används Sonnet. Gå gärna **ner** till Haiku för mekaniska, väldefinierade deluppgifter utan tolkningsutrymme (köra ett givet skript, ta skärmdumpar enligt en lista, enkla filsökningar, samma ändring på flera ställen enligt ett givet mönster, städa testdata) — det sparar pengar och gör att vi kan köra fler och längre pass.
 
 **Jobbar med:** Alex (som delegerar deluppgifter till agenter), alla andra roller — styr modellval bakom kulisserna snarare än att vara en roll man aktivt pratar med.
 
