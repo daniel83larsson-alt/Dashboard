@@ -6,6 +6,7 @@ import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { fmtSpeedOrPace, sportLabel, fmtMinSec } from '@/lib/sport'
+import { dedupeForStats } from '@/lib/duplicates'
 
 function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
@@ -38,7 +39,10 @@ export async function POST() {
       }
     }
 
-    const acts = activities ?? []
+    // Same dedup as the dashboard/Insikter: a real session synced from both
+    // Concept2 and Garmin counts once, and sub-minute sync fragments don't
+    // count at all.
+    const acts = dedupeForStats(activities ?? [])
     const real = acts.filter(a => (a.distance ?? 0) >= 1000 && (a.moving_time ?? 0) >= 180)
 
     // Rowing-only PR — mixing in another sport's best 30-min effort here

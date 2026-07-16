@@ -158,6 +158,16 @@ export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { sing
 // before being returned. Without this, "Veckans pulszoner" silently lost
 // zone data for every single merged pair, since aggregateZones only ever
 // sees the surviving row's own raw_data.
+// A session under a minute is almost certainly an accidental sync fragment
+// (a few strokes before stopping the machine, not real training) rather than
+// a legitimate short pass — same 60s floor lib/records.ts already uses for
+// PR-eligibility. These fragments are usually too small to satisfy even
+// isMergeCandidate's loose tolerance, so they'd otherwise survive as extra
+// "singles" and inflate every pass count downstream. Filtered only here, not
+// in splitMergedPairs, so the raw Passlogg list still shows every synced row
+// for manual cleanup — only the derived counts/totals exclude junk.
+const MIN_REAL_SESSION_SECONDS = 60
+
 export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
   const { pairs } = splitMergedPairs(activities)
   const dropped = new Set(pairs.map(p => p.partner.id))
@@ -168,7 +178,7 @@ export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
     if (!primaryZones && partnerZones) zonesByPrimaryId.set(p.primary.id, partnerZones)
   }
   return activities
-    .filter(a => !dropped.has(a.id))
+    .filter(a => !dropped.has(a.id) && a.moving_time >= MIN_REAL_SESSION_SECONDS)
     .map(a => {
       const zones = zonesByPrimaryId.get(a.id)
       if (!zones) return a

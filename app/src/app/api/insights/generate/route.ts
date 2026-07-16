@@ -7,6 +7,7 @@ import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { fmtSpeedOrPace } from '@/lib/sport'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { currentStepGoalStreak } from '@/lib/streaks'
+import { dedupeForStats } from '@/lib/duplicates'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -64,7 +65,7 @@ export async function POST() {
 
     const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
       supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal').eq('id', user.id).single(),
-      supabase.from('activities').select('start_date, distance, moving_time, average_heartrate, average_watts, sport_type')
+      supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, raw_data')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
@@ -81,7 +82,11 @@ export async function POST() {
       }
     }
 
-    const activities = acts ?? []
+    // Same dedup as the dashboard: a real session synced from both Concept2
+    // and Garmin counts once, and accidental sub-minute sync fragments don't
+    // count at all — otherwise "pass denna vecka/månad" here disagrees with
+    // what the dashboard shows for the same period.
+    const activities = dedupeForStats(acts ?? [])
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
