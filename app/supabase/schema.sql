@@ -884,3 +884,60 @@ create trigger protect_profile_moderation_columns
   before update on public.profiles
   for each row
   execute function public.protect_profile_moderation_columns();
+
+-- Veckoplanering, ny modell: ersätter den gamla coach_sessions('weekly_plan')
+-- JSON-klumpen (skrevs över varje gång, ingen historik) med riktiga rader
+-- per vecka och per planerat pass. training_plans har unique(user_id,
+-- week_start) — regenerering av DENNA vecka skriver över samma rad, men
+-- gamla veckor rörs aldrig, så historik för följsamhets-trenden finns
+-- "gratis". week_start ska alltid vara måndagen från startOfWeek() i koden.
+create table public.training_plans (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  week_start date not null,
+  plan_type text check (plan_type in ('mot_mal', 'adaptiv')) not null,
+  philosophy text,
+  focus_areas text[] default '{}',
+  goal_id uuid references public.goals(id) on delete set null,
+  status text default 'active' check (status in ('active', 'completed')),
+  generated_at timestamptz default now(),
+  created_at timestamptz default now(),
+  unique (user_id, week_start)
+);
+alter table public.training_plans enable row level security;
+create policy "Users see own training plans" on public.training_plans
+  for all using (auth.uid() = user_id);
+create index training_plans_user_week on public.training_plans(user_id, week_start);
+
+-- user_id är denormaliserad hit (finns redan via plan_id → training_plans)
+-- så att RLS-policyn kan vara samma enkla auth.uid() = user_id-form som
+-- alla andra tabeller, istället för en subquery mot en annan tabell (som
+-- activity_owner-kommentaren tidigare i filen varnar för — en subquery
+-- körs under anroparens egen RLS och kan tyst gå sönder).
+create table public.plan_sessions (
+  id uuid default gen_random_uuid() primary key,
+  plan_id uuid references public.training_plans(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  planned_date date not null,
+  is_rest boolean default false,
+  sport_type text,
+  title text not null,
+  description text,
+  status text default 'planned' check (status in ('planned', 'done', 'skipped', 'missed')),
+  matched_activity_id uuid references public.activities(id) on delete set null,
+  completed_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table public.plan_sessions enable row level security;
+create policy "Users see own plan sessions" on public.plan_sessions
+  for all using (auth.uid() = user_id);
+create index plan_sessions_user_date on public.plan_sessions(user_id, planned_date);
+create index plan_sessions_plan on public.plan_sessions(plan_id);
+
+-- Ett coach-föreslaget mål landar som 'proposed' — osynligt för
+-- veckoplaneringen (som redan filtrerar status='active') tills Daniel
+-- godkänner det i UI:t och det blir 'active'. Ingen extra spärr-logik
+-- behövs i generate-routen för det här, filtreringen gör jobbet automatiskt.
+alter table public.goals drop constraint if exists goals_status_check;
+alter table public.goals add constraint goals_status_check
+  check (status in ('proposed', 'active', 'achieved', 'paused', 'rejected'));
