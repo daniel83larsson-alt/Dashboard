@@ -63,6 +63,11 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  // Computed up front (pure — doesn't depend on any fetched data) so the
+  // training_plans lookup below can filter on it inside the same
+  // Promise.all batch instead of a second round-trip.
+  const weekStartStr = startOfWeek(new Date()).toISOString().slice(0, 10)
+
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
@@ -72,7 +77,10 @@ export default async function DashboardPage() {
     // genuinely needs the full history, not just a recent slice.
     supabase.from('activities').select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, raw_data, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
-    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
+    // Replaces the old coach_sessions('weekly_plan') JSON blob — this week's
+    // plan (if generated) plus its sessions in one round-trip via the FK
+    // relationship, ordered so the card can render Mon→Sun directly.
+    supabase.from('training_plans').select('*, plan_sessions(*)').eq('user_id', user.id).eq('week_start', weekStartStr).maybeSingle(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
@@ -207,7 +215,20 @@ export default async function DashboardPage() {
     await supabase.from('profiles').update({ last_onboarding_prompt_at: now.toISOString() }).eq('id', user.id)
   }
 
-  const savedPlan = (planRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? null
+  type PlanSessionRow = {
+    id: string; planned_date: string; is_rest: boolean; sport_type: string | null
+    title: string; description: string; status: 'planned' | 'done' | 'skipped' | 'missed'; matched_activity_id: string | null
+  }
+  const weeklyPlan = planRow ? {
+    id: planRow.id as string,
+    weekStart: planRow.week_start as string,
+    planType: planRow.plan_type as 'mot_mal' | 'adaptiv',
+    philosophy: planRow.philosophy as string,
+    focusAreas: (planRow.focus_areas ?? []) as string[],
+    sessions: ((planRow.plan_sessions ?? []) as PlanSessionRow[])
+      .slice()
+      .sort((a, b) => a.planned_date.localeCompare(b.planned_date)),
+  } : null
 
   // Latest team insights, for a short desktop-sidebar teaser — reuses
   // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
@@ -647,7 +668,7 @@ export default async function DashboardPage() {
 
       {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
       <div className="lg:col-span-3 lg:order-9">
-        <WeeklyPlanCard savedPlan={savedPlan} activityCount={activities.length} />
+        <WeeklyPlanCard plan={weeklyPlan} hasActiveGoal={(goals?.length ?? 0) > 0} />
       </div>
 
       </div>

@@ -5,7 +5,7 @@ import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
-import { fmtSpeedOrPace, sportLabel, fmtMinSec } from '@/lib/sport'
+import { fmtSpeedOrPace, sportLabel, fmtMinSec, SPORT_LABELS } from '@/lib/sport'
 import { dedupeForStats } from '@/lib/duplicates'
 
 function fmtDur(s: number) {
@@ -14,6 +14,10 @@ function fmtDur(s: number) {
   if (h > 0) return `${h}h ${m}m`
   return `${m} min`
 }
+
+// Ordered Mon→Sun so the AI's per-day output maps to a real date by
+// position, not by parsing its Swedish weekday label (locale-fragile).
+const WEEKDAY_LABELS = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']
 
 export async function POST() {
   try {
@@ -29,6 +33,25 @@ export async function POST() {
       supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports').eq('id', user.id).single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
+
+    // Weekly planning requires an approved goal — a coach-proposed goal sits
+    // as status='proposed' until Daniel/the athlete approves it in the UI,
+    // so this filter (status='active' above) already excludes it. No
+    // goal-less "just give me something to do" plan in v1, per the product
+    // decision: the coach sets an overarching goal, it gets approved, THEN
+    // weeks get planned under it.
+    if (!goals?.length) {
+      return NextResponse.json({ error: 'no_active_goal', message: 'Inget godkänt mål ännu — sätt ett mål med coachen först, så kan veckan planeras.' }, { status: 409 })
+    }
+
+    // Nearest target_date wins (most time-pressured goal shapes the week);
+    // falls back to the first active goal if none have a date.
+    const targetGoal = [...goals].sort((a, b) => {
+      if (a.target_date && b.target_date) return a.target_date.localeCompare(b.target_date)
+      if (a.target_date) return -1
+      if (b.target_date) return 1
+      return 0
+    })[0]
 
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
@@ -57,6 +80,8 @@ export async function POST() {
     const recentWeek = acts.filter(a => new Date(a.start_date) >= weekStart)
     const recentMonth = acts.filter(a => new Date(a.start_date) >= monthAgo)
 
+    const sportVocab = Object.keys(SPORT_LABELS).join(', ')
+
     const contextBlock = `
 TRÄNINGSDATA (senaste 30 pass, alla sporter):
 ${real.slice(0, 20).map(a => {
@@ -70,34 +95,35 @@ SAMMANFATTNING:
 - Senaste månaden: ${recentMonth.length} pass
 - Bäst 30-min rodd: ${best30 ? `${best30.distance}m (${fmtMinSec((best30.moving_time / best30.distance) * 500)}/500m)` : 'okänt (eller ingen rodd loggad)'}
 
-MÅL:
-${goals?.length ? goals.map(g => `- ${g.title} (${g.goal_type})${g.target_date ? ` — måldatum: ${g.target_date}` : ' — inget måldatum'}`).join('\n') : '- Inga specificerade mål'}
-${overviewGoal ? `\nÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
+STÅENDE MÅL (godkänt av atleten, styr den här veckan):
+- ${targetGoal.title} (${targetGoal.goal_type})${targetGoal.target_date ? ` — måldatum: ${targetGoal.target_date}` : ' — inget måldatum'}${targetGoal.description ? `\n  ${targetGoal.description}` : ''}
+${goals.length > 1 ? `\nÖVRIGA AKTIVA MÅL:\n${goals.filter(g => g.id !== targetGoal.id).map(g => `- ${g.title} (${g.goal_type})`).join('\n')}` : ''}
+${overviewGoal ? `\nÖVERGRIPANDE FILOSOFI: ${overviewGoal}` : ''}
 
 UTRUSTNING HEMMA: ${profile?.home_equipment?.length ? profile.home_equipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång, lägg bara in pass som går att göra med kroppsvikt eller det atleten faktiskt loggar pass med'}
 ${profile?.selected_sports?.length ? `AKTIVITETER/SPORTER ATLETEN UTÖVAR: ${profile.selected_sports.join(', ')}` : ''}
 `
 
-    const hasTargetedGoal = (goals ?? []).some(g => g.target_date)
+    const planType = targetGoal.target_date ? 'mot_mal' : 'adaptiv'
 
-    const prompt = `Du är ett erfaret tränarteam inom uthållighetsidrott (rodd, cykling, löpning m.fl.). Utgå från vilken/vilka sporter atleten faktiskt loggar pass inom (se träningsdatan nedan) — anta inte att det är rodd om det inte stämmer. Bestäm vilken typ av upplägg som passar bäst utifrån målen nedan:
+    const prompt = `Du är ett erfaret tränarteam inom uthållighetsidrott (rodd, cykling, löpning m.fl.). Utgå från vilken/vilka sporter atleten faktiskt loggar pass inom (se träningsdatan nedan) — anta inte att det är rodd om det inte stämmer. Planera DEN HÄR VECKAN (7 dagar, måndag till söndag) utifrån det stående målet nedan:
 
-- Om det finns ett mål med specifikt datum: bygg planen som steg mot det målet (ramad som "vecka-för-vecka mot målet").
-- Om det INTE finns något datumsatt mål: ramma planen som "kör det här upplägget i 2-3 veckor, vi justerar sedan efter varje kommande pass" — alltså adaptiv, inte ett fast långtidsschema.
+${planType === 'mot_mal'
+  ? '- Målet har ett specifikt datum: bygg veckan som ett konkret steg mot det målet.'
+  : '- Målet har inget specifikt datum: ramma veckan som "kör det här upplägget, vi justerar nästa vecka utifrån hur det gick" — adaptivt, inte ett fast långtidsschema.'}
 
 ${contextBlock}
 
 Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text):
 {
-  "planType": "mot_mal" eller "adaptiv",
-  "philosophy": "2-3 meningar som förklarar upplägget och varför, anpassat efter vilken typ du valde",
+  "philosophy": "2-3 meningar som förklarar den här veckans upplägg och varför",
   "focusAreas": ["fokusområde 1", "fokusområde 2", "fokusområde 3"],
   "sessions": [
-    { "day": "Måndag", "type": "Vila" eller "Lugn distans" eller "Intervaller" etc, "description": "konkret beskrivning med tid/distans/intensitet" }
+    { "day": "Måndag", "isRest": false, "sportType": "Rowing" eller null om vilodag/ospecifikt, "title": "Lugn distans" eller "Intervaller" etc, "description": "konkret beskrivning med tid/distans/intensitet" }
   ]
 }
 
-"sessions" ska täcka de kommande 7 dagarna (alla 7 dagar, inklusive vilodagar). Var konkret med faktiska tider och distanser anpassat till atletens nuvarande nivå. Svara på svenska.`
+"sessions" ska innehålla EXAKT 7 poster i ordningen ${WEEKDAY_LABELS.join(', ')} (inklusive vilodagar, isRest:true för dem). "sportType" måste vara ett av: ${sportVocab} — eller null för vilodagar/pass som inte tydligt tillhör en specifik sport. Var konkret med faktiska tider och distanser anpassat till atletens nuvarande nivå. Svara på svenska.`
 
     const geminiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
     const res = await fetch(
@@ -114,7 +140,6 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
             responseSchema: {
               type: 'OBJECT',
               properties: {
-                planType: { type: 'STRING', enum: ['mot_mal', 'adaptiv'] },
                 philosophy: { type: 'STRING' },
                 focusAreas: { type: 'ARRAY', items: { type: 'STRING' } },
                 sessions: {
@@ -123,14 +148,16 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
                     type: 'OBJECT',
                     properties: {
                       day: { type: 'STRING' },
-                      type: { type: 'STRING' },
+                      isRest: { type: 'BOOLEAN' },
+                      sportType: { type: 'STRING', nullable: true },
+                      title: { type: 'STRING' },
                       description: { type: 'STRING' },
                     },
-                    required: ['day', 'type', 'description'],
+                    required: ['day', 'isRest', 'title', 'description'],
                   },
                 },
               },
-              required: ['planType', 'philosophy', 'focusAreas', 'sessions'],
+              required: ['philosophy', 'focusAreas', 'sessions'],
             },
           },
         }),
@@ -139,28 +166,81 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
     const geminiData = await res.json()
     const rawPlan = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
-    let plan
+    let plan: { philosophy: string; focusAreas: string[]; sessions: Array<{ day: string; isRest: boolean; sportType?: string | null; title: string; description: string }> } | null = null
     try {
       plan = JSON.parse(rawPlan)
     } catch {
       plan = null
     }
 
-    if (!plan) {
+    if (!plan || !Array.isArray(plan.sessions) || plan.sessions.length !== 7) {
       return NextResponse.json({ error: 'Kunde inte generera plan' }, { status: 500 })
     }
 
-    const planWithMeta = { ...plan, generatedAt: new Date().toISOString(), hasTargetedGoal }
+    // Upsert this week's plan row (regenerating overwrites the SAME week —
+    // past weeks are never touched, which is what makes the adherence trend
+    // possible later).
+    const { data: planRow, error: planError } = await supabase
+      .from('training_plans')
+      .upsert({
+        user_id: user.id,
+        week_start: weekStart.toISOString().slice(0, 10),
+        plan_type: planType,
+        philosophy: plan.philosophy,
+        focus_areas: plan.focusAreas ?? [],
+        goal_id: targetGoal.id,
+        status: 'active',
+        generated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id,week_start' })
+      .select('id, week_start')
+      .single()
 
-    // Store plan in coach_sessions with special id 'weekly_plan'
-    await supabase.from('coach_sessions').upsert({
-      user_id: user.id,
-      coach_id: 'weekly_plan',
-      messages: [{ role: 'assistant', content: JSON.stringify(planWithMeta) }],
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'user_id,coach_id' })
+    if (planError || !planRow) {
+      console.error('Plan upsert error:', planError)
+      return NextResponse.json({ error: 'Kunde inte spara plan' }, { status: 500 })
+    }
 
-    return NextResponse.json({ plan: planWithMeta })
+    // Replace this week's sessions wholesale — simplest correct behavior for
+    // a regenerate, and matches the "new plan once a week" cadence (no
+    // partial merge logic needed for mid-week edits, which the product
+    // decision explicitly ruled out for v1).
+    await supabase.from('plan_sessions').delete().eq('plan_id', planRow.id)
+
+    const sessionRows = plan.sessions.map((s, i) => {
+      const date = new Date(weekStart)
+      date.setDate(date.getDate() + i)
+      return {
+        plan_id: planRow.id,
+        user_id: user.id,
+        planned_date: date.toISOString().slice(0, 10),
+        is_rest: !!s.isRest,
+        sport_type: s.isRest ? null : (s.sportType ?? null),
+        title: s.title,
+        description: s.description,
+        status: 'planned' as const,
+      }
+    })
+
+    const { data: insertedSessions, error: sessionsError } = await supabase
+      .from('plan_sessions')
+      .insert(sessionRows)
+      .select('*')
+
+    if (sessionsError) {
+      console.error('Plan sessions insert error:', sessionsError)
+      return NextResponse.json({ error: 'Kunde inte spara passen' }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      plan: {
+        id: planRow.id,
+        weekStart: planRow.week_start,
+        planType,
+        philosophy: plan.philosophy,
+        focusAreas: plan.focusAreas ?? [],
+        sessions: insertedSessions,
+      },
+    })
   } catch (err) {
     console.error('Plan generate error:', err)
     return NextResponse.json({ error: 'Generering misslyckades' }, { status: 500 })
