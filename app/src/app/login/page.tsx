@@ -37,12 +37,17 @@ export default function LoginPage() {
     const supabase = createSupabaseClient()
 
     if (mode === 'signup') {
+      // Always the real app's canonical URL, never window.location.origin —
+      // a signup started from a Vercel preview/branch URL (bookmarked,
+      // shared by mistake, or just left open in a tab) must still send the
+      // confirmation link back to the one real production site, not
+      // whichever preview deployment happened to render the signup form.
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: { name },
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
         },
       })
       if (error) setError(error.message)
