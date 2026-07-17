@@ -849,3 +849,38 @@ grant execute on function public.food_quick_picks() to authenticated;
 alter table public.profiles alter column llm_provider set default 'gemini';
 update public.profiles set llm_provider = 'gemini'
   where llm_provider = 'anthropic' and llm_api_key_encrypted is null;
+
+-- SÄKERHETSFIX: RLS-policyn "Users see own profile" (rad 15-16) saknar
+-- WITH CHECK, så USING (auth.uid() = id) återanvänds som implicit check vid
+-- UPDATE. Det avgör bara VILKEN rad en användare får ändra, inte VILKA
+-- kolumner — vilket gjorde att en inloggad användare kunde köra
+-- supabase.from('profiles').update({ locked: false, flagged_attempts: 0,
+-- flag_log: [] }) direkt från klienten och själv låsa upp sitt konto,
+-- vilket kringgår spärren mot missbruk av den delade Gemini-nyckeln i
+-- /api/coach efter FLAG_THRESHOLD flaggade meddelanden. En trigger används
+-- istället för en WITH CHECK-klausul eftersom vi behöver jämföra mot raden
+-- INNAN uppdateringen (OLD), vilket bara en trigger har tillgång till.
+-- Tillåter fortsatt: service-role (crontjobb/adminklient) och Daniels eget
+-- admin-konto (samma e-postmatchning som "Admin updates all profiles").
+create or replace function public.protect_profile_moderation_columns()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if auth.role() <> 'service_role'
+     and lower(coalesce(auth.jwt() ->> 'email', '')) <> lower('daniel83larsson@gmail.com') then
+    new.locked := old.locked;
+    new.flagged_attempts := old.flagged_attempts;
+    new.flag_log := old.flag_log;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists protect_profile_moderation_columns on public.profiles;
+create trigger protect_profile_moderation_columns
+  before update on public.profiles
+  for each row
+  execute function public.protect_profile_moderation_columns();

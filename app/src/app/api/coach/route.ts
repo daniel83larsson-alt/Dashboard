@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
@@ -116,7 +117,12 @@ export async function POST(request: NextRequest) {
       const flagLog = [entry, ...prevLog].slice(0, 10)
       const shouldLock = flaggedAttempts >= FLAG_THRESHOLD
 
-      await supabase.from('profiles').update({
+      // Service-role write, not the user's own session client: a DB trigger
+      // now blocks regular users from touching these moderation columns
+      // (they could otherwise self-unlock via the same RLS path), so this
+      // server-decided update needs the elevated client to still go through.
+      const admin = createSupabaseAdminClient()
+      await admin.from('profiles').update({
         flagged_attempts: flaggedAttempts,
         flag_log: flagLog,
         locked: shouldLock,
