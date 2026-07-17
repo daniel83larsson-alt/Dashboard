@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { fetchGarminActivities } from '@/lib/garmin'
+import { fetchGarminActivities, withGarminLock } from '@/lib/garmin'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 
 // Admin-only diagnostic: verifies that a SPECIFIC user's stored Garmin
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
   if (!email || !password) return NextResponse.json({ ok: false, reason: 'not_configured' })
 
   try {
-    const activities = await fetchGarminActivities(25, email, password)
+    const activities = await withGarminLock(() => fetchGarminActivities(25, email, password))
     const preview = activities.slice(0, 5).map(a => ({
       name: a.activityName,
       type: a.activityType?.typeKey ?? null,

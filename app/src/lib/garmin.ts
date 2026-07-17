@@ -5,6 +5,27 @@ import type { IActivity } from 'garmin-connect/dist/garmin/types/activity'
 const clientCache = new Map<string, { client: GarminConnect; loginTime: number }>()
 const LOGIN_TTL_MS = 55 * 60 * 1000
 
+// TEMPORARY mitigation (STATUS.md "Teknisk skuld" has the full writeup) for
+// a bug in the vendored garmin-connect library: its HttpClient keeps
+// isRefreshing/refreshSubscribers as module-level state instead of
+// per-instance, so when two different users' Garmin sessions are both live
+// in the same process and one triggers a 401 token refresh while another's
+// request is in flight, the second user's request can be handed the FIRST
+// user's OAuth2 token — i.e. one user's sync can silently read another
+// user's Garmin data. This is exactly the guaranteed scenario every night's
+// all-users cron creates (every Garmin sync running in one process at
+// once). Serializing all Garmin HTTP work process-wide closes that race by
+// construction, at the cost of the cron job running slower as the number of
+// Garmin-connected users grows — acceptable short-term, but the real fix is
+// patching the library itself (tracked in STATUS.md), which should let this
+// lock be removed again.
+let garminLockTail: Promise<void> = Promise.resolve()
+export function withGarminLock<T>(fn: () => Promise<T>): Promise<T> {
+  const runAfter = garminLockTail.then(fn, fn)
+  garminLockTail = runAfter.then(() => undefined, () => undefined)
+  return runAfter
+}
+
 export async function getGarminClientForUser(email: string, password: string): Promise<GarminConnect> {
   const now = Date.now()
   const cached = clientCache.get(email)

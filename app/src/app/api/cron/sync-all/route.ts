@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
+import { withGarminLock } from '@/lib/garmin'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
 import { sendPushToUser } from '@/lib/push'
 
@@ -28,12 +29,15 @@ export async function GET(request: NextRequest) {
 
   const emailByUserId = new Map((authUsers?.users ?? []).map(u => [u.id, u.email]))
 
-  // Each user's sync hits a different Garmin/Concept2 account, so there's no
-  // shared rate limit forcing these to run one at a time — running them in
-  // parallel is what keeps the whole job inside Vercel Hobby's 60s cap as
-  // the user count grows, instead of stacking each user's sync time.
+  // Garmin syncs are still kicked off "in parallel" here, but withGarminLock
+  // (see lib/garmin.ts) forces the actual Garmin HTTP work to run one user
+  // at a time — a TEMPORARY mitigation for a cross-user token-leak race in
+  // the vendored garmin-connect library (STATUS.md "Teknisk skuld" has the
+  // full writeup). This makes the job slower as the Garmin user count
+  // grows, eating back into Vercel Hobby's 60s cap; revisit if that becomes
+  // tight (batch the cron, or remove this lock once the library is patched).
   const garminSettled = await Promise.allSettled(
-    (garminRows ?? []).map(row => syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id)))
+    (garminRows ?? []).map(row => withGarminLock(() => syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id))))
   )
   const garmin = garminSettled.map((r, i) => {
     const userId = (garminRows ?? [])[i].user_id
