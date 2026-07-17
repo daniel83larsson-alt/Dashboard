@@ -65,7 +65,12 @@ export default async function DashboardPage() {
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
-    supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
+    // Narrowed from select('*') — this fetches every activity ever logged
+    // (grows without bound) so dropping unused columns matters. raw_data and
+    // strava_id stay: dedupeForStats() needs them (Concept2/Garmin pair
+    // matching + HR-zone preservation across merges), and PR/streak detection
+    // genuinely needs the full history, not just a recent slice.
+    supabase.from('activities').select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, raw_data, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),

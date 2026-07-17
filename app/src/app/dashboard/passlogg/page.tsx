@@ -17,9 +17,12 @@ export default async function PassloggPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  // Narrowed from select('*') — same reasoning as the dashboard page: this
+  // fetches every activity ever logged, so unused columns aren't free.
+  // raw_data/strava_id stay for dedupeForStats()/splitMergedPairs().
   const { data: activities } = await supabase
     .from('activities')
-    .select('*')
+    .select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, start_date, raw_data, description')
     .eq('user_id', user.id)
     .order('start_date', { ascending: false })
 
