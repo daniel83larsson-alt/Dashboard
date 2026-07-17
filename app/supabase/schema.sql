@@ -776,3 +776,63 @@ alter table public.profiles add column if not exists vo2max_date date;
 -- compares against the user's own rolling recent average instead of forcing
 -- a number on someone who hasn't thought about one yet.
 alter table public.profiles add column if not exists weekly_load_goal numeric;
+
+-- Kaloribudget-funktionen ("Mat"): BMR/TDEE kräver mer än vikten vi redan
+-- har. Mifflin-St Jeor behöver längd, ålder och biologiskt kön. Alla
+-- nullable — samma konvention som weight_kg: saknas de faller vi tillbaka
+-- på ett tydligt märkt schablonvärde (se lib/bmr.ts) istället för att
+-- blockera funktionen. birth_year istället för ålder direkt eftersom ålder
+-- annars måste uppdateras varje år.
+alter table public.profiles add column if not exists height_cm numeric;
+alter table public.profiles add column if not exists birth_year integer;
+alter table public.profiles add column if not exists biological_sex text
+  check (biological_sex in ('male', 'female'));
+
+-- Dagligt kalorimål (intag). Nullable och utan default — till skillnad från
+-- stegmålet finns inget rimligt universellt värde; kortet uppmanar
+-- användaren att sätta ett mål istället för att hitta på ett.
+alter table public.profiles add column if not exists daily_calorie_goal integer;
+
+-- Matloggen. calories är alltid server-beräknad/-validerad (se
+-- /api/food/log) — aldrig ett klientskickat tal som sparas rakt av.
+-- Snabbvalslistan är medvetet INTE en egen tabell utan härleds ur den här
+-- (food_quick_picks nedan) — samma "härled istället för dubbellagra"-princip
+-- som dedupeForStats/streaks redan använder, ingen risk för att en separat
+-- favoritlista driftar isär från den faktiska loggen.
+create table public.food_log (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  name text not null,
+  calories integer not null,
+  source text not null check (source in ('database', 'ai_text', 'photo')),
+  quantity numeric,
+  unit text check (unit in ('g', 'portion')),
+  kcal_per_100g numeric,
+  off_id text,
+  logged_at timestamptz not null default now(),
+  created_at timestamptz default now()
+);
+alter table public.food_log enable row level security;
+create policy "Users see own food log" on public.food_log
+  for all using (auth.uid() = user_id);
+create index food_log_user_logged_idx on public.food_log (user_id, logged_at desc);
+create index food_log_user_name_idx on public.food_log (user_id, lower(name));
+
+-- Snabbval: distinkta rätter användaren loggat förr, med hur ofta + senast —
+-- så listan kan rankas efter båda utan att klienten behöver göra jobbet.
+create or replace function public.food_quick_picks()
+returns table(name text, calories integer, source text, quantity numeric, unit text, kcal_per_100g numeric, off_id text, times_logged bigint, last_logged timestamptz)
+language sql
+security definer
+set search_path = public
+as $$
+  select distinct on (lower(f.name))
+    f.name, f.calories, f.source, f.quantity, f.unit, f.kcal_per_100g, f.off_id,
+    count(*) over (partition by lower(f.name)) as times_logged,
+    max(f.logged_at) over (partition by lower(f.name)) as last_logged
+  from public.food_log f
+  where f.user_id = auth.uid()
+  order by lower(f.name), f.logged_at desc
+$$;
+revoke all on function public.food_quick_picks() from public;
+grant execute on function public.food_quick_picks() to authenticated;

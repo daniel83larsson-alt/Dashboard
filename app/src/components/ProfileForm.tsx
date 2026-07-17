@@ -20,6 +20,10 @@ type Profile = {
   daily_step_goal?: number | null
   weight_kg?: number | null
   weekly_load_goal?: number | null
+  height_cm?: number | null
+  birth_year?: number | null
+  biological_sex?: 'male' | 'female' | null
+  daily_calorie_goal?: number | null
 }
 
 
@@ -59,6 +63,10 @@ export default function ProfileForm({
   const [stepGoal, setStepGoal] = useState(profile?.daily_step_goal ?? 10000)
   const [weightKg, setWeightKg] = useState(profile?.weight_kg?.toString() ?? '')
   const [loadGoal, setLoadGoal] = useState(profile?.weekly_load_goal?.toString() ?? '')
+  const [heightCm, setHeightCm] = useState(profile?.height_cm?.toString() ?? '')
+  const [birthYear, setBirthYear] = useState(profile?.birth_year?.toString() ?? '')
+  const [biologicalSex, setBiologicalSex] = useState(profile?.biological_sex ?? '')
+  const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal?.toString() ?? '')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -78,6 +86,9 @@ export default function ProfileForm({
 
     const parsedWeight = parseFloat(weightKg)
     const parsedLoadGoal = parseFloat(loadGoal)
+    const parsedHeight = parseFloat(heightCm)
+    const parsedBirthYear = parseInt(birthYear, 10)
+    const parsedCalorieGoal = parseInt(calorieGoal, 10)
     await supabase.from('profiles').update({
       name,
       llm_provider: provider,
@@ -86,6 +97,10 @@ export default function ProfileForm({
       daily_step_goal: stepGoal,
       weight_kg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
       weekly_load_goal: loadGoal.trim() && !Number.isNaN(parsedLoadGoal) ? parsedLoadGoal : null,
+      height_cm: heightCm.trim() && !Number.isNaN(parsedHeight) ? parsedHeight : null,
+      birth_year: birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null,
+      biological_sex: biologicalSex || null,
+      daily_calorie_goal: calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -238,6 +253,69 @@ export default function ProfileForm({
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
           <p className="text-muted text-xs mt-1.5">Används för att räkna ut kalorier när du loggar ett pass manuellt.</p>
+        </div>
+      </div>
+
+      {/* Body & calories */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Kropp & kalorier</div>
+          <p className="text-muted text-xs">Används för att uppskatta din basförbränning (vilopuls) i Mat-funktionen. Allt är valfritt — saknas något används ett schablonvärde, tydligt märkt som uppskattning.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-muted text-xs block mb-1.5">Längd (cm)</label>
+            <input
+              type="number"
+              min={100}
+              max={250}
+              inputMode="numeric"
+              value={heightCm}
+              onChange={e => setHeightCm(e.target.value)}
+              placeholder="t.ex. 180"
+              className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+            />
+          </div>
+          <div>
+            <label className="text-muted text-xs block mb-1.5">Födelseår</label>
+            <input
+              type="number"
+              min={1920}
+              max={new Date().getFullYear()}
+              inputMode="numeric"
+              value={birthYear}
+              onChange={e => setBirthYear(e.target.value)}
+              placeholder="t.ex. 1985"
+              className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-muted text-xs block mb-1.5">Biologiskt kön</label>
+          <select
+            value={biologicalSex}
+            onChange={e => setBiologicalSex(e.target.value as 'male' | 'female' | '')}
+            className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent"
+          >
+            <option value="">Vill inte ange</option>
+            <option value="male">Man</option>
+            <option value="female">Kvinna</option>
+          </select>
+        </div>
+        <div>
+          <label className="text-muted text-xs block mb-1.5">Dagligt kalorimål (valfritt)</label>
+          <input
+            type="number"
+            min={800}
+            max={8000}
+            step={50}
+            inputMode="numeric"
+            value={calorieGoal}
+            onChange={e => setCalorieGoal(e.target.value)}
+            placeholder="t.ex. 2400"
+            className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+          />
+          <p className="text-muted text-xs mt-1.5">Styr kalorirutan på Översikt. Lämna tomt för att bara se ätit/bränt utan ett mål att jämföra mot.</p>
         </div>
       </div>
 

@@ -13,6 +13,7 @@ const PATHS: Record<string, string> = {
   trophy: 'M8 21h8M12 17v4M7 4h10v4a5 5 0 01-10 0V4zM7 5H4v2a3 3 0 003 3M17 5h3v2a3 3 0 01-3 3',
   route: 'M5 20l2-9 5 3 5-9 2 9M5 20a2 2 0 100-4 2 2 0 000 4zM19 11a2 2 0 100-4 2 2 0 000 4z',
   plus: 'M12 8v8M8 12h8',
+  food: 'M6 2v7a2 2 0 002 2v11M6 2v20M10 2v9M18 2c-2 0-3 2-3 5s1 4 3 4v11',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {

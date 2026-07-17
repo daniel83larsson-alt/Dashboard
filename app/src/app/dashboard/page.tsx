@@ -2,7 +2,8 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
-import { startOfWeek } from '@/lib/dates'
+import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from '@/lib/dates'
+import { estimateBMR } from '@/lib/bmr'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
 import OnboardingWizard from '@/components/OnboardingWizard'
@@ -52,6 +53,7 @@ type Activity = {
   name: string
   sport_type: string
   raw_data?: unknown
+  calories?: number | null
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -61,8 +63,8 @@ export default async function DashboardPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }] = await Promise.all([
-    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal').eq('id', user.id).single(),
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_plan').single(),
@@ -73,6 +75,7 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
     supabase.rpc('friend_activity_feed'),
     supabase.rpc('pending_follow_requests'),
+    supabase.from('food_log').select('calories, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
   ])
 
   const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -153,6 +156,29 @@ export default async function DashboardPage() {
   const weekLoad = weeklyLoad(activities, restingHRForLoad, personalMaxHR, weekStart, nextWeekStart)
   const loadGoal = profile?.weekly_load_goal ?? rollingBaselineLoad(activities, restingHRForLoad, personalMaxHR, now)
   const loadPct = loadGoal ? Math.round((weekLoad / loadGoal) * 100) : null
+
+  // ── Kalorier idag ─────────────────────────────────────────────────────────
+  // "Bränt idag" = summan av redan uträknade träningspass-kalorier (kolumnen
+  // finns redan per rad) plus en uppskattad basförbränning — men bara den
+  // andel av dygnet som faktiskt har gått, annars ser en koll klockan 9 ut
+  // som att man redan bränt ett helt dygns vila. dedupeForStats säkerställer
+  // att ett Concept2+Garmin-par för samma pass inte räknas dubbelt.
+  const todayKey = stockholmDateKey(now)
+  const activityCaloriesToday = activities
+    .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
+    .reduce((s, a) => s + (a.calories ?? 0), 0)
+  const eatenToday = (recentFoodLog ?? [])
+    .filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)
+    .reduce((s, f) => s + (f.calories ?? 0), 0)
+  const bmrResult = estimateBMR({
+    weightKg: profile?.weight_kg ?? null,
+    heightCm: profile?.height_cm ?? null,
+    birthYear: profile?.birth_year ?? null,
+    biologicalSex: profile?.biological_sex ?? null,
+  }, now)
+  const burnedProjected = bmrResult.bmr + activityCaloriesToday
+  const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
+  const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
 
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
@@ -246,6 +272,41 @@ export default async function DashboardPage() {
             {loadPct !== null && loadPct > 130 && ' · klart mer än vanligt, tänk på återhämtning'}
           </div>
         </div>
+      )}
+
+      {/* ── Kalorier idag ─────────────────────────────────────────────────────── */}
+      {showCalorieCard ? (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-muted uppercase tracking-wider">Kalorier idag</div>
+            <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
+          </div>
+          <div className="flex items-baseline justify-between">
+            <span className="font-mono text-accent text-2xl font-bold">{eatenToday}</span>
+            <span className="text-muted text-xs">
+              ätit{profile?.daily_calorie_goal ? ` / ${profile.daily_calorie_goal} mål` : ''}
+            </span>
+          </div>
+          {profile?.daily_calorie_goal && (
+            <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
+              <div
+                className="h-full bg-accent rounded-full"
+                style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
+              />
+            </div>
+          )}
+          <div className="text-muted text-xs mt-2">
+            Förbränt (uppskattning): ~{burnedSoFar} kcal · beräknad dygnsförbränning ~{burnedProjected}
+            {bmrResult.usedDefaults.length > 0 && (
+              <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
+            )}
+          </div>
+        </div>
+      ) : (
+        <a href="/dashboard/mat" className="bg-card border border-edge rounded-2xl p-4 block hover:border-accent/30 transition-colors">
+          <div className="text-sm font-medium">🍽 Sätt ett kalorimål</div>
+          <div className="text-muted text-xs mt-1">Logga vad du äter och se det mot vad du bränner — sök, fota eller snabbval.</div>
+        </a>
       )}
 
       {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
