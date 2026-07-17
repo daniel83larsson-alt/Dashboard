@@ -7,7 +7,7 @@ create table public.profiles (
   email text not null,
   name text,
   selected_sports text[] default '{}',
-  llm_provider text default 'anthropic',
+  llm_provider text default 'gemini',
   llm_api_key_encrypted text,
   created_at timestamptz default now()
 );
@@ -836,3 +836,16 @@ as $$
 $$;
 revoke all on function public.food_quick_picks() from public;
 grant execute on function public.food_quick_picks() to authenticated;
+
+-- llm_provider defaulted to 'anthropic' since the original schema, which
+-- made every new user's Profil-sida show "Claude" pre-selected even though
+-- the shared free-tier fallback everywhere in the app (Insikter, Veckoplan,
+-- Coach) is actually Gemini — purely a misleading default, never a real
+-- functional bug (Coach only ever calls Anthropic when the user has BOTH
+-- their own key AND this set to 'anthropic'). Fixed for new signups going
+-- forward; existing rows updated below only where the value could only
+-- ever have come from the default (no own key saved, so 'anthropic' was
+-- never actually acted on for that account).
+alter table public.profiles alter column llm_provider set default 'gemini';
+update public.profiles set llm_provider = 'gemini'
+  where llm_provider = 'anthropic' and llm_api_key_encrypted is null;
