@@ -140,16 +140,18 @@ export default function WeeklyPlanCard({
           {plan.sessions?.length > 0 && (
             <div className="flex flex-col gap-1.5">
               {plan.sessions.map(s => (
-                <div key={s.id} className={`bg-bg rounded-xl p-3 flex gap-3 items-start ${s.status === 'skipped' ? 'opacity-50' : ''}`}>
-                  <div className="text-xs text-muted font-medium w-16 flex-shrink-0 pt-0.5">{weekdayLabel(s.planned_date)}</div>
-                  <div className="flex-1 min-w-0">
-                    <div className={`text-sm font-medium ${s.status === 'done' ? 'text-lcd' : 'text-fg'}`}>
-                      {s.status === 'done' && '✓ '}{s.title}
+                <div key={s.id} className={`bg-bg rounded-xl p-3 flex flex-col gap-2 ${s.status === 'skipped' ? 'opacity-50' : ''}`}>
+                  <div className="flex gap-3 items-start">
+                    <div className="text-xs text-muted font-medium w-16 flex-shrink-0 pt-0.5">{weekdayLabel(s.planned_date)}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-sm font-medium ${s.status === 'done' ? 'text-lcd' : 'text-fg'}`}>
+                        {s.status === 'done' && '✓ '}{s.title}
+                      </div>
+                      <div className="text-xs text-muted mt-0.5 leading-relaxed">{s.description}</div>
                     </div>
-                    <div className="text-xs text-muted mt-0.5 leading-relaxed">{s.description}</div>
                   </div>
                   {!s.is_rest && (
-                    <div className="flex-shrink-0 flex gap-1">
+                    <div className="flex gap-1 justify-end">
                       {s.status === 'planned' && (
                         <>
                           <button
