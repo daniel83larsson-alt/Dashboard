@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>iCore + Azure — arkitektur och arbetssätt</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--blue2:#3d8bff;--teal:#00c9a7;--purple:#7c5cbf;
+  --orange:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --old:#94a3b8;--old-bg:#f1f5f9;--old-line:#cbd5e1;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.08);--shadow-lg:0 8px 40px rgba(0,0,0,.12);
+  --line:#cbd5e1;
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+a{color:inherit}
+.mono{font-family:'SF Mono',Consolas,monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+/* ── HERO ── */
+.hero{background:var(--navy);color:#fff;padding:72px 0 60px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(30,111,255,.15);color:#7ea8ff;border:1px solid rgba(30,111,255,.35);padding:6px 13px;border-radius:99px;margin-bottom:22px}
+h1.h-title{font-size:clamp(28px,4vw,40px);font-weight:800;line-height:1.18;letter-spacing:-.01em;max-width:20ch;text-wrap:balance}
+h1.h-title span{color:var(--teal)}
+.h-sub{font-size:16px;color:#b6c2d9;margin-top:18px;max-width:62ch;line-height:1.6}
+.hero-stats{display:flex;gap:34px;margin-top:36px;flex-wrap:wrap}
+.hs-num{font-size:22px;font-weight:800;color:var(--teal)}
+.hs-lbl{font-size:12px;color:#93a3bf;margin-top:2px;max-width:22ch}
+
+/* ── SECTIONS ── */
+section{padding:52px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+h2.s-title{font-size:clamp(21px,2.8vw,27px);font-weight:800;letter-spacing:-.01em;max-width:30ch;text-wrap:balance}
+.s-desc{font-size:14.5px;color:var(--gray600);margin-top:12px;max-width:68ch;line-height:1.65}
+
+/* ── DIAGRAM SHELL ── */
+.diagram{margin-top:30px;background:var(--navy);border-radius:16px;padding:34px 28px;position:relative;overflow:hidden}
+.diagram::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.diagram-inner{position:relative;overflow-x:auto}
+.d-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#6b83ab;text-align:center;margin-bottom:18px}
+
+/* tree: parent -> two branches */
+.node{background:var(--navy3);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:13px 16px;text-align:center}
+.node .n-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:5px}
+.node .n-n{font-size:12.5px;font-weight:700;color:#fff;line-height:1.4}
+.node.old{border-color:rgba(148,163,184,.35)}
+.node.old .n-t{color:var(--old)}
+.node.new{border-color:rgba(0,201,167,.4)}
+
+.tree-parent-wrap{max-width:340px;margin:0 auto}
+.stub{width:2px;height:26px;background:var(--line);opacity:.4;margin:0 auto}
+.tree-children{display:flex;justify-content:center;gap:32px;margin:0 auto;max-width:600px}
+.tree-child{flex:1;max-width:280px;position:relative;padding-top:26px}
+.tree-child::before{content:'';position:absolute;top:0;left:50%;width:2px;height:26px;background:var(--line);opacity:.4;transform:translateX(-1px)}
+.tree-child::after{content:'';position:absolute;top:0;height:2px;background:var(--line);opacity:.4}
+.tree-child:first-child::after{left:50%;right:-16px}
+.tree-child:last-child::after{right:50%;left:-16px}
+.converge{text-align:center;color:#5b6f8f;font-size:18px;margin:18px 0 14px;line-height:1}
+.tree-merge-wrap{max-width:460px;margin:0 auto}
+
+/* horizontal pipeline (reused pattern) */
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:600px;margin-top:4px}
+.flow-row.sub{min-width:520px;opacity:.88}
+.flow-box{background:var(--navy3);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:13px 15px;flex:1;text-align:center}
+.flow-box .fb-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:5px}
+.flow-box.sub2 .fb-t{color:var(--purple)}
+.flow-box.sub3 .fb-t{color:var(--orange)}
+.flow-box .fb-n{font-size:12px;font-weight:700;color:#fff;line-height:1.4}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:15px;padding:0 7px;flex-shrink:0}
+.flow-loop{display:flex;align-items:center;justify-content:center;flex-direction:column;color:#5b6f8f;font-size:14px;padding:0 6px;flex-shrink:0;gap:2px}
+.flow-loop span{font-size:8.5px;color:var(--orange);font-weight:700;white-space:nowrap}
+.substrip{margin-top:22px;padding-top:18px;border-top:1px dashed rgba(255,255,255,.12)}
+.substrip-label{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b83ab;margin-bottom:10px}
+
+/* ── MINIMAL CHANGE CARDS ── */
+.min-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:28px}
+.min-card{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);position:relative}
+.min-card .mc-num{width:30px;height:30px;border-radius:8px;background:var(--blue);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13.5px;margin-bottom:14px}
+.min-card h3{font-size:14.5px;font-weight:700;margin-bottom:7px}
+.min-card p{font-size:13px;color:var(--gray600);line-height:1.6}
+.min-card .mc-note{margin-top:10px;font-size:11.5px;color:var(--gray400);font-style:italic}
+
+/* ── WORKFLOW STEPS ── */
+.steps{margin-top:32px;position:relative}
+.step{display:grid;grid-template-columns:44px 1fr;gap:18px;position:relative;padding-bottom:28px}
+.step:last-child{padding-bottom:0}
+.step:not(:last-child)::before{content:'';position:absolute;left:21px;top:44px;bottom:-2px;width:2px;background:var(--gray200)}
+.step-num{width:44px;height:44px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;z-index:1}
+.step-body{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:16px 20px;box-shadow:var(--shadow)}
+.step-body h3{font-size:14.5px;font-weight:800;margin-bottom:5px}
+.step-body p{font-size:13px;color:var(--gray600);line-height:1.6}
+
+/* ── COEXISTENCE TABLE ── */
+.coex{margin-top:28px;background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow)}
+.coex-row{display:grid;grid-template-columns:1fr 1fr}
+.coex-row+.coex-row{border-top:1px solid var(--gray200)}
+.coex-row.head{background:var(--navy);color:#fff}
+.coex-cell{padding:13px 18px;font-size:12.5px;color:var(--gray600);line-height:1.5;border-left:1px solid var(--gray200)}
+.coex-cell:first-child{border-left:none}
+.coex-row.head .coex-cell{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;border-left-color:rgba(255,255,255,.12)}
+.coex-row.head .coex-cell:nth-child(2){color:#8ee9d4}
+.coex-cell b{color:var(--navy);font-weight:700}
+
+/* ── VALUE GRID ── */
+.value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:28px}
+.value-card{padding:19px;border-radius:var(--radius);background:var(--gray50);border:1px solid var(--gray200)}
+.value-card .vc-icon{width:30px;height:30px;border-radius:8px;background:rgba(0,201,167,.12);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;margin-bottom:10px}
+.value-card h3{font-size:13.5px;font-weight:700;margin-bottom:5px}
+.value-card p{font-size:12px;color:var(--gray600);line-height:1.55}
+
+/* ── STATUS ── */
+.status-list{margin-top:24px;display:flex;flex-direction:column;gap:9px}
+.status-row{display:flex;align-items:flex-start;gap:12px;background:var(--white);border:1px solid var(--gray200);border-radius:10px;padding:13px 15px}
+.status-dot{width:9px;height:9px;border-radius:50%;margin-top:5px;flex-shrink:0}
+.sd-done{background:var(--green)}
+.sd-todo{background:var(--orange)}
+.sd-next{background:var(--blue)}
+.status-row .sr-t{font-size:13px;font-weight:700}
+.status-row .sr-d{font-size:12px;color:var(--gray600);margin-top:2px}
+
+/* ── FOOTER ── */
+.cta{background:var(--navy);color:#fff;padding:52px 0;text-align:center}
+.cta h2{font-size:21px;font-weight:800;margin-bottom:9px}
+.cta p{color:#b6c2d9;font-size:13.5px;max-width:54ch;margin:0 auto}
+
+@media (max-width:640px){
+  .min-grid,.value-grid{grid-template-columns:1fr}
+  .tree-children{gap:16px}
+  .tree-child::after{display:none}
+  .coex-row{grid-template-columns:1fr}
+  .coex-cell{border-left:none;border-top:1px solid var(--gray200)}
+  .coex-cell:first-child{border-top:none}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">iCore × Azure · Arkitekturöversikt</div>
+    <h1 class="h-title">Två vägar in, <span>ett event-flöde ut</span></h1>
+    <p class="h-sub">Gamla skript kör kvar precis som idag. Nya skript byggs och ändras i Azure, med hjälp av en LLM. iCore avgör per steg vilken väg som gäller — inget storbang-byte, ingen kund märker av det förrän ni väljer att flippa just deras rad.</p>
+    <div class="hero-stats">
+      <div><div class="hs-num">2</div><div class="hs-lbl">nya öppningar i iCore — resten är orört</div></div>
+      <div><div class="hs-num">1 rad</div><div class="hs-lbl">i dispatch-tabellen styr gammalt vs nytt, per steg och kund</div></div>
+      <div><div class="hs-num">1→N</div><div class="hs-lbl">en infil kan bli flera utfiler, samma mönster som idag</div></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Helhetsbilden</div>
+    <h2 class="s-title">iCore avgör var koden körs — inte om den körs</h2>
+    <p class="s-desc">Event-motorn, dispatch-tabellen och loggningen i iCore rörs inte. Det enda nya är att dispatchen, som redan idag slår upp <span class="mono">event + partner + filtyp → skript</span>, får ett andra möjligt svar: "kör extern" istället för "kör internt". Vilken väg som väljs avgörs per rad — inte globalt.</p>
+
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="d-label">Dispatch: event + partner + filtyp</div>
+        <div class="tree-parent-wrap">
+          <div class="node"><div class="n-t">iCore — oförändrad kärna</div><div class="n-n">Event-motor · Dispatch-tabell · Loggning</div></div>
+        </div>
+        <div class="stub"></div>
+        <div class="tree-children">
+          <div class="tree-child">
+            <div class="node old"><div class="n-t">Väg A — idag</div><div class="n-n">Gammalt skript, körs internt som vanligt</div></div>
+          </div>
+          <div class="tree-child">
+            <div class="node new"><div class="n-t">Väg B — nytt</div><div class="n-n">Externt anrop till Azure, byggt/ändrat med LLM</div></div>
+          </div>
+        </div>
+        <div class="converge">↓ &nbsp; ↓</div>
+        <div class="tree-merge-wrap">
+          <div class="node"><div class="n-t">Samma landning, oavsett väg</div><div class="n-n">Event "fil klar" triggas identiskt → nästa steg i kedjan</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Väg B i detalj</div>
+    <h2 class="s-title">Vad som faktiskt händer på Azure-sidan</h2>
+    <p class="s-desc">Samma claim-check-mönster iCore redan använder idag — anropet bär en pekare till filen, aldrig filen själv. 1-till-flera löses genom att sista steget upprepas en gång per utfil, inte genom en ny mekanik.</p>
+
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="d-label">Körflödet för ett externt steg</div>
+        <div class="flow-row">
+          <div class="flow-box"><div class="fb-t">1 · Dispatch</div><div class="fb-n">Extern URL för detta steg</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><div class="fb-t">2 · Azure Function</div><div class="fb-n">Hämtar filen, kör mappningen</div></div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-box"><div class="fb-t">3 · Blob Storage</div><div class="fb-n">Skriver resultatfil(er)</div></div>
+          <div class="flow-loop">↻<span>×1–N filer</span></div>
+          <div class="flow-box"><div class="fb-t">4 · iCore-API</div><div class="fb-n">Trigga event "fil klar"</div></div>
+        </div>
+
+        <div class="substrip">
+          <div class="substrip-label">Byggväg — hur koden hamnar där</div>
+          <div class="flow-row sub">
+            <div class="flow-box sub2"><div class="fb-t">Git</div><div class="fb-n">Skript ändras, av person eller LLM</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box sub2"><div class="fb-t">Actions</div><div class="fb-n">Testar, bygger, driftsätter</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box sub2"><div class="fb-t">Azure Function</div><div class="fb-n">Ny version live</div></div>
+          </div>
+        </div>
+
+        <div class="substrip">
+          <div class="substrip-label">Insynsväg — vad portalen visar</div>
+          <div class="flow-row sub">
+            <div class="flow-box sub3"><div class="fb-t">Function</div><div class="fb-n">Varje körning</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box sub3"><div class="fb-t">App Insights</div><div class="fb-n">Loggar resultat, tid, fel</div></div>
+            <div class="flow-arrow">→</div>
+            <div class="flow-box sub3"><div class="fb-t">Portal</div><div class="fb-n">Visualiserar mappning + historik</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Minsta möjliga ändring</div>
+    <h2 class="s-title">Det enda iCore faktiskt behöver få</h2>
+    <p class="s-desc">Ingen omskrivning. Två tunna öppningar — resten återanvänder logik som redan finns.</p>
+    <div class="min-grid">
+      <div class="min-card">
+        <div class="mc-num">1</div>
+        <h3>Ett nytt värde i dispatch-tabellen</h3>
+        <p>Idag pekar en rad på "internt skript X". Lägg till alternativet "extern URL". Matchningen på event + partner + filtyp rörs inte — bara vart resultatet av matchningen pekar.</p>
+        <div class="mc-note">Ingen ny regelmotor. En kolumn.</div>
+      </div>
+      <div class="min-card">
+        <div class="mc-num">2</div>
+        <h3>Två API:er öppnas utåt</h3>
+        <p>"Hämta fil" och "trigga event" — samma anrop skript redan gör internt idag, fast nåbara med autentisering utifrån. Ingen ny funktionalitet, bara en ny ingång till den som finns.</p>
+        <div class="mc-note">Tunna omslag, inte ny logik.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Samexistens</div>
+    <h2 class="s-title">Gammalt och nytt körs sida vid sida, permanent om ni vill</h2>
+    <p class="s-desc">Det här är inte en migrering med deadline. Vägen väljs per steg och kund — ett skift som aldrig behöver bli allt-eller-inget.</p>
+    <div class="coex">
+      <div class="coex-row head">
+        <div class="coex-cell">Gammalt skript (Väg A)</div>
+        <div class="coex-cell">Nytt skript (Väg B)</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell"><b>Kör exakt som idag</b> — ingen kund märker något förrän ni aktivt flippar deras rad</div>
+        <div class="coex-cell"><b>Byggs och ändras med hjälp av en LLM</b> — riktig kod i git, inte låst i låg-kod-verktyget</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Ingen versionshistorik utöver det gamla verktyget själv kan visa</div>
+        <div class="coex-cell">Full historik via git — vem ändrade vad, när, och varför</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Ändring = redigera direkt i produktion</div>
+        <div class="coex-cell">Ändring = gren → test → godkännande → driftsättning</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Fungerar bra, ingen anledning att rusa iväg från det</div>
+        <div class="coex-cell">Väljs när ett steg ändå ska byggas nytt eller ändras ofta</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Arbetssätt</div>
+    <h2 class="s-title">Så går en ändring från idé till aktiv, för Väg B</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><h3>Ändra skriptet i git</h3><p>Antingen skriver en utvecklare det direkt, eller så beskriver någon önskad ändring för en LLM som skriver koden. Samma startpunkt oavsett vem som håller i pennan.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><h3>Automatiska tester körs</h3><p>Samma exempel-i, facit-ut-mönster som redan finns i pipeline-kontraktet. Går testerna inte igenom stannar ändringen här — den når aldrig en kund.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><h3>En människa granskar och godkänner</h3><p>Oavsett om koden kom från en person eller en LLM passerar den samma godkännande-grind innan den får gå vidare.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><h3>Driftsätts automatiskt</h3><p>Godkänd ändring byggs och rullas ut till Azure av samma pipeline, varje gång — inget manuellt kopierande.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body"><h3>En rad i iCore flippas</h3><p>Steget aktiveras för en kund i taget genom att peka om dess dispatch-rad. Andra kunder på samma steg påverkas inte.</p></div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body"><h3>Syns direkt i portalen</h3><p>Vilken version som kör, för vem, och hur senaste körningarna gick — utan att någon behöver fråga i ett annat system.</p></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Varför det är värt det</div>
+    <h2 class="s-title">Vad ni faktiskt vinner</h2>
+    <div class="value-grid">
+      <div class="value-card"><div class="vc-icon">AI</div><h3>LLM kan faktiskt hjälpa till</h3><p>Ren kod i git istället för låst låg-kod — det enda format en LLM kan läsa, ändra och testa.</p></div>
+      <div class="value-card"><div class="vc-icon">V</div><h3>Versionshistorik på riktigt</h3><p>Vem ändrade vad och när — något det gamla verktyget aldrig gett er.</p></div>
+      <div class="value-card"><div class="vc-icon">T</div><h3>Testat innan aktiverat</h3><p>Ändringar bevisas mot facit innan de rör en enda kunds data.</p></div>
+      <div class="value-card"><div class="vc-icon">R</div><h3>Litet riskområde per ändring</h3><p>En rad i dispatch-tabellen per kund och steg — aldrig en global omkoppling.</p></div>
+      <div class="value-card"><div class="vc-icon">K</div><h3>iCores kärna orörd</h3><p>Event-motor och loggning ändras inte — bara var körningen sker.</p></div>
+      <div class="value-card"><div class="vc-icon">S</div><h3>Synligt för alla, inte bara utvecklare</h3><p>Portalen visar mappningen visuellt — ingen behöver läsa kod för att förstå vad ett steg gör.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Läge just nu</div>
+    <h2 class="s-title">Vad som finns och vad som är näst</h2>
+    <div class="status-list">
+      <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Stegkontrakt kodat och testat</div><div class="sr-d">Fraktkalkyl-steget finns i två versioner, fyra tester, körs offline redan idag</div></div></div>
+      <div class="status-row"><div class="status-dot sd-done"></div><div><div class="sr-t">Portal-mockup byggd</div><div class="sr-d">Mappningsvy, portföljöversikt och pipelinevy finns som klickbar POC</div></div></div>
+      <div class="status-row"><div class="status-dot sd-todo"></div><div><div class="sr-t">De två API:erna öppnas i iCore</div><div class="sr-d">Hämta fil + trigga event, samt det nya dispatch-alternativet</div></div></div>
+      <div class="status-row"><div class="status-dot sd-next"></div><div><div class="sr-t">Nästa steg: en pilot</div><div class="sr-d">Koppla fraktkalkyl-steget mot en riktig Azure Function, bevisa hela kedjan för ett enda steg innan fler flyttas</div></div></div>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>Byt författarverktyg. Inte körmotor.</h2>
+    <p>Två öppningar i iCore, en pilot med ett steg — sen vet vi om resten ska följa efter.</p>
+  </div>
+</div>
+
+</body>
+</html>
