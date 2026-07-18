@@ -1,6 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import AdminUserRow from '@/components/AdminUserRow'
 import NewsletterSender from '@/components/NewsletterSender'
+import FeatureShowcaseSender from '@/components/FeatureShowcaseSender'
 import DemoResetButton from '@/components/DemoResetButton'
 
 export default async function AdminPage() {
@@ -46,6 +47,7 @@ export default async function AdminPage() {
         <p className="text-muted text-sm mt-1">{profileRows.length} registrerade användare</p>
       </div>
 
+      <FeatureShowcaseSender recipientCount={(newsletterRecipients ?? []).length} />
       <NewsletterSender recipientCount={(newsletterRecipients ?? []).length} />
       <DemoResetButton />
 
