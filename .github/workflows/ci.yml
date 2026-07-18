@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npx tsc --noEmit
       - run: npm run lint
+      - run: npm run test
       - name: Build (dummy env — only proves the app compiles, no real backend needed)
         run: npm run build
         env:
