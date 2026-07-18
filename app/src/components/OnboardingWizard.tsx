@@ -240,7 +240,7 @@ export default function OnboardingWizard({
                 type="button"
                 onClick={goNext}
                 disabled={saving}
-                className="flex-1 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                className="flex-1 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
               >
                 {saving ? 'Sparar...' : (step === 'equipment' ? 'Klar' : 'Nästa')}
               </button>

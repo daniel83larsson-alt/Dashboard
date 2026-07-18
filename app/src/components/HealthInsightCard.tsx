@@ -47,7 +47,7 @@ export default function HealthInsightCard({ savedInsight }: { savedInsight: Heal
         <button
           onClick={generate}
           disabled={loading}
-          className="bg-accent text-bg text-xs font-semibold px-3 py-2 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2 flex-shrink-0"
+          className="bg-accent text-bg text-xs font-semibold px-3 py-2 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center gap-2 flex-shrink-0"
         >
           {loading ? (
             <>

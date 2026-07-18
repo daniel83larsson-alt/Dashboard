@@ -221,7 +221,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
             <button
               onClick={save}
               disabled={saving || movingTime <= 0}
-              className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity w-full"
+              className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
             >
               {saving ? 'Sparar...' : 'Logga pass'}
             </button>

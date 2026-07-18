@@ -104,7 +104,7 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
         <button
           onClick={generate}
           disabled={loading || !hasData}
-          className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity flex items-center gap-2"
+          className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity flex items-center gap-2"
         >
           {loading ? (
             <>

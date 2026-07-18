@@ -141,7 +141,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-accent text-bg font-semibold py-3 rounded-xl mt-2 disabled:opacity-50 transition-opacity text-sm"
+            className="w-full bg-accent text-bg font-semibold py-3 rounded-xl mt-2 disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed transition-opacity text-sm"
           >
             {loading ? '...' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
           </button>

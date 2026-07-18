@@ -222,7 +222,7 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
           <button
             type="submit"
             disabled={saving || !title.trim()}
-            className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+            className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
           >
             {saving ? 'Sparar...' : 'Spara mål'}
           </button>

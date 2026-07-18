@@ -327,7 +327,7 @@ export default function FoodLogClient({
             <button
               onClick={estimateFromText}
               disabled={estimating}
-              className="text-xs bg-accent text-bg font-semibold px-3 py-2 rounded-lg disabled:opacity-50"
+              className="text-xs bg-accent text-bg font-semibold px-3 py-2 rounded-lg disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
             >
               {estimating ? 'Uppskattar...' : 'Uppskatta med AI'}
             </button>
@@ -366,7 +366,7 @@ export default function FoodLogClient({
                 <button
                   onClick={logDatabaseCandidate}
                   disabled={logging}
-                  className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                  className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
                 >
                   {logging ? 'Loggar...' : 'Logga'}
                 </button>
@@ -399,7 +399,7 @@ export default function FoodLogClient({
                 <button
                   onClick={logEstimate}
                   disabled={logging}
-                  className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                  className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
                 >
                   {logging ? 'Loggar...' : 'Logga'}
                 </button>

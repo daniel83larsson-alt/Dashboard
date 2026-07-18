@@ -449,7 +449,7 @@ export default function ProfileForm({
               type="button"
               onClick={saveGarmin}
               disabled={garminSaving || !garminEmail.trim() || !garminPassword}
-              className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+              className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
             >
               {garminSaving ? 'Ansluter...' : 'Anslut Garmin'}
             </button>
@@ -542,7 +542,7 @@ export default function ProfileForm({
       <button
         type="submit"
         disabled={saving}
-        className="w-full bg-accent text-bg font-semibold py-3 rounded-xl disabled:opacity-50 transition-opacity text-sm"
+        className="w-full bg-accent text-bg font-semibold py-3 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed transition-opacity text-sm"
       >
         {saved ? '✓ Sparat' : saving ? 'Sparar...' : 'Spara ändringar'}
       </button>

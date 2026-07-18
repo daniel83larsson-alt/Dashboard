@@ -97,7 +97,7 @@ export default function NewsletterSender({ recipientCount }: { recipientCount: n
               <button
                 onClick={() => send(false)}
                 disabled={sending}
-                className="text-xs bg-accent text-bg px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                className="text-xs bg-accent text-bg px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
               >
                 {sending ? 'Skickar…' : 'Ja, skicka'}
               </button>

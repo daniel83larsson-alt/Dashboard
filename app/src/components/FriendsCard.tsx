@@ -95,7 +95,7 @@ export default function FriendsCard({
                   <button
                     onClick={() => respond(r.id, true)}
                     disabled={busyId === r.id}
-                    className="text-xs bg-accent text-bg px-3 py-1.5 rounded-lg font-medium disabled:opacity-50"
+                    className="text-xs bg-accent text-bg px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
                   >
                     Godkänn
                   </button>

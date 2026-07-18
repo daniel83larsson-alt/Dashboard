@@ -83,7 +83,7 @@ export default function NotificationSettings() {
           <button
             onClick={enable}
             disabled={status === 'subscribing'}
-            className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity w-full"
+            className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
           >
             {status === 'subscribing' ? 'Aktiverar...' : 'Aktivera notiser'}
           </button>

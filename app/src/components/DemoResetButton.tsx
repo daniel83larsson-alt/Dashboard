@@ -29,7 +29,7 @@ export default function DemoResetButton() {
       <button
         onClick={reset}
         disabled={loading}
-        className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity"
+        className="bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
       >
         {loading ? 'Återställer…' : 'Återställ demo-data'}
       </button>

@@ -135,7 +135,7 @@ export default function RorlighetPage() {
           <button
             onClick={generate}
             disabled={selected.size === 0}
-            className="mt-4 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity w-full"
+            className="mt-4 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
           >
             Generera pass
           </button>
@@ -212,7 +212,7 @@ export default function RorlighetPage() {
                 <button
                   onClick={logPass}
                   disabled={saving || checked.size === 0}
-                  className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 hover:opacity-90 transition-opacity w-full"
+                  className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
                 >
                   {saving ? 'Sparar...' : allChecked ? 'Logga avklarat pass' : `Logga pass (${checked.size} avklarade)`}
                 </button>
