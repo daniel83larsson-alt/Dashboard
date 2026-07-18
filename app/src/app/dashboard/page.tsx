@@ -230,6 +230,13 @@ export default async function DashboardPage() {
       .sort((a, b) => a.planned_date.localeCompare(b.planned_date)),
   } : null
 
+  // Ghost markers on the calendar: only still-open (not yet done/skipped)
+  // non-rest sessions — once logged/matched it shows as a real "trained"
+  // day instead, and a skipped one shouldn't look like an outstanding gap.
+  const plannedDates = (weeklyPlan?.sessions ?? [])
+    .filter(s => !s.is_rest && s.status === 'planned')
+    .map(s => s.planned_date)
+
   // Latest team insights, for a short desktop-sidebar teaser — reuses
   // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -662,6 +669,7 @@ export default async function DashboardPage() {
           <ActivityCalendar
             trainedDates={activities.map(a => a.start_date)}
             mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
+            plannedDates={plannedDates}
           />
         </div>
       )}

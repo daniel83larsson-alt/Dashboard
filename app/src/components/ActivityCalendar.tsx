@@ -8,9 +8,10 @@ const MOBILITY_WEEKLY_GOAL = 2
 type Props = {
   trainedDates: string[] // ISO date strings
   mobilityDates?: string[] // ISO date strings — subset of trainedDates, marked with a second color
+  plannedDates?: string[] // ISO date strings — planned-but-not-yet-done sessions from the weekly plan
 }
 
-export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: Props) {
+export default function ActivityCalendar({ trainedDates, mobilityDates = [], plannedDates = [] }: Props) {
   const today = new Date()
   const weekStart = startOfWeek(today)
   const mobilityThisWeek = mobilityDates.filter(d => new Date(d) >= weekStart).length
@@ -32,6 +33,9 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: P
   )
   const mobility = new Set(
     mobilityDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
+  )
+  const planned = new Set(
+    plannedDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
   )
 
   const cells: (number | null)[] = [
@@ -101,6 +105,11 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: P
               const isToday = isCurrentMonth && day === today.getDate()
               const hasTrained = trained.has(dateStr)
               const hasMobility = mobility.has(dateStr)
+              // Ghost marker for a planned-but-not-yet-done session — turns
+              // into the solid "trained" fill above once the matching
+              // activity is logged/matched, so this only ever shows for the
+              // still-open gap between planned and done.
+              const hasPlanned = !hasTrained && planned.has(dateStr)
               const isFuture = cellDate > today
 
               return (
@@ -109,7 +118,7 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: P
                     className={`
                       w-7 h-7 flex items-center justify-center rounded-lg text-xs font-mono relative
                       ${isToday ? 'ring-1 ring-accent' : ''}
-                      ${hasTrained ? 'bg-accent/20 text-accent font-bold' : isFuture ? 'text-muted/40' : 'text-muted'}
+                      ${hasTrained ? 'bg-accent/20 text-accent font-bold' : hasPlanned ? 'border border-dashed border-accent/50 text-muted' : isFuture ? 'text-muted/40' : 'text-muted'}
                     `}
                   >
                     {hasTrained && (
@@ -135,6 +144,12 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [] }: P
             <div className="w-2.5 h-2.5 rounded-full bg-lcd" />
             <span className="text-xs text-muted">Rörlighet</span>
           </div>
+          {plannedDates.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full border border-dashed border-accent/50" />
+              <span className="text-xs text-muted">Planerat</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <div className="w-5 h-5 rounded-lg ring-1 ring-accent" />
             <span className="text-xs text-muted">Idag</span>
