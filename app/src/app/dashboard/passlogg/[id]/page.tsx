@@ -2,7 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
-import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
+import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
 import { bestMergePartner } from '@/lib/duplicates'
 import { REGION_LABELS, Region } from '@/lib/mobility'
 
@@ -159,10 +159,12 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           the page ~80% empty on a wide screen with no focal point. */}
       <div className="lg:grid lg:grid-cols-2 lg:gap-5 lg:items-start space-y-5 lg:space-y-0">
         <div className="bg-card border border-edge rounded-2xl p-5 grid grid-cols-3 gap-3">
-          <div>
-            <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtKm(activity.distance)}</div>
-            <div className="text-muted text-xs mt-1">Distans</div>
-          </div>
+          {usesDistance(activity.sport_type) && (
+            <div>
+              <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtKm(activity.distance)}</div>
+              <div className="text-muted text-xs mt-1">Distans</div>
+            </div>
+          )}
           <div>
             <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtDur(activity.moving_time)}</div>
             <div className="text-muted text-xs mt-1">Tid</div>

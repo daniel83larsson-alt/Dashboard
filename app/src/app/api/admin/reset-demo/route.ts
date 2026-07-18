@@ -184,7 +184,7 @@ export async function POST() {
     daily_step_goal: 10000,
     weight_kg: 78,
     home_equipment: ['Roddmaskin', 'Skivstång', 'Löpband'],
-    selected_sports: ['Rowing', 'Run', 'Ride'],
+    selected_sports: ['Rodd', 'Löpning', 'Cykling'],
     vo2max_value: 47.5,
     vo2max_source: 'estimated',
     vo2max_date: new Date(now.getTime() - 6 * 86400000).toISOString().slice(0, 10),

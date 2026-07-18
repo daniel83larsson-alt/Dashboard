@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { sportLabel, sportIcon } from '@/lib/sport'
+import { sportLabel, sportIcon, usesDistance } from '@/lib/sport'
 import { startOfWeek } from '@/lib/dates'
 import { dedupeForStats } from '@/lib/duplicates'
 import { computeAllSportPRs, longestSession, type Activity } from '@/lib/records'
@@ -205,21 +205,21 @@ export default async function RekordPage() {
             <span className="text-2xl">📅</span>
             <div>
               <div className="font-mono text-accent text-sm font-bold">{activities.length} pass</div>
-              <div className="text-muted text-xs">all time</div>
+              <div className="text-muted text-xs">genom tiderna</div>
             </div>
           </div>
           <div className="bg-card border border-edge rounded-xl px-4 py-3 flex items-center gap-3">
             <span className="text-2xl">🏅</span>
             <div>
               <div className="font-mono text-accent text-sm font-bold">{(allTimeDist / 1000).toFixed(0)} km</div>
-              <div className="text-muted text-xs">totalt all time</div>
+              <div className="text-muted text-xs">totalt genom tiderna</div>
             </div>
           </div>
         </div>
 
         {sportBreakdown.length > 1 && (
           <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="text-xs text-muted mb-3">Sportfördelning all time</div>
+            <div className="text-xs text-muted mb-3">Sportfördelning genom tiderna</div>
             <div className="flex flex-col gap-2">
               {sportBreakdown.map(([type, s]) => (
                 <div key={type} className="flex items-center gap-3 bg-bg rounded-lg px-3 py-2">
@@ -228,7 +228,9 @@ export default async function RekordPage() {
                     <div className="text-xs text-fg capitalize">{sportLabel(type)}</div>
                     <div className="text-[10px] text-muted">{s.count} pass · {fmtDur(s.time)}</div>
                   </div>
-                  <span className="font-mono text-xs text-accent font-bold flex-shrink-0">{fmtKm(s.dist)}</span>
+                  {usesDistance(type) && (
+                    <span className="font-mono text-xs text-accent font-bold flex-shrink-0">{fmtKm(s.dist)}</span>
+                  )}
                 </div>
               ))}
             </div>

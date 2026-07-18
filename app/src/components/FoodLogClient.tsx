@@ -259,13 +259,13 @@ export default function FoodLogClient({
         {entries.length > 0 && (
           <div className="flex flex-col gap-1 mt-3">
             {entries.map(e => (
-              <div key={e.id} className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2">
-                <div>
-                  <span className="text-fg">{e.name}</span>
-                  <span className="text-muted text-xs ml-2">{fmtTime(e.logged_at)}</span>
+              <div key={e.id} className="flex items-center justify-between gap-2 text-sm bg-bg rounded-lg px-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <span className="text-fg break-words">{e.name}</span>
+                  <span className="text-muted text-xs ml-2 whitespace-nowrap">{fmtTime(e.logged_at)}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-muted">{e.calories} kcal</span>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <span className="font-mono text-muted whitespace-nowrap">{e.calories} kcal</span>
                   <button onClick={() => deleteEntry(e.id)} className="text-muted hover:text-red-400 transition-colors text-xs px-1">✕</button>
                 </div>
               </div>

@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessChartsLoader'
 import HealthInsightCard from '@/components/HealthInsightCard'
 import { bestVo2maxEstimate } from '@/lib/vo2max'
+import { hrvStatusLabel } from '@/lib/wellness'
 
 const VO2MAX_LOOKBACK_DAYS = 90
 
@@ -178,7 +179,7 @@ export default async function HalsaPage() {
                     <div className="font-mono text-lcd text-2xl font-bold leading-none">{Math.round(latest.hrv)}</div>
                     <div className="text-muted text-xs mt-1">HRV (ms)</div>
                     {latest.hrvStatus && (
-                      <div className="text-[10px] text-lcd mt-1 capitalize">{latest.hrvStatus.toLowerCase().replace(/_/g, ' ')}</div>
+                      <div className="text-[10px] text-lcd mt-1">{hrvStatusLabel(latest.hrvStatus)}</div>
                     )}
                   </div>
                 )}

@@ -135,12 +135,12 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
             </div>
             <div className="bg-card border border-edge rounded-xl p-3">
               <div className="font-mono text-accent text-lg font-bold">{insight.stats.totalKm} km</div>
-              <div className="text-muted text-xs">all time</div>
+              <div className="text-muted text-xs">genom tiderna</div>
             </div>
             {insight.stats.pr30 && (
               <div className="bg-card border border-edge rounded-xl p-3">
                 <div className="font-mono text-lcd text-sm font-bold leading-tight">{insight.stats.pr30}</div>
-                <div className="text-muted text-xs mt-0.5">PB 30 min</div>
+                <div className="text-muted text-xs mt-0.5">Bäst 30 min</div>
               </div>
             )}
           </div>

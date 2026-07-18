@@ -17,6 +17,7 @@ import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import InstallAppButton from '@/components/InstallAppButton'
+import { hrvStatusLabel } from '@/lib/wellness'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -568,7 +569,7 @@ export default async function DashboardPage() {
                 <div className="font-mono text-lcd text-2xl font-bold leading-none">{Math.round(wellness.hrv)}</div>
                 <div className="text-muted text-xs mt-1">HRV (ms)</div>
                 {wellness.hrvStatus && (
-                  <div className="text-[10px] text-lcd mt-1 capitalize">{wellness.hrvStatus.toLowerCase().replace('_', ' ')}</div>
+                  <div className="text-[10px] text-lcd mt-1">{hrvStatusLabel(wellness.hrvStatus)}</div>
                 )}
               </div>
             )}

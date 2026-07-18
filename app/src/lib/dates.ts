@@ -35,3 +35,14 @@ export function stockholmDayElapsedFraction(d: Date = new Date()): number {
   const p = stockholmParts(d)
   return (p.h * 3600 + p.mi * 60 + p.s) / 86400
 }
+
+// "Idag"/"Igår" for recent dates, full weekday+date for anything older —
+// long lists (Passlogg) read a lot faster with this than a full date on
+// every row. Compares Swedish-local calendar days, not server-local ones.
+export function relativeDateLabel(iso: string, now: Date = new Date()): string {
+  const todayKey = stockholmDateKey(now)
+  const dateKey = stockholmDateKey(new Date(iso))
+  if (dateKey === todayKey) return 'Idag'
+  if (dateKey === stockholmDateKey(new Date(now.getTime() - 86400000))) return 'Igår'
+  return new Date(iso).toLocaleDateString('sv-SE', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
+}

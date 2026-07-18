@@ -6,6 +6,13 @@ import ReactMarkdown from 'react-markdown'
 
 type Message = { role: 'user' | 'assistant'; content: string; warning?: boolean }
 
+const SUGGESTED_QUESTIONS = [
+  'Hur ser min form ut just nu?',
+  'Vad ska jag fokusera på denna vecka?',
+  'Tips för bättre återhämtning?',
+  'Hur bygger jag upp inför ett lopp?',
+]
+
 export default function CoachPage() {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -65,6 +72,11 @@ export default function CoachPage() {
     setLoading(false)
   }
 
+  function pickSuggestion(q: string) {
+    setInput(q)
+    inputRef.current?.focus()
+  }
+
   function handleKey(e: React.KeyboardEvent) {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
@@ -108,6 +120,18 @@ export default function CoachPage() {
               <div className="font-semibold text-fg text-base">Vad kan jag hjälpa dig med?</div>
               <div className="text-muted text-sm mt-2 max-w-xs">
                 Fråga om träningsupplägg, teknik, återhämtning, mål eller veckans plan.
+              </div>
+              <div className="flex flex-wrap justify-center gap-2 mt-5 max-w-sm">
+                {SUGGESTED_QUESTIONS.map(q => (
+                  <button
+                    key={q}
+                    type="button"
+                    onClick={() => pickSuggestion(q)}
+                    className="text-xs bg-card border border-edge text-muted px-3 py-1.5 rounded-full hover:border-accent/40 hover:text-fg transition-colors"
+                  >
+                    {q}
+                  </button>
+                ))}
               </div>
             </div>
           </div>

@@ -33,19 +33,24 @@ export default function SportChartsTabs({ activities }: { activities: Activity[]
   return (
     <div className="flex flex-col gap-5">
       {sports.length > 1 && (
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {sports.map(s => (
-            <button
-              key={s}
-              onClick={() => setSelected(s)}
-              className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors capitalize ${
-                selected === s ? 'bg-accent text-bg' : 'bg-card border border-edge text-muted hover:text-fg'
-              }`}
-            >
-              <span>{sportIcon(s)}</span>
-              {sportLabel(s)}
-            </button>
-          ))}
+        <div className="relative">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {sports.map(s => (
+              <button
+                key={s}
+                onClick={() => setSelected(s)}
+                className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-medium transition-colors capitalize ${
+                  selected === s ? 'bg-accent text-bg' : 'bg-card border border-edge text-muted hover:text-fg'
+                }`}
+              >
+                <span>{sportIcon(s)}</span>
+                {sportLabel(s)}
+              </button>
+            ))}
+          </div>
+          {/* Fade hint that the chip row scrolls horizontally — most sports
+              lists overflow their container on mobile with no other cue. */}
+          <div className="pointer-events-none absolute right-0 top-0 bottom-1 w-8 bg-gradient-to-l from-bg to-transparent" />
         </div>
       )}
       <TrainingCharts activities={activities} sport={selected} />

@@ -130,28 +130,30 @@ export default function RutterPage() {
 
         <div>
           <label className="text-muted text-xs block mb-2">Plats</label>
-          <form onSubmit={searchPlace} className="flex gap-2">
+          <form onSubmit={searchPlace} className="flex flex-col sm:flex-row gap-2">
             <input
               value={locationQuery}
               onChange={e => setLocationQuery(e.target.value)}
               placeholder="T.ex. Onsala, Göteborg..."
-              className="flex-1 bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              className="flex-1 min-w-0 bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
             />
-            <button
-              type="submit"
-              disabled={locating || !locationQuery.trim()}
-              className="text-sm bg-bg border border-edge px-4 py-2.5 rounded-xl text-fg disabled:opacity-50 hover:border-accent transition-colors"
-            >
-              Sök plats
-            </button>
-            <button
-              type="button"
-              onClick={useMyLocation}
-              disabled={locating}
-              className="text-sm bg-bg border border-edge px-4 py-2.5 rounded-xl text-fg disabled:opacity-50 hover:border-accent transition-colors whitespace-nowrap"
-            >
-              📍 Min plats
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={locating || !locationQuery.trim()}
+                className="flex-1 sm:flex-none text-sm bg-bg border border-edge px-4 py-2.5 rounded-xl text-fg disabled:opacity-50 hover:border-accent transition-colors whitespace-nowrap"
+              >
+                Sök plats
+              </button>
+              <button
+                type="button"
+                onClick={useMyLocation}
+                disabled={locating}
+                className="flex-1 sm:flex-none text-sm bg-bg border border-edge px-4 py-2.5 rounded-xl text-fg disabled:opacity-50 hover:border-accent transition-colors whitespace-nowrap"
+              >
+                📍 Min plats
+              </button>
+            </div>
           </form>
           {location && <div className="text-lcd text-xs mt-2">Vald plats: {location.label}</div>}
         </div>

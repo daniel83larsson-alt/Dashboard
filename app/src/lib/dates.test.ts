@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from './dates'
+import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction, relativeDateLabel } from './dates'
 
 describe('startOfWeek', () => {
   it('returns the same Monday for every day in that week', () => {
@@ -51,5 +51,32 @@ describe('stockholmDayElapsedFraction', () => {
     const morning = stockholmDayElapsedFraction(new Date('2026-07-13T06:00:00Z'))
     const evening = stockholmDayElapsedFraction(new Date('2026-07-13T18:00:00Z'))
     expect(evening).toBeGreaterThan(morning)
+  })
+})
+
+describe('relativeDateLabel', () => {
+  const now = new Date('2026-07-13T18:00:00Z') // 20:00 Stockholm summer time
+
+  it('labels the same Swedish-local day as "Idag"', () => {
+    expect(relativeDateLabel('2026-07-13T05:00:00Z', now)).toBe('Idag')
+  })
+
+  it('labels the previous Swedish-local day as "Igår"', () => {
+    expect(relativeDateLabel('2026-07-12T20:00:00Z', now)).toBe('Igår')
+  })
+
+  it('falls back to a full date further back', () => {
+    const label = relativeDateLabel('2026-07-01T12:00:00Z', now)
+    expect(label).not.toBe('Idag')
+    expect(label).not.toBe('Igår')
+    expect(label).toMatch(/2026/)
+  })
+
+  it('uses the Swedish-local calendar day, not the UTC one, near midnight', () => {
+    // 2026-07-13 23:30 UTC is already 2026-07-14 01:30 Stockholm time —
+    // still "Idag" relative to a `now` on the 14th, even though the raw
+    // UTC date string still says the 13th.
+    const lateNow = new Date('2026-07-13T23:30:00Z')
+    expect(relativeDateLabel('2026-07-13T23:00:00Z', lateNow)).toBe('Idag')
   })
 })

@@ -1,8 +1,9 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import DuplicateCleanup from '@/components/DuplicateCleanup'
 import Link from 'next/link'
-import { sportIcon, sportLabel, fmtSpeedOrPace } from '@/lib/sport'
+import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
 import { splitMergedPairs, dedupeForStats } from '@/lib/duplicates'
+import { relativeDateLabel } from '@/lib/dates'
 
 const PAGE_SIZE = 20
 
@@ -95,11 +96,7 @@ export default async function PassloggPage({
                   <div className="flex items-start justify-between mb-3">
                     <div>
                       <div className="font-medium text-sm">{a.name}</div>
-                      <div className="text-muted text-xs mt-0.5">
-                        {new Date(a.start_date).toLocaleDateString('sv-SE', {
-                          weekday: 'short', day: 'numeric', month: 'short', year: 'numeric'
-                        })}
-                      </div>
+                      <div className="text-muted text-xs mt-0.5">{relativeDateLabel(a.start_date)}</div>
                     </div>
                     <span className="text-xs bg-bg text-muted px-2 py-1 rounded-lg flex-shrink-0 ml-2 flex items-center gap-1">
                       <span>{sportIcon(a.sport_type)}</span>
@@ -107,19 +104,23 @@ export default async function PassloggPage({
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-2">
-                    <div>
-                      <div className="font-mono text-fg text-sm font-bold">{fmt_km(a.distance)}</div>
-                      <div className="text-muted text-xs">km</div>
-                    </div>
+                  <div className={`grid ${usesDistance(a.sport_type) ? 'grid-cols-4' : 'grid-cols-2'} gap-2`}>
+                    {usesDistance(a.sport_type) && (
+                      <div>
+                        <div className="font-mono text-fg text-sm font-bold">{fmt_km(a.distance)}</div>
+                        <div className="text-muted text-xs">km</div>
+                      </div>
+                    )}
                     <div>
                       <div className="font-mono text-fg text-sm font-bold">{fmt_dur(a.moving_time)}</div>
                       <div className="text-muted text-xs">tid</div>
                     </div>
-                    <div>
-                      <div className="font-mono text-lcd text-sm font-bold">{speedOrPace?.value ?? '--'}</div>
-                      <div className="text-muted text-xs">{speedOrPace?.label ?? '–'}</div>
-                    </div>
+                    {usesDistance(a.sport_type) && (
+                      <div>
+                        <div className="font-mono text-lcd text-sm font-bold">{speedOrPace?.value ?? '--'}</div>
+                        <div className="text-muted text-xs">{speedOrPace?.label ?? '–'}</div>
+                      </div>
+                    )}
                     <div>
                       <div className="font-mono text-lcd text-sm font-bold">
                         {hr ? Math.round(hr) : '—'}
