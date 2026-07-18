@@ -21,13 +21,24 @@ export async function proxy(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // getSession() (not getUser()) on purpose: this is only a fast-path
+  // redirect for the obvious cases (no cookie at all / already logged in),
+  // not the actual security boundary — it reads the JWT from the cookie
+  // and checks its local expiry without a network round trip to Supabase.
+  // Middleware runs before ANY HTML can stream, so a slow check here was
+  // blocking the entire page on every single dashboard/login request,
+  // stacked on top of dashboard/layout.tsx's own check right after it.
+  // The real, server-verified check stays in layout.tsx's getUser() call,
+  // which still runs before any protected content renders — a forged or
+  // stale-but-unexpired cookie gets past this fast path but is caught
+  // there, same as it always was.
+  const { data: { session } } = await supabase.auth.getSession()
 
-  if (!user && request.nextUrl.pathname.startsWith('/dashboard')) {
+  if (!session && request.nextUrl.pathname.startsWith('/dashboard')) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 
-  if (user && request.nextUrl.pathname === '/login') {
+  if (session && request.nextUrl.pathname === '/login') {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 

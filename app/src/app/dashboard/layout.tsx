@@ -1,10 +1,30 @@
+import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import BottomNav from '@/components/BottomNav'
 import SideNav from '@/components/SideNav'
 import { isDemoAccount } from '@/lib/demo'
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+// Same spinner as dashboard/loading.tsx on purpose — this boundary and that
+// one now render back-to-back with nothing in between, so they need to look
+// like one continuous spinner rather than two different ones flashing past.
+function DashboardBootSplash() {
+  return (
+    <div className="min-h-screen flex flex-col items-center justify-center gap-3">
+      <div className="font-mono text-accent text-4xl font-bold tracking-tight leading-none animate-pulse">DL</div>
+      <span className="w-4 h-4 border-2 border-edge border-t-accent rounded-full animate-spin" />
+    </div>
+  )
+}
+
+// The auth check + profile-name fetch used to sit directly in the layout
+// body, which blocks ALL rendering (nav chrome included) until it resolves
+// — loading.tsx's Suspense boundary only wraps page.tsx, not layout.tsx, so
+// this was the actual source of the reported cold-start black screen (a
+// network round trip with literally nothing on screen), not page.tsx's own
+// heavier data fetch. Moving it into its own async component under an
+// explicit <Suspense> here lets the boot splash stream immediately instead.
+async function AuthedShell({ children }: { children: React.ReactNode }) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -34,5 +54,13 @@ export default async function DashboardLayout({ children }: { children: React.Re
       </main>
       <BottomNav isAdmin={isAdmin} />
     </div>
+  )
+}
+
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <Suspense fallback={<DashboardBootSplash />}>
+      <AuthedShell>{children}</AuthedShell>
+    </Suspense>
   )
 }
