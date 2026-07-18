@@ -1,3 +1,9 @@
+// Only id/strava_id/start_date/distance/moving_time/sport_type/raw_data are
+// actually read by this file's merge/dedup logic (isMergeCandidate,
+// splitMergedPairs, dedupeForStats) — name/average_heartrate/description are
+// used only by suggestKeepId (the duplicate-cleanup flow), which already
+// null-guards both, so they're optional here rather than forcing every
+// caller to select columns it doesn't need just to satisfy the type.
 export type ActivityRow = {
   id: string
   strava_id: number
@@ -5,9 +11,9 @@ export type ActivityRow = {
   distance: number
   moving_time: number
   sport_type: string
-  name: string
-  average_heartrate: number | null
-  description: string | null
+  name?: string
+  average_heartrate?: number | null
+  description?: string | null
   created_at?: string
   raw_data?: unknown
 }

@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import WellnessCharts from '@/components/WellnessCharts'
+import WellnessCharts from '@/components/WellnessChartsLoader'
 import HealthInsightCard from '@/components/HealthInsightCard'
 import { bestVo2maxEstimate } from '@/lib/vo2max'
 

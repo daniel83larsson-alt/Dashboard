@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import SportChartsTabs from '@/components/SportChartsTabs'
+import SportChartsTabs from '@/components/SportChartsTabsLoader'
 
 export default async function GraferPage() {
   const supabase = await createSupabaseServerClient()
