@@ -93,8 +93,14 @@ export function renderFeatureShowcaseHtml({
           </a>
         </td></tr>
 
+        <tr><td style="padding:20px 32px 4px;" align="center">
+          <p style="margin:0;color:#ccd400;font-size:12px;font-weight:600;letter-spacing:0.02em;">
+            🌐 Vi håller på att flytta in på vår egen adress — dltrainer.se
+          </p>
+        </td></tr>
+
         ${wrongVersionNote ? `
-        <tr><td style="padding:20px 32px 4px;">
+        <tr><td style="padding:12px 32px 4px;">
           <p style="margin:0;color:#999;font-size:12px;line-height:1.6;">
             PS: Om du (eller någon du tipsat om appen) registrerade sig nyligen och landade på en gammal testversion av sidan — det är åtgärdat nu. Logga in via knappen ovan så hamnar du garanterat på rätt ställe.
           </p>
