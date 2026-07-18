@@ -1,16 +1,26 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<'login' | 'signup'>('login')
+  const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [name, setName] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
+
+  useEffect(() => {
+    // Plain window.location read instead of useSearchParams — this page is
+    // statically rendered and useSearchParams would force a Suspense
+    // boundary just for a one-off error flag from the reset-password link.
+    if (new URLSearchParams(window.location.search).get('resetError')) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
+    }
+  }, [])
 
   async function tryDemo() {
     const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL
@@ -35,6 +45,20 @@ export default function LoginPage() {
     setMessage('')
 
     const supabase = createSupabaseClient()
+
+    if (mode === 'forgot') {
+      // Same canonical-URL rule as the signup confirmation link above — the
+      // recovery link must always come back to the one real production
+      // site, never whichever preview/branch URL happened to render this
+      // form. Always shows the same message regardless of outcome so the
+      // form can't be used to check which emails have an account.
+      await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
+      })
+      setMessage('Om det finns ett konto med den e-postadressen har vi skickat en länk för att återställa lösenordet.')
+      setLoading(false)
+      return
+    }
 
     if (mode === 'signup') {
       // Always the real app's canonical URL, never window.location.origin —
@@ -78,24 +102,33 @@ export default function LoginPage() {
           <div className="text-muted text-sm mt-1">Din personliga AI-träningsdashboard</div>
         </div>
 
-        <div className="flex bg-card border border-edge rounded-xl p-1 mb-6">
+        {mode === 'forgot' ? (
           <button
-            onClick={() => setMode('login')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              mode === 'login' ? 'bg-accent text-bg' : 'text-muted'
-            }`}
+            onClick={() => { setMode('login'); setError(''); setMessage('') }}
+            className="text-muted text-sm mb-6 hover:text-fg transition-colors"
           >
-            Logga in
+            ‹ Tillbaka till inloggning
           </button>
-          <button
-            onClick={() => setMode('signup')}
-            className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
-              mode === 'signup' ? 'bg-accent text-bg' : 'text-muted'
-            }`}
-          >
-            Skapa konto
-          </button>
-        </div>
+        ) : (
+          <div className="flex bg-card border border-edge rounded-xl p-1 mb-6">
+            <button
+              onClick={() => { setMode('login'); setError(''); setMessage('') }}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                mode === 'login' ? 'bg-accent text-bg' : 'text-muted'
+              }`}
+            >
+              Logga in
+            </button>
+            <button
+              onClick={() => { setMode('signup'); setError(''); setMessage('') }}
+              className={`flex-1 py-2 rounded-lg text-sm font-medium transition-colors ${
+                mode === 'signup' ? 'bg-accent text-bg' : 'text-muted'
+              }`}
+            >
+              Skapa konto
+            </button>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-4">
           {mode === 'signup' && (
@@ -122,18 +155,31 @@ export default function LoginPage() {
               className="w-full bg-card border border-edge rounded-xl px-4 py-3 text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors text-sm"
             />
           </div>
-          <div>
-            <label className="text-muted text-xs uppercase tracking-wider mb-1.5 block">Lösenord</label>
-            <input
-              type="password"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              placeholder="••••••••"
-              required
-              minLength={6}
-              className="w-full bg-card border border-edge rounded-xl px-4 py-3 text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors text-sm"
-            />
-          </div>
+          {mode !== 'forgot' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-muted text-xs uppercase tracking-wider block">Lösenord</label>
+                {mode === 'login' && (
+                  <button
+                    type="button"
+                    onClick={() => { setMode('forgot'); setError(''); setMessage('') }}
+                    className="text-accent text-xs hover:underline"
+                  >
+                    Glömt lösenord?
+                  </button>
+                )}
+              </div>
+              <input
+                type="password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                minLength={6}
+                className="w-full bg-card border border-edge rounded-xl px-4 py-3 text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors text-sm"
+              />
+            </div>
+          )}
 
           {error && <p className="text-red-400 text-sm">{error}</p>}
           {message && <p className="text-lcd text-sm">{message}</p>}
@@ -143,11 +189,11 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-accent text-bg font-semibold py-3 rounded-xl mt-2 disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed transition-opacity text-sm"
           >
-            {loading ? '...' : mode === 'login' ? 'Logga in' : 'Skapa konto'}
+            {loading ? '...' : mode === 'login' ? 'Logga in' : mode === 'signup' ? 'Skapa konto' : 'Skicka återställningslänk'}
           </button>
         </form>
 
-        {process.env.NEXT_PUBLIC_DEMO_EMAIL && (
+        {mode !== 'forgot' && process.env.NEXT_PUBLIC_DEMO_EMAIL && (
           <button
             onClick={tryDemo}
             disabled={loading}
