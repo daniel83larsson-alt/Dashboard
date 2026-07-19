@@ -179,7 +179,6 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const weekStart = startOfWeek(now)
     const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate() - 30)
-    const yr = acts.filter(a => new Date(a.start_date).getFullYear() === now.getFullYear())
 
     function fmtPace(s: number, m: number) {
       if (!m) return '--'

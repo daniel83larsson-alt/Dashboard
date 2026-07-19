@@ -154,7 +154,7 @@ Fokus: proteinintag 1,6–2,2 g/kg, timing runt träning, kreatin, kasein. Leane
     icon: '🧘',
     role: 'Rörlighet · Spänningar · Skadeförebyggande',
     hasVeto: false,
-    systemPrompt: (sport, _) => `Du är rörlighets- och skadeförebyggande specialist för ${sport}.
+    systemPrompt: (sport) => `Du är rörlighets- och skadeförebyggande specialist för ${sport}.
 ${REGLER}
 
 Fokus: sportspecifika rörlighetsövningar för ${sportLabel(sport)}, spänningskedjor, konkreta protokoll med frekvens.`,
@@ -165,7 +165,7 @@ Fokus: sportspecifika rörlighetsövningar för ${sportLabel(sport)}, spännings
     icon: '🔬',
     role: 'Evidens · Forskning · Protokoll',
     hasVeto: false,
-    systemPrompt: (sport, _) => `Du är vetenskapsrådgivare inom träningsfysiologi, just nu för ${sportLabel(sport)}.
+    systemPrompt: (sport) => `Du är vetenskapsrådgivare inom träningsfysiologi, just nu för ${sportLabel(sport)}.
 ${REGLER}
 
 Nyckelstudier (referera vid relevans): Helgerud 2007: 4×4 = +7–9% VO2max/8v | BJSM 2025: exercise snacks ger VO2max-effekt | Stöggl & Sperlich 2014: polariserad > pyramidal | Ross/Mandsager: VO2max starkaste livslängdsprediktorn.

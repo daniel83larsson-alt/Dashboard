@@ -24,7 +24,6 @@ const ACCENT = '#ccd400'
 const LCD    = '#a7bda9'
 const MUTED  = '#6b7280'
 const EDGE   = '#1e2428'
-const BG     = '#0e1113'
 
 const tooltip = {
   contentStyle: { backgroundColor: '#161b1f', border: `1px solid ${EDGE}`, borderRadius: 12, color: '#e2e8ec', fontSize: 12 },

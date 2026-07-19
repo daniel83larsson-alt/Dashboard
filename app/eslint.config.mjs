@@ -13,6 +13,16 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  // Standalone CommonJS investigation/maintenance scripts, run directly via
+  // `node scripts/...` — not part of the Next.js app bundle, and the
+  // package has no "type": "module", so require() here is correct, not a
+  // style violation.
+  {
+    files: ["scripts/**/*.js"],
+    rules: {
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
 ]);
 
 export default eslintConfig;
