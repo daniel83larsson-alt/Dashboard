@@ -128,8 +128,16 @@ export function renderFeatureShowcaseHtml({
       <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:20px;overflow:hidden;">
 
         <tr><td style="background:#0e1113;padding:36px 32px 30px;">
-          <span style="color:#ccd400;font-size:24px;font-weight:800;letter-spacing:-0.02em;">DL Trainer</span>
-          <p style="margin:14px 0 0;color:#c9cccd;font-size:15px;line-height:1.55;">
+          <table cellpadding="0" cellspacing="0"><tr>
+            <td style="padding-right:12px;">
+              <img src="${appUrl}/icon-192.png" width="40" height="40" alt="DL Trainer"
+                   style="display:block;width:40px;height:40px;border-radius:10px;" />
+            </td>
+            <td valign="middle">
+              <span style="color:#ccd400;font-size:24px;font-weight:800;letter-spacing:-0.02em;">DL Trainer</span>
+            </td>
+          </tr></table>
+          <p style="margin:16px 0 0;color:#c9cccd;font-size:15px;line-height:1.55;">
             Hej ${name}! Det har hänt en hel del i appen sedan du var inne senast — här är en snabb rundtur på det bästa.
           </p>
         </td></tr>
