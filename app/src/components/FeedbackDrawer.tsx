@@ -88,6 +88,31 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
         }
       }
 
+      // Concept2-sourced pass (rodd/roddmaskin) — delsträckorna är det som
+      // faktiskt visar upplägget inom passet (negativ split, jämn takt,
+      // avmattning mot slutet), utan dem har coachen bara ett snitt att gå på.
+      let splitStr = ''
+      if (activity.strava_id < 0) {
+        try {
+          const res = await fetch(`/api/activities/${activity.id}/concept2-detail`)
+          const data = await res.json()
+          const splits: { distance: number; time: number; stroke_rate?: number; heart_rate?: { average?: number } }[] | undefined = data.detail?.workout?.splits
+          if (splits?.length) {
+            splitStr = `, delsträckor: ${splits
+              .map(s => {
+                const pace = s.distance ? (s.time / 10 / s.distance) * 500 : 0
+                const paceStr = pace ? `${Math.floor(pace / 60)}:${Math.round(pace % 60).toString().padStart(2, '0')}/500m` : '--'
+                const sr = s.stroke_rate ? ` ${Math.round(s.stroke_rate)}spm` : ''
+                const hr = s.heart_rate?.average ? ` HR${Math.round(s.heart_rate.average)}` : ''
+                return `${Math.round(s.distance)}m ${paceStr}${sr}${hr}`
+              })
+              .join(', ')}`
+          }
+        } catch {
+          // splits are a bonus for the coach's assessment — skip silently if unavailable
+        }
+      }
+
       const parts = [
         `Analysera mitt senaste ${activity.sport_type}-pass: "${activity.name}".`,
         `Distans: ${(activity.distance / 1000).toFixed(1)} km,`,
@@ -97,6 +122,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
         activity.max_heartrate ? `, max-HR: ${Math.round(activity.max_heartrate)} bpm` : '',
         activity.average_watts ? `, snitt-watt: ${Math.round(activity.average_watts)}W` : '',
         zoneStr,
+        splitStr,
         `. Ge ett kort betyg 1-10 för passet utifrån mina mål och min plan (skriv "Betyg: X/10"), sen max 2-3 meningar konkret feedback och EN rekommendation inför nästa pass. Håll det kort — jag chattar vidare om jag vill veta mer.`,
       ]
       sendMessage(parts.join(''))
@@ -109,7 +135,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
         onClick={openAndAsk}
         className="w-full border border-accent/40 text-accent font-semibold py-3 rounded-xl hover:bg-accent/10 transition-colors text-sm"
       >
-        Begär feedback från tränaren
+        Begär feedback från coachen
       </button>
 
       {open && (
