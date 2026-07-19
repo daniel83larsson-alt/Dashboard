@@ -6,7 +6,7 @@ import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
 import { startOfWeek } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
-import { fmtMinSec } from '@/lib/sport'
+import { fmtMinSec, sportLabel } from '@/lib/sport'
 import { logApiCall } from '@/lib/log-api-call'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
     logApiCall(supabase, user.id, 'coach')
 
-    const { coachId, message, sport } = await request.json()
+    const { coachId, message, sport, activityId } = await request.json()
     const coach = getCoachById(coachId as CoachId)
     if (!coach) return NextResponse.json({ error: 'Coach not found' }, { status: 404 })
     if (typeof message !== 'string' || !message.trim()) {
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }, { data: overviewRow }] = await Promise.all([
+    const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }] = await Promise.all([
       supabase
         .from('activities')
         .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts, sport_type')
@@ -167,6 +167,14 @@ export async function POST(request: NextRequest) {
         .eq('user_id', user.id)
         .eq('coach_id', 'goals_overview')
         .single(),
+      typeof activityId === 'string'
+        ? supabase
+            .from('activities')
+            .select('id, strava_id, name, sport_type, distance, moving_time, average_heartrate, max_heartrate, raw_data')
+            .eq('id', activityId)
+            .eq('user_id', user.id)
+            .single()
+        : Promise.resolve({ data: null }),
     ])
 
     const acts = allActivities ?? []
@@ -205,11 +213,47 @@ export async function POST(request: NextRequest) {
     const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
     const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
+    // Ett specifikt pass som chatten just nu handlar om (öppnad via "Begär
+    // feedback från coachen"-knappen) — läser samma cachade delsträckor/
+    // pulszoner som redan sparas av /concept2-detail och /garmin-zones
+    // (fyller aldrig i själv, undviker att duplicera Garmin/Concept2-
+    // inloggningslogik här; om det inte är cachat än blir focusActivity
+    // bara utan den delen, inte ett fel).
+    let focusActivity: string | undefined
+    if (focusRow) {
+      const raw = (focusRow.raw_data ?? {}) as Record<string, unknown>
+      const lines = [
+        `${focusRow.name} (${sportLabel(focusRow.sport_type)}), ${(focusRow.distance / 1000).toFixed(1)} km, ${fmtDur(focusRow.moving_time)}`,
+      ]
+      if (focusRow.average_heartrate) lines.push(`snitt-HR ${Math.round(focusRow.average_heartrate)} bpm${focusRow.max_heartrate ? `, max ${Math.round(focusRow.max_heartrate)} bpm` : ''}`)
+
+      const hrZones = raw.hrZones as { zoneNumber: number; secsInZone: number }[] | undefined
+      if (Array.isArray(hrZones) && hrZones.length) {
+        const total = hrZones.reduce((s, z) => s + z.secsInZone, 0)
+        if (total > 0) {
+          lines.push(`pulszoner: ${hrZones.sort((a, b) => a.zoneNumber - b.zoneNumber).map(z => `Z${z.zoneNumber} ${Math.round((z.secsInZone / total) * 100)}%`).join(' ')}`)
+        }
+      }
+
+      const splits = (raw.workout as { splits?: { distance: number; time: number; stroke_rate?: number; heart_rate?: { average?: number } }[] } | undefined)?.splits
+      if (Array.isArray(splits) && splits.length) {
+        lines.push(`delsträckor: ${splits.map(sp => {
+          const pace = sp.distance ? fmtPace(sp.time / 10, sp.distance) : '--'
+          const sr = sp.stroke_rate ? ` ${Math.round(sp.stroke_rate)}spm` : ''
+          const hr = sp.heart_rate?.average ? ` HR${Math.round(sp.heart_rate.average)}` : ''
+          return `${Math.round(sp.distance)}m ${pace}${sr}${hr}`
+        }).join(', ')}`)
+      }
+
+      focusActivity = lines.join('\n')
+    }
+
     const userContext: UserContext = {
       sport,
       name: profile?.name ?? 'Användaren',
       userBio: userBio || undefined,
       overviewGoal: overviewGoal || undefined,
+      focusActivity,
       homeEquipment: profile?.home_equipment ?? undefined,
       activeSports: profile?.selected_sports ?? undefined,
       recentActivities: acts.map(a => ({

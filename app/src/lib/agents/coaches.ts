@@ -51,6 +51,12 @@ export type UserContext = {
     best45min?: string
     fastest5k?: string
   }
+  // Ett specifikt pass chatten just nu handlar om (öppnad via "Begär
+  // feedback"-knappen på ett visst pass) — förformaterad text (delsträckor/
+  // pulszoner). Skickas med på VARJE tur i konversationen, inte bara den
+  // första, så det inte faller ur kontext om chatten fortsätter länge nog
+  // att historiken (MAX_HISTORY_TURNS i /api/coach) klipper bort öppningsturen.
+  focusActivity?: string
 }
 
 function compact(ctx: UserContext, sport: string): string {
@@ -76,7 +82,7 @@ function compact(ctx: UserContext, sport: string): string {
     ? `OBS: Det aktuella passet/frågan gäller ${label}, INTE rodd. PB-raden nedan är enbart roddspecifik historik (annan sport, annan enhet) — använd den inte som referens för ${label}. Svara helt utifrån ${label}s egna mått (t.ex. km/h eller min/km för cykel/löpning), inte /500m-pace.\n`
     : ''
 
-  return `${sportNote}ANVÄNDARE: ${ctx.name} | Aktuell sport: ${label}
+  return `${ctx.focusActivity ? `PASSET SOM DISKUTERAS JUST NU — utgå från det här om frågan gäller passet, inte bara historiken nedan:\n${ctx.focusActivity}\n\n` : ''}${sportNote}ANVÄNDARE: ${ctx.name} | Aktuell sport: ${label}
 SPORTMIX (senaste ${ctx.recentActivities.length} pass): ${sportMix || 'okänd'}
 STATS: ${s?.totalSessions ?? '?'} pass tot | ${s?.sessionsThisWeek ?? '?'}/v | ${s?.sessionsThisMonth ?? '?'}/mån | ${s?.totalDistKm ?? '?'} km all time
 ${p ? `RODD-PB (endast rodd, ej andra sporter): 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}

@@ -46,6 +46,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
           coachId: 'roddcoach',
           message: msg,
           sport: activity.sport_type,
+          activityId: activity.id,
         }),
       })
       const data = await res.json()
