@@ -22,7 +22,7 @@ export default async function InsikterPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('activities').select('start_date, raw_data').eq('user_id', user.id).gte('start_date', queryStart.toISOString()),
+    supabase.from('activities').select('start_date, hr_zones:raw_data->hrZones').eq('user_id', user.id).gte('start_date', queryStart.toISOString()),
   ])
 
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content

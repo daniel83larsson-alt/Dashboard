@@ -29,12 +29,14 @@ export default async function PassloggPage({
   const to = from + PAGE_SIZE - 1
 
   const [{ data: activities, count: totalRows }, { data: allForTotals }] = await Promise.all([
-    // Den faktiska sidan att visa — narrowed men behåller raw_data/strava_id
+    // Den faktiska sidan att visa — narrowed men behåller hr_zones/strava_id
     // som dedupeForStats()/splitMergedPairs() behöver för att slå ihop
     // Concept2+Garmin-par korrekt och inte tappa pulszondata vid ihopslagning.
+    // hr_zones hämtas som JSON-path (`hr_zones:raw_data->hrZones`) istället
+    // för hela raw_data-kolumnen — det är det enda fältet som faktiskt läses.
     supabase
       .from('activities')
-      .select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, start_date, raw_data, description', { count: 'exact' })
+      .select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, start_date, hr_zones:raw_data->hrZones, description', { count: 'exact' })
       .eq('user_id', user.id)
       .order('start_date', { ascending: false })
       .range(from, to),

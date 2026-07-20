@@ -13,12 +13,14 @@ function summarize(totals: Map<number, number>): ZoneSummary[] {
 }
 
 // Sums seconds-in-zone across many activities' cached Garmin HR-zone data
-// (raw_data.hrZones — populated on-demand when a pass is opened, or by the
-// gradual sync backfill) into one combined zone breakdown.
-export function aggregateZones(rows: { raw_data?: unknown }[]): ZoneSummary[] {
+// (hr_zones — populated on-demand when a pass is opened, or by the gradual
+// sync backfill — selected as `hr_zones:raw_data->hrZones` by callers
+// rather than the full raw_data column, since a bulk activity list can't
+// afford to carry each row's whole cached API response along for this).
+export function aggregateZones(rows: { hr_zones?: unknown }[]): ZoneSummary[] {
   const totals = new Map<number, number>()
   for (const row of rows) {
-    const zones = (row.raw_data as { hrZones?: HrZone[] } | null)?.hrZones
+    const zones = row.hr_zones as HrZone[] | undefined
     if (!Array.isArray(zones)) continue
     for (const z of zones) {
       totals.set(z.zoneNumber, (totals.get(z.zoneNumber) ?? 0) + (z.secsInZone ?? 0))
@@ -36,6 +38,6 @@ export function zonesToSummary(zones: HrZone[]): ZoneSummary[] {
 
 // How many of the given activities actually have cached zone data — used to
 // show "based on X of Y passes" since coverage fills in gradually.
-export function zoneCoverageCount(rows: { raw_data?: unknown }[]): number {
-  return rows.filter(r => Array.isArray((r.raw_data as { hrZones?: unknown[] } | null)?.hrZones)).length
+export function zoneCoverageCount(rows: { hr_zones?: unknown }[]): number {
+  return rows.filter(r => Array.isArray(r.hr_zones)).length
 }

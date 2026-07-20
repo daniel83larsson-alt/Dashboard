@@ -65,7 +65,7 @@ export async function POST() {
 
     const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
       supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal').eq('id', user.id).single(),
-      supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, raw_data')
+      supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, hr_zones:raw_data->hrZones')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),

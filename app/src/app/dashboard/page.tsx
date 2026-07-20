@@ -53,7 +53,7 @@ type Activity = {
   average_watts?: number
   name: string
   sport_type: string
-  raw_data?: unknown
+  hr_zones?: unknown
   calories?: number | null
 }
 
@@ -72,11 +72,17 @@ export default async function DashboardPage() {
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
-    // (grows without bound) so dropping unused columns matters. raw_data and
-    // strava_id stay: dedupeForStats() needs them (Concept2/Garmin pair
-    // matching + HR-zone preservation across merges), and PR/streak detection
-    // genuinely needs the full history, not just a recent slice.
-    supabase.from('activities').select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, raw_data, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
+    // (grows without bound) so dropping unused columns matters. strava_id
+    // stays: dedupeForStats() needs it for Concept2/Garmin pair matching.
+    // hr_zones is selected as a JSON-path projection (`hr_zones:raw_data->
+    // hrZones`) rather than the full raw_data column — dedupeForStats/
+    // aggregateZones only ever read that one field, and raw_data (the whole
+    // cached Garmin/Concept2 API response per pass) made this query several
+    // MB for an account with 800+ activities, which was the dominant cost
+    // in the reported cold-start delay (measured: ~3MB → ~290KB for this
+    // query alone after narrowing). PR/streak detection genuinely needs the
+    // full history, not just a recent slice, so no date/row limit here.
+    supabase.from('activities').select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, hr_zones:raw_data->hrZones, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     // Replaces the old coach_sessions('weekly_plan') JSON blob — this week's
     // plan (if generated) plus its sessions in one round-trip via the FK

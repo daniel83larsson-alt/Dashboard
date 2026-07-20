@@ -98,22 +98,22 @@ describe('dedupeForStats', () => {
     expect(result[0].id).toBe('c')
   })
 
-  it('copies the Garmin partner\'s hrZones onto the surviving Concept2 row', () => {
+  it('copies the Garmin partner\'s hr_zones onto the surviving Concept2 row', () => {
     // The actual regression this session fixed: "Veckans pulszoner" silently
     // lost zone data for every merged pair because only the surviving row's
-    // own raw_data was ever read afterward.
-    const c = row({ id: 'c', strava_id: -1, raw_data: {} })
-    const g = row({ id: 'g', strava_id: 500, raw_data: { hrZones: { z1: 100, z2: 200 } } })
+    // own hr_zones was ever read afterward.
+    const c = row({ id: 'c', strava_id: -1, hr_zones: undefined })
+    const g = row({ id: 'g', strava_id: 500, hr_zones: { z1: 100, z2: 200 } })
     const result = dedupeForStats([c, g])
     expect(result).toHaveLength(1)
-    expect((result[0].raw_data as { hrZones?: unknown }).hrZones).toEqual({ z1: 100, z2: 200 })
+    expect(result[0].hr_zones).toEqual({ z1: 100, z2: 200 })
   })
 
-  it('does not overwrite hrZones the primary row already has', () => {
-    const c = row({ id: 'c', strava_id: -1, raw_data: { hrZones: { z1: 999 } } })
-    const g = row({ id: 'g', strava_id: 500, raw_data: { hrZones: { z1: 1 } } })
+  it('does not overwrite hr_zones the primary row already has', () => {
+    const c = row({ id: 'c', strava_id: -1, hr_zones: { z1: 999 } })
+    const g = row({ id: 'g', strava_id: 500, hr_zones: { z1: 1 } })
     const result = dedupeForStats([c, g])
-    expect((result[0].raw_data as { hrZones?: unknown }).hrZones).toEqual({ z1: 999 })
+    expect(result[0].hr_zones).toEqual({ z1: 999 })
   })
 
   it('filters out sub-60s sync fragments from stats but a real short pass survives', () => {

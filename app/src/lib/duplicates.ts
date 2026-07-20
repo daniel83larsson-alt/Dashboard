@@ -1,9 +1,13 @@
-// Only id/strava_id/start_date/distance/moving_time/sport_type/raw_data are
+// Only id/strava_id/start_date/distance/moving_time/sport_type/hr_zones are
 // actually read by this file's merge/dedup logic (isMergeCandidate,
 // splitMergedPairs, dedupeForStats) — name/average_heartrate/description are
 // used only by suggestKeepId (the duplicate-cleanup flow), which already
 // null-guards both, so they're optional here rather than forcing every
 // caller to select columns it doesn't need just to satisfy the type.
+// hr_zones is the ONLY part of raw_data any of this needs — callers select
+// it as `hr_zones:raw_data->hrZones` instead of the full column, since
+// raw_data (the entire cached Garmin/Concept2 API response) can run
+// multiple KB per row and a full activity list is otherwise several MB.
 export type ActivityRow = {
   id: string
   strava_id: number
@@ -15,7 +19,7 @@ export type ActivityRow = {
   average_heartrate?: number | null
   description?: string | null
   created_at?: string
-  raw_data?: unknown
+  hr_zones?: unknown
 }
 
 // Exported so the activity-detail page can find the matching Garmin/Concept2
@@ -160,10 +164,10 @@ export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { sing
 // start_date, e.g. activities[0] as "latest pass").
 //
 // Concept2 never has HR-zone data (only Garmin's watch does) — so the
-// kept Concept2 row is patched with the dropped Garmin partner's hrZones
+// kept Concept2 row is patched with the dropped Garmin partner's hr_zones
 // before being returned. Without this, "Veckans pulszoner" silently lost
 // zone data for every single merged pair, since aggregateZones only ever
-// sees the surviving row's own raw_data.
+// sees the surviving row's own hr_zones.
 // A session under a minute is almost certainly an accidental sync fragment
 // (a few strokes before stopping the machine, not real training) rather than
 // a legitimate short pass — same 60s floor lib/records.ts already uses for
@@ -179,15 +183,13 @@ export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
   const dropped = new Set(pairs.map(p => p.partner.id))
   const zonesByPrimaryId = new Map<string, unknown>()
   for (const p of pairs) {
-    const primaryZones = (p.primary.raw_data as { hrZones?: unknown } | null)?.hrZones
-    const partnerZones = (p.partner.raw_data as { hrZones?: unknown } | null)?.hrZones
-    if (!primaryZones && partnerZones) zonesByPrimaryId.set(p.primary.id, partnerZones)
+    if (!p.primary.hr_zones && p.partner.hr_zones) zonesByPrimaryId.set(p.primary.id, p.partner.hr_zones)
   }
   return activities
     .filter(a => !dropped.has(a.id) && a.moving_time >= MIN_REAL_SESSION_SECONDS)
     .map(a => {
       const zones = zonesByPrimaryId.get(a.id)
       if (!zones) return a
-      return { ...a, raw_data: { ...(a.raw_data as object ?? {}), hrZones: zones } } as T
+      return { ...a, hr_zones: zones } as T
     })
 }
