@@ -1,14 +1,22 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 
 export default function NewPasswordPage() {
+  const [code, setCode] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    // Plain window.location read instead of useSearchParams — same reason
+    // as login/page.tsx, avoids a Suspense boundary for a one-off param.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCode(new URLSearchParams(window.location.search).get('code'))
+  }, [])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -16,10 +24,24 @@ export default function NewPasswordPage() {
       setError('Lösenorden matchar inte')
       return
     }
+    if (!code) {
+      setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
+      return
+    }
     setLoading(true)
     setError('')
 
     const supabase = createSupabaseClient()
+    // The code is only ever redeemed here, on a real form submit — not on
+    // page load — so an email/SMS link-scanner's passive GET can never
+    // burn it before the person actually sets their password.
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
+    if (exchangeError) {
+      setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
+      setLoading(false)
+      return
+    }
+
     const { error } = await supabase.auth.updateUser({ password })
     if (error) {
       setError('Kunde inte uppdatera lösenordet. Länken kan ha gått ut — försök begära en ny.')
