@@ -1,0 +1,47 @@
+name: DL Trainer scheduled sync
+
+# Vercel Cron only registers jobs from Production-target deployments, and
+# this project's Git connection ("sourceless" link, set up outside the
+# normal GitHub App flow) doesn't expose a way to make our actual deploy
+# branch count as Production — confirmed both via the Vercel API (every
+# attempt to change link.productionBranch is rejected) and the dashboard UI
+# (the Production Branch setting isn't present). vercel.json's three cron
+# definitions have therefore likely never fired automatically since they
+# were written. GitHub Actions' own scheduler is a complete substitute here
+# — the routes only check the CRON_SECRET header, not where the request
+# comes from, so this reaches the exact same endpoints Vercel Cron would
+# have called, just via a different scheduler.
+on:
+  schedule:
+    - cron: '0 5 * * *'   # sync-all — matches vercel.json
+    - cron: '0 18 * * *'  # streak-reminder — matches vercel.json
+    - cron: '30 5 * * *'  # isolation-check — matches vercel.json
+  workflow_dispatch:
+    inputs:
+      route:
+        description: 'Which route to call (for manual testing)'
+        required: true
+        type: choice
+        options: [sync-all, streak-reminder, isolation-check]
+
+jobs:
+  call:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine which route this trigger is for
+        id: route
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "path=${{ inputs.route }}" >> "$GITHUB_OUTPUT"
+          else
+            case "${{ github.event.schedule }}" in
+              "0 5 * * *") echo "path=sync-all" >> "$GITHUB_OUTPUT" ;;
+              "0 18 * * *") echo "path=streak-reminder" >> "$GITHUB_OUTPUT" ;;
+              "30 5 * * *") echo "path=isolation-check" >> "$GITHUB_OUTPUT" ;;
+            esac
+          fi
+      - name: Call the cron endpoint
+        run: |
+          curl --fail-with-body -sS \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "https://dltrainer.se/api/cron/${{ steps.route.outputs.path }}"
