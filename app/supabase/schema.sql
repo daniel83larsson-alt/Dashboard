@@ -809,6 +809,10 @@ create table public.food_log (
   unit text check (unit in ('g', 'portion')),
   kcal_per_100g numeric,
   off_id text,
+  -- Protein, samma "kan saknas" som kcal_per_100g — inte varje OFF-produkt
+  -- eller AI-uppskattning ger ett proteinvärde, så nullable snarare än 0.
+  protein_g numeric,
+  protein_per_100g numeric,
   logged_at timestamptz not null default now(),
   created_at timestamptz default now()
 );
@@ -821,13 +825,13 @@ create index food_log_user_name_idx on public.food_log (user_id, lower(name));
 -- Snabbval: distinkta rätter användaren loggat förr, med hur ofta + senast —
 -- så listan kan rankas efter båda utan att klienten behöver göra jobbet.
 create or replace function public.food_quick_picks()
-returns table(name text, calories integer, source text, quantity numeric, unit text, kcal_per_100g numeric, off_id text, times_logged bigint, last_logged timestamptz)
+returns table(name text, calories integer, source text, quantity numeric, unit text, kcal_per_100g numeric, off_id text, protein_g numeric, protein_per_100g numeric, times_logged bigint, last_logged timestamptz)
 language sql
 security definer
 set search_path = public
 as $$
   select distinct on (lower(f.name))
-    f.name, f.calories, f.source, f.quantity, f.unit, f.kcal_per_100g, f.off_id,
+    f.name, f.calories, f.source, f.quantity, f.unit, f.kcal_per_100g, f.off_id, f.protein_g, f.protein_per_100g,
     count(*) over (partition by lower(f.name)) as times_logged,
     max(f.logged_at) over (partition by lower(f.name)) as last_logged
   from public.food_log f

@@ -12,13 +12,14 @@ const ESTIMATE_SCHEMA = {
   properties: {
     name: { type: 'STRING', description: 'Rättens namn på svenska' },
     kcal: { type: 'INTEGER', description: 'Uppskattade kalorier för EN normal portion' },
+    protein_g: { type: 'INTEGER', description: 'Uppskattat protein i gram för EN normal portion' },
     portion_desc: { type: 'STRING', description: 'T.ex. "1 normal portion (~250 g)"' },
     confidence: { type: 'STRING', description: '"hög", "medel" eller "låg"' },
   },
-  required: ['name', 'kcal', 'portion_desc', 'confidence'],
+  required: ['name', 'kcal', 'protein_g', 'portion_desc', 'confidence'],
 }
 
-const ESTIMATE_SYSTEM = 'Du uppskattar kalorier för en maträtt utifrån en kort beskrivning eller en bild. Svara med rättens namn på svenska och en kaloriuppskattning för EN normal portion. Gissa aldrig löjligt exakt — det är en uppskattning, inte en labbmätning. Svara ENDAST med JSON enligt schema.'
+const ESTIMATE_SYSTEM = 'Du uppskattar kalorier och protein för en maträtt utifrån en kort beskrivning eller en bild. Svara med rättens namn på svenska, en kaloriuppskattning och en proteinuppskattning (gram) för EN normal portion. Gissa aldrig löjligt exakt — det är en uppskattning, inte en labbmätning. Svara ENDAST med JSON enligt schema.'
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp']
 const MAX_IMAGE_BASE64_LENGTH = 8_000_000 // ~6MB decoded, generous for a phone photo
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'AI-uppskattningen misslyckades' }, { status: 502 })
     }
 
-    const parsed = JSON.parse(raw) as { name: string; kcal: number; portion_desc: string; confidence: string }
+    const parsed = JSON.parse(raw) as { name: string; kcal: number; protein_g: number; portion_desc: string; confidence: string }
     return NextResponse.json({ ...parsed, source: body.mode === 'photo' ? 'photo' : 'ai_text' })
   } catch (err) {
     console.error('Food estimate error:', err)

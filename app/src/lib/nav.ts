@@ -8,12 +8,9 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/logga', label: 'Logga pass', icon: 'plus' },
   { href: '/dashboard/passlogg', label: 'Passlogg', icon: 'log' },
   { href: '/dashboard/mat', label: 'Mat', icon: 'food' },
-  { href: '/dashboard/rorlighet', label: 'Rörlighet', icon: 'stretch' },
   { href: '/dashboard/rekord', label: 'Rekord', icon: 'trophy' },
   { href: '/dashboard/rutter', label: 'Rutter', icon: 'route' },
-  { href: '/dashboard/insikter', label: 'Insikter', icon: 'insight' },
-  { href: '/dashboard/halsa', label: 'Hälsa', icon: 'heart' },
-  { href: '/dashboard/grafer', label: 'Grafer', icon: 'chart' },
+  { href: '/dashboard/halsa', label: 'Hälsa & Insikter', icon: 'heart' },
   { href: '/dashboard/coach', label: 'Coach', icon: 'chat' },
   { href: '/dashboard/profil', label: 'Profil & Inställningar', icon: 'profile' },
 ]

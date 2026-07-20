@@ -1,32 +1,60 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessChartsLoader'
 import HealthInsightCard from '@/components/HealthInsightCard'
+import InsightsPanel from '@/components/InsightsPanel'
+import ZoneTabs from '@/components/ZoneTabs'
+import SportChartsTabs from '@/components/SportChartsTabsLoader'
+import TopTabs from '@/components/TopTabs'
 import { bestVo2maxEstimate } from '@/lib/vo2max'
 import { hrvStatusLabel } from '@/lib/wellness'
+import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
+import { startOfWeek } from '@/lib/dates'
 
 const VO2MAX_LOOKBACK_DAYS = 90
 
-export default async function HalsaPage() {
+// Merges what used to be three separate pages (Hälsa/Grafer/Insikter) into
+// one, behind tabs — they all look at overlapping data (wellness numbers,
+// the same numbers as trend charts, AI commentary on the same numbers) and
+// even linked to each other before this. Daniel: "röriga menyer, går det
+// slå ihop några sidor?" One combined server fetch instead of three
+// separate page loads.
+export default async function HalsaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
+  const initialTab = (await searchParams).tab
+
   const now = new Date()
   const ninetyDaysAgo = new Date(now.getTime() - VO2MAX_LOOKBACK_DAYS * 86400000).toISOString()
+  const weekStart = startOfWeek(now)
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+  const yearStart = new Date(now.getFullYear(), 0, 1)
+  const zoneQueryStart = weekStart < yearStart ? weekStart : yearStart
 
-  const [{ data: wellnessRow }, { data: healthInsightRow }, { data: profile }, { data: recentRuns }] = await Promise.all([
+  const [
+    { data: wellnessRow },
+    { data: healthInsightRow },
+    { data: insightRow },
+    { data: profile },
+    { data: recentRuns },
+    { count: activityCount },
+    { data: zoneRangeActivities },
+    { data: chartActivities },
+  ] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date').eq('id', user.id).single(),
     supabase.from('activities').select('sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id).in('sport_type', ['Run', 'TrailRun']).gte('start_date', ninetyDaysAgo),
+    supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
+    supabase.from('activities').select('start_date, hr_zones:raw_data->hrZones').eq('user_id', user.id).gte('start_date', zoneQueryStart.toISOString()),
+    supabase.from('activities').select('start_date, distance, moving_time, average_heartrate, sport_type')
+      .eq('user_id', user.id).order('start_date', { ascending: false }).limit(200),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
 
-  // Prefer Garmin's own already-computed value; fall back to our own
-  // estimate from the best qualifying recent run when Garmin doesn't have
-  // one (some watches never compute it) — always tagged with its source
-  // and the date it refers to, never presented as a single unlabeled number.
   const vo2max = profile?.vo2max_source === 'garmin' && profile?.vo2max_value
     ? { value: profile.vo2max_value, source: 'garmin' as const, date: profile.vo2max_date as string }
     : (() => {
@@ -37,6 +65,9 @@ export default async function HalsaPage() {
 
   const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
+
+  const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const savedInsight = insightRaw ? (() => { try { return JSON.parse(insightRaw) } catch { return null } })() : null
 
   const raw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const store = raw ? (() => { try { return JSON.parse(raw) } catch { return null } })() : null
@@ -54,26 +85,29 @@ export default async function HalsaPage() {
   const avgSteps = avg('steps')
   const avgHRV   = avg('hrv')
 
-  return (
-    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto space-y-6">
-      {/* Header */}
+  const allZoneRows = zoneRangeActivities ?? []
+  const weekRows = allZoneRows.filter(a => a.start_date >= weekStart.toISOString())
+  const monthRows = allZoneRows.filter(a => a.start_date >= monthStart.toISOString())
+  const yearRows = allZoneRows.filter(a => a.start_date >= yearStart.toISOString())
+  const zonePeriods = [
+    { key: 'week', label: 'Vecka', zones: aggregateZones(weekRows), analyzed: zoneCoverageCount(weekRows), total: weekRows.length },
+    { key: 'month', label: 'Månad', zones: aggregateZones(monthRows), analyzed: zoneCoverageCount(monthRows), total: monthRows.length },
+    { key: 'year', label: String(now.getFullYear()), zones: aggregateZones(yearRows), analyzed: zoneCoverageCount(yearRows), total: yearRows.length },
+  ]
+  const hasAnyZoneData = zonePeriods.some(p => p.zones.length > 0)
+
+  const wellnessPanel = (
+    <div className="space-y-6">
       <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">Hälsa</h1>
-          <p className="text-muted text-sm mt-1">Wellness-data från Garmin · {history.length > 0 ? `senaste ${history.length} dagarna` : 'väntar på data'}</p>
-        </div>
+        <p className="text-muted text-sm">Wellness-data från Garmin · {history.length > 0 ? `senaste ${history.length} dagarna` : 'väntar på data'}</p>
         {updatedAt && (
-          <div className="text-right">
+          <div className="text-right flex-shrink-0">
             <div className="text-[10px] text-muted">Senast synkad</div>
             <div className="text-xs text-fg">{updatedAt.toLocaleString('sv-SE', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</div>
           </div>
         )}
       </div>
 
-      {/* VO2max — always its own card regardless of Garmin wellness sync,
-          since the estimated fallback only needs synced runs, not wellness
-          history. Source + date always shown so it's never mistaken for a
-          fresher number than it is. */}
       {vo2max && (
         <div className="bg-card border border-edge rounded-2xl p-4">
           <div className="flex items-start justify-between">
@@ -101,7 +135,6 @@ export default async function HalsaPage() {
         </div>
       ) : (
         <>
-          {/* 7-day averages */}
           <div>
             <div className="text-xs text-muted uppercase tracking-wider mb-3">7-dagarssnitt</div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -132,7 +165,6 @@ export default async function HalsaPage() {
             </div>
           </div>
 
-          {/* Latest values */}
           {latest && (
             <div>
               <div className="text-xs text-muted uppercase tracking-wider mb-3">
@@ -195,16 +227,57 @@ export default async function HalsaPage() {
             </div>
           )}
 
-          {/* Trend charts — summary tiles omitted, "Senaste dag" above already covers today's values */}
           <div>
             <div className="text-xs text-muted uppercase tracking-wider mb-4">Utveckling över tid</div>
             <WellnessCharts history={history} showSummary={false} />
           </div>
 
-          {/* Team insights, health-data only */}
           <HealthInsightCard savedInsight={savedHealthInsight} />
         </>
       )}
+    </div>
+  )
+
+  const graferPanel = (
+    <div>
+      <p className="text-muted text-sm mb-4">Trender, pace och volym</p>
+      <SportChartsTabs activities={chartActivities ?? []} />
+    </div>
+  )
+
+  const insikterPanel = (
+    <div className="space-y-8">
+      <p className="text-muted text-sm">Hela tränarteamet analyserar din träning</p>
+
+      {hasAnyZoneData && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Pulszoner</h2>
+          <ZoneTabs periods={zonePeriods} />
+        </div>
+      )}
+
+      <div>
+        <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Tränarteamets analys</h2>
+        <InsightsPanel savedInsight={savedInsight} activityCount={activityCount ?? 0} hasWellness={history.length > 0} />
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto">
+      <div className="mb-4">
+        <h1 className="text-2xl font-semibold">Hälsa & Insikter</h1>
+      </div>
+      <TopTabs
+        tabs={[
+          { key: 'wellness', label: 'Hälsa' },
+          { key: 'grafer', label: 'Grafer' },
+          { key: 'insikter', label: 'Insikter' },
+        ]}
+        initial={initialTab && ['wellness', 'grafer', 'insikter'].includes(initialTab) ? initialTab : undefined}
+      >
+        {{ wellness: wellnessPanel, grafer: graferPanel, insikter: insikterPanel }}
+      </TopTabs>
     </div>
   )
 }

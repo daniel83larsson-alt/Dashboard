@@ -95,7 +95,7 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
     supabase.rpc('friend_activity_feed'),
     supabase.rpc('pending_follow_requests'),
-    supabase.from('food_log').select('calories, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
+    supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
   ])
 
   const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
   const activityCaloriesToday = activities
     .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
     .reduce((s, a) => s + (a.calories ?? 0), 0)
-  const eatenToday = (recentFoodLog ?? [])
-    .filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)
-    .reduce((s, f) => s + (f.calories ?? 0), 0)
+  const foodLogToday = (recentFoodLog ?? []).filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)
+  const eatenToday = foodLogToday.reduce((s, f) => s + (f.calories ?? 0), 0)
+  const proteinToday = foodLogToday.reduce((s, f) => s + (f.protein_g ?? 0), 0)
   const bmrResult = estimateBMR({
     weightKg: profile?.weight_kg ?? null,
     heightCm: profile?.height_cm ?? null,
@@ -341,6 +341,12 @@ export default async function DashboardPage() {
               <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
             )}
           </div>
+          {proteinToday > 0 && (
+            <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
+              <span className="text-muted text-xs">Protein (uppskattat)</span>
+              <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+            </div>
+          )}
         </div>
       ) : (
         <a href="/dashboard/mat" className="bg-card border border-edge rounded-2xl p-4 block hover:border-accent/30 transition-colors">
@@ -495,7 +501,7 @@ export default async function DashboardPage() {
               <div>
                 <div className="text-xs text-accent font-medium mb-1">🚣 Tränarteamet</div>
                 <p className="text-xs text-fg/90 leading-relaxed">{shortTake(savedInsight.agents.summary)}</p>
-                <a href="/dashboard/insikter" className="text-xs text-accent hover:underline mt-1 inline-block">Se hela analysen →</a>
+                <a href="/dashboard/halsa?tab=insikter" className="text-xs text-accent hover:underline mt-1 inline-block">Se hela analysen →</a>
               </div>
             )}
             {savedHealthInsight?.recovery && (

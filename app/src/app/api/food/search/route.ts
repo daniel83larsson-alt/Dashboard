@@ -5,6 +5,7 @@ export type FoodCandidate = {
   name: string
   brand: string | null
   kcalPer100g: number
+  proteinPer100g: number | null
   offId: string
   servingGrams: number | null
 }
@@ -47,7 +48,7 @@ export async function POST(request: NextRequest) {
   url.searchParams.set('json', '1')
   url.searchParams.set('page_size', '20')
   url.searchParams.set('sort_by', 'unique_scans_n')
-  url.searchParams.set('fields', 'code,product_name,product_name_sv,brands,nutriments,serving_size')
+  url.searchParams.set('fields', 'code,product_name,product_name_sv,brands,nutriments,serving_size,proteins_100g')
   url.searchParams.set('lc', 'sv')
 
   type OffProduct = {
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
     product_name_sv?: string
     brands?: string
     serving_size?: string
-    nutriments?: { 'energy-kcal_100g'?: number; energy_100g?: number }
+    nutriments?: { 'energy-kcal_100g'?: number; energy_100g?: number; proteins_100g?: number }
   }
 
   try {
@@ -74,10 +75,12 @@ export async function POST(request: NextRequest) {
         const kcalPer100g = kcalDirect ?? kcalFromKj
         if (!kcalPer100g || kcalPer100g <= 0) return null
         if (!sharesToken(trimmed, name)) return null
+        const proteinPer100g = p.nutriments?.proteins_100g
         return {
           name,
           brand: p.brands?.split(',')[0]?.trim() || null,
           kcalPer100g: Math.round(kcalPer100g),
+          proteinPer100g: proteinPer100g != null && proteinPer100g >= 0 ? Math.round(proteinPer100g * 10) / 10 : null,
           offId: p.code,
           servingGrams: parseServingGrams(p.serving_size),
         }

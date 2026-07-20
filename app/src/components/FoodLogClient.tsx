@@ -8,6 +8,7 @@ export type FoodEntry = {
   id: string
   name: string
   calories: number
+  protein_g: number | null
   source: 'database' | 'ai_text' | 'photo'
   logged_at: string
 }
@@ -20,11 +21,13 @@ export type QuickPick = {
   unit: string | null
   kcal_per_100g: number | null
   off_id: string | null
+  protein_g: number | null
+  protein_per_100g: number | null
   times_logged: number
   last_logged: string
 }
 
-type Estimate = { name: string; kcal: number; portion_desc: string; confidence: string; source: 'ai_text' | 'photo' }
+type Estimate = { name: string; kcal: number; protein_g: number; portion_desc: string; confidence: string; source: 'ai_text' | 'photo' }
 
 // Liten/Normal/Stor — a simple multiplier on the base (per-100g or
 // per-normal-portion) amount rather than asking for an exact gram figure
@@ -50,6 +53,7 @@ export default function FoodLogClient({
 }) {
   const [entries, setEntries] = useState(todayEntries)
   const todayTotal = entries.reduce((s, e) => s + e.calories, 0)
+  const todayProtein = entries.reduce((s, e) => s + (e.protein_g ?? 0), 0)
   const goalPct = dailyCalorieGoal ? Math.min(100, Math.round((todayTotal / dailyCalorieGoal) * 100)) : null
 
   // ── Sök ──────────────────────────────────────────────────────────────────
@@ -187,7 +191,7 @@ export default function FoodLogClient({
       const res = await fetch('/api/food/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: estimate.name, source: estimate.source, baseKcal: estimate.kcal, multiplier }),
+        body: JSON.stringify({ name: estimate.name, source: estimate.source, baseKcal: estimate.kcal, baseProteinG: estimate.protein_g, multiplier }),
       })
       const data = await res.json()
       if (res.ok) { setEntries(prev => [data.entry, ...prev]); clearFlow() }
@@ -204,7 +208,7 @@ export default function FoodLogClient({
     try {
       const body = pick.source === 'database' && pick.off_id && pick.quantity
         ? { name: pick.name, source: 'database', offId: pick.off_id, grams: pick.quantity }
-        : { name: pick.name, source: pick.source, baseKcal: pick.calories, multiplier: 1 }
+        : { name: pick.name, source: pick.source, baseKcal: pick.calories, baseProteinG: pick.protein_g, multiplier: 1 }
       const res = await fetch('/api/food/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -256,6 +260,10 @@ export default function FoodLogClient({
             Inget kalorimål satt — <a href="/dashboard/profil" className="text-accent hover:underline">ange ett i Profil</a> för att se det som en budget.
           </p>
         )}
+        <div className="flex items-baseline justify-between mt-3 pt-3 border-t border-edge">
+          <span className="text-muted text-xs">Protein (uppskattat)</span>
+          <span className="font-mono text-fg text-sm">{Math.round(todayProtein)} g</span>
+        </div>
         {entries.length > 0 && (
           <div className="flex flex-col gap-1 mt-3">
             {entries.map(e => (

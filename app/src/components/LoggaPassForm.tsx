@@ -88,11 +88,8 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-2xl w-full mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Logga pass</h1>
-        <p className="text-muted text-sm mt-1">Ange ett pass i efterhand — kalorier räknas ut automatiskt utifrån träningstyp, tid och din vikt</p>
-      </div>
+    <div>
+      <p className="text-muted text-sm mb-4">Ange ett pass i efterhand — kalorier räknas ut automatiskt utifrån träningstyp, tid och din vikt</p>
 
       {saved && (
         <div className="mb-4 bg-card border border-accent/30 rounded-2xl p-4 text-accent text-sm text-center">
