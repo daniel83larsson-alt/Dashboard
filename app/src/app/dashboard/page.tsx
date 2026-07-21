@@ -137,15 +137,9 @@ export default async function DashboardPage() {
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
-  const y = now.getFullYear()
-  const mo = now.getMonth()
   const weekStart = startOfWeek(now)
-  const monthStart = new Date(y, mo, 1)
-  const yearStart  = new Date(y, 0, 1)
 
   const thisWeek  = activities.filter(a => new Date(a.start_date) >= weekStart)
-  const thisMonth = activities.filter(a => new Date(a.start_date) >= monthStart)
-  const thisYear  = activities.filter(a => new Date(a.start_date) >= yearStart)
 
   function totals(arr: Activity[]) {
     const sports = new Set(arr.map(a => a.sport_type))
@@ -159,8 +153,6 @@ export default async function DashboardPage() {
   }
 
   const wk = totals(thisWeek)
-  const mm = totals(thisMonth)
-  const yy = totals(thisYear)
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -589,35 +581,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Stats: Vecka / Månad / År ─────────────────────────────────────── */}
-      {activities.length > 0 && (
-        <div className="lg:col-span-2 lg:order-5">
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Din statistik</h2>
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: 'Denna vecka', data: wk },
-              { label: now.toLocaleDateString('sv-SE', { month: 'long' }).replace(/^./, c => c.toUpperCase()), data: mm },
-              { label: String(y), data: yy },
-            ].map(({ label, data }) => (
-              <div key={label} className="bg-card border border-edge rounded-2xl p-4">
-                <div className="text-xs text-muted mb-3">{label}</div>
-                <div className="font-mono text-accent text-xl font-bold leading-none mb-0.5">
-                  {fmtKm(data.dist)}
-                </div>
-                <div className="text-muted text-xs">{data.count} pass</div>
-                <div className="text-muted text-xs">{fmtDur(data.time)}</div>
-                {data.dist > 0 && data.singleSport && fmtSpeedOrPace(data.singleSport, data.dist, data.time) && (
-                  <div className="font-mono text-lcd text-xs mt-2">
-                    ⌀ {fmtSpeedOrPace(data.singleSport, data.dist, data.time)!.value}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-
-        </div>
-      )}
-
       {/* ── Veckans pulszoner ──────────────────────────────────────────────── */}
       {weekZones.length > 0 && (
         <div className="lg:order-4">
@@ -628,22 +591,6 @@ export default async function DashboardPage() {
               Baserat på {weekZoneCoverage} av {thisWeek.length} pass denna vecka — resten fylls på gradvis
             </div>
           </div>
-        </div>
-      )}
-
-      {/* ── Rekord (egen sida) ───────────────────────────────────────────────── */}
-      {activities.length > 0 && (
-        <div className="lg:order-6">
-          <a
-            href="/dashboard/rekord"
-            className="bg-card border border-edge rounded-2xl p-4 flex items-center justify-between hover:border-accent/40 transition-colors"
-          >
-            <div className="flex items-center gap-2">
-              <span className="text-lg">🏆</span>
-              <span className="text-sm font-medium">Se alla rekord</span>
-            </div>
-            <span className="text-muted text-xs">Personliga rekord, längsta streak, mm →</span>
-          </a>
         </div>
       )}
 
