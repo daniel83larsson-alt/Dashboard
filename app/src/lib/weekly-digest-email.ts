@@ -18,6 +18,13 @@ function statBox(value: string, label: string) {
   </td>`
 }
 
+function insightBlock(label: string, text: string) {
+  return `<div style="margin:0 0 14px;">
+    <p style="margin:0 0 3px;color:#999;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">${label}</p>
+    <p style="margin:0;color:#1a1a1a;line-height:1.55;font-size:14.5px;">${text}</p>
+  </div>`
+}
+
 export function renderWeeklyDigestHtml({
   name,
   record,
@@ -29,19 +36,22 @@ export function renderWeeklyDigestHtml({
 }): string {
   const { thisWeek, adherence, lookAhead } = record.data
 
-  const narrativeHtml = record.narrative
-    ? `<p style="margin:0 0 16px;color:#1a1a1a;line-height:1.6;font-size:15px;">${record.narrative.replace(/\n+/g, '<br>')}</p>`
-    : ''
-
   const adherenceHtml = adherence
     ? `<div style="margin:0 0 16px;padding:12px 16px;background:#f4f4f2;border-radius:12px;">
         <p style="margin:0;color:#1a1a1a;font-size:14px;">${adherence.label}</p>
       </div>`
     : ''
 
+  const insightsHtml = record.insights
+    ? insightBlock('Om veckans pass', record.insights.sessions)
+      + insightBlock('Sömn & steg', record.insights.wellness)
+    : `<p style="margin:0 0 16px;color:#999;font-size:13px;font-style:italic;">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>`
+
+  const motivationHtml = record.insights ? insightBlock('Inför nästa vecka', record.insights.motivation) : ''
+
   const lookAheadHtml = lookAhead.kind === 'plan'
-    ? `<div style="margin:16px 0 0;">
-        <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Vecka framåt</p>
+    ? `<div style="margin:0 0 16px;">
+        <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Nästa veckas plan</p>
         <p style="margin:0;color:#1a1a1a;font-size:14px;">${lookAhead.sessions.filter(s => !s.isRest).map(s => s.label).join(', ') || 'Vila'}</p>
       </div>`
     : ''
@@ -59,15 +69,16 @@ export function renderWeeklyDigestHtml({
         <tr><td style="padding:28px 32px;">
           <p style="margin:0 0 4px;color:#1a1a1a;font-size:15px;">Hej ${name}!</p>
           <p style="margin:0 0 20px;color:#999;font-size:12px;">${fmtDateRange(record.weekStartISO, record.weekEndISO)}</p>
-          ${narrativeHtml}
-          ${adherenceHtml}
-          <table width="100%" cellpadding="0" cellspacing="8">
+          <table width="100%" cellpadding="0" cellspacing="8" style="margin:0 0 18px;">
             <tr>
               ${statBox(String(thisWeek.sessions.count), 'pass')}
               ${statBox(`${thisWeek.sessions.totalKm} km`, 'distans')}
               ${statBox(thisWeek.wellness.avgSteps ? Math.round(thisWeek.wellness.avgSteps).toLocaleString('sv-SE') : '–', 'steg/dag')}
             </tr>
           </table>
+          ${adherenceHtml}
+          ${insightsHtml}
+          ${motivationHtml}
           ${lookAheadHtml}
           <p style="margin:24px 0 0;">
             <a href="${process.env.NEXT_PUBLIC_APP_URL}/dashboard/veckoplan" style="display:inline-block;background:#ccd400;color:#0e1113;padding:10px 20px;border-radius:10px;text-decoration:none;font-weight:600;font-size:14px;">Öppna Veckoplan</a>

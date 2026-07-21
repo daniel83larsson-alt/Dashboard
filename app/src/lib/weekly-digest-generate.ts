@@ -7,12 +7,25 @@
 // once-a-week-per-user scheduled job is a different kind of load and is
 // throttled separately in the cron route itself).
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { computeWeeklyDigest, recapWeekStart, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
+import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
 import { decryptMaybeLegacy } from './encrypt'
+import { sportLabel } from './sport'
 import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+
+// Three short, distinct coach perspectives instead of one blended paragraph
+// — Daniel's own feedback on the first real send: "inte så kul... hade velat
+// ha lite insikter eller tips från coachen, om passen, steg och sömn, som
+// peppar mot målet." Mirrors the same "specialist voices" idea already used
+// by /api/insights/generate's coach team, condensed to one field per topic
+// instead of six, since this is a weekly push, not an on-demand deep-dive.
+export type WeeklyDigestInsights = {
+  sessions: string // feedback specifically on the pass som kördes denna vecka
+  wellness: string // insikt om steg + sömn-mönstret
+  motivation: string // peppig, mål-kopplad rad om vad som väntar
+}
 
 export type WeeklyDigestRecord = {
   generatedAt: string
@@ -20,9 +33,9 @@ export type WeeklyDigestRecord = {
   weekEndISO: string
   data: WeeklyDigestData
   // null means the AI call failed — the record still holds real computed
-  // numbers, so the card/email fall back to showing those without a written
-  // paragraph rather than skipping the user entirely.
-  narrative: string | null
+  // numbers, so the card/email fall back to showing those without written
+  // insights rather than skipping the user entirely.
+  insights: WeeklyDigestInsights | null
   // Set when the Veckoplan page renders this record — drives the "new
   // recap ready" badge on Översikt (badge shows while viewedAt is null or
   // older than generatedAt, i.e. a fresh cron-generated digest hasn't been
@@ -34,47 +47,80 @@ function fmtKm(km: number): string {
   return `${km.toFixed(1)} km`
 }
 
-function sportBreakdown(bySport: WeeklyDigestData['thisWeek']['sessions']['bySport']): string {
-  if (!bySport.length) return 'inga pass'
-  return bySport.map(s => `${s.count}x ${s.label}`).join(', ')
+// A dated one-line-per-session list — plain aggregate stats read as dry
+// (Daniel's own complaint); giving the model the actual sessions lets it
+// say something concrete about THIS week ("tre roddpass, tyngst på
+// torsdagen") instead of a generic re-statement of the totals.
+function sessionList(activities: ActivityRow[]): string {
+  if (!activities.length) return 'Inga pass loggade denna vecka.'
+  return activities
+    .slice()
+    .sort((a, b) => a.start_date.localeCompare(b.start_date))
+    .map(a => {
+      const day = new Date(a.start_date).toLocaleDateString('sv-SE', { weekday: 'short' })
+      const km = a.distance > 0 ? `, ${(a.distance / 1000).toFixed(1)} km` : ''
+      const min = Math.round(a.moving_time / 60)
+      return `${day} ${sportLabel(a.sport_type)}${km}, ${min} min`
+    })
+    .join('\n')
 }
 
-function buildPrompt(data: WeeklyDigestData, goalTitle: string | null): string {
+function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], goalTitle: string | null): string {
   const w = data.thisWeek
   const p = data.prevWeek
   const fmtAvg = (v: number | null, unit: string, decimals = 0) => v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
 
   const lookAheadLine = data.lookAhead.kind === 'plan'
     ? `Nästa veckas plan finns redan: ${data.lookAhead.sessions.filter(s => !s.isRest).map(s => s.label).join(', ') || 'bara vila'}.`
-    : 'Nästa veckas plan är inte genererad än — ge en kort riktning för nästa vecka baserat på målet och veckans rytm istället.'
+    : 'Nästa veckas plan är inte genererad än.'
 
-  return `DENNA VECKA (${data.weekStartISO} till ${data.weekEndISO}): ${w.sessions.count} pass, ${fmtKm(w.sessions.totalKm)}, ${w.sessions.totalMinutes} min. Fördelning: ${sportBreakdown(w.sessions.bySport)}.
-FÖRRA VECKAN: ${p.sessions.count} pass, ${fmtKm(p.sessions.totalKm)}.
+  return `DENNA VECKAS PASS (${data.weekStartISO} till ${data.weekEndISO}):
+${sessionList(thisWeekActivities)}
+TOTALT: ${w.sessions.count} pass, ${fmtKm(w.sessions.totalKm)}, ${w.sessions.totalMinutes} min. Förra veckan: ${p.sessions.count} pass, ${fmtKm(p.sessions.totalKm)}.
 FÖLJSAMHET MOT PLANEN: ${data.adherence ? data.adherence.label : 'ingen plan var satt denna vecka'}
-STEG: snitt ${fmtAvg(w.wellness.avgSteps, '')} (förra veckan ${fmtAvg(p.wellness.avgSteps, '')})
+STEG: snitt ${fmtAvg(w.wellness.avgSteps, '')}/dag (förra veckan ${fmtAvg(p.wellness.avgSteps, '')})
 SÖMN: snitt ${fmtAvg(w.wellness.avgSleepHours, 'h', 1)} (förra veckan ${fmtAvg(p.wellness.avgSleepHours, 'h', 1)})
 VILOPULS: snitt ${fmtAvg(w.wellness.avgRestingHR, ' bpm')} (förra veckan ${fmtAvg(p.wellness.avgRestingHR, ' bpm')})
-MÅL: ${goalTitle ?? 'inget aktivt mål'}
+MÅL: ${goalTitle ?? 'inget aktivt mål satt'}
 ${lookAheadLine}
 
-Skriv "Veckans Recap" — en kort, personlig helhetsbild av veckan som gick, som ett litet nyhetsbrev med atletens egna siffror. Max 4 korta meningar, svenska, andra person ("du"), gå rakt på sak utan hälsningsfras eller avslutande fråga. Nämn minst en konkret siffra från datan ovan. Avsluta med en kort mening om vad nästa vecka innebär.`
+Ge tre korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
+
+sessions: Kommentera passen som faktiskt kördes denna vecka — nämn en specifik dag/pass eller ett tydligt mönster, inte bara totalen. MAX 2 meningar.
+
+wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (jämför med förra veckan om det säger något intressant). MAX 2 meningar.
+
+motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.`
 }
 
-async function generateNarrative(apiKey: string, data: WeeklyDigestData, goalTitle: string | null): Promise<string> {
-  const system = 'Du är atletens huvudcoach som skriver veckans personliga sammanfattning. Svara ENDAST med den färdiga texten, ingen rubrik, inga citattecken runt om.'
+async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], goalTitle: string | null): Promise<WeeklyDigestInsights> {
+  const system = 'Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.'
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, goalTitle) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, goalTitle) }] }],
       systemInstruction: { parts: [{ text: system }] },
-      generationConfig: { maxOutputTokens: 400, thinkingConfig: { thinkingBudget: 0 } },
+      generationConfig: {
+        maxOutputTokens: 500,
+        thinkingConfig: { thinkingBudget: 0 },
+        responseMimeType: 'application/json',
+        responseSchema: {
+          type: 'OBJECT',
+          properties: {
+            sessions: { type: 'STRING' },
+            wellness: { type: 'STRING' },
+            motivation: { type: 'STRING' },
+          },
+          required: ['sessions', 'wellness', 'motivation'],
+        },
+      },
     }),
   })
   const d = await res.json()
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
-  return (text as string).trim()
+  return JSON.parse(text) as WeeklyDigestInsights
 }
 
 export async function generateWeeklyDigestForUser(
@@ -114,12 +160,13 @@ export async function generateWeeklyDigestForUser(
 
   const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
   const goalTitle = (goals?.[0]?.title as string | undefined) ?? null
+  const thisWeekActivities = activitiesInWeek((acts ?? []) as ActivityRow[], weekStart)
 
-  let narrative: string | null = null
+  let insights: WeeklyDigestInsights | null = null
   try {
-    narrative = await generateNarrative(apiKey, digestData, goalTitle)
+    insights = await generateInsights(apiKey, digestData, thisWeekActivities, goalTitle)
   } catch (err) {
-    console.error('Weekly digest narrative failed for user', userId, err)
+    console.error('Weekly digest insights failed for user', userId, err)
   }
 
   const record: WeeklyDigestRecord = {
@@ -127,7 +174,7 @@ export async function generateWeeklyDigestForUser(
     weekStartISO: digestData.weekStartISO,
     weekEndISO: digestData.weekEndISO,
     data: digestData,
-    narrative,
+    insights,
     viewedAt: null,
   }
 

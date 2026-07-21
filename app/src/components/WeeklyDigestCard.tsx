@@ -1,29 +1,9 @@
 'use client'
 
 import { useState } from 'react'
+import type { WeeklyDigestRecord } from '@/lib/weekly-digest-generate'
 
-type SportCount = { sport: string; label: string; count: number }
-type SessionStats = { count: number; totalKm: number; totalMinutes: number; bySport: SportCount[] }
-type WellnessStats = { avgSteps: number | null; avgSleepHours: number | null; avgRestingHR: number | null; avgHrv: number | null }
-type Adherence = { plannedCount: number; doneCount: number; label: string } | null
-type LookAhead =
-  | { kind: 'plan'; sessions: { sport: string | null; label: string; title: string; plannedDate: string; isRest: boolean }[] }
-  | { kind: 'none' }
-
-type DigestRecord = {
-  generatedAt: string
-  weekStartISO: string
-  weekEndISO: string
-  data: {
-    weekStartISO: string
-    weekEndISO: string
-    thisWeek: { sessions: SessionStats; wellness: WellnessStats }
-    prevWeek: { sessions: SessionStats; wellness: WellnessStats }
-    adherence: Adherence
-    lookAhead: LookAhead
-  }
-  narrative: string | null
-}
+type DigestRecord = WeeklyDigestRecord
 
 function fmtDateRange(startISO: string, endISO: string) {
   const start = new Date(`${startISO}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
@@ -88,8 +68,24 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
         </button>
       </div>
 
-      {record.narrative && <p className="text-sm text-fg leading-relaxed">{record.narrative}</p>}
-      {!record.narrative && <p className="text-muted text-xs italic">Kunde inte skriva en sammanfattning just nu — siffrorna nedan stämmer ändå.</p>}
+      {record.insights ? (
+        <div className="space-y-2.5">
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Om veckans pass</div>
+            <p className="text-sm text-fg leading-relaxed">{record.insights.sessions}</p>
+          </div>
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Sömn & steg</div>
+            <p className="text-sm text-fg leading-relaxed">{record.insights.wellness}</p>
+          </div>
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Inför nästa vecka</div>
+            <p className="text-sm text-fg leading-relaxed">{record.insights.motivation}</p>
+          </div>
+        </div>
+      ) : (
+        <p className="text-muted text-xs italic">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>
+      )}
       {error && <p className="text-red-400 text-xs">{error}</p>}
 
       <div className="grid grid-cols-2 gap-3">

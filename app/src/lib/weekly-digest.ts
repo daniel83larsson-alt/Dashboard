@@ -68,6 +68,17 @@ function isoDateKey(d: Date): string {
   return d.toISOString().slice(0, 10)
 }
 
+// Deduped activities within [weekStart, weekStart+7) — exported so callers
+// that need the actual per-session list (not just aggregated stats, e.g. the
+// AI prompt builder) reuse the exact same dedup+boundary logic as the stats
+// below, rather than re-deriving it and risking the two disagreeing (see the
+// Sunday-evening boundary bug this function's tests already cover).
+export function activitiesInWeek(activities: ActivityRow[], weekStart: Date): ActivityRow[] {
+  const weekEndExclusive = new Date(weekStart)
+  weekEndExclusive.setDate(weekEndExclusive.getDate() + 7)
+  return dedupeForStats(activities).filter(a => new Date(a.start_date) >= weekStart && new Date(a.start_date) < weekEndExclusive)
+}
+
 function sessionStats(activities: ActivityRow[]): WeeklyDigestSessionStats {
   const bySportCount = new Map<string, number>()
   let totalDistance = 0
@@ -153,9 +164,8 @@ export function computeWeeklyDigest({
   const prevWeekEnd = new Date(weekStart)
   prevWeekEnd.setDate(prevWeekEnd.getDate() - 1)
 
-  const deduped = dedupeForStats(activities)
-  const thisWeekActs = deduped.filter(a => new Date(a.start_date) >= weekStart && new Date(a.start_date) < weekEndExclusive)
-  const prevWeekActs = deduped.filter(a => new Date(a.start_date) >= prevWeekStart && new Date(a.start_date) < weekStart)
+  const thisWeekActs = activitiesInWeek(activities, weekStart)
+  const prevWeekActs = activitiesInWeek(activities, prevWeekStart)
 
   const weekStartKey = isoDateKey(weekStart)
   const weekEndKey = isoDateKey(weekEndDisplay)
