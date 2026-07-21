@@ -24,6 +24,7 @@ type Profile = {
   birth_year?: number | null
   biological_sex?: 'male' | 'female' | null
   daily_calorie_goal?: number | null
+  weekly_digest_opt_out?: boolean | null
 }
 
 
@@ -67,6 +68,7 @@ export default function ProfileForm({
   const [birthYear, setBirthYear] = useState(profile?.birth_year?.toString() ?? '')
   const [biologicalSex, setBiologicalSex] = useState(profile?.biological_sex ?? '')
   const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal?.toString() ?? '')
+  const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -77,6 +79,8 @@ export default function ProfileForm({
   const [garminPassword, setGarminPassword] = useState('')
   const [garminSaving, setGarminSaving] = useState(false)
   const [garminConnected, setGarminConnected] = useState(hasGarmin)
+  const [sendingTest, setSendingTest] = useState(false)
+  const [testMsg, setTestMsg] = useState('')
   const router = useRouter()
 
   async function save(e: React.FormEvent) {
@@ -101,6 +105,7 @@ export default function ProfileForm({
       birth_year: birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null,
       biological_sex: biologicalSex || null,
       daily_calorie_goal: calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null,
+      weekly_digest_opt_out: !weeklyDigestEnabled,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -184,6 +189,19 @@ export default function ProfileForm({
       setGarminMsg('Nätverksfel')
     }
     setGarminSyncing(false)
+  }
+
+  async function sendTestDigest() {
+    setSendingTest(true)
+    setTestMsg('')
+    try {
+      const res = await fetch('/api/weekly-digest/send-test', { method: 'POST' })
+      const data = await res.json()
+      setTestMsg(data.ok ? 'Skickat! Kolla din inkorg.' : (data.error ?? 'Något gick fel'))
+    } catch {
+      setTestMsg('Nätverksfel')
+    }
+    setSendingTest(false)
   }
 
   async function signOut() {
@@ -316,6 +334,34 @@ export default function ProfileForm({
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
           <p className="text-muted text-xs mt-1.5">Styr kalorirutan på Översikt. Lämna tomt för att bara se ätit/bränt utan ett mål att jämföra mot.</p>
+        </div>
+      </div>
+
+      {/* Veckans Recap */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Veckans Recap</div>
+          <p className="text-muted text-xs">En helhetsbild av veckans pass, steg, sömn och följsamhet mot planen — skickas på mail varje söndag. Separat från nyhetsbrevet, så du kan ha av/på oberoende av varandra.</p>
+        </div>
+        <label className="flex items-center gap-2.5 text-sm text-fg">
+          <input
+            type="checkbox"
+            checked={weeklyDigestEnabled}
+            onChange={e => setWeeklyDigestEnabled(e.target.checked)}
+            className="w-4 h-4 accent-accent"
+          />
+          Skicka Veckans Recap på mail varje söndag
+        </label>
+        <div>
+          <button
+            type="button"
+            onClick={sendTestDigest}
+            disabled={sendingTest}
+            className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+          >
+            {sendingTest ? 'Skickar...' : 'Skicka testmail till mig'}
+          </button>
+          {testMsg && <p className="text-muted text-xs mt-1.5">{testMsg}</p>}
         </div>
       </div>
 

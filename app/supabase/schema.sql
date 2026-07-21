@@ -1008,3 +1008,23 @@ create policy "Can only kudos a friend's activity" on public.activity_kudos
       )
     )
   );
+
+-- "Veckans Recap" — en helhetsbild av veckans pass+hälsodata, skickas
+-- söndagar. Separat på/av-läge från newsletter_opt_out (Daniels beslut,
+-- se STATUS.md): en personlig hälsodata-sammanställning varje vecka är en
+-- annan sorts mail än ett då-och-då-nyhetsbrev, så de ska kunna stängas av
+-- oberoende av varandra.
+alter table public.profiles add column if not exists weekly_digest_opt_out boolean not null default false;
+
+-- Samma acceptable-risk-form som unsubscribe_newsletter ovan — publik länk,
+-- ingen inloggning krävs, skyddas bara av att user_id är en ogissbar uuid.
+create or replace function public.unsubscribe_weekly_digest(target_user_id uuid)
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  update public.profiles set weekly_digest_opt_out = true where id = target_user_id;
+$$;
+revoke all on function public.unsubscribe_weekly_digest(uuid) from public;
+grant execute on function public.unsubscribe_weekly_digest(uuid) to anon, authenticated;
