@@ -1,6 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
-import WeeklyPlanCard from '@/components/WeeklyPlanCard'
+import WeeklyPlanSummaryCard from '@/components/WeeklyPlanSummaryCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from '@/lib/dates'
 import { estimateBMR } from '@/lib/bmr'
@@ -67,9 +67,13 @@ export default async function DashboardPage() {
   // Computed up front (pure — doesn't depend on any fetched data) so the
   // training_plans lookup below can filter on it inside the same
   // Promise.all batch instead of a second round-trip.
-  const weekStartStr = startOfWeek(new Date()).toISOString().slice(0, 10)
+  const weekStartDate = startOfWeek(new Date())
+  const weekStartStr = weekStartDate.toISOString().slice(0, 10)
+  const prevWeekStartDate = new Date(weekStartDate)
+  prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
+  const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -88,6 +92,9 @@ export default async function DashboardPage() {
     // plan (if generated) plus its sessions in one round-trip via the FK
     // relationship, ordered so the card can render Mon→Sun directly.
     supabase.from('training_plans').select('*, plan_sessions(*)').eq('user_id', user.id).eq('week_start', weekStartStr).maybeSingle(),
+    // Just for pre-filling the sport picker's auto-generate carry-over — see
+    // WeeklyPlanSummaryCard's initialSports prop below.
+    supabase.from('training_plans').select('requested_sports').eq('user_id', user.id).eq('week_start', prevWeekStartStr).maybeSingle(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
@@ -636,7 +643,11 @@ export default async function DashboardPage() {
 
       {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
       <div className="lg:col-span-3 lg:order-9">
-        <WeeklyPlanCard plan={weeklyPlan} hasActiveGoal={(goals?.length ?? 0) > 0} />
+        <WeeklyPlanSummaryCard
+          plan={weeklyPlan}
+          hasActiveGoal={(goals?.length ?? 0) > 0}
+          initialSports={(planRow?.requested_sports ?? prevPlanRow?.requested_sports ?? []) as string[]}
+        />
       </div>
 
       </div>

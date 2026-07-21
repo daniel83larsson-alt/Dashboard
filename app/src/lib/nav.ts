@@ -5,6 +5,7 @@ export type NavItem = { href: string; label: string; icon: string }
 // means adding one entry here.
 export const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Översikt', icon: 'home' },
+  { href: '/dashboard/veckoplan', label: 'Veckoplan', icon: 'calendar' },
   { href: '/dashboard/logga', label: 'Logga pass', icon: 'plus' },
   { href: '/dashboard/passlogg', label: 'Passlogg', icon: 'log' },
   { href: '/dashboard/mat', label: 'Mat', icon: 'food' },

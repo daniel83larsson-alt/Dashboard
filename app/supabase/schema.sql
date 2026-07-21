@@ -904,6 +904,11 @@ create table public.training_plans (
   focus_areas text[] default '{}',
   goal_id uuid references public.goals(id) on delete set null,
   status text default 'active' check (status in ('active', 'completed')),
+  -- Sport-nycklar (samma vokabulär som activities.sport_type/SPORT_LABELS)
+  -- atleten kryssade i vid generering, om något — tomt betyder "AI:n fick
+  -- gissa utifrån historiken", som tidigare. Sparas dels för spårbarhet,
+  -- dels så nästa veckas Veckoplan-sida kan förifylla samma val.
+  requested_sports text[] default '{}',
   generated_at timestamptz default now(),
   created_at timestamptz default now(),
   unique (user_id, week_start)

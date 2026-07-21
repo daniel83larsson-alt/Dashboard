@@ -14,6 +14,7 @@ const PATHS: Record<string, string> = {
   route: 'M5 20l2-9 5 3 5-9 2 9M5 20a2 2 0 100-4 2 2 0 000 4zM19 11a2 2 0 100-4 2 2 0 000 4z',
   plus: 'M12 8v8M8 12h8',
   food: 'M6 2v7a2 2 0 002 2v11M6 2v20M10 2v9M18 2c-2 0-3 2-3 5s1 4 3 4v11',
+  calendar: 'M8 2v3M16 2v3M3 9h18M5 5h14a2 2 0 012 2v12a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z',
 }
 
 export default function NavIcon({ icon, className = 'w-4 h-4' }: { icon: string; className?: string }) {

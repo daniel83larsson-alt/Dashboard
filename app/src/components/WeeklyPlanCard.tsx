@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { SPORT_LABELS, sportLabel } from '@/lib/sport'
 
 type SessionStatus = 'planned' | 'done' | 'skipped' | 'missed'
 
@@ -29,23 +30,46 @@ function weekdayLabel(dateStr: string) {
   return label.charAt(0).toUpperCase() + label.slice(1)
 }
 
+// The 7 dates (Mon-Sun) of the week a plan covers — used to populate the
+// "flytta till" day picker, so it only ever offers days within this plan's
+// own week (the move endpoint enforces the same bound server-side).
+function weekDates(weekStartStr: string): string[] {
+  const monday = new Date(`${weekStartStr}T00:00:00Z`)
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday)
+    d.setUTCDate(d.getUTCDate() + i)
+    return d.toISOString().slice(0, 10)
+  })
+}
+
 export default function WeeklyPlanCard({
   plan: initialPlan,
   hasActiveGoal,
+  initialSports = [],
 }: {
   plan: Plan | null
   hasActiveGoal: boolean
+  initialSports?: string[]
 }) {
   const [plan, setPlan] = useState<Plan | null>(initialPlan)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [selectedSports, setSelectedSports] = useState<string[]>(initialSports)
   const autoTriedRef = useRef(false)
+
+  function toggleSport(sport: string) {
+    setSelectedSports(prev => prev.includes(sport) ? prev.filter(s => s !== sport) : [...prev, sport])
+  }
 
   async function generate() {
     setLoading(true)
     setError('')
     try {
-      const res = await fetch('/api/plan/generate', { method: 'POST' })
+      const res = await fetch('/api/plan/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sports: selectedSports }),
+      })
       const data = await res.json()
       if (data.plan) {
         setPlan(data.plan)
@@ -88,6 +112,27 @@ export default function WeeklyPlanCard({
     }
   }
 
+  async function moveSession(sessionId: string, plannedDate: string) {
+    if (!plan) return
+    const prevSessions = plan.sessions
+    setPlan({
+      ...plan,
+      sessions: plan.sessions
+        .map(s => s.id === sessionId ? { ...s, planned_date: plannedDate } : s)
+        .sort((a, b) => a.planned_date.localeCompare(b.planned_date)),
+    })
+    try {
+      const res = await fetch('/api/plan/session/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId, plannedDate }),
+      })
+      if (!res.ok) setPlan({ ...plan, sessions: prevSessions })
+    } catch {
+      setPlan({ ...plan, sessions: prevSessions })
+    }
+  }
+
   if (!hasActiveGoal) {
     return (
       <div>
@@ -111,6 +156,28 @@ export default function WeeklyPlanCard({
         >
           {loading ? 'Genererar...' : plan ? 'Uppdatera plan' : 'Planera veckan'}
         </button>
+      </div>
+
+      <div className="bg-card border border-edge rounded-2xl p-4 mb-3">
+        <div className="text-xs font-medium mb-2">Vilka sporter vill du köra denna vecka?</div>
+        <div className="flex flex-wrap gap-1.5">
+          {Object.keys(SPORT_LABELS).map(sport => {
+            const active = selectedSports.includes(sport)
+            return (
+              <button
+                key={sport}
+                type="button"
+                onClick={() => toggleSport(sport)}
+                className={`text-xs px-3 py-1.5 rounded-full border transition-colors ${
+                  active ? 'bg-accent text-bg border-accent font-medium' : 'bg-bg border-edge text-muted hover:border-accent/40'
+                }`}
+              >
+                {sportLabel(sport)}
+              </button>
+            )
+          })}
+        </div>
+        <p className="text-muted text-xs mt-2">Inget ikryssat = AI:n gissar utifrån din tidigare träning, som innan.</p>
       </div>
 
       {error && <p className="text-red-400 text-xs mb-3">{error}</p>}
@@ -142,7 +209,19 @@ export default function WeeklyPlanCard({
               {plan.sessions.map(s => (
                 <div key={s.id} className={`bg-bg rounded-xl p-3 flex flex-col gap-2 ${s.status === 'skipped' ? 'opacity-50' : ''}`}>
                   <div className="flex gap-3 items-start">
-                    <div className="text-xs text-muted font-medium w-16 flex-shrink-0 pt-0.5">{weekdayLabel(s.planned_date)}</div>
+                    {s.is_rest ? (
+                      <div className="text-xs text-muted font-medium w-20 flex-shrink-0 pt-0.5">{weekdayLabel(s.planned_date)}</div>
+                    ) : (
+                      <select
+                        value={s.planned_date}
+                        onChange={e => moveSession(s.id, e.target.value)}
+                        className="text-xs text-muted font-medium w-20 flex-shrink-0 bg-transparent border-none focus:outline-none focus:text-fg cursor-pointer -ml-1"
+                      >
+                        {weekDates(plan.weekStart).map(d => (
+                          <option key={d} value={d} className="bg-card text-fg">{weekdayLabel(d)}</option>
+                        ))}
+                      </select>
+                    )}
                     <div className="flex-1 min-w-0">
                       <div className={`text-sm font-medium ${s.status === 'done' ? 'text-lcd' : 'text-fg'}`}>
                         {s.status === 'done' && '✓ '}{s.title}

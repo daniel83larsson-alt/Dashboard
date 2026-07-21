@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
@@ -19,13 +19,25 @@ function fmtDur(s: number) {
 // position, not by parsing its Swedish weekday label (locale-fragile).
 const WEEKDAY_LABELS = ['Måndag', 'Tisdag', 'Onsdag', 'Torsdag', 'Fredag', 'Lördag', 'Söndag']
 
-export async function POST() {
+export async function POST(request: NextRequest) {
   try {
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
     logApiCall(supabase, user.id, 'plan_generate')
+
+    // Optional — the auto-generate-on-first-visit trigger posts no body at
+    // all, same as before this feature existed, and that must keep working
+    // unchanged (falls through to "AI guesses from history", as always).
+    const body = await request.json().catch(() => ({})) as { sports?: unknown }
+    let requestedSports: string[] = []
+    if (body.sports !== undefined) {
+      if (!Array.isArray(body.sports) || body.sports.some(s => typeof s !== 'string' || !(s in SPORT_LABELS))) {
+        return NextResponse.json({ error: 'Ogiltigt sportval' }, { status: 400 })
+      }
+      requestedSports = [...new Set(body.sports as string[])]
+    }
 
     const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([
       supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }).limit(30),
@@ -102,6 +114,7 @@ ${overviewGoal ? `\nÖVERGRIPANDE FILOSOFI: ${overviewGoal}` : ''}
 
 UTRUSTNING HEMMA: ${profile?.home_equipment?.length ? profile.home_equipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång, lägg bara in pass som går att göra med kroppsvikt eller det atleten faktiskt loggar pass med'}
 ${profile?.selected_sports?.length ? `AKTIVITETER/SPORTER ATLETEN UTÖVAR: ${profile.selected_sports.join(', ')}` : ''}
+${requestedSports.length ? `\nATLETEN VILL FOKUSERA PÅ DESSA SPORTER DENNA VECKA: ${requestedSports.map(sportLabel).join(', ')} — bygg de flesta träningspassen runt dessa. Vilodagar och ev. rörlighetspass får fortfarande ingå som vanligt.` : ''}
 `
 
     const planType = targetGoal.target_date ? 'mot_mal' : 'adaptiv'
@@ -190,6 +203,7 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
         focus_areas: plan.focusAreas ?? [],
         goal_id: targetGoal.id,
         status: 'active',
+        requested_sports: requestedSports,
         generated_at: new Date().toISOString(),
       }, { onConflict: 'user_id,week_start' })
       .select('id, week_start')
