@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeWeeklyDigest, matchAdherence, type PlanSessionRow } from './weekly-digest'
+import { computeWeeklyDigest, matchAdherence, recapWeekStart, type PlanSessionRow } from './weekly-digest'
 import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 
@@ -36,6 +36,26 @@ function wellnessDay(date: string, overrides: Partial<DayWellness> = {}): DayWel
 function plan(overrides: Partial<PlanSessionRow>): PlanSessionRow {
   return { planned_date: '2026-07-13', is_rest: false, sport_type: 'Rowing', title: 'Rodd L2', ...overrides }
 }
+
+describe('recapWeekStart', () => {
+  it('returns last week\'s Monday on a mid-week day', () => {
+    // 2026-07-15 is a Wednesday in the week of 2026-07-13.
+    const result = recapWeekStart(new Date('2026-07-15T12:00:00'))
+    expect(result.toISOString().slice(0, 10)).toBe('2026-07-06')
+  })
+
+  it('returns THIS week\'s Monday when run on a Sunday', () => {
+    // 2026-07-19 is the Sunday of the week of 2026-07-13 — the digest sent
+    // that evening should cover the week that's ending today, not last week.
+    const result = recapWeekStart(new Date('2026-07-19T18:00:00'))
+    expect(result.toISOString().slice(0, 10)).toBe('2026-07-13')
+  })
+
+  it('returns last week\'s Monday on a Monday (the new week has just started)', () => {
+    const result = recapWeekStart(new Date('2026-07-20T09:00:00'))
+    expect(result.toISOString().slice(0, 10)).toBe('2026-07-13')
+  })
+})
 
 describe('matchAdherence', () => {
   it('returns null when the plan has no non-rest sessions', () => {

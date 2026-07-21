@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
+import WeeklyDigestCard from '@/components/WeeklyDigestCard'
 import { startOfWeek } from '@/lib/dates'
 
 type PlanSessionRow = {
@@ -18,11 +19,15 @@ export default async function VeckoplanPage() {
   prevWeekStart.setDate(prevWeekStart.getDate() - 7)
   const prevWeekStartStr = prevWeekStart.toISOString().slice(0, 10)
 
-  const [{ data: goals }, { data: planRow }, { data: prevPlanRow }] = await Promise.all([
+  const [{ data: goals }, { data: planRow }, { data: prevPlanRow }, { data: digestRow }] = await Promise.all([
     supabase.from('goals').select('id').eq('user_id', user.id).eq('status', 'active'),
     supabase.from('training_plans').select('*, plan_sessions(*)').eq('user_id', user.id).eq('week_start', weekStartStr).maybeSingle(),
     supabase.from('training_plans').select('requested_sports').eq('user_id', user.id).eq('week_start', prevWeekStartStr).maybeSingle(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_digest').maybeSingle(),
   ])
+
+  const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const digestRecord = digestRaw ? (() => { try { return JSON.parse(digestRaw) } catch { return null } })() : null
 
   const weeklyPlan = planRow ? {
     id: planRow.id as string,
@@ -46,6 +51,9 @@ export default async function VeckoplanPage() {
         <h1 className="text-2xl font-semibold">Veckoplan</h1>
       </div>
       <WeeklyPlanCard plan={weeklyPlan} hasActiveGoal={(goals?.length ?? 0) > 0} initialSports={initialSports} />
+      <div className="mt-6">
+        <WeeklyDigestCard initialRecord={digestRecord} />
+      </div>
     </div>
   )
 }

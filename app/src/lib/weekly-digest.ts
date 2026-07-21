@@ -6,7 +6,23 @@
 // Gemini and never writes anything back to the database.
 import { dedupeForStats, type ActivityRow } from './duplicates'
 import { sportLabel } from './sport'
+import { startOfWeek } from './dates'
 import type { DayWellness } from './garmin-sync'
+
+// The Monday of "the week to recap" as of `now`. On any day Mon–Sat that's
+// last week (the current week isn't over yet); on a Sunday it's THIS week's
+// Monday, since Sunday evening is when the digest is meant to cover the
+// week that's ending today (the approved send time) — matching Daniel's own
+// framing ("din förra vecka" sent Sunday evening means the week just lived,
+// including today). Both the manual "generate now" trigger and the Sunday
+// cron call this so they never disagree on which week "last week" means.
+export function recapWeekStart(now: Date = new Date()): Date {
+  const thisWeekMonday = startOfWeek(now)
+  if (now.getDay() === 0) return thisWeekMonday
+  const lastWeekMonday = new Date(thisWeekMonday)
+  lastWeekMonday.setDate(lastWeekMonday.getDate() - 7)
+  return lastWeekMonday
+}
 
 export type PlanSessionRow = {
   planned_date: string // YYYY-MM-DD
