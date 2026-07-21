@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
-import { generateWeeklyDigestForUser } from '@/lib/weekly-digest-generate'
+import { recapWeekStart } from '@/lib/weekly-digest'
+import { generateWeeklyDigestForUser, type WeeklyDigestRecord } from '@/lib/weekly-digest-generate'
 import { sendWeeklyDigestEmail } from '@/lib/weekly-digest-email'
 import { sendPushToUser } from '@/lib/push'
 
@@ -9,22 +10,25 @@ export const maxDuration = 60 // Vercel Hobby plan's hard cap
 // Only the shared default Gemini key has a real per-minute limit to worry
 // about (free tier, ~10 req/min across ALL users combined) — anyone with
 // their own key has their own separate quota and doesn't need spacing.
-// 6.5s keeps shared-key calls comfortably under that. At today's user count
-// this fits well inside maxDuration; if the shared-key user count grows
-// enough to threaten the 60s cap, batch this cron the same way sync-all's
-// own comment already flags for its Garmin lock.
+// 6.5s keeps shared-key calls comfortably under that.
 const SHARED_KEY_SPACING_MS = 6500
+
+// A single invocation only has ~60s to work with, which real testing showed
+// does NOT fit every non-opted-out user once there are more than a handful
+// (spacing alone for 13 shared-key users already exceeds it) — confirmed via
+// a genuine 504 FUNCTION_INVOCATION_TIMEOUT against production, not a guess.
+// Rather than race the clock, this processes a bounded batch and relies on
+// "already has this week's digest" as the resume checkpoint: the GitHub
+// Actions workflow calls this route several times in a row (see
+// dl-trainer-cron.yml), and each call only picks up users who don't have a
+// weekly_digest row for the current recap week yet — so re-running is always
+// safe and a partial/timed-out run is automatically finished by the next call.
+const BATCH_SIZE = 5
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
-// Runs Sunday evening (see .github/workflows/dl-trainer-cron.yml) — generates
-// and sends "Veckans Recap" for every user who hasn't opted out. Sequential
-// rather than Promise.allSettled-parallel like the other cron jobs, because
-// shared-key users need real spacing between Gemini calls; each user's
-// generate+email+push is still wrapped so one person's failure (AI or
-// otherwise) never stops the rest of the run.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
   if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
@@ -32,17 +36,39 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdminClient()
+  const targetWeekISO = recapWeekStart(new Date()).toISOString().slice(0, 10)
 
-  const { data: recipients } = await supabase
+  const { data: allRecipients } = await supabase
     .from('profiles')
     .select('id, email, name, llm_api_key_encrypted')
     .eq('weekly_digest_opt_out', false)
+  const recipients = allRecipients ?? []
 
-  const rows = recipients ?? []
+  const { data: existingRows } = await supabase
+    .from('coach_sessions')
+    .select('user_id, messages')
+    .eq('coach_id', 'weekly_digest')
+    .in('user_id', recipients.map(r => r.id))
+
+  const doneThisWeek = new Set(
+    (existingRows ?? [])
+      .filter(row => {
+        const raw = (row.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+        if (!raw) return false
+        try {
+          return (JSON.parse(raw) as WeeklyDigestRecord).weekStartISO === targetWeekISO
+        } catch {
+          return false
+        }
+      })
+      .map(row => row.user_id)
+  )
+
+  const pending = recipients.filter(r => !doneThisWeek.has(r.id)).slice(0, BATCH_SIZE)
   const results: { userId: string; ok: boolean; error?: string }[] = []
 
-  for (let i = 0; i < rows.length; i++) {
-    const r = rows[i]
+  for (let i = 0; i < pending.length; i++) {
+    const r = pending[i]
     try {
       const record = await generateWeeklyDigestForUser(supabase, r.id)
       await Promise.allSettled([
@@ -60,12 +86,16 @@ export async function GET(request: NextRequest) {
       console.error('Weekly digest cron failed for user', r.id, err)
       results.push({ userId: r.id, ok: false, error: err instanceof Error ? err.message : String(err) })
     }
-    if (!r.llm_api_key_encrypted && i < rows.length - 1) await sleep(SHARED_KEY_SPACING_MS)
+    if (!r.llm_api_key_encrypted && i < pending.length - 1) await sleep(SHARED_KEY_SPACING_MS)
   }
 
   return NextResponse.json({
     ranAt: new Date().toISOString(),
-    processed: results.length,
-    failed: results.filter(r => !r.ok).length,
+    targetWeek: targetWeekISO,
+    totalRecipients: recipients.length,
+    alreadyDoneBeforeThisRun: doneThisWeek.size,
+    processedThisRun: results.length,
+    failedThisRun: results.filter(r => !r.ok).length,
+    remainingAfterThisRun: Math.max(0, recipients.length - doneThisWeek.size - results.length),
   })
 }

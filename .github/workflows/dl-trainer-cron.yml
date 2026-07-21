@@ -44,6 +44,23 @@ jobs:
           fi
       - name: Call the cron endpoint
         run: |
-          curl --fail-with-body -sS \
-            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
-            "https://dltrainer.se/api/cron/${{ steps.route.outputs.path }}"
+          call() {
+            curl --fail-with-body -sS \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+              "https://dltrainer.se/api/cron/${{ steps.route.outputs.path }}"
+          }
+          if [ "${{ steps.route.outputs.path }}" = "weekly-digest" ]; then
+            # Batched — a single invocation only fits ~5 users inside Vercel's
+            # 60s cap (confirmed by a real timeout during testing), so this
+            # calls the route repeatedly. Each call only processes users who
+            # don't have this week's digest yet, so repeating past "everyone's
+            # done" is a safe no-op — just enough calls to drain a growing
+            # user base without needing to hand-tune this number often.
+            for i in 1 2 3 4 5 6; do
+              echo "weekly-digest batch $i"
+              call
+              echo
+            done
+          else
+            call
+          fi
