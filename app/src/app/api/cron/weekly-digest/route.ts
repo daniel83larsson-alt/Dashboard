@@ -4,6 +4,7 @@ import { recapWeekStart } from '@/lib/weekly-digest'
 import { generateWeeklyDigestForUser, type WeeklyDigestRecord } from '@/lib/weekly-digest-generate'
 import { sendWeeklyDigestEmail } from '@/lib/weekly-digest-email'
 import { sendPushToUser } from '@/lib/push'
+import { isDemoAccount } from '@/lib/demo'
 
 export const maxDuration = 60 // Vercel Hobby plan's hard cap
 
@@ -42,7 +43,11 @@ export async function GET(request: NextRequest) {
     .from('profiles')
     .select('id, email, name, llm_api_key_encrypted')
     .eq('weekly_digest_opt_out', false)
-  const recipients = allRecipients ?? []
+  // The shared demo account must never spend the shared AI quota or get
+  // real emails/push — same rule every other AI-consuming route already
+  // enforces (isDemoAccount), missed here initially since this is a cron
+  // rather than a route triggered by the demo session itself.
+  const recipients = (allRecipients ?? []).filter(r => !isDemoAccount(r.email))
 
   const { data: existingRows } = await supabase
     .from('coach_sessions')
