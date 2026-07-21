@@ -140,12 +140,12 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex flex-col">
+        <div className="fixed inset-0 z-[60] flex flex-col">
           <div
             className="flex-1 bg-black/70"
             onClick={() => setOpen(false)}
           />
-          <div className="bg-card border-t border-edge rounded-t-3xl flex flex-col w-full max-w-2xl mx-auto"
+          <div className="bg-card border-t border-edge rounded-t-3xl safe-area-pb flex flex-col w-full max-w-2xl mx-auto"
             style={{ maxHeight: '85vh' }}>
 
             {/* Handle bar */}
