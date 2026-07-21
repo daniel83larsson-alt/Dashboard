@@ -69,7 +69,7 @@ export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId
         <div className="bg-card border border-edge rounded-2xl p-6 text-center">
           <div className="text-muted text-sm">Inga vänner ännu</div>
           <p className="text-muted text-xs mt-1">
-            <a href="/dashboard/profil" className="text-accent hover:underline">Sök upp och följ en vän under Profil</a>
+            <a href="/dashboard/profil" className="text-accent hover:underline">Sök upp och bli vän med någon under Profil</a>
           </p>
         </div>
       ) : (

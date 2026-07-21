@@ -26,7 +26,7 @@ export default function FriendsCard({
   const router = useRouter()
   const supabase = createSupabaseClient()
 
-  const followedIds = new Set(initialMyFollows.map(f => f.followee_id))
+  const followByFolloweeId = new Map(initialMyFollows.map(f => [f.followee_id, f]))
 
   async function search(q: string) {
     setQuery(q)
@@ -80,7 +80,7 @@ export default function FriendsCard({
     <div className="bg-card border border-edge rounded-2xl p-5 space-y-5">
       <div>
         <h2 className="font-medium text-fg">Vänner</h2>
-        <p className="text-muted text-xs mt-0.5">Följ en vän för att se deras träningspass på Översikt.</p>
+        <p className="text-muted text-xs mt-0.5">Bli vän med någon för att se varandras träningspass på Översikt — räcker att en av er skickar en förfrågan och den andra godkänner.</p>
       </div>
 
       {/* Väntande förfrågningar till mig */}
@@ -131,16 +131,16 @@ export default function FriendsCard({
         {results.length > 0 && (
           <div className="flex flex-col gap-2 mt-2">
             {results.map(r => {
-              const already = followedIds.has(r.id)
+              const existing = followByFolloweeId.get(r.id)
               return (
                 <div key={r.id} className="flex items-center justify-between bg-bg rounded-xl px-3 py-2">
                   <span className="text-sm">{r.name}</span>
                   <button
                     onClick={() => sendRequest(r.id)}
-                    disabled={already || busyId === r.id}
+                    disabled={!!existing || busyId === r.id}
                     className="text-xs bg-accent text-bg px-3 py-1.5 rounded-lg font-medium disabled:opacity-50 disabled:bg-edge disabled:text-muted"
                   >
-                    {already ? 'Följer' : 'Följ'}
+                    {existing ? (existing.status === 'accepted' ? 'Vän' : 'Skickad') : 'Bli vän'}
                   </button>
                 </div>
               )
@@ -149,10 +149,10 @@ export default function FriendsCard({
         )}
       </div>
 
-      {/* Du följer */}
+      {/* Dina vänner (och skickade förfrågningar som väntar) */}
       {initialMyFollows.length > 0 && (
         <div>
-          <div className="text-xs text-muted uppercase tracking-wider mb-2">Du följer</div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-2">Dina vänner</div>
           <div className="flex flex-col gap-2">
             {initialMyFollows.map(f => (
               <div key={f.id} className="flex items-center justify-between bg-bg rounded-xl px-3 py-2">
@@ -165,7 +165,7 @@ export default function FriendsCard({
                   disabled={busyId === f.id}
                   className="text-xs bg-transparent border border-edge text-muted px-3 py-1.5 rounded-lg disabled:opacity-50"
                 >
-                  {f.status === 'pending' ? 'Avbryt' : 'Sluta följ'}
+                  {f.status === 'pending' ? 'Avbryt' : 'Ta bort vän'}
                 </button>
               </div>
             ))}

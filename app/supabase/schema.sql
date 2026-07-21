@@ -950,3 +950,61 @@ create index plan_sessions_plan on public.plan_sessions(plan_id);
 alter table public.goals drop constraint if exists goals_status_check;
 alter table public.goals add constraint goals_status_check
   check (status in ('proposed', 'active', 'achieved', 'paused', 'rejected'));
+
+-- Daniel: "blir man vän med någon ska man se varandras pass, inte att båda
+-- måste följa varandra." follows stayed a directional request/accept row
+-- (A requests B, B accepts) but both friend_activity_feed() and the kudos
+-- insert policy only ever checked the ONE direction matching the caller as
+-- follower — so B accepting A's request let B see A, but A couldn't see B
+-- back without ALSO sending and having B accept a second, separate request.
+-- Fixed by matching an accepted row in EITHER direction — a single
+-- accept now grants mutual visibility, as "vän" implies. No data
+-- migration needed: existing accepted rows already satisfy this either-
+-- direction check regardless of which way they happened to be recorded.
+drop function public.friend_activity_feed();
+create function public.friend_activity_feed()
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  activity_name text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz,
+  kudos_count bigint,
+  liked_by_me boolean
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.name, a.distance, a.moving_time, a.start_date,
+    (select count(*) from public.activity_kudos k where k.activity_id = a.id),
+    exists(select 1 from public.activity_kudos k2 where k2.activity_id = a.id and k2.giver_id = auth.uid())
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  join public.follows f on f.status = 'accepted' and (
+    (f.follower_id = auth.uid() and f.followee_id = a.user_id) or
+    (f.followee_id = auth.uid() and f.follower_id = a.user_id)
+  )
+  order by a.start_date desc
+  limit 10;
+$$;
+revoke all on function public.friend_activity_feed() from public;
+grant execute on function public.friend_activity_feed() to authenticated;
+
+drop policy "Can only kudos a followed friend's activity" on public.activity_kudos;
+create policy "Can only kudos a friend's activity" on public.activity_kudos
+  for insert with check (
+    auth.uid() = giver_id
+    and giver_id != public.activity_owner(activity_id)
+    and exists (
+      select 1 from public.follows f
+      where f.status = 'accepted' and (
+        (f.follower_id = auth.uid() and f.followee_id = public.activity_owner(activity_id)) or
+        (f.followee_id = auth.uid() and f.follower_id = public.activity_owner(activity_id))
+      )
+    )
+  );
