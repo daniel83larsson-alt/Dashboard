@@ -2,6 +2,7 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
+import FeedbackDrawer from '@/components/FeedbackDrawer'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
 import { bestMergePartner } from '@/lib/duplicates'
 import { REGION_LABELS, Region } from '@/lib/mobility'
@@ -153,6 +154,26 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           </p>
         )}
       </div>
+
+      {/* Daniel: feedback-knappen fanns tidigare bara för det senaste passet
+          på Översikt — men man vill kunna be om feedback på VILKET pass som
+          helst i efterhand, inte bara det man råkade logga sist. */}
+      {!isMobility && (
+        <FeedbackDrawer
+          activity={{
+            id: activity.id,
+            strava_id: activity.strava_id,
+            sport_type: activity.sport_type,
+            name: activity.name,
+            distance: activity.distance,
+            moving_time: activity.moving_time,
+            average_heartrate: mergedAvgHr,
+            max_heartrate: mergedMaxHr,
+            average_watts: activity.average_watts,
+            start_date: activity.start_date,
+          }}
+        />
+      )}
 
       {/* Core stats + HR zones/splits side by side on desktop — on mobile
           this was previously buried far below Map/Garmin extras, leaving

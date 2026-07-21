@@ -115,7 +115,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
       }
 
       const parts = [
-        `Analysera mitt senaste ${activity.sport_type}-pass: "${activity.name}".`,
+        `Analysera mitt ${activity.sport_type}-pass: "${activity.name}" (${new Date(activity.start_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}).`,
         `Distans: ${(activity.distance / 1000).toFixed(1)} km,`,
         `Tid: ${Math.floor(activity.moving_time / 60)} min`,
         speedOrPace ? `, ${speedOrPace.label}: ${speedOrPace.value}` : '',
