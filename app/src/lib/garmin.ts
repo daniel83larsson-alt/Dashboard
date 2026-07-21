@@ -169,28 +169,19 @@ export async function fetchGarminRestingHR(email?: string, password?: string, fo
   }
 }
 
-export async function fetchGarminSleep(email?: string, password?: string): Promise<number | null> {
-  try {
-    const gc = await getGarminClient(email, password)
-    const yesterday = new Date()
-    yesterday.setDate(yesterday.getDate() - 1)
-    const sleep = await gc.getSleepDuration(yesterday)
-    if (!sleep) return null
-    return sleep.hours + sleep.minutes / 60
-  } catch {
-    return null
-  }
-}
-
-// Fetch sleep data for a specific "wake-up date". Sleep stored under wellness
-// date D is fetched by passing D−1 as the Garmin calendar date (the night
-// that ended on the morning of D).
+// Fetch sleep data for a specific "wake-up date". Garmin's own dailySleepData
+// endpoint already keys by wake date — requesting date D returns the sleep
+// session that ENDED on the morning of D (verified directly against
+// Garmin's raw response: date=2026-07-21 returned sleepStartTimestampGMT
+// 2026-07-20 22:11 UTC → sleepEndTimestampGMT 2026-07-21 03:50 UTC). No
+// day-shift needed — a previous version of this code subtracted a day here
+// on the mistaken assumption that Garmin keyed by go-to-bed date, which
+// made every wellness entry show the PREVIOUS night's sleep instead of the
+// one that had just ended.
 export async function fetchGarminSleepFull(email?: string, password?: string, wakeDate?: Date): Promise<SleepSummary | null> {
   try {
     const gc = await getGarminClient(email, password)
-    const base = wakeDate ?? new Date()
-    const sleepDate = new Date(base)
-    sleepDate.setDate(sleepDate.getDate() - 1)
+    const sleepDate = wakeDate ?? new Date()
     const data = await gc.getSleepData(sleepDate)
     if (!data?.dailySleepDTO) return null
     const d = data.dailySleepDTO
