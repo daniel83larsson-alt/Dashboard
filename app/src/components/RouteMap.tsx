@@ -73,7 +73,7 @@ export default function RouteMap({
   const end = selectedPoints[selectedPoints.length - 1]
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-edge" style={{ height: 420 }}>
+    <div className="rounded-2xl overflow-hidden border border-edge isolate" style={{ height: 420 }}>
       <MapContainer center={[center.lat, center.lng]} zoom={12} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'

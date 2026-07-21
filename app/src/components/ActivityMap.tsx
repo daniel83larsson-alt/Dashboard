@@ -47,7 +47,7 @@ export default function ActivityMap({ lat, lng, label, polyline }: { lat: number
   const end = hasRoute ? polyline![polyline!.length - 1] : null
 
   return (
-    <div className="rounded-2xl overflow-hidden border border-edge" style={{ height: hasRoute ? 300 : 220 }}>
+    <div className="rounded-2xl overflow-hidden border border-edge isolate" style={{ height: hasRoute ? 300 : 220 }}>
       <MapContainer center={[lat, lng]} zoom={13} scrollWheelZoom={false} style={{ height: '100%', width: '100%' }}>
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
