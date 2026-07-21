@@ -29,6 +29,16 @@ export default async function VeckoplanPage() {
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const digestRecord = digestRaw ? (() => { try { return JSON.parse(digestRaw) } catch { return null } })() : null
 
+  // Marks the digest as seen so the "ny recap redo"-badge on Översikt
+  // clears — only writes when it's actually unseen, so a normal page load
+  // of an already-viewed recap never touches the database.
+  if (digestRecord && (!digestRecord.viewedAt || digestRecord.viewedAt < digestRecord.generatedAt)) {
+    digestRecord.viewedAt = new Date().toISOString()
+    await supabase.from('coach_sessions').update({
+      messages: [{ role: 'system', content: JSON.stringify(digestRecord) }],
+    }).eq('user_id', user.id).eq('coach_id', 'weekly_digest')
+  }
+
   const weeklyPlan = planRow ? {
     id: planRow.id as string,
     weekStart: planRow.week_start as string,

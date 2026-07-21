@@ -23,6 +23,11 @@ export type WeeklyDigestRecord = {
   // numbers, so the card/email fall back to showing those without a written
   // paragraph rather than skipping the user entirely.
   narrative: string | null
+  // Set when the Veckoplan page renders this record — drives the "new
+  // recap ready" badge on Översikt (badge shows while viewedAt is null or
+  // older than generatedAt, i.e. a fresh cron-generated digest hasn't been
+  // opened yet). Always null right after generation.
+  viewedAt: string | null
 }
 
 function fmtKm(km: number): string {
@@ -123,6 +128,7 @@ export async function generateWeeklyDigestForUser(
     weekEndISO: digestData.weekEndISO,
     data: digestData,
     narrative,
+    viewedAt: null,
   }
 
   await supabase.from('coach_sessions').upsert({

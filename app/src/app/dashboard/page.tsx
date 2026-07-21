@@ -16,6 +16,7 @@ import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
+import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
 import InstallAppButton from '@/components/InstallAppButton'
 import { hrvStatusLabel } from '@/lib/wellness'
 
@@ -73,7 +74,7 @@ export default async function DashboardPage() {
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -103,7 +104,12 @@ export default async function DashboardPage() {
     supabase.rpc('friend_activity_feed'),
     supabase.rpc('pending_follow_requests'),
     supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_digest').maybeSingle(),
   ])
+
+  const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const digestRecord = digestRaw ? (() => { try { return JSON.parse(digestRaw) } catch { return null } })() : null
+  const hasUnseenDigest = !!digestRecord && (!digestRecord.viewedAt || digestRecord.viewedAt < digestRecord.generatedAt)
 
   const userBio = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
   const overviewGoal = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
@@ -266,6 +272,7 @@ export default async function DashboardPage() {
         </div>
         <div className="flex items-center gap-2">
           <FriendRequestBadge count={pendingRequests?.length ?? 0} />
+          <WeeklyDigestBadge show={hasUnseenDigest} />
           <InstallAppButton />
           <SyncAllButton />
         </div>
