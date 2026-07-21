@@ -71,11 +71,19 @@ export default async function PassloggPage({
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold">Passlogg</h1>
-        <p className="text-muted text-sm mt-1">
-          {totalSessions} pass · {fmt_km(totalDist)} totalt
-        </p>
+      <div className="mb-6 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Aktiviteter</h1>
+          <p className="text-muted text-sm mt-1">
+            {totalSessions} pass · {fmt_km(totalDist)} totalt
+          </p>
+        </div>
+        <Link
+          href="/dashboard/logga"
+          className="flex-shrink-0 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+        >
+          + Logga pass
+        </Link>
       </div>
 
       <DuplicateCleanup />

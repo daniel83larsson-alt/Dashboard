@@ -413,7 +413,7 @@ export default async function DashboardPage() {
 
           {latestRecords.length > 0 && (
             <a
-              href="/dashboard/rekord"
+              href="/dashboard/halsa?tab=rekord"
               className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2 mb-3 hover:border-amber-500/50 transition-colors"
             >
               <span className="text-lg">🏅</span>
@@ -601,8 +601,28 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Mål ─────────────────────────────────────────────────────────────── */}
-      <div className="lg:order-7">
+      {/* ── Kalender ──────────────────────────────────────────────────────────── */}
+      {activities.length > 0 && (
+        <div className="lg:col-span-3 lg:order-8">
+          <ActivityCalendar
+            trainedDates={activities.map(a => a.start_date)}
+            mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
+            plannedDates={plannedDates}
+          />
+        </div>
+      )}
+
+      {/* ── Veckoplan + Mina mål (hålls ihop, Daniel: "kan lägga sig under
+          veckoplan så håller man ihop det") ───────────────────────────────── */}
+      <div className="lg:col-span-3 lg:order-9">
+        <WeeklyPlanSummaryCard
+          plan={weeklyPlan}
+          hasActiveGoal={(goals?.length ?? 0) > 0}
+          initialSports={(planRow?.requested_sports ?? prevPlanRow?.requested_sports ?? []) as string[]}
+        />
+      </div>
+
+      <div className="lg:col-span-3 lg:order-10">
         <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Mina mål</h2>
         {goals && goals.length > 0 ? (
           <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
@@ -628,26 +648,6 @@ export default async function DashboardPage() {
             </p>
           </div>
         )}
-      </div>
-
-      {/* ── Kalender ──────────────────────────────────────────────────────────── */}
-      {activities.length > 0 && (
-        <div className="lg:col-span-3 lg:order-8">
-          <ActivityCalendar
-            trainedDates={activities.map(a => a.start_date)}
-            mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
-            plannedDates={plannedDates}
-          />
-        </div>
-      )}
-
-      {/* ── Veckoplan ────────────────────────────────────────────────────────── */}
-      <div className="lg:col-span-3 lg:order-9">
-        <WeeklyPlanSummaryCard
-          plan={weeklyPlan}
-          hasActiveGoal={(goals?.length ?? 0) > 0}
-          initialSports={(planRow?.requested_sports ?? prevPlanRow?.requested_sports ?? []) as string[]}
-        />
       </div>
 
       </div>

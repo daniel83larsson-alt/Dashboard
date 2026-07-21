@@ -61,7 +61,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   if (!activity) {
     return (
       <div className="p-4 md:p-8 max-w-2xl w-full mx-auto">
-        <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Passlogg</Link>
+        <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Aktiviteter</Link>
         <div className="bg-card border border-edge rounded-2xl p-10 text-center mt-6">
           <div className="font-medium">Hittade inte passet</div>
         </div>
@@ -128,7 +128,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-5">
-      <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Passlogg</Link>
+      <Link href="/dashboard/passlogg" className="text-accent text-sm hover:underline">← Tillbaka till Aktiviteter</Link>
 
       {/* Header */}
       <div>

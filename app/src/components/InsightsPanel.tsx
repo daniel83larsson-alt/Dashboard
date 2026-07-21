@@ -145,7 +145,7 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
             )}
           </div>
           <p className="text-muted text-[10px] mt-1.5">
-            Ögonblicksbild vid analysen ({new Date(insight.generatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}) — kan skilja sig från Passlogg om du synkat nya pass sen dess
+            Ögonblicksbild vid analysen ({new Date(insight.generatedAt).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}) — kan skilja sig från Aktiviteter om du synkat nya pass sen dess
           </p>
         </div>
       )}
