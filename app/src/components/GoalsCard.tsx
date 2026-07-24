@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
+import { SPORT_LABELS } from '@/lib/sport'
 
 type Goal = {
   id: string
@@ -11,6 +12,7 @@ type Goal = {
   description: string | null
   target_date: string | null
   sessions_per_week: number | null
+  sport_type: string
 }
 
 const TYPE_LABEL: Record<Goal['goal_type'], string> = {
@@ -23,6 +25,7 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
   const [open, setOpen] = useState(false)
   const [title, setTitle] = useState('')
   const [goalType, setGoalType] = useState<Goal['goal_type']>('metric')
+  const [sportType, setSportType] = useState('Rowing')
   const [targetDate, setTargetDate] = useState('')
   const [sessionsPerWeek, setSessionsPerWeek] = useState('')
   const [description, setDescription] = useState('')
@@ -61,7 +64,7 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
 
     const { error: insertError } = await supabase.from('goals').insert({
       user_id: user.id,
-      sport_type: 'Rowing',
+      sport_type: sportType,
       goal_type: goalType,
       title: title.trim(),
       description: description.trim() || null,
@@ -73,7 +76,7 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
     if (insertError) {
       setError('Kunde inte spara målet')
     } else {
-      setTitle(''); setTargetDate(''); setSessionsPerWeek(''); setDescription('')
+      setTitle(''); setTargetDate(''); setSessionsPerWeek(''); setDescription(''); setSportType('Rowing')
       setOpen(false)
       router.refresh()
     }
@@ -141,6 +144,7 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] bg-card border border-edge text-muted px-1.5 py-0.5 rounded">{TYPE_LABEL[g.goal_type]}</span>
+                  <span className="text-[10px] bg-card border border-edge text-muted px-1.5 py-0.5 rounded">{SPORT_LABELS[g.sport_type] ?? g.sport_type}</span>
                   {g.target_date && (
                     <span className="text-[10px] text-muted">
                       {new Date(g.target_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
@@ -187,6 +191,18 @@ export default function GoalsCard({ goals, savedOverview }: { goals: Goal[]; sav
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Sport</label>
+              <select
+                value={sportType}
+                onChange={e => setSportType(e.target.value)}
+                className="w-full bg-bg border border-edge rounded-xl px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent"
+              >
+                {Object.entries(SPORT_LABELS).map(([key, label]) => (
+                  <option key={key} value={key}>{label.charAt(0).toUpperCase() + label.slice(1)}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <label className="text-muted text-xs block mb-1.5">Måldatum (valfritt)</label>
               <input
