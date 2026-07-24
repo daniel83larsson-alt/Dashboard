@@ -17,6 +17,8 @@ const EXERCISES_BY_SPORT: Record<string, string[]> = {
   Kettlebell: ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft'],
   HIIT: ['Burpees', 'Mountain Climbers', 'Jumping Jacks', 'High Knees', 'Squat Jumps', 'Armhävningar'],
   Crossfit: ['Burpees', 'Wall Balls', 'Box Jumps', 'Thrusters', 'Pull-ups', 'Kettlebell Swings'],
+  WeightTraining: ['Bänkpress', 'Knäböj', 'Marklyft', 'Axelpress', 'Rodd', 'Bicepscurl'],
+  Yoga: ['Nedåtgående hund', 'Krigare I', 'Krigare II', 'Triangel', 'Katt-ko', 'Barnets position'],
 }
 
 function nowForInput(): string {
