@@ -24,6 +24,7 @@ export default async function PassloggPage({
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+  const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
   const page = Math.max(1, parseInt((await searchParams).sida ?? '1', 10) || 1)
   const from = (page - 1) * PAGE_SIZE
@@ -89,9 +90,11 @@ export default async function PassloggPage({
 
       <DuplicateCleanup />
 
-      <div className="mb-6">
-        <CopyTrainingLogButton />
-      </div>
+      {isAdmin && (
+        <div className="mb-6">
+          <CopyTrainingLogButton />
+        </div>
+      )}
 
       {!rows.length ? (
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">

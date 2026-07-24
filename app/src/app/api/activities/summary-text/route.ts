@@ -12,6 +12,9 @@ export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (!process.env.ADMIN_EMAIL || user.email !== process.env.ADMIN_EMAIL) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 403 })
+  }
 
   const weeksParam = parseInt(request.nextUrl.searchParams.get('weeks') ?? '', 10)
   const weeks = Math.min(MAX_WEEKS, Math.max(1, Number.isFinite(weeksParam) ? weeksParam : 12))
