@@ -1,5 +1,6 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import DuplicateCleanup from '@/components/DuplicateCleanup'
+import CopyTrainingLogButton from '@/components/CopyTrainingLogButton'
 import Link from 'next/link'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
 import { splitMergedPairs, dedupeForStats } from '@/lib/duplicates'
@@ -87,6 +88,10 @@ export default async function PassloggPage({
       </div>
 
       <DuplicateCleanup />
+
+      <div className="mb-6">
+        <CopyTrainingLogButton />
+      </div>
 
       {!rows.length ? (
         <div className="bg-card border border-edge rounded-2xl p-10 text-center">
