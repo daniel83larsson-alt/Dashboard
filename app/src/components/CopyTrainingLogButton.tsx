@@ -40,13 +40,13 @@ export default function CopyTrainingLogButton() {
         <input
           type="number"
           min={1}
-          max={104}
+          max={520}
           inputMode="numeric"
           value={weeks}
           onChange={e => setWeeks(e.target.value)}
           className="w-20 bg-bg border border-edge rounded-xl px-3 py-2 text-sm text-fg text-center focus:outline-none focus:border-accent"
         />
-        <span className="text-muted text-xs">veckor tillbaka</span>
+        <span className="text-muted text-xs">veckor tillbaka (max 520 — täcker flera års historik)</span>
         <button
           onClick={copy}
           disabled={loading}

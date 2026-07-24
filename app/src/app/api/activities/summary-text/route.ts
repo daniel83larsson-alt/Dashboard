@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { buildTrainingLogText } from '@/lib/training-log-text'
 
-const MAX_WEEKS = 104
+// A generous ceiling, not a real limit — just guards against a garbage
+// query param. Real activity history can run back several years (accounts
+// synced before the 1-year Garmin-backfill cap was added keep their older
+// data), so this needs to comfortably exceed that, not just "a year or two".
+const MAX_WEEKS = 520
 
 export async function GET(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
