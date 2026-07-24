@@ -17,6 +17,7 @@ export const SPORT_LABELS: Record<string, string> = {
   Elliptical: 'crosstrainer',
   Workout: 'träningspass',
   HIIT: 'HIIT',
+  Crossfit: 'crossfit',
   Mobility: 'rörlighet',
   NordicSki: 'längdskidor',
   AlpineSki: 'utförsåkning',
@@ -25,7 +26,7 @@ export const SPORT_LABELS: Record<string, string> = {
 export const SPORT_ICONS: Record<string, string> = {
   Rowing: '🚣', Run: '🏃', TrailRun: '🏔', Ride: '🚴', VirtualRide: '🚴',
   Walk: '🚶', Hike: '🥾', Swim: '🏊', WeightTraining: '🏋️', Kettlebell: '🔔', Workout: '💪',
-  HIIT: '⚡', Yoga: '🧘', Elliptical: '⚙️', Mobility: '🤸',
+  HIIT: '⚡', Crossfit: '💥', Yoga: '🧘', Elliptical: '⚙️', Mobility: '🤸',
   NordicSki: '🎿', AlpineSki: '⛷️',
 }
 

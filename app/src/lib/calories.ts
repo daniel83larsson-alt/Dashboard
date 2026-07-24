@@ -22,6 +22,9 @@ const MET_BY_SPORT: Record<string, number> = {
   Elliptical: 5.5,
   Workout: 6,
   HIIT: 8.5,
+  // Mixed-modal circuit training (kettlebell/barbell/bodyweight combos) —
+  // same vigorous-full-body-circuit bracket as Kettlebell above.
+  Crossfit: 8,
   Mobility: 2.5,
   NordicSki: 9,
   AlpineSki: 6,

@@ -6,12 +6,18 @@ import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
 
 const SPORT_ORDER = [
   'Run', 'TrailRun', 'Walk', 'Hike', 'Ride', 'VirtualRide', 'Swim', 'Rowing',
-  'NordicSki', 'AlpineSki', 'WeightTraining', 'Kettlebell', 'HIIT', 'Elliptical', 'Yoga', 'Mobility', 'Workout',
+  'NordicSki', 'AlpineSki', 'WeightTraining', 'Kettlebell', 'HIIT', 'Crossfit', 'Elliptical', 'Yoga', 'Mobility', 'Workout',
 ]
 
-// The 5-6 most common kettlebell movements — good enough to cover a normal
-// session without turning this into a full exercise database.
-const KETTLEBELL_EXERCISES = ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft']
+// The 5-6 most common movements per hemma-/gym-sport — good enough to cover
+// a normal session without turning this into a full exercise database. Same
+// pattern for all three: check off what you did, fill in set×reps, gets
+// compiled into the pass-namnet on save (see exerciseSummary below).
+const EXERCISES_BY_SPORT: Record<string, string[]> = {
+  Kettlebell: ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft'],
+  HIIT: ['Burpees', 'Mountain Climbers', 'Jumping Jacks', 'High Knees', 'Squat Jumps', 'Armhävningar'],
+  Crossfit: ['Burpees', 'Wall Balls', 'Box Jumps', 'Thrusters', 'Pull-ups', 'Kettlebell Swings'],
+}
 
 function nowForInput(): string {
   const d = new Date()
@@ -67,7 +73,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
           movingTime,
           distance,
           startDate: new Date(startDate).toISOString(),
-          name: sport === 'Kettlebell' && exerciseSummary ? exerciseSummary : undefined,
+          name: sport && EXERCISES_BY_SPORT[sport] && exerciseSummary ? exerciseSummary : undefined,
         }),
       })
       const data = await res.json()
@@ -116,11 +122,11 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
           </div>
         </div>
 
-        {sport === 'Kettlebell' && (
+        {sport && EXERCISES_BY_SPORT[sport] && (
           <div>
             <div className="text-sm font-medium mb-3">Övningar (valfritt)</div>
             <div className="flex flex-col gap-2">
-              {KETTLEBELL_EXERCISES.map(name => {
+              {EXERCISES_BY_SPORT[sport].map(name => {
                 const picked = exercises[name]
                 return (
                   <div key={name} className={`border rounded-xl px-3 py-2.5 transition-colors ${picked ? 'border-accent/30 bg-accent/5' : 'border-edge'}`}>
