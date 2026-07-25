@@ -2,10 +2,54 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { sendPushToUser } from '@/lib/push'
 import { currentDailyStreak } from '@/lib/streaks'
+import { startOfWeek } from '@/lib/dates'
+import type { SupabaseClient } from '@supabase/supabase-js'
 
 export const maxDuration = 60
 
 type Activity = { user_id: string; start_date: string }
+type PendingPlanSession = { user_id: string; is_rest: boolean }
+
+// Piggybacks on this same daily evening cron rather than its own entry —
+// per Daniel: "påminna innan söndag att man har ett kvar" (a reminder that
+// arrives on Sunday itself would already be too late, the week is basically
+// over). Deliberately only counts sessions still 'planned' — the sync-all
+// cron earlier the same day already flips matched ones to 'done' via
+// plan-reconcile.ts, so this never nags about a session that's done already.
+async function remindPendingPlanSessions(supabase: SupabaseClient, now: Date) {
+  const weekStart = startOfWeek(now)
+  const weekEnd = new Date(weekStart)
+  weekEnd.setDate(weekEnd.getDate() + 6)
+  const weekStartKey = weekStart.toISOString().slice(0, 10)
+  const weekEndKey = weekEnd.toISOString().slice(0, 10)
+
+  const { data: sessions } = await supabase
+    .from('plan_sessions')
+    .select('user_id, is_rest')
+    .eq('status', 'planned')
+    .gte('planned_date', weekStartKey)
+    .lte('planned_date', weekEndKey)
+
+  const countByUser = new Map<string, number>()
+  for (const s of (sessions ?? []) as PendingPlanSession[]) {
+    if (s.is_rest) continue
+    countByUser.set(s.user_id, (countByUser.get(s.user_id) ?? 0) + 1)
+  }
+
+  await Promise.allSettled(
+    [...countByUser.entries()].map(([userId, count]) =>
+      sendPushToUser(supabase, userId, {
+        title: count === 1 ? 'Ett pass kvar i veckan' : `${count} pass kvar i veckan`,
+        body: count === 1
+          ? 'Du har ett planerat pass kvar innan veckan är slut imorgon.'
+          : `Du har ${count} planerade pass kvar innan veckan är slut imorgon.`,
+        url: '/dashboard/veckoplan',
+      })
+    )
+  )
+
+  return countByUser.size
+}
 
 // Runs once in the evening (see vercel.json) — only pings someone who
 // actually has a streak worth protecting (2+ days) AND hasn't logged
@@ -18,6 +62,10 @@ export async function GET(request: NextRequest) {
   }
 
   const supabase = createSupabaseAdminClient()
+  const now = new Date()
+
+  const isSaturday = now.getDay() === 6
+  const planRemindersSent = isSaturday ? await remindPendingPlanSessions(supabase, now) : 0
 
   const since = new Date()
   since.setDate(since.getDate() - 30) // enough history for any realistic streak
@@ -33,7 +81,6 @@ export async function GET(request: NextRequest) {
     byUser.set(a.user_id, list)
   }
 
-  const now = new Date()
   const todayKey = now.toISOString().slice(0, 10)
 
   const notified: string[] = []
@@ -55,5 +102,5 @@ export async function GET(request: NextRequest) {
     )
   )
 
-  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length })
+  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length, planRemindersSent })
 }

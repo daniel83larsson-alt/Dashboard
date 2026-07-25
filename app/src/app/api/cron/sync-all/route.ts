@@ -4,6 +4,14 @@ import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
 import { withGarminLock } from '@/lib/garmin'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
 import { sendPushToUser } from '@/lib/push'
+import { reconcileUserPlanSessions } from '@/lib/plan-reconcile'
+import type { ActivityRow } from '@/lib/duplicates'
+
+// How far back to pull activities for plan reconciliation — generous
+// relative to how young the weekly-plan feature is (plan_sessions only
+// exist for the last few weeks at most today), cheap to widen later if
+// plans stick around unfinalized longer than expected.
+const RECONCILE_LOOKBACK_DAYS = 90
 
 export const maxDuration = 60 // Vercel Hobby plan's hard cap — every user's sync below runs in parallel to fit inside it
 
@@ -56,6 +64,33 @@ export async function GET(request: NextRequest) {
     return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
   })
 
+  // Match today's (and any still-open past weeks') plan_sessions against
+  // real synced activities — every user with an unfinished planned session
+  // is checked, not just users who synced something new today, since a
+  // past week needs finalizing (→ 'missed') even with zero new activity.
+  const { data: planUserRows } = await supabase
+    .from('plan_sessions')
+    .select('user_id')
+    .eq('status', 'planned')
+  const planUserIds = [...new Set((planUserRows ?? []).map(r => r.user_id))]
+
+  const reconcileSince = new Date()
+  reconcileSince.setDate(reconcileSince.getDate() - RECONCILE_LOOKBACK_DAYS)
+  const reconcileSettled = await Promise.allSettled(
+    planUserIds.map(async userId => {
+      const { data: acts } = await supabase
+        .from('activities')
+        .select('id, strava_id, sport_type, distance, moving_time, start_date')
+        .eq('user_id', userId)
+        .gte('start_date', reconcileSince.toISOString())
+      return reconcileUserPlanSessions(supabase, userId, (acts ?? []) as ActivityRow[])
+    })
+  )
+  const reconciled = reconcileSettled.reduce(
+    (acc, r) => r.status === 'fulfilled' ? { matched: acc.matched + r.value.matched, missed: acc.missed + r.value.missed } : acc,
+    { matched: 0, missed: 0 }
+  )
+
   // One notification per user summarizing everything the whole run found for
   // them, not one per source — nobody wants two separate pings because they
   // happen to have both Garmin and Concept2 connected.
@@ -78,5 +113,6 @@ export async function GET(request: NextRequest) {
     garmin: { total: garmin.length, ok: garmin.filter(r => r.ok).length, results: garmin },
     concept2: { total: concept2.length, ok: concept2.filter(r => r.ok).length, results: concept2 },
     notified: newPassesByUser.size,
+    planReconcile: { usersChecked: planUserIds.length, ...reconciled },
   })
 }

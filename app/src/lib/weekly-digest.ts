@@ -115,25 +115,35 @@ function wellnessStats(wellnessHistory: DayWellness[], startKey: string, endKeyI
   }
 }
 
-// Greedy, week-level, sport-only match — deliberately looser than the
-// deferred reconcilePlanWeek job (no day-of-week tolerance check, no
-// distance/time comparison): a planned session counts as done if there's
-// any unclaimed activity of the same sport_type anywhere in the same week,
-// which already covers "moved the session to a different day" for free.
-// Purely computed for this digest — never persisted back to plan_sessions.
-export function matchAdherence(planned: PlanSessionRow[], activities: ActivityRow[]): WeeklyDigestAdherence {
+// Greedy, week-level, sport-only match — deliberately loose (no day-of-week
+// tolerance check, no distance/time comparison): a planned session counts
+// as done if there's any unclaimed activity of the same sport_type anywhere
+// in the same week, which already covers "moved the session to a different
+// day" for free. Generic over the session type so both this digest's
+// read-only adherence count AND plan-reconcile.ts's real write-back
+// (matched_activity_id, status) share the exact same matching rule instead
+// of two copies quietly drifting apart.
+type Matchable = { is_rest: boolean; sport_type: string | null }
+export function greedySportMatch<P extends Matchable, A extends ActivityRow>(
+  planned: P[], activities: A[]
+): { session: P; activity: A | null }[] {
   const nonRest = planned.filter(p => !p.is_rest && p.sport_type)
-  if (!nonRest.length) return null
   const unclaimed = [...activities]
-  let done = 0
-  for (const p of nonRest) {
+  return nonRest.map(p => {
     const idx = unclaimed.findIndex(a => a.sport_type === p.sport_type)
-    if (idx !== -1) {
-      done++
-      unclaimed.splice(idx, 1)
-    }
-  }
-  return { plannedCount: nonRest.length, doneCount: done, label: `${done} av ${nonRest.length} planerade pass gjorda` }
+    if (idx === -1) return { session: p, activity: null }
+    const [activity] = unclaimed.splice(idx, 1)
+    return { session: p, activity }
+  })
+}
+
+// Purely computed for this digest — never persisted back to plan_sessions
+// (see plan-reconcile.ts for the job that actually writes matches back).
+export function matchAdherence(planned: PlanSessionRow[], activities: ActivityRow[]): WeeklyDigestAdherence {
+  const pairs = greedySportMatch(planned, activities)
+  if (!pairs.length) return null
+  const done = pairs.filter(p => p.activity).length
+  return { plannedCount: pairs.length, doneCount: done, label: `${done} av ${pairs.length} planerade pass gjorda` }
 }
 
 export function computeWeeklyDigest({
