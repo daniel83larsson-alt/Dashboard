@@ -13,7 +13,27 @@ export const maxDuration = 60
 // the same Discord webhook already used for signup notifications, never
 // auto-fix. Both test accounts are always deleted before returning,
 // success or failure, so nothing synthetic lingers in production data.
-const TABLES = ['profiles', 'activities', 'connected_accounts', 'coach_sessions'] as const
+// Every single-owner table with a real `select` RLS policy — i.e. every
+// table where "can user A's session see user B's row" is a meaningful
+// question to ask. Deliberately excludes three tables checked and ruled
+// out during this expansion (not an oversight):
+//   - api_call_log: RLS only has an INSERT policy, no SELECT policy at all
+//     (reads only ever go through admin_api_call_stats()) — a select-based
+//     isolation check there would trivially "pass" with zero real signal,
+//     since nobody's own session can read even their own rows.
+//   - newsletter_log: no user_id column, admin-only ("Admin only" policy
+//     keyed on daniel83larsson@gmail.com specifically) — not a per-user
+//     ownership table, the isolation question doesn't apply.
+//   - follows / activity_kudos: DELIBERATELY cross-user visible (asymmetric
+//     following, kudos on someone else's pass) — a blanket "must not see
+//     the other test user's row" assertion would be testing the wrong
+//     thing. Left for a follow-up with an inverted assertion ("B sees A's
+//     row only after an approved follow"), not built here.
+const TABLES = [
+  'profiles', 'activities', 'connected_accounts', 'coach_sessions',
+  'goals', 'food_log', 'plan_sessions', 'training_plans',
+  'push_subscriptions', 'strava_tokens', 'concept2_tokens', 'polar_tokens',
+] as const
 
 type Violation = { table: string; queriedBy: 'A' | 'B'; foundForeignMarker: string }
 
@@ -39,12 +59,34 @@ async function seedMarkers(admin: ReturnType<typeof createSupabaseAdminClient>, 
   await admin.from('activities').insert({
     user_id: userId,
     strava_id: Date.now() + Math.floor(Math.random() * 100000),
+    source: 'manual',
     sport_type: 'Run',
     name: marker,
     start_date: new Date().toISOString(),
   })
   await admin.from('connected_accounts').insert({ provider: 'garmin', external_id: `${marker}@isolation-check.internal`, user_id: userId })
   await admin.from('coach_sessions').insert({ user_id: userId, coach_id: 'isolation_test', messages: [{ role: 'system', content: marker }] })
+  await admin.from('goals').insert({ user_id: userId, sport_type: 'Run', goal_type: 'habit', title: marker })
+  await admin.from('food_log').insert({ user_id: userId, name: marker, calories: 1, source: 'ai_text' })
+  await admin.from('push_subscriptions').insert({ user_id: userId, endpoint: `https://isolation-check.internal/${marker}`, p256dh: marker, auth: marker })
+  await admin.from('strava_tokens').insert({ user_id: userId, athlete_id: Date.now(), access_token: marker, refresh_token: marker, expires_at: 9999999999 })
+  await admin.from('concept2_tokens').insert({ user_id: userId, concept2_user_id: Date.now() % 1000000, access_token: marker, refresh_token: marker, expires_at: 9999999999 })
+  await admin.from('polar_tokens').insert({ user_id: userId, polar_user_id: Date.now(), access_token: marker })
+
+  // plan_sessions needs a real training_plans row to reference — seed both,
+  // marker lives on the session's title (what a leak would actually expose).
+  const { data: plan } = await admin.from('training_plans')
+    .insert({ user_id: userId, week_start: new Date().toISOString().slice(0, 10), plan_type: 'adaptiv' })
+    .select('id')
+    .single()
+  if (plan) {
+    await admin.from('plan_sessions').insert({
+      plan_id: plan.id,
+      user_id: userId,
+      planned_date: new Date().toISOString().slice(0, 10),
+      title: marker,
+    })
+  }
 }
 
 async function checkTable(
