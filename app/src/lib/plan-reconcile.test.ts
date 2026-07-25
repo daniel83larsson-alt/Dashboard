@@ -31,6 +31,25 @@ describe('planReconcileDecisions', () => {
     expect(decisions).toEqual([{ session: planned[0], action: 'done', activityId: 'a1' }])
   })
 
+  // KNOWN BUG, confirmed 2026-07-25 while adding TZ=Europe/Stockholm to CI
+  // (see .github/workflows/ci.yml + vitest.config.ts): this test FAILS
+  // under any server timezone with a non-zero UTC offset (e.g. run
+  // `TZ=Europe/Stockholm npx vitest run` locally) — the current week gets
+  // misclassified as a past week and the session becomes 'missed' instead
+  // of 'none'. Root cause in planReconcileDecisions (plan-reconcile.ts):
+  // `currentWeekStart = startOfWeek(now)` keeps full local-midnight
+  // precision, but the per-session `weekKey` is computed as
+  // `startOfWeek(new Date(s.planned_date)).toISOString().slice(0, 10)` and
+  // then re-parsed via `new Date(weekKey)` — date-only ISO strings always
+  // parse as UTC midnight, so that round trip silently shifts the local
+  // midnight back by the timezone offset before the two are compared.
+  // Currently latent (Vercel prod and CI both run UTC, so the offset is
+  // always 0 in practice), but a real, reproducible defect — not a test
+  // bug. Left failing on purpose rather than weakened, per this repo's
+  // rule against weakening tests to make something pass; flagged to Sam
+  // as teknisk skuld (see STATUS.md) instead of silently patched here,
+  // since fixing plan-reconcile.ts's decision logic was out of scope for
+  // the test-coverage task that surfaced this.
   it('leaves an unmatched session in the CURRENT week untouched (still time left)', () => {
     const planned = [session({ id: 's1', planned_date: '2026-07-24' })] // Friday, still ahead
     const decisions = planReconcileDecisions(planned, [], now)

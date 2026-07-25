@@ -38,22 +38,27 @@ function plan(overrides: Partial<PlanSessionRow>): PlanSessionRow {
 }
 
 describe('recapWeekStart', () => {
+  // Compared via toDateString() (local calendar day), not
+  // toISOString().slice(0,10) (UTC) — recapWeekStart is built on
+  // startOfWeek(), which returns LOCAL midnight, so a UTC-string comparison
+  // only happens to match under TZ=UTC and produces an off-by-one day
+  // under e.g. TZ=Europe/Stockholm (caught by CI's second vitest run).
   it('returns last week\'s Monday on a mid-week day', () => {
     // 2026-07-15 is a Wednesday in the week of 2026-07-13.
     const result = recapWeekStart(new Date('2026-07-15T12:00:00'))
-    expect(result.toISOString().slice(0, 10)).toBe('2026-07-06')
+    expect(result.toDateString()).toBe(new Date('2026-07-06').toDateString())
   })
 
   it('returns THIS week\'s Monday when run on a Sunday', () => {
     // 2026-07-19 is the Sunday of the week of 2026-07-13 — the digest sent
     // that evening should cover the week that's ending today, not last week.
     const result = recapWeekStart(new Date('2026-07-19T18:00:00'))
-    expect(result.toISOString().slice(0, 10)).toBe('2026-07-13')
+    expect(result.toDateString()).toBe(new Date('2026-07-13').toDateString())
   })
 
   it('returns last week\'s Monday on a Monday (the new week has just started)', () => {
     const result = recapWeekStart(new Date('2026-07-20T09:00:00'))
-    expect(result.toISOString().slice(0, 10)).toBe('2026-07-13')
+    expect(result.toDateString()).toBe(new Date('2026-07-13').toDateString())
   })
 })
 

@@ -22,8 +22,12 @@ describe('startOfWeek', () => {
 
   it('crosses a month boundary correctly', () => {
     // 2026-08-01 is a Saturday; its Monday is 2026-07-27.
+    // Compared via toDateString() (local calendar day), not
+    // toISOString().slice(0,10) (UTC) — startOfWeek returns LOCAL
+    // midnight, so a UTC-string comparison only happens to match under
+    // TZ=UTC and produces an off-by-one day under e.g. TZ=Europe/Stockholm.
     const result = startOfWeek(new Date('2026-08-01'))
-    expect(result.toISOString().slice(0, 10)).toBe('2026-07-27')
+    expect(result.toDateString()).toBe(new Date('2026-07-27').toDateString())
   })
 })
 

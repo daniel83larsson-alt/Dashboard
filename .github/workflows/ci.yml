@@ -23,6 +23,20 @@ jobs:
       - run: npx tsc --noEmit
       - run: npm run lint
       - run: npm run test
+      # NOT wired in yet: a second `TZ=Europe/Stockholm npx vitest run` step
+      # (the app and all its users are Europe/Stockholm; prod/CI both run
+      # UTC). Ran it locally while adding this — it found one real,
+      # pre-existing bug in plan-reconcile.ts's week-boundary grouping
+      # (see the comment on the failing test in plan-reconcile.test.ts and
+      # STATUS.md's teknisk skuld). Wiring in a step that's currently known
+      # to fail would just make every future push red for an unrelated
+      # reason, so this is held back — same call as below for the Garmin
+      # script — until that bug has an owner and a fix. vitest.config.ts's
+      # `env.TZ` still defaults to UTC (falling back to an explicit shell
+      # TZ if set) so `TZ=Europe/Stockholm npx vitest run` keeps working
+      # for anyone who wants to check locally in the meantime.
+      - name: Verify Garmin token-refresh isolation (garmin-connect race-condition harness)
+        run: node scripts/verify-garmin-token-race.js
       - name: Build (dummy env — only proves the app compiles, no real backend needed)
         run: npm run build
         env:
@@ -45,6 +59,7 @@ jobs:
           cache-dependency-path: hemkoll/package-lock.json
       - run: npm ci
       - run: npx tsc --noEmit
+      - run: npm run lint
       - name: Build (dummy env — only proves the app compiles, no real backend needed)
         run: npm run build
         env:
