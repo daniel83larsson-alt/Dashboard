@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('name, llm_api_key_encrypted, llm_provider, locked, flagged_attempts, flag_log, home_equipment, selected_sports')
+      .select('name, llm_api_key_encrypted, llm_provider, locked, flagged_attempts, flag_log, home_equipment, selected_sports, coach_tone')
       .eq('id', user.id)
       .single()
 
@@ -256,6 +256,7 @@ export async function POST(request: NextRequest) {
       focusActivity,
       homeEquipment: profile?.home_equipment ?? undefined,
       activeSports: profile?.selected_sports ?? undefined,
+      coachTone: profile?.coach_tone,
       recentActivities: acts.map(a => ({
         date: a.start_date,
         distance: a.distance,

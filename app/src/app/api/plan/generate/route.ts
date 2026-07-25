@@ -7,6 +7,7 @@ import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { fmtSpeedOrPace, sportLabel, fmtMinSec, SPORT_LABELS } from '@/lib/sport'
 import { dedupeForStats } from '@/lib/duplicates'
+import { coachToneInstruction } from '@/lib/coach-tone'
 
 function fmtDur(s: number) {
   const h = Math.floor(s / 3600)
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     const [{ data: activities }, { data: goals }, { data: profile }, { data: overviewRow }] = await Promise.all([
       supabase.from('activities').select('*').eq('user_id', user.id).order('start_date', { ascending: false }).limit(30),
       supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
-      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports').eq('id', user.id).single(),
+      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, coach_tone').eq('id', user.id).single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     ])
 
@@ -120,6 +121,8 @@ ${requestedSports.length ? `\nATLETEN VILL FOKUSERA PÅ DESSA SPORTER DENNA VECK
     const planType = targetGoal.target_date ? 'mot_mal' : 'adaptiv'
 
     const prompt = `Du är ett erfaret tränarteam inom uthållighetsidrott (rodd, cykling, löpning m.fl.). Utgå från vilken/vilka sporter atleten faktiskt loggar pass inom (se träningsdatan nedan) — anta inte att det är rodd om det inte stämmer. Planera DEN HÄR VECKAN (7 dagar, måndag till söndag) utifrån det stående målet nedan:
+
+${coachToneInstruction(profile?.coach_tone)} (gäller särskilt "philosophy"-texten nedan — själva passen ska alltid vara tränings-sunda oavsett ton.)
 
 ${planType === 'mot_mal'
   ? '- Målet har ett specifikt datum: bygg veckan som ett konkret steg mot det målet.'

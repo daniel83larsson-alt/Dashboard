@@ -8,6 +8,7 @@ import { fmtSpeedOrPace } from '@/lib/sport'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { currentStepGoalStreak } from '@/lib/streaks'
 import { dedupeForStats } from '@/lib/duplicates'
+import { coachToneInstruction } from '@/lib/coach-tone'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -18,8 +19,9 @@ type AgentInsights = { data: string; sleep: string; steps: string; mental: strin
 // calls (one per specialist + one synthesis) — same shared quota, a
 // seventh of the requests, at the cost of each perspective being generated
 // in the same pass rather than fully independently.
-async function askAgentTeam(apiKey: string, question: string): Promise<AgentInsights> {
-  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker (fokus: helhetsdata + hur upplägget/målen går), sömncoach, stegcoach, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.`
+async function askAgentTeam(apiKey: string, question: string, coachTone: string | null | undefined): Promise<AgentInsights> {
+  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker (fokus: helhetsdata + hur upplägget/målen går), sömncoach, stegcoach, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.
+${coachToneInstruction(coachTone)}`
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
@@ -64,7 +66,7 @@ export async function POST() {
     logApiCall(supabase, user.id, 'insights_generate')
 
     const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
-      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal').eq('id', user.id).single(),
+      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal, coach_tone').eq('id', user.id).single(),
       supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, hr_zones:raw_data->hrZones')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
@@ -176,7 +178,7 @@ mobility (Rörlighets-/stretchcoach, KONKRETA övningar): ${hasActivities
 
 summary (Huvudcoach): Läs de sex bedömningarna du själv precis formulerat. Vad är den ENA viktigaste prioriteringen för atleten just nu?`
 
-    const { data, sleep, steps, mental, strength, mobility, summary } = await askAgentTeam(apiKey, question)
+    const { data, sleep, steps, mental, strength, mobility, summary } = await askAgentTeam(apiKey, question, profile?.coach_tone)
 
     const insight = {
       generatedAt: now.toISOString(),

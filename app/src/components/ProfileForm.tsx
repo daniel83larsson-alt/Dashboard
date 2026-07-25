@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
+import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -25,6 +26,7 @@ type Profile = {
   biological_sex?: 'male' | 'female' | null
   daily_calorie_goal?: number | null
   weekly_digest_opt_out?: boolean | null
+  coach_tone?: string | null
 }
 
 
@@ -69,6 +71,7 @@ export default function ProfileForm({
   const [biologicalSex, setBiologicalSex] = useState(profile?.biological_sex ?? '')
   const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal?.toString() ?? '')
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
+  const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
@@ -106,6 +109,7 @@ export default function ProfileForm({
       biological_sex: biologicalSex || null,
       daily_calorie_goal: calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null,
       weekly_digest_opt_out: !weeklyDigestEnabled,
+      coach_tone: coachTone,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -550,6 +554,24 @@ export default function ProfileForm({
               Hämtas på console.anthropic.com → API Keys
             </p>
           )}
+        </div>
+        <div>
+          <label className="text-muted text-xs block mb-1.5">Coachens ton</label>
+          <p className="text-muted text-[11px] mb-2">Påverkar Coach-chatten, Insikter, Veckans Recap och Veckoplanens text — konsekvent oavsett var du möter coachen.</p>
+          <div className="grid grid-cols-3 gap-2">
+            {(['snall', 'neutral', 'tuff'] as const).map(t => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setCoachTone(t)}
+                className={`text-xs font-medium px-3 py-2.5 rounded-xl border transition-colors ${
+                  coachTone === t ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'
+                }`}
+              >
+                {COACH_TONE_LABELS[t]}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

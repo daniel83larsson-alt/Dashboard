@@ -1028,3 +1028,9 @@ as $$
 $$;
 revoke all on function public.unsubscribe_weekly_digest(uuid) from public;
 grant execute on function public.unsubscribe_weekly_digest(uuid) to anon, authenticated;
+
+-- Coach-tonens intensitet, valbar i Profil — påverkar alla AI-röster
+-- (Coach-chatten, Insikter, Veckans Recap, Veckoplanens filosofi-text) via
+-- den delade lib/coach-tone.ts, inte bara en enda prompt.
+alter table public.profiles add column if not exists coach_tone text not null default 'neutral'
+  check (coach_tone in ('snall', 'neutral', 'tuff'));

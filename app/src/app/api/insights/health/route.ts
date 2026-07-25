@@ -4,6 +4,7 @@ import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
+import { coachToneInstruction } from '@/lib/coach-tone'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -13,8 +14,9 @@ type HealthInsight = { recovery: string; mental: string }
 // at wellness data (sleep/HR/HRV/steps/Body Battery) for the Hälsa page,
 // while the Insikter page's team analysis covers the full training picture.
 // Two short fields instead of six — kept intentionally brief.
-async function askHealthTeam(apiKey: string, question: string): Promise<HealthInsight> {
-  const system = 'Du är återhämtnings- och mentalcoach för en uthållighetsidrottare. Svara ENDAST med JSON enligt schema. Fokusera BARA på hälsodata (sömn, vilopuls, HRV, steg, Body Battery) — inte träningspass eller personbästa. Varje fält: 2-3 meningar, svenska, konkret.'
+async function askHealthTeam(apiKey: string, question: string, coachTone: string | null | undefined): Promise<HealthInsight> {
+  const system = `Du är återhämtnings- och mentalcoach för en uthållighetsidrottare. Svara ENDAST med JSON enligt schema. Fokusera BARA på hälsodata (sömn, vilopuls, HRV, steg, Body Battery) — inte träningspass eller personbästa. Varje fält: 2-3 meningar, svenska, konkret.
+${coachToneInstruction(coachTone)}`
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
@@ -54,7 +56,7 @@ export async function POST() {
     logApiCall(supabase, user.id, 'insights_health')
 
     const [{ data: profile }, { data: wellnessRow }] = await Promise.all([
-      supabase.from('profiles').select('llm_api_key_encrypted').eq('id', user.id).single(),
+      supabase.from('profiles').select('llm_api_key_encrypted, coach_tone').eq('id', user.id).single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     ])
 
@@ -87,7 +89,7 @@ export async function POST() {
 recovery: bedöm återhämtningsstatus utifrån vilopuls/sömn/HRV — trend, obalans eller allt ser bra ut?
 mental: vad säger dagsformen (sömn/Body Battery) om läge för fokus och motivation just nu — ge ett kort konkret tips.`
 
-    const insight = await askHealthTeam(apiKey, question)
+    const insight = await askHealthTeam(apiKey, question, profile?.coach_tone)
     const result = { generatedAt: new Date().toISOString(), ...insight }
 
     await supabase.from('coach_sessions').upsert({

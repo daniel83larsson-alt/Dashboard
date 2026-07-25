@@ -1,4 +1,5 @@
 import { sportLabel } from '@/lib/sport'
+import { coachToneInstruction } from '@/lib/coach-tone'
 
 export type CoachId =
   | 'roddcoach'
@@ -57,6 +58,9 @@ export type UserContext = {
   // första, så det inte faller ur kontext om chatten fortsätter länge nog
   // att historiken (MAX_HISTORY_TURNS i /api/coach) klipper bort öppningsturen.
   focusActivity?: string
+  // Profilens 'snall' | 'neutral' | 'tuff' — se lib/coach-tone.ts. Saknas
+  // (äldre profil, fältet inte satt än) betyder samma sak som 'neutral'.
+  coachTone?: string | null
 }
 
 function compact(ctx: UserContext, sport: string): string {
@@ -96,7 +100,10 @@ SENASTE PASS (sport per rad inom hakparentes):
 ${acts}`
 }
 
-const REGLER = `REGLER: Konsistens > perfektion. Lågt tröskel. Återhämtning styr volym. Svara på svenska. Håll svaret kort — max 4-5 meningar om inte användaren uttryckligen ber om en längre genomgång.`
+function regler(tone: string | null | undefined): string {
+  return `REGLER: Konsistens > perfektion. Lågt tröskel. Återhämtning styr volym. Svara på svenska. Håll svaret kort — max 4-5 meningar om inte användaren uttryckligen ber om en längre genomgång.
+${coachToneInstruction(tone)}`
+}
 
 export const COACHES: Coach[] = [
   {
@@ -106,7 +113,7 @@ export const COACHES: Coach[] = [
     role: 'Teknik · Upplägget · Progression',
     hasVeto: false,
     systemPrompt: (sport, ctx) => `Du är personlig tränare, van vid flera sporter. Just nu coachar du användarens ${sportLabel(sport)}. Analysera träningsdata, ge råd om teknik, struktur och progression för DEN sporten — anta aldrig att ett pass är rodd bara för att appen/annan historik är roddfokuserad.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ${compact(ctx, sport)}
 
@@ -119,7 +126,7 @@ Fokus: passupplägg, teknikråd, progressionsväg för ${sportLabel(sport)} spec
     role: 'Splits · Watt · Trender',
     hasVeto: false,
     systemPrompt: (sport, ctx) => `Du är datadriven träningsanalytiker, van vid flera sporter — just nu ${sportLabel(sport)}. Hitta mönster, avvikelser och trender i siffrorna för den sporten.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ${compact(ctx, sport)}
 
@@ -132,7 +139,7 @@ Fokus: trender, procentuella förändringar, bekräftade mönster. Skilj fakta f
     role: 'Sömn · Vilopuls · Belastning',
     hasVeto: false,
     systemPrompt: (_, ctx) => `Du är återhämtningsspecialist. Du är systemets broms mot överträning.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ${compact(ctx, ctx.sport)}
 
@@ -145,7 +152,7 @@ Flagga alltid: förhöjd vilopuls, sömnunderskott, för hög frekvens. Föresl�
     role: 'Protein · Timing · Energibalans',
     hasVeto: false,
     systemPrompt: (_, ctx) => `Du är nutritionsspecialist för uthållighetsidrottare.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ANVÄNDARE: ${ctx.name} | ${sportLabel(ctx.sport)}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
@@ -160,8 +167,8 @@ Fokus: proteinintag 1,6–2,2 g/kg, timing runt träning, kreatin, kasein. Leane
     icon: '🧘',
     role: 'Rörlighet · Spänningar · Skadeförebyggande',
     hasVeto: false,
-    systemPrompt: (sport) => `Du är rörlighets- och skadeförebyggande specialist för ${sport}.
-${REGLER}
+    systemPrompt: (sport, ctx) => `Du är rörlighets- och skadeförebyggande specialist för ${sport}.
+${regler(ctx.coachTone)}
 
 Fokus: sportspecifika rörlighetsövningar för ${sportLabel(sport)}, spänningskedjor, konkreta protokoll med frekvens.`,
   },
@@ -171,8 +178,8 @@ Fokus: sportspecifika rörlighetsövningar för ${sportLabel(sport)}, spännings
     icon: '🔬',
     role: 'Evidens · Forskning · Protokoll',
     hasVeto: false,
-    systemPrompt: (sport) => `Du är vetenskapsrådgivare inom träningsfysiologi, just nu för ${sportLabel(sport)}.
-${REGLER}
+    systemPrompt: (sport, ctx) => `Du är vetenskapsrådgivare inom träningsfysiologi, just nu för ${sportLabel(sport)}.
+${regler(ctx.coachTone)}
 
 Nyckelstudier (referera vid relevans): Helgerud 2007: 4×4 = +7–9% VO2max/8v | BJSM 2025: exercise snacks ger VO2max-effekt | Stöggl & Sperlich 2014: polariserad > pyramidal | Ross/Mandsager: VO2max starkaste livslängdsprediktorn.
 
@@ -185,7 +192,7 @@ Var ärlig om osäkerhet. Skilj kausalitet från korrelation.`,
     role: 'Mindset · Tävling · Mental styrka',
     hasVeto: false,
     systemPrompt: (sport, ctx) => `Du är mentalcoach för uthållighetsidrottare, just nu med fokus på ${sportLabel(sport)}.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ${compact(ctx, sport)}
 
@@ -198,7 +205,7 @@ Fokus: mental uthållighet under hård träning, tävlingsförberedelse, hantera
     role: 'Kompletterande styrka · Core · Rörlighet',
     hasVeto: false,
     systemPrompt: (sport, ctx) => `Du är styrkecoach specialiserad på kompletterande träning för ${sportLabel(sport)}-utövare.
-${REGLER}
+${regler(ctx.coachTone)}
 
 ${compact(ctx, sport)}
 
@@ -211,7 +218,7 @@ Fokus: core-stabilitet, benstyrka, skadeförebyggande, med övningar som passar 
     role: 'Motivation · Lågt tröskel',
     hasVeto: true,
     systemPrompt: (_, ctx) => `Du är Hejarklacken — motivationscoachen med VETORÄTT.
-${REGLER}
+${regler(ctx.coachTone)}
 
 VETO: Avvisa varje upplägg som höjer tröskeln att börja. Köra dåligt > missa superbra pass.
 

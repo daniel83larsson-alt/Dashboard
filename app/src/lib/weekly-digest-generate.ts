@@ -10,6 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
 import { decryptMaybeLegacy } from './encrypt'
 import { sportLabel } from './sport'
+import { coachToneInstruction } from './coach-tone'
 import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 
@@ -65,7 +66,29 @@ function sessionList(activities: ActivityRow[]): string {
     .join('\n')
 }
 
-function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], goalTitle: string | null): string {
+// The week's PLANNED sessions, same one-line-per-session shape as
+// sessionList() — feeding both lists to the model lets it reason in plain
+// language about deviations ("tisdagens planerade intervaller blev en lugn
+// distans") instead of needing a hand-built matching algorithm for workout
+// TYPE (only sport+week is actually verified by plan-reconcile.ts; whether
+// a session matched its intended character is deliberately left to the
+// model's judgment here, per Daniel: volume matching is enough for the
+// automatic checkmark, but the recap should still give constructive
+// feedback on fit).
+function planList(planned: PlanSessionRow[]): string {
+  const nonRest = planned.filter(p => !p.is_rest)
+  if (!nonRest.length) return 'Ingen plan var satt denna vecka.'
+  return nonRest
+    .slice()
+    .sort((a, b) => a.planned_date.localeCompare(b.planned_date))
+    .map(p => {
+      const day = new Date(p.planned_date).toLocaleDateString('sv-SE', { weekday: 'short' })
+      return `${day} ${sportLabel(p.sport_type ?? '')}: ${p.title}`
+    })
+    .join('\n')
+}
+
+function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null): string {
   const w = data.thisWeek
   const p = data.prevWeek
   const fmtAvg = (v: number | null, unit: string, decimals = 0) => v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
@@ -74,7 +97,10 @@ function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], 
     ? `Nästa veckas plan finns redan: ${data.lookAhead.sessions.filter(s => !s.isRest).map(s => s.label).join(', ') || 'bara vila'}.`
     : 'Nästa veckas plan är inte genererad än.'
 
-  return `DENNA VECKAS PASS (${data.weekStartISO} till ${data.weekEndISO}):
+  return `VECKANS PLAN (vad som var tänkt):
+${planList(planSessionsThisWeek)}
+
+DENNA VECKAS PASS (${data.weekStartISO} till ${data.weekEndISO}, vad som faktiskt kördes):
 ${sessionList(thisWeekActivities)}
 TOTALT: ${w.sessions.count} pass, ${fmtKm(w.sessions.totalKm)}, ${w.sessions.totalMinutes} min. Förra veckan: ${p.sessions.count} pass, ${fmtKm(p.sessions.totalKm)}.
 FÖLJSAMHET MOT PLANEN: ${data.adherence ? data.adherence.label : 'ingen plan var satt denna vecka'}
@@ -86,20 +112,21 @@ ${lookAheadLine}
 
 Ge tre korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
 
-sessions: Kommentera passen som faktiskt kördes denna vecka — nämn en specifik dag/pass eller ett tydligt mönster, inte bara totalen. MAX 2 meningar.
+sessions: Jämför VECKANS PLAN mot passen som faktiskt kördes. Om mängden/sporterna stämmer bra mot planen, säg det kort. Om något planerat pass avvek från vad som faktiskt kördes (t.ex. ett planerat intervallpass blev en lugn distans, eller fel sport/dag) — ge KONSTRUKTIV feedback på just den skillnaden, inte bara att volymen stämde. Nämn en specifik dag/pass, inte bara totalen. Om ingen plan fanns denna vecka, kommentera bara passen som kördes. MAX 2 meningar.
 
 wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (jämför med förra veckan om det säger något intressant). MAX 2 meningar.
 
 motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.`
 }
 
-async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], goalTitle: string | null): Promise<WeeklyDigestInsights> {
-  const system = 'Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.'
+async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined): Promise<WeeklyDigestInsights> {
+  const system = `Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.
+${coachToneInstruction(coachTone)}`
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, goalTitle) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, planSessionsThisWeek, goalTitle) }] }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
         maxOutputTokens: 500,
@@ -135,7 +162,7 @@ export async function generateWeeklyDigestForUser(
   historyStart.setDate(historyStart.getDate() - 7)
 
   const [{ data: profile }, { data: goals }, { data: acts }, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan }] = await Promise.all([
-    supabase.from('profiles').select('llm_api_key_encrypted').eq('id', userId).single(),
+    supabase.from('profiles').select('llm_api_key_encrypted, coach_tone').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
     supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, sport_type')
       .eq('user_id', userId).gte('start_date', historyStart.toISOString()).lt('start_date', nextWeekStart.toISOString()),
@@ -150,11 +177,13 @@ export async function generateWeeklyDigestForUser(
   const wellnessStore = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
   const wellnessHistory: DayWellness[] = wellnessStore?.history ?? []
 
+  const planSessionsThisWeek = (thisPlan?.plan_sessions ?? []) as PlanSessionRow[]
+
   const digestData = computeWeeklyDigest({
     weekStart,
     activities: (acts ?? []) as ActivityRow[],
     wellnessHistory,
-    planSessionsThisWeek: (thisPlan?.plan_sessions ?? []) as PlanSessionRow[],
+    planSessionsThisWeek,
     planSessionsNextWeek: (nextPlan?.plan_sessions ?? []) as PlanSessionRow[],
   })
 
@@ -164,7 +193,7 @@ export async function generateWeeklyDigestForUser(
 
   let insights: WeeklyDigestInsights | null = null
   try {
-    insights = await generateInsights(apiKey, digestData, thisWeekActivities, goalTitle)
+    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone)
   } catch (err) {
     console.error('Weekly digest insights failed for user', userId, err)
   }
