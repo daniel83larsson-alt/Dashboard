@@ -233,7 +233,7 @@ create unique index if not exists activities_user_strava_unique
 -- varje riktigt konto bara kan höra till EN DL Trainer-profil åt gången.
 -- Kör vid uppdatering av en befintlig databas:
 create table if not exists public.connected_accounts (
-  provider text not null check (provider in ('garmin', 'concept2', 'strava')),
+  provider text not null check (provider in ('garmin', 'concept2', 'strava', 'polar')),
   external_id text not null,
   user_id uuid references public.profiles(id) on delete cascade not null,
   created_at timestamptz default now(),
@@ -1056,3 +1056,24 @@ alter table public.activities alter column source set default 'manual';
 alter table public.activities alter column source set not null;
 alter table public.activities add constraint activities_source_check
   check (source in ('garmin', 'concept2', 'strava', 'polar', 'manual'));
+
+-- Strava tokens don't expire — no refresh_token/expires_at needed. Polar's
+-- own numeric user id (returned once at registration, see lib/polar.ts) is
+-- stored separately from the DL Trainer user_id since AccessLink's
+-- transaction endpoints are keyed by IT, not by the member-id we chose.
+create table if not exists public.polar_tokens (
+  user_id uuid references public.profiles(id) on delete cascade primary key,
+  polar_user_id bigint not null,
+  access_token text not null,
+  updated_at timestamptz default now()
+);
+alter table public.polar_tokens enable row level security;
+create policy "Users see own polar tokens" on public.polar_tokens
+  for all using (auth.uid() = user_id);
+
+-- connected_accounts' provider check (defined earlier in this file) predates
+-- Polar — widen it on an already-migrated database. Safe/idempotent to
+-- re-run: drops and re-adds the same constraint by name.
+alter table public.connected_accounts drop constraint if exists connected_accounts_provider_check;
+alter table public.connected_accounts add constraint connected_accounts_provider_check
+  check (provider in ('garmin', 'concept2', 'strava', 'polar'));

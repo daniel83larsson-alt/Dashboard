@@ -46,9 +46,11 @@ export default function ProfileForm({
   hasConcept2,
   hasGarmin,
   hasStrava,
+  hasPolar,
   concept2Synced,
   garminSynced,
   stravaSynced,
+  polarSynced,
   savedContext,
 }: {
   profile: Profile | null
@@ -56,9 +58,11 @@ export default function ProfileForm({
   hasConcept2: boolean
   hasGarmin: boolean
   hasStrava: boolean
+  hasPolar: boolean
   concept2Synced: boolean
   garminSynced: boolean
   stravaSynced: boolean
+  polarSynced: boolean
   savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
@@ -82,6 +86,8 @@ export default function ProfileForm({
   const [syncMsg, setSyncMsg] = useState('')
   const [stravaSyncing, setStravaSyncing] = useState(false)
   const [stravaSyncMsg, setStravaSyncMsg] = useState('')
+  const [polarSyncing, setPolarSyncing] = useState(false)
+  const [polarSyncMsg, setPolarSyncMsg] = useState('')
   const [garminSyncing, setGarminSyncing] = useState(false)
   const [garminMsg, setGarminMsg] = useState('')
   const [garminEmail, setGarminEmail] = useState('')
@@ -174,6 +180,24 @@ export default function ProfileForm({
       setStravaSyncMsg('Nätverksfel')
     }
     setStravaSyncing(false)
+  }
+
+  async function syncPolarNow() {
+    setPolarSyncing(true)
+    setPolarSyncMsg('')
+    try {
+      const res = await fetch('/api/activities/sync-polar', { method: 'POST' })
+      const data = await res.json()
+      if (data.synced !== undefined) {
+        setPolarSyncMsg(`Synkade ${data.synced} nya pass`)
+        router.refresh()
+      } else {
+        setPolarSyncMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setPolarSyncMsg('Nätverksfel')
+    }
+    setPolarSyncing(false)
   }
 
   async function saveGarmin(e: React.FormEvent) {
@@ -503,6 +527,45 @@ export default function ProfileForm({
               className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
             >
               Anslut Strava
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Polar */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div className="text-xs text-muted uppercase tracking-wider">Polar</div>
+        {hasPolar ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-sm text-fg flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full inline-block ${polarSynced ? 'bg-accent' : 'bg-amber-400'}`} />
+                {polarSynced ? 'Ansluten' : 'Ansluten — väntar på första synk'}
+              </div>
+              {polarSyncMsg && <div className="text-xs text-lcd mt-1">{polarSyncMsg}</div>}
+            </div>
+            <button
+              type="button"
+              onClick={syncPolarNow}
+              disabled={polarSyncing}
+              className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+            >
+              {polarSyncing ? 'Synkar...' : 'Synka nu'}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-muted text-xs mb-2">
+              Anslut Polar Flow för att automatiskt synka dina pass därifrån.
+            </p>
+            <div className="bg-bg rounded-xl p-3 mb-3 text-xs text-muted leading-relaxed">
+              <span className="text-fg font-medium">Så funkar det:</span> klicka på knappen nedan så skickas du till Polars egen inloggningssida. Logga in med ditt vanliga Polar Flow-konto och godkänn åtkomsten. Du loggar in direkt hos Polar — vi ser eller sparar aldrig ditt lösenord, bara en åtkomsttoken efteråt.
+            </div>
+            <a
+              href="/api/auth/polar"
+              className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Anslut Polar
             </a>
           </div>
         )}

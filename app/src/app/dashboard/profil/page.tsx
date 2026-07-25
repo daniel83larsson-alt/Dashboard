@@ -14,10 +14,11 @@ export default async function ProfilPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: c2token }, { data: stravaToken }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: stravaActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
+  const [{ data: profile }, { data: c2token }, { data: stravaToken }, { data: polarToken }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: stravaActivity }, { data: polarActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('concept2_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('strava_tokens').select('user_id').eq('user_id', user.id).single(),
+    supabase.from('polar_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_credentials').single(),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }),
@@ -29,6 +30,7 @@ export default async function ProfilPage({
     supabase.from('activities').select('id').eq('user_id', user.id).eq('source', 'concept2').limit(1).maybeSingle(),
     supabase.from('activities').select('id').eq('user_id', user.id).eq('source', 'garmin').limit(1).maybeSingle(),
     supabase.from('activities').select('id').eq('user_id', user.id).eq('source', 'strava').limit(1).maybeSingle(),
+    supabase.from('activities').select('id').eq('user_id', user.id).eq('source', 'polar').limit(1).maybeSingle(),
     supabase.rpc('pending_follow_requests'),
     supabase.rpc('my_follows'),
   ])
@@ -39,6 +41,7 @@ export default async function ProfilPage({
   const concept2Synced = !!concept2Activity
   const garminSynced = !!garminActivity
   const stravaSynced = !!stravaActivity
+  const polarSynced = !!polarActivity
   const savedOverview = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
   return (
@@ -72,6 +75,16 @@ export default async function ProfilPage({
           Kunde inte ansluta Strava. Försök igen.
         </div>
       )}
+      {error === 'polar_taken' && (
+        <div className="mb-4 bg-card border border-red-500/40 rounded-2xl p-4 text-sm text-fg">
+          Det här Polar-kontot är redan anslutet till en annan DL Trainer-profil. Varje person behöver sitt eget Polar-konto.
+        </div>
+      )}
+      {(error === 'polar_auth' || error === 'polar_failed') && (
+        <div className="mb-4 bg-card border border-amber-500/30 rounded-2xl p-4 text-sm text-fg">
+          Kunde inte ansluta Polar. Försök igen.
+        </div>
+      )}
       <div className="mb-4">
         <NotificationSettings />
       </div>
@@ -91,9 +104,11 @@ export default async function ProfilPage({
         hasConcept2={!!c2token}
         hasGarmin={hasGarmin}
         hasStrava={!!stravaToken}
+        hasPolar={!!polarToken}
         concept2Synced={concept2Synced}
         garminSynced={garminSynced}
         stravaSynced={stravaSynced}
+        polarSynced={polarSynced}
         savedContext={savedContext}
       />
     </div>
