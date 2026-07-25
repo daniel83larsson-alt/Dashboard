@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
 import { withGarminLock } from '@/lib/garmin'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
+import { syncStravaForUser, StravaNotConnectedError } from '@/lib/strava-sync'
 import { sendPushToUser } from '@/lib/push'
 import { reconcileUserPlanSessions } from '@/lib/plan-reconcile'
 import type { ActivityRow } from '@/lib/duplicates'
@@ -29,9 +30,10 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdminClient()
 
-  const [{ data: garminRows }, { data: c2Rows }, { data: authUsers }] = await Promise.all([
+  const [{ data: garminRows }, { data: c2Rows }, { data: stravaRows }, { data: authUsers }] = await Promise.all([
     supabase.from('coach_sessions').select('user_id').eq('coach_id', 'garmin_credentials'),
     supabase.from('concept2_tokens').select('user_id'),
+    supabase.from('strava_tokens').select('user_id'),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
@@ -61,6 +63,16 @@ export async function GET(request: NextRequest) {
     const userId = (c2Rows ?? [])[i].user_id
     if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
     const isConfigError = r.reason instanceof Concept2NotConnectedError
+    return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
+  })
+
+  const stravaSettled = await Promise.allSettled(
+    (stravaRows ?? []).map(row => syncStravaForUser(supabase, row.user_id))
+  )
+  const strava = stravaSettled.map((r, i) => {
+    const userId = (stravaRows ?? [])[i].user_id
+    if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
+    const isConfigError = r.reason instanceof StravaNotConnectedError
     return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
   })
 
@@ -95,14 +107,14 @@ export async function GET(request: NextRequest) {
   // them, not one per source — nobody wants two separate pings because they
   // happen to have both Garmin and Concept2 connected.
   const newPassesByUser = new Map<string, number>()
-  for (const r of [...garmin, ...concept2]) {
+  for (const r of [...garmin, ...concept2, ...strava]) {
     if (r.ok && r.synced) newPassesByUser.set(r.userId, (newPassesByUser.get(r.userId) ?? 0) + r.synced)
   }
   await Promise.allSettled(
     [...newPassesByUser.entries()].map(([userId, count]) =>
       sendPushToUser(supabase, userId, {
         title: count === 1 ? 'Nytt pass synkat' : `${count} nya pass synkade`,
-        body: count === 1 ? 'Ett nytt pass hämtades från Garmin/Concept2 idag.' : `${count} nya pass hämtades från Garmin/Concept2 idag.`,
+        body: count === 1 ? 'Ett nytt pass hämtades idag.' : `${count} nya pass hämtades idag.`,
         url: '/dashboard/passlogg',
       })
     )
@@ -112,6 +124,7 @@ export async function GET(request: NextRequest) {
     ranAt: new Date().toISOString(),
     garmin: { total: garmin.length, ok: garmin.filter(r => r.ok).length, results: garmin },
     concept2: { total: concept2.length, ok: concept2.filter(r => r.ok).length, results: concept2 },
+    strava: { total: strava.length, ok: strava.filter(r => r.ok).length, results: strava },
     notified: newPassesByUser.size,
     planReconcile: { usersChecked: planUserIds.length, ...reconciled },
   })

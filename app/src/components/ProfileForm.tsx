@@ -45,16 +45,20 @@ export default function ProfileForm({
   userEmail,
   hasConcept2,
   hasGarmin,
+  hasStrava,
   concept2Synced,
   garminSynced,
+  stravaSynced,
   savedContext,
 }: {
   profile: Profile | null
   userEmail: string
   hasConcept2: boolean
   hasGarmin: boolean
+  hasStrava: boolean
   concept2Synced: boolean
   garminSynced: boolean
+  stravaSynced: boolean
   savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
@@ -76,6 +80,8 @@ export default function ProfileForm({
   const [saved, setSaved] = useState(false)
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
+  const [stravaSyncing, setStravaSyncing] = useState(false)
+  const [stravaSyncMsg, setStravaSyncMsg] = useState('')
   const [garminSyncing, setGarminSyncing] = useState(false)
   const [garminMsg, setGarminMsg] = useState('')
   const [garminEmail, setGarminEmail] = useState('')
@@ -150,6 +156,24 @@ export default function ProfileForm({
       setSyncMsg('Nätverksfel')
     }
     setSyncing(false)
+  }
+
+  async function syncStravaNow() {
+    setStravaSyncing(true)
+    setStravaSyncMsg('')
+    try {
+      const res = await fetch('/api/activities/sync-strava', { method: 'POST' })
+      const data = await res.json()
+      if (data.synced !== undefined) {
+        setStravaSyncMsg(`Synkade ${data.synced} nya pass`)
+        router.refresh()
+      } else {
+        setStravaSyncMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setStravaSyncMsg('Nätverksfel')
+    }
+    setStravaSyncing(false)
   }
 
   async function saveGarmin(e: React.FormEvent) {
@@ -440,6 +464,45 @@ export default function ProfileForm({
               className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
             >
               Anslut Concept2
+            </a>
+          </div>
+        )}
+      </div>
+
+      {/* Strava */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div className="text-xs text-muted uppercase tracking-wider">Strava</div>
+        {hasStrava ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-sm text-fg flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full inline-block ${stravaSynced ? 'bg-accent' : 'bg-amber-400'}`} />
+                {stravaSynced ? 'Ansluten' : 'Ansluten — väntar på första synk'}
+              </div>
+              {stravaSyncMsg && <div className="text-xs text-lcd mt-1">{stravaSyncMsg}</div>}
+            </div>
+            <button
+              type="button"
+              onClick={syncStravaNow}
+              disabled={stravaSyncing}
+              className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+            >
+              {stravaSyncing ? 'Synkar...' : 'Synka nu'}
+            </button>
+          </div>
+        ) : (
+          <div>
+            <p className="text-muted text-xs mb-2">
+              Anslut Strava för att automatiskt synka dina pass därifrån.
+            </p>
+            <div className="bg-bg rounded-xl p-3 mb-3 text-xs text-muted leading-relaxed">
+              <span className="text-fg font-medium">Så funkar det:</span> klicka på knappen nedan så skickas du till Stravas egen inloggningssida. Logga in med ditt vanliga Strava-konto och godkänn åtkomsten. Du loggar in direkt hos Strava — vi ser eller sparar aldrig ditt lösenord, bara en åtkomsttoken efteråt.
+            </div>
+            <a
+              href="/api/auth/strava"
+              className="inline-block bg-accent text-bg text-xs font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
+            >
+              Anslut Strava
             </a>
           </div>
         )}
