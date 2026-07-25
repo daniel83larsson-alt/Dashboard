@@ -20,7 +20,6 @@ export default function HomeyCard() {
   const [disconnecting, setDisconnecting] = useState(false)
 
   async function load() {
-    setLoading(true)
     try {
       const res = await fetch('/api/homey/devices')
       const data = await res.json()
@@ -33,7 +32,13 @@ export default function HomeyCard() {
     setLoading(false)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    // Standard fetch-on-mount — the rule below can't tell load()'s setState
+    // calls all happen after an await (a genuine async continuation, not a
+    // synchronous cascade), so it flags this pattern regardless.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    load()
+  }, [])
 
   async function disconnect() {
     setDisconnecting(true)
