@@ -4,7 +4,7 @@ import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
-import { bestMergePartner } from '@/lib/duplicates'
+import { bestMergePartners, rowSource, type KnownSource } from '@/lib/duplicates'
 import { REGION_LABELS, Region } from '@/lib/mobility'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
@@ -78,11 +78,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     ? ((raw.exercises ?? []) as Array<{ id: string; name: string; region: Region; dose: string }>)
     : []
 
-  // Same real-world session can get synced from both Concept2 (erg) and
-  // Garmin (wrist HR) — look for the other-source counterpart within a wide
-  // window and merge their data instead of showing two half-empty passes.
-  // Doesn't apply to manually-logged Mobility passes — there's no second
-  // source to merge with, so skip the lookup entirely for those.
+  // Same real-world session can get synced from more than one source at once
+  // — Garmin (wrist HR) + Concept2 (erg) directly, plus Strava if Garmin
+  // auto-forwards there, or Polar as a second watch. Look for ALL
+  // other-source counterparts within a wide window and merge their data
+  // instead of showing several half-empty passes. Doesn't apply to
+  // manually-logged Mobility passes — there's no second source to merge
+  // with, so skip the lookup entirely for those.
   const windowStart = new Date(new Date(activity.start_date).getTime() - 36 * 3600 * 1000)
   const windowEnd = new Date(new Date(activity.start_date).getTime() + 36 * 3600 * 1000)
   const { data: sameDayActivities } = isMobility
@@ -96,11 +98,11 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         .gte('start_date', windowStart.toISOString())
         .lte('start_date', windowEnd.toISOString())
 
-  const partner = bestMergePartner(activity, sameDayActivities ?? [])
-  const partnerIsGarmin = partner ? partner.source === 'garmin' : false
-  const partnerRaw = (partner?.raw_data ?? {}) as Record<string, unknown>
-
-  const garminRaw = isGarmin ? raw : (partner && partnerIsGarmin ? partnerRaw : null)
+  const partners = bestMergePartners(activity, sameDayActivities ?? [])
+  const garminPartner = partners.find(p => p.source === 'garmin')
+  const concept2Partner = partners.find(p => p.source === 'concept2')
+  const garminRow = isGarmin ? activity : garminPartner
+  const garminRaw = (garminRow?.raw_data ?? null) as Record<string, unknown> | null
   const garminExtras = garminRaw
     ? GARMIN_EXTRA_FIELDS
         .map(f => ({ ...f, value: garminRaw[f.key] }))
@@ -113,13 +115,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const lng: number | null = isNum(rawLng) && rawLng !== 0 ? rawLng : null
   const hasCoords = lat !== null && lng !== null
 
-  // Concept2 doesn't always have a paired HR strap — fall back to the
-  // matched Garmin session's HR when this record doesn't have its own.
-  const mergedAvgHr = activity.average_heartrate ?? partner?.average_heartrate ?? null
-  const mergedMaxHr = activity.max_heartrate ?? partner?.max_heartrate ?? null
+  // Concept2 doesn't always have a paired HR strap, and Strava/Polar rows
+  // sometimes lack it too — fall back to whichever merged partner has it.
+  const mergedAvgHr = activity.average_heartrate ?? partners.map(p => p.average_heartrate).find(h => h != null) ?? null
+  const mergedMaxHr = activity.max_heartrate ?? partners.map(p => p.max_heartrate).find(h => h != null) ?? null
 
-  const garminActivityId = isGarmin ? activity.id : (partner && partnerIsGarmin ? partner.id : undefined)
-  const concept2ActivityId = !isGarmin ? activity.id : (partner && !partnerIsGarmin ? partner.id : undefined)
+  const concept2Row = activity.source === 'concept2' ? activity : concept2Partner
+  const garminActivityId = garminRow?.id
+  const concept2ActivityId = concept2Row?.id
 
   const SOURCE_LABELS: Record<string, string> = {
     garmin: 'Garmin',
@@ -128,13 +131,22 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     polar: 'Polar',
     manual: 'Manuellt loggat',
   }
+  const SOURCE_ORDER: KnownSource[] = ['concept2', 'garmin', 'strava', 'polar']
   const sourceLabel = isMobility
     ? 'Rörlighet'
-    : partner
-      // Merging only ever pairs a real Concept2+Garmin duo (see
-      // isMergeCandidate in duplicates.ts) — never a Strava/Polar/manual row.
-      ? 'Concept2 + Garmin'
+    : partners.length > 0
+      ? SOURCE_ORDER.filter(s => [activity, ...partners].some(m => rowSource(m) === s)).map(s => SOURCE_LABELS[s]).join(' + ')
       : (SOURCE_LABELS[activity.source] ?? activity.source)
+  // Only the partner sources actually add anything beyond what's already
+  // named in sourceLabel above — and only Concept2/Garmin have data worth
+  // calling out specifically (exact erg distance/pace, HR zones). A Strava
+  // or Polar partner is named but gets no fabricated claim of extra data,
+  // since it's usually just a mirror of what Garmin already synced.
+  const partnerSourceLabel = SOURCE_ORDER.filter(s => partners.some(p => rowSource(p) === s)).map(s => SOURCE_LABELS[s]).join(' + ')
+  const partnerDataNotes = [
+    concept2Partner ? 'Concept2 ger exakt distans/tempo/delsträckor från roddmaskinen' : null,
+    garminPartner ? 'Garmin ger pulszoner' : null,
+  ].filter(Boolean).join(', ')
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-5">
@@ -157,9 +169,9 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
             <span className="text-[10px] text-muted">{sourceLabel}</span>
           </div>
         </div>
-        {partner && (
+        {partners.length > 0 && (
           <p className="text-[11px] text-accent mt-2">
-            🔗 Sammanslaget med ett {partnerIsGarmin ? 'Garmin' : 'Concept2'}-pass från samma träning — {isGarmin ? 'Concept2 ger exakt distans/tempo/delsträckor från roddmaskinen' : 'Garmin ger pulszoner'} ovanpå det du ser här.
+            🔗 Sammanslaget med {partnerSourceLabel} från samma träning{partnerDataNotes ? ` — ${partnerDataNotes}` : ''} ovanpå det du ser här.
           </p>
         )}
       </div>
@@ -273,7 +285,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         </div>
       )}
 
-      {!isGarmin && (!!raw.verified || !!raw.ranked || !!raw.workout_type) && (
+      {activity.source === 'concept2' && (!!raw.verified || !!raw.ranked || !!raw.workout_type) && (
         <div className="flex flex-wrap gap-2">
           {!!raw.workout_type && (
             <span className="text-xs bg-bg border border-edge text-muted px-2.5 py-1 rounded-lg capitalize">{String(raw.workout_type)}</span>

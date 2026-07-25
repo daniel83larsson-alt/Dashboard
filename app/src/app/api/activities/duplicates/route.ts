@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import { findDuplicateGroups, suggestKeepId, rowSource } from '@/lib/duplicates'
+import { findDuplicateGroups, suggestKeepId, isCleanCrossSourceGroup } from '@/lib/duplicates'
 
 export async function GET() {
   try {
@@ -14,15 +14,13 @@ export async function GET() {
       .eq('user_id', user.id)
       .order('start_date', { ascending: false })
 
-    // A clean 1-Garmin + 1-Concept2 pair is now merged for display and
-    // stats (Passlogg, dashboard totals) instead of being a delete-one
-    // choice — only flag groups that AREN'T that (same-source double-syncs,
-    // 3+-way ties), where deletion is still the right call.
-    const groups = findDuplicateGroups(activities ?? []).filter(group => {
-      const garmin = group.filter(a => rowSource(a) === 'garmin')
-      const concept2 = group.filter(a => rowSource(a) === 'concept2')
-      return !(garmin.length === 1 && concept2.length === 1)
-    })
+    // A clean cross-source group (one row per distinct sync source — Garmin,
+    // Concept2, Strava, Polar — all pairwise a valid merge match) is now
+    // merged for display and stats (Passlogg, dashboard totals) instead of
+    // being a delete-one choice — only flag groups that AREN'T that
+    // (same-source double-syncs, ties where only some pairs match), where
+    // deletion is still the right call.
+    const groups = findDuplicateGroups(activities ?? []).filter(group => !isCleanCrossSourceGroup(group))
     const result = groups.map(group => ({ activities: group, suggestedKeepId: suggestKeepId(group) }))
 
     return NextResponse.json({ groups: result })

@@ -3,10 +3,17 @@ import DuplicateCleanup from '@/components/DuplicateCleanup'
 import CopyTrainingLogButton from '@/components/CopyTrainingLogButton'
 import Link from 'next/link'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
-import { splitMergedPairs, dedupeForStats } from '@/lib/duplicates'
+import { splitMergedPairs, dedupeForStats, rowSource, type KnownSource, type ActivityRow } from '@/lib/duplicates'
 import { relativeDateLabel } from '@/lib/dates'
 
 const PAGE_SIZE = 20
+
+const SOURCE_LABELS: Record<KnownSource, string> = { concept2: 'Concept2', garmin: 'Garmin', strava: 'Strava', polar: 'Polar' }
+const SOURCE_ORDER: KnownSource[] = ['concept2', 'garmin', 'strava', 'polar']
+function mergedSourceLabel(members: ActivityRow[]) {
+  const present = new Set(members.map(m => rowSource(m)))
+  return SOURCE_ORDER.filter(s => present.has(s)).map(s => SOURCE_LABELS[s]).join(' + ')
+}
 
 function fmt_km(m: number) { return (m / 1000).toFixed(1) + ' km' }
 function fmt_dur(s: number) {
@@ -31,14 +38,17 @@ export default async function PassloggPage({
   const to = from + PAGE_SIZE - 1
 
   const [{ data: activities, count: totalRows }, { data: allForTotals }] = await Promise.all([
-    // Den faktiska sidan att visa — narrowed men behåller hr_zones/strava_id
-    // som dedupeForStats()/splitMergedPairs() behöver för att slå ihop
-    // Concept2+Garmin-par korrekt och inte tappa pulszondata vid ihopslagning.
+    // Den faktiska sidan att visa — narrowed men behåller hr_zones/strava_id/
+    // source som dedupeForStats()/splitMergedPairs() behöver för att slå
+    // ihop en grupp av samma pass från flera källor korrekt (Garmin, Concept2,
+    // Strava, Polar) och inte tappa pulszondata vid ihopslagning. Utan
+    // `source` faller rowSource() tillbaka på det gamla strava_id-tecken-
+    // hacket, som felaktigt skulle klassa en riktig Strava-rad som "garmin".
     // hr_zones hämtas som JSON-path (`hr_zones:raw_data->hrZones`) istället
     // för hela raw_data-kolumnen — det är det enda fältet som faktiskt läses.
     supabase
       .from('activities')
-      .select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, start_date, hr_zones:raw_data->hrZones, description', { count: 'exact' })
+      .select('id, strava_id, source, sport_type, name, distance, moving_time, average_heartrate, start_date, hr_zones:raw_data->hrZones, description', { count: 'exact' })
       .eq('user_id', user.id)
       .order('start_date', { ascending: false })
       .range(from, to),
@@ -46,9 +56,10 @@ export default async function PassloggPage({
     // historiken för att stämma, inte bara denna sida — men behöver aldrig
     // raw_data (bara vilka rader hör ihop, inte deras pulszondata), så det
     // är en mycket lättare fråga än man kan tro trots att den täcker allt.
+    // `source` behövs av samma anledning som ovan.
     supabase
       .from('activities')
-      .select('id, strava_id, sport_type, distance, moving_time, start_date')
+      .select('id, strava_id, source, sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id),
   ])
 
@@ -58,17 +69,19 @@ export default async function PassloggPage({
   const totalSessions = statRows.length
   const totalPages = Math.max(1, Math.ceil((totalRows ?? 0) / PAGE_SIZE))
 
-  // Concept2 + Garmin pairs for the same session become one card (Concept2's
-  // precise distance/pace, Garmin's HR as fallback) instead of two — the
-  // detail page already does this merge when you open either half. Only
-  // pairs within the current page merge — a pair split exactly across a
-  // page boundary shows as two unmerged cards, a rare, cosmetic-only edge
-  // case not worth the complexity of boundary-aware fetching.
-  const { singles, pairs } = splitMergedPairs(rows)
+  // Rows for the same session from more than one source (Garmin, Concept2,
+  // Strava, Polar — any combination, not just Concept2+Garmin) become one
+  // card (most precise distance/pace, HR borrowed from a partner as a
+  // fallback) instead of several — the detail page already does this merge
+  // when you open any member. Only groups fully within the current page
+  // merge — a group split across a page boundary shows as unmerged cards, a
+  // rare, cosmetic-only edge case not worth the complexity of
+  // boundary-aware fetching.
+  const { singles, groups } = splitMergedPairs(rows)
   type Row = typeof rows[number]
-  const displayItems: ({ kind: 'single'; a: Row } | { kind: 'merged'; a: Row; partner: Row })[] = [
+  const displayItems: ({ kind: 'single'; a: Row } | { kind: 'merged'; a: Row; partners: Row[] })[] = [
     ...singles.map(a => ({ kind: 'single' as const, a })),
-    ...pairs.map(p => ({ kind: 'merged' as const, a: p.primary, partner: p.partner })),
+    ...groups.map(g => ({ kind: 'merged' as const, a: g.primary, partners: g.partners })),
   ].sort((x, y) => y.a.start_date.localeCompare(x.a.start_date))
 
   return (
@@ -108,7 +121,7 @@ export default async function PassloggPage({
             {displayItems.map(item => {
               const { a } = item
               const speedOrPace = fmtSpeedOrPace(a.sport_type, a.distance, a.moving_time)
-              const hr = a.average_heartrate ?? (item.kind === 'merged' ? item.partner.average_heartrate : null)
+              const hr = a.average_heartrate ?? (item.kind === 'merged' ? item.partners.map(p => p.average_heartrate).find(h => h != null) ?? null : null)
               return (
                 <Link key={a.id} href={`/dashboard/passlogg/${a.id}`} className="bg-card border border-edge rounded-xl p-4 block hover:border-accent/40 transition-colors">
                   <div className="flex items-start justify-between mb-3">
@@ -147,7 +160,7 @@ export default async function PassloggPage({
                     </div>
                   </div>
                   {item.kind === 'merged' && (
-                    <div className="text-[10px] text-accent mt-2">Concept2 + Garmin ihopslaget</div>
+                    <div className="text-[10px] text-accent mt-2">{mergedSourceLabel([a, ...item.partners])} ihopslaget</div>
                   )}
                 </Link>
               )

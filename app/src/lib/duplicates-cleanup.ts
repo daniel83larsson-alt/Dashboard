@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { findDuplicateGroups, suggestKeepId, rowSource } from '@/lib/duplicates'
+import { findDuplicateGroups, suggestKeepId, isCleanCrossSourceGroup } from '@/lib/duplicates'
 
 type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 
@@ -10,16 +10,18 @@ type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 // survivor so switching which source "wins" never throws away data. Runs
 // automatically on every sync so duplicates never accumulate.
 //
-// EXCEPT: a clean 1-Garmin + 1-Concept2 pair for the same session is no
-// longer deleted here — Passlogg, the dashboard, and the detail page all
-// merge that pair live for display (splitMergedPairs/dedupeForStats in
-// duplicates.ts) using each row's own API route (garmin-zones needs a real
-// Garmin strava_id, concept2-detail needs a real Concept2 one). Deleting
-// either half would silently break that merge and make the copied-over
-// field unreachable anyway, since those routes gate on strava_id sign, not
-// on raw_data contents. This function now only cleans up genuine same-
-// source duplicates (double-syncs) and 3+-way ties, which the display
-// merge doesn't handle and which really are just redundant rows.
+// EXCEPT: a clean cross-source group for the same session (one row per
+// distinct sync source — Garmin, Concept2, Strava, Polar — all a valid
+// merge match) is no longer deleted here — Passlogg, the dashboard, and the
+// detail page all merge that group live for display (splitMergedPairs/
+// dedupeForStats in duplicates.ts) using each row's own API route
+// (garmin-zones needs a real Garmin strava_id, concept2-detail needs a real
+// Concept2 one). Deleting any member would silently break that merge and
+// make the copied-over field unreachable anyway, since those routes gate on
+// source, not on raw_data contents. This function now only cleans up genuine
+// same-source duplicates (double-syncs) and ties where only some pairs
+// match, which the display merge doesn't handle and which really are just
+// redundant rows.
 export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data: activities } = await supabase
     .from('activities')
@@ -28,11 +30,7 @@ export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: st
 
   if (!activities?.length) return 0
 
-  const groups = findDuplicateGroups(activities).filter(group => {
-    const garmin = group.filter(a => rowSource(a) === 'garmin')
-    const concept2 = group.filter(a => rowSource(a) === 'concept2')
-    return !(garmin.length === 1 && concept2.length === 1)
-  })
+  const groups = findDuplicateGroups(activities).filter(group => !isCleanCrossSourceGroup(group))
   if (!groups.length) return 0
 
   const idsToDelete: string[] = []

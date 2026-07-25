@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isFuzzyMatch, findDuplicateGroups, suggestKeepId, isMergeCandidate, splitMergedPairs, dedupeForStats, type ActivityRow } from './duplicates'
+import { isFuzzyMatch, findDuplicateGroups, suggestKeepId, isMergeCandidate, splitMergedPairs, dedupeForStats, bestMergePartners, isCleanCrossSourceGroup, type ActivityRow } from './duplicates'
 
 // Concept2 rows use a negative strava_id (source marker), Garmin rows a
 // positive one — same convention the real sync code uses.
@@ -48,19 +48,22 @@ describe('isMergeCandidate', () => {
     expect(isMergeCandidate(concept2, garmin)).toBe(true)
   })
 
-  it('never merges a Strava row even if its (real, positive) id would pass the legacy sign check', () => {
+  it('merges a Concept2+Strava pair — Garmin auto-forwarding to Strava is a common real combination, not just Garmin+Concept2', () => {
     // Strava's own activity ids are large positive numbers, same shape as
-    // Garmin's — without the explicit `source` field this would have looked
-    // like a real Garmin+Concept2 pair to the old sign-only check.
+    // Garmin's — without the explicit `source` field the old sign-only
+    // check would have misjudged this, and an earlier version of this logic
+    // deliberately refused to merge anything but a Garmin+Concept2 pair.
+    // Daniel's own real account syncs Garmin+Concept2+Strava simultaneously
+    // for the same session, so this must merge now.
     const concept2 = row({ id: 'c', strava_id: -1, source: 'concept2' })
     const strava = row({ id: 's', strava_id: 999999999, source: 'strava' })
-    expect(isMergeCandidate(concept2, strava)).toBe(false)
+    expect(isMergeCandidate(concept2, strava)).toBe(true)
   })
 
-  it('never merges a Polar row even with a negative id in Concept2s numeric range', () => {
+  it('merges a Garmin+Polar pair', () => {
     const garmin = row({ id: 'g', strava_id: 500, source: 'garmin' })
     const polar = row({ id: 'p', strava_id: -42, source: 'polar' })
-    expect(isMergeCandidate(garmin, polar)).toBe(false)
+    expect(isMergeCandidate(garmin, polar)).toBe(true)
   })
 
   it('still merges a real Garmin+Concept2 pair when source is explicitly set', () => {
@@ -68,45 +71,124 @@ describe('isMergeCandidate', () => {
     const garmin = row({ id: 'g', strava_id: 500, source: 'garmin' })
     expect(isMergeCandidate(concept2, garmin)).toBe(true)
   })
+
+  it('never merges a manually-logged row, even against a close distance/time match', () => {
+    const manual = row({ id: 'm', strava_id: -999, source: 'manual' })
+    const garmin = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    expect(isMergeCandidate(manual, garmin)).toBe(false)
+  })
 })
 
 describe('splitMergedPairs', () => {
   it('pairs a Concept2 row with its Garmin counterpart', () => {
-    const c = row({ id: 'c', strava_id: -1 })
-    const g = row({ id: 'g', strava_id: 500 })
-    const { singles, pairs } = splitMergedPairs([c, g])
+    const c = row({ id: 'c', strava_id: -1, source: 'concept2' })
+    const g = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    const { singles, groups } = splitMergedPairs([c, g])
     expect(singles).toHaveLength(0)
-    expect(pairs).toEqual([{ primary: c, partner: g }])
+    expect(groups).toEqual([{ primary: c, partners: [g] }])
   })
 
   it('leaves an unmatched row as a single', () => {
     const c = row({ id: 'c', strava_id: -1 })
-    const { singles, pairs } = splitMergedPairs([c])
+    const { singles, groups } = splitMergedPairs([c])
     expect(singles).toEqual([c])
-    expect(pairs).toHaveLength(0)
+    expect(groups).toHaveLength(0)
   })
 
   it('pairs two same-day sessions by closest distance instead of arbitrarily', () => {
     // A short test pull and a real workout both logged twice the same day —
     // moving_time alone can't disambiguate (see the file's own comment on
     // why distance is used), so this locks in that distance is what decides.
-    const c1 = row({ id: 'c1', strava_id: -1, distance: 500, moving_time: 120 })
-    const c2 = row({ id: 'c2', strava_id: -2, distance: 5000, moving_time: 1200 })
-    const g1 = row({ id: 'g1', strava_id: 500, distance: 520, moving_time: 130 })
-    const g2 = row({ id: 'g2', strava_id: 600, distance: 4900, moving_time: 1180 })
-    const { pairs } = splitMergedPairs([c1, c2, g1, g2])
-    expect(pairs).toHaveLength(2)
-    const byPrimary = new Map(pairs.map(p => [p.primary.id, p.partner.id]))
-    expect(byPrimary.get('c1')).toBe('g1')
-    expect(byPrimary.get('c2')).toBe('g2')
+    const c1 = row({ id: 'c1', strava_id: -1, source: 'concept2', distance: 500, moving_time: 120 })
+    const c2 = row({ id: 'c2', strava_id: -2, source: 'concept2', distance: 5000, moving_time: 1200 })
+    const g1 = row({ id: 'g1', strava_id: 500, source: 'garmin', distance: 520, moving_time: 130 })
+    const g2 = row({ id: 'g2', strava_id: 600, source: 'garmin', distance: 4900, moving_time: 1180 })
+    const { groups } = splitMergedPairs([c1, c2, g1, g2])
+    expect(groups).toHaveLength(2)
+    const byPrimary = new Map(groups.map(g => [g.primary.id, g.partners.map(p => p.id)]))
+    expect(byPrimary.get('c1')).toEqual(['g1'])
+    expect(byPrimary.get('c2')).toEqual(['g2'])
   })
 
   it('never merges rows from different sports even on the same day', () => {
     const c = row({ id: 'c', strava_id: -1, sport_type: 'Rowing' })
     const g = row({ id: 'g', strava_id: 500, sport_type: 'Run' })
-    const { singles, pairs } = splitMergedPairs([c, g])
-    expect(pairs).toHaveLength(0)
+    const { singles, groups } = splitMergedPairs([c, g])
+    expect(groups).toHaveLength(0)
     expect(singles).toHaveLength(2)
+  })
+
+  it('merges all three when the same session syncs from Garmin, Concept2 AND Strava at once', () => {
+    // The exact real-world case that prompted this generalization: Daniel's
+    // own passes sync to all three simultaneously (Garmin auto-forwards to
+    // Strava while Concept2 syncs the erg session directly) — the old
+    // pairwise-only logic could only ever combine two of the three, leaving
+    // the third sitting as a phantom duplicate everywhere stats are shown.
+    const c = row({ id: 'c', strava_id: -1, source: 'concept2', distance: 5000, moving_time: 1200 })
+    const g = row({ id: 'g', strava_id: 500, source: 'garmin', distance: 5050, moving_time: 1210 })
+    const s = row({ id: 's', strava_id: 999999999, source: 'strava', distance: 5040, moving_time: 1205 })
+    const { singles, groups } = splitMergedPairs([c, g, s])
+    expect(singles).toHaveLength(0)
+    expect(groups).toHaveLength(1)
+    expect(groups[0].primary.id).toBe('c') // Concept2 preferred as primary
+    expect(groups[0].partners.map(p => p.id).sort()).toEqual(['g', 's'])
+  })
+
+  it('does not chain two distinct same-day sessions together through a third row that loosely matches both', () => {
+    // A safety check on the clustering: only merge into a cluster when a row
+    // is a valid match against EVERY existing member, not just one — so a
+    // borderline row can't transitively link two genuinely different
+    // sessions just because it happens to match both individually.
+    const a = row({ id: 'a', strava_id: -1, source: 'concept2', distance: 4000, moving_time: 1000 })
+    const b = row({ id: 'b', strava_id: 500, source: 'garmin', distance: 5000, moving_time: 1250 }) // ~25% off a, within tolerance
+    const c = row({ id: 'c', strava_id: 999999999, source: 'strava', distance: 6200, moving_time: 1550 }) // ~25% off b, but ~55% off a
+    expect(isMergeCandidate(a, b)).toBe(true)
+    expect(isMergeCandidate(b, c)).toBe(true)
+    expect(isMergeCandidate(a, c)).toBe(false)
+    const { groups, singles } = splitMergedPairs([a, b, c])
+    // a+b merge (closest pair), c is left unmerged rather than dragged into
+    // a's group through b.
+    expect(groups).toHaveLength(1)
+    expect(groups[0].primary.id).toBe('a')
+    expect(groups[0].partners.map(p => p.id)).toEqual(['b'])
+    expect(singles.map(x => x.id)).toEqual(['c'])
+  })
+})
+
+describe('bestMergePartners', () => {
+  it('returns the closest match per other source, not just the single overall closest', () => {
+    const activity = row({ id: 'g', strava_id: 500, source: 'garmin', distance: 5000, moving_time: 1200 })
+    const concept2 = row({ id: 'c', strava_id: -1, source: 'concept2', distance: 5050, moving_time: 1210 })
+    const strava = row({ id: 's', strava_id: 999999999, source: 'strava', distance: 5100, moving_time: 1220 })
+    const partners = bestMergePartners(activity, [concept2, strava])
+    expect(partners.map(p => p.id).sort()).toEqual(['c', 's'])
+  })
+
+  it('returns an empty array when nothing matches', () => {
+    const activity = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    const unrelated = row({ id: 'x', strava_id: 999, source: 'garmin', sport_type: 'Run' })
+    expect(bestMergePartners(activity, [unrelated])).toEqual([])
+  })
+})
+
+describe('isCleanCrossSourceGroup', () => {
+  it('is true for a real Garmin+Concept2+Strava trio', () => {
+    const c = row({ id: 'c', strava_id: -1, source: 'concept2', distance: 5000, moving_time: 1200 })
+    const g = row({ id: 'g', strava_id: 500, source: 'garmin', distance: 5050, moving_time: 1210 })
+    const s = row({ id: 's', strava_id: 999999999, source: 'strava', distance: 5040, moving_time: 1205 })
+    expect(isCleanCrossSourceGroup([c, g, s])).toBe(true)
+  })
+
+  it('is false when two rows share the same source', () => {
+    const g1 = row({ id: 'g1', strava_id: 500, source: 'garmin' })
+    const g2 = row({ id: 'g2', strava_id: 501, source: 'garmin' })
+    expect(isCleanCrossSourceGroup([g1, g2])).toBe(false)
+  })
+
+  it('is false when a manual row is in the group', () => {
+    const g = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    const m = row({ id: 'm', strava_id: -999, source: 'manual' })
+    expect(isCleanCrossSourceGroup([g, m])).toBe(false)
   })
 })
 
