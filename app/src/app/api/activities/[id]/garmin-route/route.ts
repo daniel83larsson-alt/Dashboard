@@ -16,13 +16,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { data: activity } = await supabase
       .from('activities')
-      .select('id, strava_id, raw_data')
+      .select('id, strava_id, source, raw_data')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
     if (!activity) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (activity.strava_id < 0) return NextResponse.json({ polyline: null }) // Concept2, no GPS
+    // strava_id is used as a real Garmin activity id below — only safe when
+    // source is actually 'garmin' (a Strava row's own positive id would
+    // otherwise pass the old sign-only check).
+    if (activity.source !== 'garmin') return NextResponse.json({ polyline: null })
 
     const raw = (activity.raw_data ?? {}) as Record<string, unknown>
     if (Array.isArray(raw.polyline)) {

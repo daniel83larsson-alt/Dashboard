@@ -14,13 +14,16 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     const { data: activity } = await supabase
       .from('activities')
-      .select('id, strava_id, raw_data')
+      .select('id, strava_id, source, raw_data')
       .eq('id', id)
       .eq('user_id', user.id)
       .single()
 
     if (!activity) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (activity.strava_id >= 0) return NextResponse.json({ detail: null }) // Garmin, not Concept2
+    // strava_id×-1 is used as a real Concept2 result id below — only safe
+    // when source is actually 'concept2' (a manual/mobility row's
+    // -Date.now() id would otherwise pass the old sign-only check).
+    if (activity.source !== 'concept2') return NextResponse.json({ detail: null })
 
     const raw = (activity.raw_data ?? {}) as Record<string, unknown>
     const cachedWorkout = raw.workout as { splits?: unknown[] } | undefined

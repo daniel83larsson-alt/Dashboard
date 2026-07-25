@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
     // (positive) id space without needing a schema change for a "source"
     // column just for this one feature.
     strava_id: -Date.now(),
+    source: 'manual',
     sport_type: 'Mobility',
     name: `Rörlighetspass (${regions.map(r => REGION_LABELS[r]).join(', ')})`,
     distance: 0,

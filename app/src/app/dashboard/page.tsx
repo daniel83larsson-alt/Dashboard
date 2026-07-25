@@ -45,6 +45,7 @@ function shortTake(text: string, max = 140): string {
 type Activity = {
   id: string
   strava_id: number
+  source?: string
   description?: string | null
   start_date: string
   distance: number
@@ -87,7 +88,7 @@ export default async function DashboardPage() {
     // in the reported cold-start delay (measured: ~3MB → ~290KB for this
     // query alone after narrowing). PR/streak detection genuinely needs the
     // full history, not just a recent slice, so no date/row limit here.
-    supabase.from('activities').select('id, strava_id, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, hr_zones:raw_data->hrZones, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
+    supabase.from('activities').select('id, strava_id, source, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, hr_zones:raw_data->hrZones, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
     // Replaces the old coach_sessions('weekly_plan') JSON blob — this week's
     // plan (if generated) plus its sessions in one round-trip via the FK

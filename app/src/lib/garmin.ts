@@ -52,6 +52,7 @@ export function garminActivityToRow(a: IActivity, userId: string) {
   return {
     user_id: userId,
     strava_id: a.activityId,
+    source: 'garmin',
     sport_type: sportType,
     name: a.activityName || `${sportType} ${formatDate(a.startTimeLocal)}`,
     distance: a.distance ? Math.round(a.distance) : null,

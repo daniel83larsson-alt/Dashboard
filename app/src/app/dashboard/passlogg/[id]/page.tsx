@@ -71,7 +71,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   }
 
   const isMobility = activity.sport_type === 'Mobility'
-  const isGarmin = !isMobility && activity.strava_id >= 0
+  const isGarmin = !isMobility && activity.source === 'garmin'
   const raw = (activity.raw_data ?? {}) as Record<string, unknown>
   const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
   const mobilityExercises = isMobility
@@ -89,7 +89,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
     ? { data: [] }
     : await supabase
         .from('activities')
-        .select('id, strava_id, start_date, distance, moving_time, sport_type, name, average_heartrate, max_heartrate, description, raw_data')
+        .select('id, strava_id, source, start_date, distance, moving_time, sport_type, name, average_heartrate, max_heartrate, description, raw_data')
         .eq('user_id', user.id)
         .eq('sport_type', activity.sport_type)
         .neq('id', activity.id)
@@ -97,7 +97,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         .lte('start_date', windowEnd.toISOString())
 
   const partner = bestMergePartner(activity, sameDayActivities ?? [])
-  const partnerIsGarmin = partner ? partner.strava_id >= 0 : false
+  const partnerIsGarmin = partner ? partner.source === 'garmin' : false
   const partnerRaw = (partner?.raw_data ?? {}) as Record<string, unknown>
 
   const garminRaw = isGarmin ? raw : (partner && partnerIsGarmin ? partnerRaw : null)
@@ -121,11 +121,20 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const garminActivityId = isGarmin ? activity.id : (partner && partnerIsGarmin ? partner.id : undefined)
   const concept2ActivityId = !isGarmin ? activity.id : (partner && !partnerIsGarmin ? partner.id : undefined)
 
+  const SOURCE_LABELS: Record<string, string> = {
+    garmin: 'Garmin',
+    concept2: 'Concept2',
+    strava: 'Strava',
+    polar: 'Polar',
+    manual: 'Manuellt loggat',
+  }
   const sourceLabel = isMobility
     ? 'Rörlighet'
     : partner
+      // Merging only ever pairs a real Concept2+Garmin duo (see
+      // isMergeCandidate in duplicates.ts) — never a Strava/Polar/manual row.
       ? 'Concept2 + Garmin'
-      : (isGarmin ? 'Garmin' : 'Concept2')
+      : (SOURCE_LABELS[activity.source] ?? activity.source)
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-5xl w-full space-y-5">

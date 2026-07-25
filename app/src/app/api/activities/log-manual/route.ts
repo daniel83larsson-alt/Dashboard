@@ -35,6 +35,7 @@ export async function POST(request: NextRequest) {
     // strava_id to dedupe on — same negative-timestamp convention already
     // used by the mobility logger.
     strava_id: -Date.now(),
+    source: 'manual',
     sport_type: sportType,
     // An optional exercise summary (e.g. "5x10 Clean and Press") from the
     // kettlebell picker overrides the generic sport-label name — capped and

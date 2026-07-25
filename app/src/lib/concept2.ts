@@ -118,6 +118,7 @@ export function concept2ResultToActivity(r: Concept2Result, userId: string) {
   return {
     user_id: userId,
     strava_id: r.id * -1,
+    source: 'concept2',
     sport_type: 'Rowing',
     name: `Rodd ${formatDate(r.date)}`,
     distance: r.distance,

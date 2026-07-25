@@ -6,6 +6,7 @@ import { fmtSpeedOrPace } from '@/lib/sport'
 type Activity = {
   id: string
   strava_id: number
+  source?: string
   sport_type: string
   name: string
   distance: number
@@ -70,7 +71,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
       const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
 
       let zoneStr = ''
-      if (activity.strava_id >= 0) {
+      if (activity.source === 'garmin') {
         try {
           const res = await fetch(`/api/activities/${activity.id}/garmin-zones`)
           const data = await res.json()
@@ -93,7 +94,7 @@ export default function FeedbackDrawer({ activity }: { activity: Activity }) {
       // faktiskt visar upplägget inom passet (negativ split, jämn takt,
       // avmattning mot slutet), utan dem har coachen bara ett snitt att gå på.
       let splitStr = ''
-      if (activity.strava_id < 0) {
+      if (activity.source === 'concept2') {
         try {
           const res = await fetch(`/api/activities/${activity.id}/concept2-detail`)
           const data = await res.json()

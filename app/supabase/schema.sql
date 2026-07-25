@@ -1034,3 +1034,25 @@ grant execute on function public.unsubscribe_weekly_digest(uuid) to anon, authen
 -- den delade lib/coach-tone.ts, inte bara en enda prompt.
 alter table public.profiles add column if not exists coach_tone text not null default 'neutral'
   check (coach_tone in ('snall', 'neutral', 'tuff'));
+
+-- Explicit source of truth for "which sync source is this row from", ahead
+-- of adding Strava/Polar. Before this, the whole app inferred Garmin vs
+-- Concept2 from strava_id's SIGN (Garmin: real positive id, Concept2:
+-- -1×real id, manual/mobility: -Date.now()) — a two-source hack that breaks
+-- the moment a third source with its own positive-or-negative id space
+-- exists (a Strava row would collide with the "garmin" bucket, a Polar row
+-- could collide with either). Backfilled once from the historical sign
+-- convention (verified against live data: garmin ids are large positive,
+-- concept2 ids are small negative down to -118M, manual ids are large
+-- negative from -Date.now(), comfortably separated by the -100B cutoff
+-- below), never re-run.
+alter table public.activities add column if not exists source text;
+update public.activities set source = case
+  when strava_id >= 0 then 'garmin'
+  when strava_id < -100000000000 then 'manual'
+  else 'concept2'
+end where source is null;
+alter table public.activities alter column source set default 'manual';
+alter table public.activities alter column source set not null;
+alter table public.activities add constraint activities_source_check
+  check (source in ('garmin', 'concept2', 'strava', 'polar', 'manual'));

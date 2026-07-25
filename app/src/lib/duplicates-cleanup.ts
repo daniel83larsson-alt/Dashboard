@@ -1,5 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { findDuplicateGroups, suggestKeepId } from '@/lib/duplicates'
+import { findDuplicateGroups, suggestKeepId, rowSource } from '@/lib/duplicates'
 
 type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 
@@ -23,14 +23,14 @@ type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data: activities } = await supabase
     .from('activities')
-    .select('id, strava_id, start_date, distance, moving_time, sport_type, name, average_heartrate, description, created_at')
+    .select('id, strava_id, source, start_date, distance, moving_time, sport_type, name, average_heartrate, description, created_at')
     .eq('user_id', userId)
 
   if (!activities?.length) return 0
 
   const groups = findDuplicateGroups(activities).filter(group => {
-    const garmin = group.filter(a => a.strava_id >= 0)
-    const concept2 = group.filter(a => a.strava_id < 0)
+    const garmin = group.filter(a => rowSource(a) === 'garmin')
+    const concept2 = group.filter(a => rowSource(a) === 'concept2')
     return !(garmin.length === 1 && concept2.length === 1)
   })
   if (!groups.length) return 0

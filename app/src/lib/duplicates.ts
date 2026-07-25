@@ -20,6 +20,34 @@ export type ActivityRow = {
   description?: string | null
   created_at?: string
   hr_zones?: unknown
+  // Optional on purpose — most callers only need it for the garmin/concept2
+  // split inside splitMergedPairs(), not for their own logic, so they're not
+  // forced to add it to every select() just to satisfy the type. See
+  // rowSource() below for what happens when it's omitted.
+  source?: string
+}
+
+// Ground truth for "which sync source is this row from" WHEN the caller's
+// select() included the `source` column. If it didn't (most existing call
+// sites don't, and aren't required to — see ActivityRow above), this falls
+// back to the legacy strava_id-SIGN heuristic (Garmin: real positive id,
+// Concept2: -1×real id). That fallback is exactly right for every row that
+// existed before Strava/Polar shipped (all backfilled correctly, see
+// schema.sql) but can misjudge a Strava row (real positive id) as "garmin"
+// or a Polar row as either, IF AND ONLY IF a call site that omits `source`
+// also happens to run splitMergedPairs()/dedupeForStats() over a mix that
+// includes real Strava/Polar rows. Worst case there is cosmetic (a stats
+// aggregate might treat an unrelated same-day/sport Strava+Concept2 pair as
+// one merged session instead of two) — never a data leak. The four routes
+// that call a specific vendor's API using strava_id as that vendor's real
+// activity id (garmin-zones, garmin-route, concept2-detail, and the
+// Passlogg detail page that picks between them) all select `source`
+// explicitly and never rely on this fallback, since a wrong guess there
+// means calling Garmin's API with a Strava id — a real functional bug, not
+// just an imprecise aggregate.
+export function rowSource(a: ActivityRow): 'garmin' | 'concept2' | 'other' {
+  if (a.source) return a.source === 'garmin' ? 'garmin' : a.source === 'concept2' ? 'concept2' : 'other'
+  return a.strava_id >= 0 ? 'garmin' : 'concept2'
 }
 
 // Exported so the activity-detail page can find the matching Garmin/Concept2
@@ -84,7 +112,10 @@ export function isMergeCandidate(a: ActivityRow, b: ActivityRow): boolean {
   if (a.id === b.id) return false
   if (a.sport_type !== b.sport_type) return false
   if (a.start_date.slice(0, 10) !== b.start_date.slice(0, 10)) return false
-  if ((a.strava_id >= 0) === (b.strava_id >= 0)) return false // must be opposite sources
+  const aSource = rowSource(a)
+  const bSource = rowSource(b)
+  if (aSource === 'other' || bSource === 'other') return false // only a real garmin+concept2 pair ever merges
+  if (aSource === bSource) return false // must be opposite sources
 
   const distOk = a.distance > 0 && b.distance > 0
     ? Math.abs(a.distance - b.distance) / Math.max(a.distance, b.distance) < 0.3
@@ -136,8 +167,8 @@ export function splitMergedPairs<T extends ActivityRow>(activities: T[]): { sing
   }
 
   for (const group of byDaySport.values()) {
-    const concept2 = group.filter(a => a.strava_id < 0)
-    const garmin = group.filter(a => a.strava_id >= 0)
+    const concept2 = group.filter(a => rowSource(a) === 'concept2')
+    const garmin = group.filter(a => rowSource(a) === 'garmin')
     const candidates = concept2
       .flatMap(c => garmin.filter(g => isMergeCandidate(c, g)).map(g => ({ c, g, distDiff: Math.abs(c.distance - g.distance) })))
       .sort((x, y) => x.distDiff - y.distDiff)

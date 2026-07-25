@@ -47,6 +47,27 @@ describe('isMergeCandidate', () => {
     const garmin = row({ id: 'g', strava_id: 500, distance: 100, moving_time: 72 })
     expect(isMergeCandidate(concept2, garmin)).toBe(true)
   })
+
+  it('never merges a Strava row even if its (real, positive) id would pass the legacy sign check', () => {
+    // Strava's own activity ids are large positive numbers, same shape as
+    // Garmin's — without the explicit `source` field this would have looked
+    // like a real Garmin+Concept2 pair to the old sign-only check.
+    const concept2 = row({ id: 'c', strava_id: -1, source: 'concept2' })
+    const strava = row({ id: 's', strava_id: 999999999, source: 'strava' })
+    expect(isMergeCandidate(concept2, strava)).toBe(false)
+  })
+
+  it('never merges a Polar row even with a negative id in Concept2s numeric range', () => {
+    const garmin = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    const polar = row({ id: 'p', strava_id: -42, source: 'polar' })
+    expect(isMergeCandidate(garmin, polar)).toBe(false)
+  })
+
+  it('still merges a real Garmin+Concept2 pair when source is explicitly set', () => {
+    const concept2 = row({ id: 'c', strava_id: -1, source: 'concept2' })
+    const garmin = row({ id: 'g', strava_id: 500, source: 'garmin' })
+    expect(isMergeCandidate(concept2, garmin)).toBe(true)
+  })
 })
 
 describe('splitMergedPairs', () => {
