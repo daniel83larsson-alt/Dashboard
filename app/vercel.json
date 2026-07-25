@@ -13,6 +13,10 @@
       "schedule": "30 5 * * *"
     },
     {
+      "path": "/api/cron/prod-smoke",
+      "schedule": "45 5 * * *"
+    },
+    {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 16 * * 0"
     }

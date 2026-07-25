@@ -44,6 +44,7 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
   const ALLOWLIST = [
     'app/api/cron/streak-reminder/route.ts',
     'app/api/cron/isolation-check/route.ts',
+    'app/api/cron/prod-smoke/route.ts',
     'app/api/cron/weekly-digest/route.ts',
     'app/api/cron/sync-all/route.ts',
     'app/api/weekly-digest/unsubscribe/route.ts',

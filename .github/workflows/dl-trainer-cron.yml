@@ -16,6 +16,7 @@ on:
     - cron: '0 5 * * *'    # sync-all — matches vercel.json
     - cron: '0 18 * * *'   # streak-reminder — matches vercel.json
     - cron: '30 5 * * *'   # isolation-check — matches vercel.json
+    - cron: '45 5 * * *'   # prod-smoke — matches vercel.json
     - cron: '0 16 * * 0'   # weekly-digest, Sunday only — matches vercel.json (18:00 svensk sommartid)
   workflow_dispatch:
     inputs:
@@ -23,7 +24,7 @@ on:
         description: 'Which route to call (for manual testing)'
         required: true
         type: choice
-        options: [sync-all, streak-reminder, isolation-check, weekly-digest]
+        options: [sync-all, streak-reminder, isolation-check, prod-smoke, weekly-digest]
 
 jobs:
   call:
@@ -39,6 +40,7 @@ jobs:
               "0 5 * * *") echo "path=sync-all" >> "$GITHUB_OUTPUT" ;;
               "0 18 * * *") echo "path=streak-reminder" >> "$GITHUB_OUTPUT" ;;
               "30 5 * * *") echo "path=isolation-check" >> "$GITHUB_OUTPUT" ;;
+              "45 5 * * *") echo "path=prod-smoke" >> "$GITHUB_OUTPUT" ;;
               "0 16 * * 0") echo "path=weekly-digest" >> "$GITHUB_OUTPUT" ;;
             esac
           fi
