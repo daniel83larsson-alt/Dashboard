@@ -11,7 +11,7 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
-import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak } from '@/lib/streaks'
+import { currentDailyStreak, currentWeeklyStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from '@/lib/streaks'
 import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
@@ -147,7 +147,8 @@ export default async function DashboardPage() {
 
   const dailyStreak = currentDailyStreak(activities)
   const weeklyStreak = currentWeeklyStreak(activities)
-  const stepStreak = currentStepGoalStreak(wellnessStore?.history ?? [], stepGoal)
+  const stepGoalDaysMet = daysMetStepGoalThisWeek(wellnessStore?.history ?? [], stepGoal)
+  const stepGoalDaysElapsed = daysElapsedThisWeek()
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
@@ -292,8 +293,10 @@ export default async function DashboardPage() {
           </div>
           {(wellnessStore?.history?.length ?? 0) > 0 && (
             <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {stepStreak}</div>
-              <div className="text-muted text-xs mt-1">{stepStreak === 1 ? 'dag med stegmål' : 'dagar med stegmål'}</div>
+              <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {stepGoalDaysMet}</div>
+              <div className="text-muted text-xs mt-1">
+                av {stepGoalDaysElapsed} {stepGoalDaysElapsed === 1 ? 'dag' : 'dagar'} denna vecka
+              </div>
             </div>
           )}
         </div>

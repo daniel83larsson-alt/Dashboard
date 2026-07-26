@@ -49,6 +49,36 @@ export function currentWeeklyStreak(activities: { start_date: string }[], now = 
   return streak
 }
 
+// How many days of the CURRENT calendar week (Monday-start, same boundary
+// as Veckoplan/Veckans Recap) have passed so far, including today — the
+// denominator for the Översikt step-goal card's "X av Y dagar" label, so a
+// Tuesday shows "av 2" rather than a full week's worth before it's even
+// possible to have hit that many.
+export function daysElapsedThisWeek(now = new Date()): number {
+  const weekStart = startOfWeek(now)
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+  return Math.round((today.getTime() - weekStart.getTime()) / DAY_MS) + 1
+}
+
+// Days in the CURRENT calendar week (Monday-start) where the step goal was
+// met — a plain count, not a chain. Daniel: "Så tråkigt när man inte får
+// ihop alla dagar" about the old currentStepGoalStreak-based card below,
+// which reset to 0 the instant a single day was missed. This is the
+// Översikt card's replacement metric: one missed Monday no longer erases a
+// good Tuesday-Thursday. currentStepGoalStreak itself is kept as-is (still
+// used by Insikter's AI context below, which Daniel didn't ask to change).
+export function daysMetStepGoalThisWeek(history: { date: string; steps: number | null }[], goal: number, now = new Date()): number {
+  if (!goal) return 0
+  const weekStartKey = toDayKey(startOfWeek(now))
+  const todayKey = toDayKey(now)
+  return history.filter(h => {
+    if (h.steps == null) return false
+    const dayKey = h.date.slice(0, 10)
+    return dayKey >= weekStartKey && dayKey <= todayKey && (h.steps ?? 0) >= goal
+  }).length
+}
+
 // Consecutive days where recorded steps met the user's goal, walking back
 // from the most recent day with wellness data. Stale sync (no data for 2+
 // days) reads as 0 rather than a frozen, misleading number.
