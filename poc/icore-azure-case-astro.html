@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Case: Order till Astro — löskopplat med iCore + Azure + LLM</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--blue2:#3d8bff;--teal:#00c9a7;--purple:#7c5cbf;
+  --orange:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --icore:#94a3b8;--azure:#00c9a7;--dotnet:#7c5cbf;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --radius:12px;--shadow:0 4px 24px rgba(0,0,0,.08);--line:#cbd5e1;
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+.mono{font-family:'SF Mono',Consolas,monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+.hero{background:var(--navy);color:#fff;padding:68px 0 56px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(0,201,167,.13);color:#5be6cd;border:1px solid rgba(0,201,167,.35);padding:6px 13px;border-radius:99px;margin-bottom:22px}
+h1.h-title{font-size:clamp(27px,4vw,38px);font-weight:800;line-height:1.2;letter-spacing:-.01em;max-width:22ch;text-wrap:balance}
+h1.h-title .mono{color:var(--teal);font-family:'SF Mono',Consolas,monospace;font-size:.85em}
+.h-sub{font-size:15.5px;color:#b6c2d9;margin-top:16px;max-width:60ch;line-height:1.6}
+.route{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:28px;font-size:12.5px}
+.route .seg{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);padding:7px 12px;border-radius:8px;color:#dbe4f5;font-weight:600}
+.route .ar{color:#5b6f8f}
+
+section{padding:50px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:10px}
+h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01em;max-width:30ch;text-wrap:balance}
+.s-desc{font-size:14.5px;color:var(--gray600);margin-top:12px;max-width:66ch;line-height:1.65}
+
+/* legend */
+.legend{display:flex;gap:18px;margin-top:22px;flex-wrap:wrap}
+.legend-item{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:600;color:var(--gray600)}
+.legend-dot{width:10px;height:10px;border-radius:3px}
+
+/* diagram */
+.diagram{margin-top:24px;background:var(--navy);border-radius:16px;padding:32px 26px;position:relative;overflow:hidden}
+.diagram::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
+.diagram-inner{position:relative;overflow-x:auto}
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:760px}
+.step-col{flex:1;display:flex;flex-direction:column;gap:8px}
+.sys-badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;text-align:center;padding:4px 0;border-radius:6px 6px 0 0}
+.sys-badge.icore{background:rgba(148,163,184,.18);color:#cbd5e1}
+.sys-badge.azure{background:rgba(0,201,167,.18);color:#5be6cd}
+.step-box{background:var(--navy3);border:1px solid rgba(255,255,255,.1);border-radius:0 0 10px 10px;padding:14px 14px 16px;text-align:center;flex:1}
+.step-box.icore-b{border-color:rgba(148,163,184,.35)}
+.step-box.azure-b{border-color:rgba(0,201,167,.4)}
+.step-box .sb-n{font-size:12.5px;font-weight:700;color:#fff;line-height:1.4}
+.step-box .sb-d{font-size:10.5px;color:#93a3bf;margin-top:6px;line-height:1.5}
+.step-box .sb-tag{display:inline-block;margin-top:9px;font-size:8.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;padding:2px 7px;border-radius:99px;background:rgba(124,92,191,.2);color:#c4b0f0}
+.flow-arrow{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#5b6f8f;font-size:14px;padding:0 8px;flex-shrink:0;margin-top:14px}
+.flow-arrow span{font-size:8px;color:#5b6f8f;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:2px;white-space:nowrap}
+.callback{margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.15);display:flex;align-items:center;gap:10px;font-size:11px;color:#93a3bf}
+.callback b{color:#cbd5e1}
+
+/* before/after */
+.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:26px}
+.ba-card{border-radius:var(--radius);padding:22px;border:1px solid var(--gray200)}
+.ba-card.before{background:var(--gray50);display:flex;flex-direction:column}
+.ba-card.before .ba-block{margin:auto 0}
+.ba-card.after{background:var(--white);box-shadow:var(--shadow)}
+.ba-label{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:12px}
+.ba-card.before .ba-label{color:var(--gray400)}
+.ba-card.after .ba-label{color:var(--teal)}
+.ba-block{background:var(--navy);color:#fff;border-radius:9px;padding:14px 16px;font-size:12px;text-align:center;font-weight:600}
+.ba-steps{display:flex;flex-direction:column;gap:6px}
+.ba-mini{background:var(--white);border:1px solid var(--gray200);border-radius:8px;padding:9px 12px;font-size:11.5px;font-weight:600;color:var(--gray800)}
+
+/* fast path */
+.steps{margin-top:30px;position:relative}
+.step{display:grid;grid-template-columns:44px 1fr;gap:18px;position:relative;padding-bottom:26px}
+.step:last-child{padding-bottom:0}
+.step:not(:last-child)::before{content:'';position:absolute;left:21px;top:44px;bottom:-2px;width:2px;background:var(--gray200)}
+.step-num{width:44px;height:44px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0;z-index:1}
+.step-body{background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius);padding:15px 20px;box-shadow:var(--shadow)}
+.step-body h3{font-size:14px;font-weight:800;margin-bottom:4px}
+.step-body p{font-size:12.5px;color:var(--gray600);line-height:1.6}
+.step-body .why{display:inline-block;margin-top:8px;font-size:10.5px;font-weight:700;color:var(--blue);background:rgba(30,111,255,.08);padding:3px 9px;border-radius:6px}
+
+/* footer */
+.cta{background:var(--navy);color:#fff;padding:48px 0;text-align:center}
+.cta h2{font-size:20px;font-weight:800;margin-bottom:8px}
+.cta p{color:#b6c2d9;font-size:13px;max-width:56ch;margin:0 auto}
+
+@media (max-width:640px){
+  .ba-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Verkligt case · Ordermottagning → Astro WMS</div>
+    <h1 class="h-title">Ett riktigt flöde, isärplockat: <span class="mono">FTP → IM → Astro</span></h1>
+    <p class="h-sub">Inte ett påhittat exempel — er faktiska orderintegration mot Astro, brutet i fyra fristående steg som triggar varandra via event. Så lite som möjligt rört i iCore. Resten byggt snabbt, med en LLM, i Azure.</p>
+    <div class="route">
+      <div class="seg">Källsystem</div><div class="ar">→ FTP</div>
+      <div class="seg">Mappning + förädling</div><div class="ar">→ IM</div>
+      <div class="seg">Mappning</div><div class="ar">→ Astro-format</div>
+      <div class="seg">API</div><div class="ar">→</div>
+      <div class="seg">Astro (WMS)</div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Arkitektur</div>
+    <h2 class="s-title">Var varje steg kör, och varför just där</h2>
+    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter vad som redan fungerar. FTP-hämtningen rörs inte. Allt som behöver kunna ändras, synas och byggas av en LLM flyttar till Azure — som fristående, versionerade steg.</p>
+
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:var(--icore)"></div>iCore — oförändrat</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--azure)"></div>Azure — nytt, LLM-genererat</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dotnet)"></div>.NET — typad API-klient</div>
+    </div>
+
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="flow-row">
+          <div class="step-col">
+            <div class="sys-badge icore">iCore</div>
+            <div class="step-box icore-b">
+              <div class="sb-n">1 · FTP-hämtning</div>
+              <div class="sb-d">Befintlig connector. Rörs inte — fungerar redan.</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→<span>event</span></div>
+          <div class="step-col">
+            <div class="sys-badge azure">Azure</div>
+            <div class="step-box azure-b">
+              <div class="sb-n">2 · Mappa + förädla → IM</div>
+              <div class="sb-d">Strukturerar om till kanoniskt format och berikar datan i samma steg.</div>
+              <div class="sb-tag">Anropar iCore för regler/masterdata</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→<span>event</span></div>
+          <div class="step-col">
+            <div class="sys-badge azure">Azure</div>
+            <div class="step-box azure-b">
+              <div class="sb-n">3 · Mappa IM → Astro-format</div>
+              <div class="sb-d">Samma stegkontrakt som steg 2, egen version, byts oberoende.</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→<span>event</span></div>
+          <div class="step-col">
+            <div class="sys-badge azure">Azure</div>
+            <div class="step-box azure-b" style="border-color:rgba(124,92,191,.45)">
+              <div class="sb-n">4 · API-anrop till Astro</div>
+              <div class="sb-d">Typad klient mot Astros API. Körs asynkront — svarar inte alltid direkt.</div>
+              <div class="sb-tag" style="background:rgba(124,92,191,.22);color:#c4b0f0">.NET</div>
+            </div>
+          </div>
+        </div>
+        <div class="callback">↩ <b>Steg 2</b> läser regler och masterdata direkt från iCore via API — det ni redan är bra på återanvänds, det byggs inte om.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Före / efter</div>
+    <h2 class="s-title">Från en kedja till fyra fristående steg</h2>
+    <div class="ba-grid">
+      <div class="ba-card before">
+        <div class="ba-label">Idag</div>
+        <div class="ba-block">Hela flödet — hämta, mappa, mappa, skicka — en enda kedja i gamla developern. Ändra en del, testa hela.</div>
+      </div>
+      <div class="ba-card after">
+        <div class="ba-label">Löskopplat</div>
+        <div class="ba-steps">
+          <div class="ba-mini">1. FTP-hämtning — event: "fil mottagen"</div>
+          <div class="ba-mini">2. Mappa + förädla → IM — event: "IM klar"</div>
+          <div class="ba-mini">3. Mappa → Astro-format — event: "redo att skicka"</div>
+          <div class="ba-mini">4. API-anrop till Astro — event: "levererad"</div>
+        </div>
+      </div>
+    </div>
+    <p class="s-desc">Fyra separata event istället för en kedja. Ett steg kan bytas, testas och driftsättas utan att röra de andra tre — och ett fel i steg 3 stoppar inte steg 1 eller 2 för nästa fil.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Snabbaste vägen</div>
+    <h2 class="s-title">Hur ni nyttjar en LLM snabbast, ihop med iCore</h2>
+    <p class="s-desc">Målet är inte att bygga plattformen om. Målet är ett körbart bevis på det här ena flödet, på kortast möjliga tid.</p>
+    <div class="steps">
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body"><h3>Rör inte FTP-hämtningen</h3><p>Den fungerar redan. Ingen anledning att bygga om något som inte är trasigt.</p><span class="why">Sparar tid direkt</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body"><h3>Öppna de två API:erna i iCore — bara för det här flödet</h3><p>"Hämta fil" och "trigga event", skopat till just den här integrationen. Inte hela plattformen på en gång.</p><span class="why">Minsta möjliga ändring i iCore</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body"><h3>Låt en LLM skriva de två mappningsstegen</h3><p>Mot samma stegkontrakt som redan finns och är testat (samma form som fraktkalkyl-exemplet) — bara med IM- och Astro-fälten istället för fraktdata.</p><span class="why">Ren kod, LLM:en kan faktiskt läsa och ändra den</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body"><h3>Låt en LLM generera .NET-klienten mot Astro</h3><p>Samma stegkontrakt, men typad och byggd för ett riktigt API-anrop med retries och felhantering. Körs asynkront.</p><span class="why">Rätt verktyg för ett tyngre steg</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">5</div>
+        <div class="step-body"><h3>Testa alla fyra offline mot exempeldata</h3><p>Innan en enda riktig order rör vid det. Samma test-innan-aktivera-mönster som redan bevisats.</p><span class="why">Ingen risk mot produktion</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">6</div>
+        <div class="step-body"><h3>Peka om en dispatch-rad i iCore — bara för Astro-flödet</h3><p>Resten av plattformen, alla andra kunder och integrationer, opåverkade.</p><span class="why">Litet, reversibelt steg</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>Ett flöde. Fyra steg. Ett bevis.</h2>
+    <p>Inte hela plattformen om — ett riktigt kundflöde, byggt löskopplat, för att se om resten ska följa efter.</p>
+  </div>
+</div>
+
+</body>
+</html>
