@@ -46,6 +46,22 @@ function isNum(v: unknown): v is number {
   return typeof v === 'number' && !Number.isNaN(v)
 }
 
+// Garmin reports moving_time (excludes standing-still/paused stretches) and
+// elapsed_time (the full recording) separately — for most sports they're
+// close enough that showing just one is fine, but a hike with viewpoint
+// stops or a long break can leave them minutes apart. HR zones (fetched
+// separately from Garmin, see ActivityEnrichment) are binned against the
+// FULL recording, not moving-only, so on a pass like that the zone minutes
+// visibly add up to more than the single "Tid" stat — confusing, and
+// exactly what Daniel flagged from a real hike (30m17s moving_time next to
+// zones summing to ~70 min of a 73-minute elapsed hike). Surfaced as a
+// second stat, not a silent swap, only when the gap is real (10%+ AND at
+// least 5 minutes) so a normal run/row/ride with a few seconds of GPS
+// jitter doesn't grow an extra, redundant number.
+function hasMeaningfulPause(movingTime: number, elapsedTime: number | null): elapsedTime is number {
+  return elapsedTime != null && elapsedTime > movingTime * 1.1 && elapsedTime - movingTime >= 300
+}
+
 export default async function ActivityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createSupabaseServerClient()
@@ -74,6 +90,7 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const isGarmin = !isMobility && activity.source === 'garmin'
   const raw = (activity.raw_data ?? {}) as Record<string, unknown>
   const speedOrPace = fmtSpeedOrPace(activity.sport_type, activity.distance, activity.moving_time)
+  const showsElapsedTime = hasMeaningfulPause(activity.moving_time, activity.elapsed_time)
   const mobilityExercises = isMobility
     ? ((raw.exercises ?? []) as Array<{ id: string; name: string; region: Region; dose: string }>)
     : []
@@ -209,8 +226,14 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
           )}
           <div>
             <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtDur(activity.moving_time)}</div>
-            <div className="text-muted text-xs mt-1">Tid</div>
+            <div className="text-muted text-xs mt-1">{showsElapsedTime ? 'Rörelsetid' : 'Tid'}</div>
           </div>
+          {showsElapsedTime && (
+            <div>
+              <div className="font-mono text-accent text-lg lg:text-2xl font-bold leading-none">{fmtDur(activity.elapsed_time!)}</div>
+              <div className="text-muted text-xs mt-1">Total tid</div>
+            </div>
+          )}
           {speedOrPace && (
             <div>
               <div className="font-mono text-lcd text-lg lg:text-2xl font-bold leading-none">{speedOrPace.value}</div>
