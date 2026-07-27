@@ -1,0 +1,24 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-all",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/streak-reminder",
+      "schedule": "0 18 * * *"
+    },
+    {
+      "path": "/api/cron/isolation-check",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/cron/prod-smoke",
+      "schedule": "45 5 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-digest",
+      "schedule": "0 16 * * 0"
+    }
+  ]
+}

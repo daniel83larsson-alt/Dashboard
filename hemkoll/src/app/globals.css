@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #12100e;
+  --card: #1c1815;
+  --edge: #332c25;
+  --accent: #e8934a;
+  --lcd: #b9a58e;
+  --muted: #a08f7d;
+  --fg: #f0e9e1;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-lcd: var(--lcd);
+  --color-muted: var(--muted);
+  --color-fg: var(--fg);
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}

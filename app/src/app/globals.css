@@ -1,0 +1,41 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #0e1113;
+  --card: #161b1e;
+  --edge: #2a3035;
+  --accent: #ccd400;
+  --lcd: #a7bda9;
+  --muted: #8899a0;
+  --fg: #e8ecef;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-card: var(--card);
+  --color-edge: var(--edge);
+  --color-accent: var(--accent);
+  --color-lcd: var(--lcd);
+  --color-muted: var(--muted);
+  --color-fg: var(--fg);
+  --font-sans: var(--font-space);
+  --font-mono: var(--font-jb);
+}
+
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-space), system-ui, sans-serif;
+  /* Guards against mobile Safari's layout viewport getting stuck wider
+     than the device after a transient overflow from stray long content
+     (e.g. an unbroken long email/test value) - it doesn't auto-shrink
+     back until the user pinch-zooms. No page needs horizontal scroll. */
+  overflow-x: hidden;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
