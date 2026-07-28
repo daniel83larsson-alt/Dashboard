@@ -118,12 +118,12 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
   <div class="wrap">
     <div class="s-eyebrow">Arkitektur</div>
     <h2 class="s-title">Var varje steg kör, och varför just där</h2>
-    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter var logiken redan har ett bra hem. FTP-hämtningen rörs inte. Förädlingen rörs inte heller — den har redan tillgång till produktens regler och sättningar i iCore, och att bygga om det i Azure hade bara varit dubbelarbete. Det som flyttar är de två mappningarna och API-anropet — där vinsten med synlighet och LLM väger tyngst. Varje steg är sitt eget, tydligt avgränsade, med ett eget event in och ett eget event ut — så att komplexitet aldrig gömmer sig inuti ett annat steg.</p>
+    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter vad varje steg faktiskt behöver nå. FTP-hämtningen rörs inte. Mappningarna och API-anropet till Astro körs i Azure, bakom den generiska gränsen (hämta fil, trigga event) — de behöver bara filen och nästa event, ingenting mer. Förädlingen är annorlunda: den behöver iCore:s egna interna funktioner och klasser, inte bara data via ett generiskt API. Den byggs därför också ny och ren — men hostas direkt i iCore, som redan kan drifta egna .NET-API:er. Samma stegkontrakt överallt, bara olika hem beroende på vad steget faktiskt behöver komma åt.</p>
 
     <div class="legend">
-      <div class="legend-item"><div class="legend-dot" style="background:var(--icore)"></div>iCore — oförändrat</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--azure)"></div>Azure — nytt, LLM-genererat</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--dotnet)"></div>.NET — typad API-klient</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--icore)"></div>iCore — hostar, direkt åtkomst till interna funktioner</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--azure)"></div>Azure — nytt, LLM-genererat, bakom extern gräns</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--dotnet)"></div>.NET — kompilerad tjänst, hostas där åtkomsten kräver det</div>
     </div>
 
     <div class="diagram">
@@ -150,8 +150,8 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
             <div class="sys-badge icore">iCore</div>
             <div class="step-box icore-b">
               <div class="sb-n">3 · Förädling</div>
-              <div class="sb-d">Beräkningar och regler mot produktens befintliga sättningar. Stannar där de redan bor.</div>
-              <div class="sb-tag" style="background:rgba(148,163,184,.22);color:#cbd5e1">Eget steg, eget event</div>
+              <div class="sb-d">Egen .NET Web API, hostad av iCore. Mappar hela orderklassen och anropar iCore:s interna funktioner direkt.</div>
+              <div class="sb-tag" style="background:rgba(148,163,184,.22);color:#cbd5e1">Ingen extern gräns — interna anrop</div>
             </div>
           </div>
           <div class="flow-arrow">→<span>event</span></div>
@@ -215,7 +215,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-body"><h3>Rör inte förädlingen</h3><p>Ge den bara ett eget, tydligt event in och ett event ut — istället för att den ligger dold inuti en större kedja som idag. Logiken och sättningarna den redan har i iCore lämnas orörda.</p><span class="why">Inget dubbelarbete</span></div>
+        <div class="step-body"><h3>Bygg förädlingen som en egen .NET Web API i iCore</h3><p>Samma stegkontrakt som mappningarna, men hostad direkt i iCore — eftersom den behöver anropa dess interna funktioner och klasser rakt av, inte via en extern gräns. Ingen ny "hämta fil"-/"trigga event"-API behövs för det här steget.</p><span class="why">Rätt plats för djup åtkomst</span></div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
