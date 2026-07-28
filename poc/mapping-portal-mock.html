@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Mappningsportalen — 40 integrationer, samlat och redigerbart</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#132133;--navy3:#1c2c40;
+  --blue:#1e6fff;--teal:#00c9a7;--purple:#7c5cbf;
+  --green:#16a34a;--green-bg:#ecfdf3;--green-fg:#15803d;
+  --amber:#d97706;--amber-bg:#fffbeb;--amber-fg:#b45309;
+  --red:#dc2626;--red-bg:#fef2f2;--red-fg:#b91c1c;
+  --slate-bg:#f1f5f9;--slate-fg:#475569;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;--gray300:#cbd5e1;
+  --gray400:#94a3b8;--gray500:#64748b;--gray600:#475569;--gray800:#1e293b;
+  --shadow:0 1px 2px rgba(15,23,42,.06);--shadow-md:0 4px 16px rgba(15,23,42,.08);
+}
+html,body{height:100%}
+body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+.mono{font-family:'SF Mono',Consolas,'Liberation Mono',monospace}
+button{font-family:inherit;cursor:pointer}
+input{font-family:inherit}
+:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+
+.app{display:flex;flex-direction:column;height:100vh;min-height:640px}
+
+/* ── HEADER ── */
+.header{background:var(--navy);color:#fff;flex:0 0 auto;padding:16px 24px 0}
+.header-top{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--blue));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--navy)}
+.brand-name{font-size:14.5px;font-weight:700}
+.brand-sub{font-size:11px;color:#8ea0bf}
+.search-wrap{position:relative;flex:1;max-width:420px;min-width:220px}
+.search-wrap input{width:100%;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);color:#fff;padding:9px 14px 9px 34px;border-radius:9px;font-size:13px}
+.search-wrap input::placeholder{color:#7c8fac}
+.search-wrap input:focus{background:rgba(255,255,255,.12);border-color:rgba(0,201,167,.5)}
+.search-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:12px;color:#7c8fac}
+.stat-row{display:flex;gap:10px;flex-shrink:0}
+.stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);border-radius:9px;padding:7px 13px;min-width:64px}
+.stat b{display:block;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{font-size:9.5px;color:#93a3bf;text-transform:uppercase;letter-spacing:.4px}
+.stat.warn b{color:#fbbf24}
+.stat.err b{color:#f87171}
+
+.filter-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px 0 12px;margin-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+.chip-group{display:flex;gap:5px;background:rgba(255,255,255,.05);padding:3px;border-radius:9px}
+.chip{border:none;background:transparent;color:#9fb0cb;font-size:11.5px;font-weight:600;padding:6px 11px;border-radius:7px;transition:background .12s,color .12s}
+.chip:hover{color:#fff}
+.chip.active{background:var(--white);color:var(--navy)}
+.chip .n{opacity:.6;margin-left:4px;font-variant-numeric:tabular-nums}
+.chip.active .n{opacity:.45}
+.result-count{margin-left:auto;font-size:11.5px;color:#7c8fac;font-variant-numeric:tabular-nums}
+
+/* ── BODY: list + detail ── */
+.body{flex:1 1 auto;display:flex;min-height:0}
+.list-pane{width:380px;flex:0 0 380px;background:var(--white);border-right:1px solid var(--gray200);display:flex;flex-direction:column;min-height:0}
+.list-scroll{flex:1;overflow-y:auto}
+.list-empty{padding:40px 20px;text-align:center;color:var(--gray400);font-size:13px}
+
+.row{display:flex;gap:11px;padding:12px 16px;border-bottom:1px solid var(--gray100);cursor:pointer;position:relative;align-items:flex-start}
+.row:hover{background:var(--gray50)}
+.row.selected{background:#eef5ff}
+.row.selected::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--blue)}
+.row-icon{width:30px;height:30px;border-radius:8px;background:var(--gray100);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+.row-icon.enrich{background:rgba(124,92,191,.12)}
+.row-body{flex:1;min-width:0}
+.row-name{font-size:12.5px;font-weight:700;color:var(--navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-meta{font-size:11px;color:var(--gray500);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.row-foot{display:flex;align-items:center;gap:6px;margin-top:7px}
+.pill{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;padding:2.5px 7px;border-radius:99px;display:inline-flex;align-items:center;gap:4px}
+.pill::before{content:'';width:5px;height:5px;border-radius:50%}
+.pill.aktiv{background:var(--green-bg);color:var(--green-fg)}
+.pill.aktiv::before{background:var(--green)}
+.pill.utkast{background:var(--slate-bg);color:var(--slate-fg)}
+.pill.utkast::before{background:var(--gray400)}
+.pill.fel{background:var(--red-bg);color:var(--red-fg)}
+.pill.fel::before{background:var(--red)}
+.ver-tag{font-size:10px;color:var(--gray400);font-family:'SF Mono',Consolas,monospace}
+.row-time{margin-left:auto;font-size:10px;color:var(--gray400);flex-shrink:0}
+
+/* ── DETAIL ── */
+.detail-pane{flex:1;overflow-y:auto;min-width:0}
+.detail-inner{max-width:820px;padding:30px 36px 60px}
+.d-eyebrow{display:flex;align-items:center;gap:8px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray400);margin-bottom:10px}
+.d-title-row{display:flex;align-items:flex-start;justify-content:space-between;gap:20px;flex-wrap:wrap}
+.d-title{font-size:21px;font-weight:800;letter-spacing:-.01em}
+.d-sub{font-size:13px;color:var(--gray500);margin-top:5px}
+.d-actions{display:flex;gap:8px;flex-shrink:0}
+.btn{border-radius:8px;padding:8px 14px;font-size:12.5px;font-weight:700;border:1px solid var(--gray200);background:var(--white);color:var(--navy)}
+.btn:hover{background:var(--gray50)}
+.btn.primary{background:var(--navy);color:#fff;border-color:var(--navy)}
+.btn.primary:hover{background:#182a41}
+
+.d-metabar{display:flex;flex-wrap:wrap;gap:10px;margin-top:18px}
+.meta-card{background:var(--white);border:1px solid var(--gray200);border-radius:10px;padding:10px 14px;min-width:120px}
+.meta-card .mc-l{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray400)}
+.meta-card .mc-v{font-size:13px;font-weight:700;margin-top:3px;color:var(--navy)}
+.meta-card .mc-v.mono{font-family:'SF Mono',Consolas,monospace;font-size:12px}
+
+.route-visual{display:flex;align-items:center;gap:10px;margin-top:22px;background:var(--navy);border-radius:12px;padding:16px 20px}
+.route-node{display:flex;align-items:center;gap:8px;color:#fff;font-size:12.5px;font-weight:700}
+.route-node .ic{width:26px;height:26px;border-radius:7px;background:rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;font-size:12px}
+.route-arrow{color:#5b6f8f;font-size:14px}
+.route-tag{margin-left:auto;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;background:rgba(0,201,167,.16);color:#5be6cd;padding:4px 9px;border-radius:99px}
+
+.view-toggle{display:flex;gap:4px;background:var(--gray100);padding:3px;border-radius:9px;width:fit-content;margin-top:26px}
+.vt-btn{border:none;background:transparent;font-size:12px;font-weight:700;padding:7px 15px;border-radius:7px;color:var(--gray500)}
+.vt-btn.active{background:var(--white);color:var(--navy);box-shadow:var(--shadow)}
+
+.panel{margin-top:14px}
+.field-table{width:100%;border-collapse:collapse;background:var(--white);border:1px solid var(--gray200);border-radius:10px;overflow:hidden}
+.field-table th{text-align:left;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--gray400);background:var(--gray50);padding:9px 14px;border-bottom:1px solid var(--gray200)}
+.field-table td{padding:10px 14px;font-size:12.5px;border-bottom:1px solid var(--gray100);vertical-align:middle}
+.field-table tr:last-child td{border-bottom:none}
+.field-table .ff{font-family:'SF Mono',Consolas,monospace;color:var(--gray800)}
+.field-table .arrow-cell{color:var(--gray300);text-align:center;width:24px}
+.transform-pill{display:inline-flex;align-items:center;gap:5px;background:var(--slate-bg);color:var(--slate-fg);font-size:11px;font-weight:600;padding:4px 10px;border-radius:99px;font-family:'SF Mono',Consolas,monospace}
+.transform-pill.none{background:transparent;color:var(--gray300);font-style:italic}
+.row-del{color:var(--gray300);font-size:13px;width:20px;text-align:center}
+.add-field{margin-top:10px;font-size:12px;font-weight:700;color:var(--blue);background:none;border:1px dashed var(--gray300);border-radius:9px;padding:9px;width:100%;text-align:center}
+.add-field:hover{border-color:var(--blue);background:#f5f9ff}
+
+.code-panel{background:var(--navy);border-radius:10px;overflow:hidden}
+.code-head{display:flex;align-items:center;justify-content:space-between;padding:9px 14px;background:var(--navy2);border-bottom:1px solid rgba(255,255,255,.06)}
+.code-head .cf{font-size:11px;color:#8ea0bf;font-family:'SF Mono',Consolas,monospace}
+.code-badge{font-size:9.5px;font-weight:700;color:#5be6cd;background:rgba(0,201,167,.14);padding:3px 8px;border-radius:99px}
+.code-body{padding:14px 0;font-family:'SF Mono',Consolas,monospace;font-size:12px;line-height:1.7;overflow-x:auto}
+.code-line{display:flex}
+.ln{width:36px;flex-shrink:0;text-align:right;padding-right:14px;color:#3d5273;user-select:none}
+.code-text{white-space:pre;color:#c3cfe6}
+.tok-key{color:#7ea8ff}
+.tok-str{color:#7fe0c9}
+.tok-punc{color:#5b6f8f}
+
+.d-footer{display:flex;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid var(--gray200)}
+
+@media (max-width:860px){
+  .body{flex-direction:column;overflow-y:auto}
+  .list-pane{width:100%;flex:0 0 auto;max-height:44vh;border-right:none;border-bottom:1px solid var(--gray200)}
+  .detail-pane{overflow-y:visible}
+  .stat-row{display:none}
+  .detail-inner{padding:22px 18px 48px}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="header">
+    <div class="header-top">
+      <div class="brand">
+        <div class="brand-mark">iC</div>
+        <div>
+          <div class="brand-name">Mappningsportalen</div>
+          <div class="brand-sub">iCore × Azure — alla integrationer, ett ställe</div>
+        </div>
+      </div>
+      <div class="search-wrap">
+        <span class="search-icon">⌕</span>
+        <input id="searchInput" type="text" placeholder="Sök på kund, system eller mappning…" autocomplete="off"/>
+      </div>
+      <div class="stat-row">
+        <div class="stat"><b id="statTotal">0</b><span>Totalt</span></div>
+        <div class="stat"><b id="statActive">0</b><span>Aktiva</span></div>
+        <div class="stat warn"><b id="statDraft">0</b><span>Utkast</span></div>
+        <div class="stat err"><b id="statError">0</b><span>Fel</span></div>
+      </div>
+    </div>
+    <div class="filter-row">
+      <div class="chip-group" id="statusChips"></div>
+      <div class="chip-group" id="kindChips"></div>
+      <div class="result-count" id="resultCount"></div>
+    </div>
+  </div>
+
+  <div class="body">
+    <div class="list-pane">
+      <div class="list-scroll" id="listScroll"></div>
+    </div>
+    <div class="detail-pane">
+      <div class="detail-inner" id="detailRoot"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SYSTEMS = {
+  bc:      { name: 'Business Central', icon: '🧮' },
+  wms:     { name: 'Ongoing WMS',      icon: '📦' },
+  tms:     { name: 'Consignor TMS',    icon: '🚚' },
+  fortnox: { name: 'Fortnox',          icon: '💳' },
+  shopify: { name: 'Shopify',          icon: '🛒' },
+  sap:     { name: 'SAP',              icon: '🏭' },
+  edi:     { name: 'CargoNet EDI',     icon: '📡' },
+  visma:   { name: 'Visma',            icon: '📒' },
+  astro:   { name: 'Astro WMS',        icon: '🏗️' },
+};
+
+const CUSTOMER_SYSTEMS = {
+  'Nordic Lager AB':      ['bc', 'wms', 'tms', 'fortnox'],
+  'Baltic Freight':       ['fortnox', 'tms', 'shopify', 'astro'],
+  'Kungsvägen Logistik':  ['sap', 'wms', 'edi'],
+  'Polar Distribution':   ['shopify', 'wms', 'fortnox', 'bc'],
+  'Sydhamn Terminal':     ['bc', 'edi', 'visma'],
+  'Vinter Cargo':         ['visma', 'tms', 'sap', 'wms'],
+};
+
+const KIND_OVERRIDES = {
+  'Nordic Lager AB::tms::out':     { kind: 'Förädling', label: 'Fraktkalkyl' },
+  'Vinter Cargo::tms::out':        { kind: 'Förädling', label: 'Fraktkalkyl' },
+  'Kungsvägen Logistik::wms::out': { kind: 'Förädling', label: 'Lagersaldo-tolkning' },
+  'Baltic Freight::astro::out':    { kind: 'Förädling', label: 'Fraktkalkyl' },
+  'Polar Distribution::bc::out':   { kind: 'Förädling', label: 'Momsberäkning' },
+  'Sydhamn Terminal::edi::in':     { kind: 'Förädling', label: 'EDI-tolkning' },
+};
+
+const STATUS_OVERRIDES = {
+  'Kungsvägen Logistik::edi::in':   'fel',
+  'Vinter Cargo::sap::out':         'fel',
+  'Polar Distribution::shopify::in':'utkast',
+  'Baltic Freight::astro::in':      'utkast',
+  'Baltic Freight::astro::out':     'utkast',
+  'Sydhamn Terminal::visma::out':   'utkast',
+  'Nordic Lager AB::wms::in':       'utkast',
+};
+
+const VERSION_OVERRIDES = {
+  'Nordic Lager AB::tms::out': 'v2.1.0',
+  'Kungsvägen Logistik::wms::out': 'v1.3.0',
+};
+
+const HAS_V2 = new Set(['Nordic Lager AB::bc::in', 'Polar Distribution::wms::out', 'Vinter Cargo::visma::in']);
+
+const TIME_POOL = ['för 4 min sedan','för 22 min sedan','för 1 tim sedan','för 3 tim sedan','för 6 tim sedan','igår','för 2 dagar sedan','för 4 dagar sedan'];
+
+const FIELD_TEMPLATES = {
+  in: [
+    { from: 'OrderNr',          to: 'orderId',                 tf: 'trim' },
+    { from: 'Kundnr',           to: 'customerId',               tf: null },
+    { from: 'Leveransadress1',  to: 'shippingAddress.street',   tf: null },
+    { from: 'Postnummer',       to: 'shippingAddress.zip',      tf: 'normalizeZip' },
+    { from: 'Radrad[]',         to: 'lines[]',                  tf: 'mapLines' },
+    { from: 'Valuta',           to: 'currency',                 tf: 'uppercase' },
+  ],
+  out: [
+    { from: 'orderId',                  to: 'ORDER_REF',       tf: null },
+    { from: 'customerId',               to: 'CUST_NO',          tf: 'lookupCustomer' },
+    { from: 'shippingAddress.street',   to: 'DELIVERY_ADDR_1',  tf: null },
+    { from: 'shippingAddress.zip',      to: 'DELIVERY_ZIP',     tf: null },
+    { from: 'lines[]',                  to: 'ORDER_LINES[]',    tf: 'mapLinesOut' },
+    { from: 'currency',                 to: 'CURR',             tf: 'lowercase' },
+  ],
+};
+
+// ── Bygg mappningslistan ──
+let mappings = [];
+let idc = 1;
+Object.entries(CUSTOMER_SYSTEMS).forEach(([customer, systemIds]) => {
+  systemIds.forEach(sysId => {
+    ['in', 'out'].forEach(dir => {
+      const key = `${customer}::${sysId}::${dir}`;
+      const sys = SYSTEMS[sysId];
+      const override = KIND_OVERRIDES[key];
+      const kind = override ? override.kind : 'Mappning';
+      const name = override ? override.label : (dir === 'in' ? `${sys.name} → IM` : `IM → ${sys.name}`);
+      mappings.push({
+        id: 'm' + (idc++),
+        customer, sysId, dir, kind, name,
+        status: STATUS_OVERRIDES[key] || 'aktiv',
+        version: VERSION_OVERRIDES[key] || 'v1.0.0',
+        hasV2: HAS_V2.has(key),
+        time: TIME_POOL[idc % TIME_POOL.length],
+      });
+    });
+  });
+});
+
+// ── State ──
+let statusFilter = 'alla';
+let kindFilter = 'alla';
+let searchTerm = '';
+let selectedId = mappings[0].id;
+let viewMode = 'falt';
+
+const STATUS_LABEL = { aktiv: 'Aktiv', utkast: 'Utkast', fel: 'Fel' };
+
+function matchesFilters(m) {
+  if (statusFilter !== 'alla' && m.status !== statusFilter) return false;
+  if (kindFilter !== 'alla' && m.kind !== kindFilter) return false;
+  if (searchTerm) {
+    const hay = `${m.customer} ${m.name} ${SYSTEMS[m.sysId].name} ${m.kind}`.toLowerCase();
+    if (!hay.includes(searchTerm)) return false;
+  }
+  return true;
+}
+
+function renderChips() {
+  const statusCounts = { alla: mappings.length, aktiv: 0, utkast: 0, fel: 0 };
+  mappings.forEach(m => statusCounts[m.status]++);
+  const statusEl = document.getElementById('statusChips');
+  statusEl.innerHTML = ['alla','aktiv','utkast','fel'].map(s => `
+    <button class="chip ${statusFilter===s?'active':''}" data-status="${s}">${s==='alla'?'Alla':STATUS_LABEL[s]}<span class="n">${statusCounts[s]}</span></button>
+  `).join('');
+  statusEl.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { statusFilter = b.dataset.status; render(); }));
+
+  const kindCounts = { alla: mappings.length, Mappning: 0, Förädling: 0 };
+  mappings.forEach(m => kindCounts[m.kind]++);
+  const kindEl = document.getElementById('kindChips');
+  kindEl.innerHTML = ['alla','Mappning','Förädling'].map(k => `
+    <button class="chip ${kindFilter===k?'active':''}" data-kind="${k}">${k==='alla'?'Alla typer':k}<span class="n">${kindCounts[k]}</span></button>
+  `).join('');
+  kindEl.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => { kindFilter = b.dataset.kind; render(); }));
+}
+
+function renderStats() {
+  document.getElementById('statTotal').textContent = mappings.length;
+  document.getElementById('statActive').textContent = mappings.filter(m => m.status === 'aktiv').length;
+  document.getElementById('statDraft').textContent = mappings.filter(m => m.status === 'utkast').length;
+  document.getElementById('statError').textContent = mappings.filter(m => m.status === 'fel').length;
+}
+
+function renderList() {
+  const filtered = mappings.filter(matchesFilters);
+  document.getElementById('resultCount').textContent = `${filtered.length} av ${mappings.length}`;
+  const el = document.getElementById('listScroll');
+  if (!filtered.length) {
+    el.innerHTML = `<div class="list-empty">Inga mappningar matchar filtret.</div>`;
+    return;
+  }
+  el.innerHTML = filtered.map(m => `
+    <div class="row ${m.id===selectedId?'selected':''}" data-id="${m.id}">
+      <div class="row-icon ${m.kind==='Förädling'?'enrich':''}">${m.kind==='Förädling' ? '🧮' : SYSTEMS[m.sysId].icon}</div>
+      <div class="row-body">
+        <div class="row-name">${m.name}</div>
+        <div class="row-meta">${m.customer}</div>
+        <div class="row-foot">
+          <span class="pill ${m.status}">${STATUS_LABEL[m.status]}</span>
+          <span class="ver-tag">${m.version}${m.hasV2 ? ' · v2 väntar' : ''}</span>
+          <span class="row-time">${m.status==='utkast' ? 'Ej driftsatt' : m.time}</span>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  el.querySelectorAll('.row').forEach(r => r.addEventListener('click', () => { selectedId = r.dataset.id; render(); }));
+}
+
+function fieldRowsHtml(dir) {
+  return FIELD_TEMPLATES[dir].map(f => `
+    <tr>
+      <td class="ff">${f.from}</td>
+      <td class="arrow-cell">→</td>
+      <td class="ff">${f.to}</td>
+      <td>${f.tf ? `<span class="transform-pill">${f.tf}()</span>` : `<span class="transform-pill none">ingen</span>`}</td>
+      <td class="row-del">✕</td>
+    </tr>
+  `).join('');
+}
+
+function highlightJson(json) {
+  return json
+    .replace(/"([^"]+)":/g, '<span class="tok-key">"$1"</span><span class="tok-punc">:</span>')
+    .replace(/: "([^"]*)"/g, ': <span class="tok-str">"$1"</span>');
+}
+
+function codeHtml(m) {
+  const spec = {
+    step: m.name,
+    version: m.version,
+    fields: FIELD_TEMPLATES[m.dir].map(f => ({ from: f.from, to: f.to, transform: f.tf || undefined })),
+  };
+  const json = JSON.stringify(spec, null, 2);
+  const lines = highlightJson(json).split('\n');
+  return lines.map((l, i) => `<div class="code-line"><span class="ln">${i+1}</span><span class="code-text">${l}</span></div>`).join('');
+}
+
+function renderDetail() {
+  const m = mappings.find(x => x.id === selectedId);
+  const root = document.getElementById('detailRoot');
+  if (!m) { root.innerHTML = ''; return; }
+  const sys = SYSTEMS[m.sysId];
+  const srcNode = m.dir === 'in' ? { icon: sys.icon, label: sys.name } : { icon: '🧬', label: 'IM' };
+  const dstNode = m.dir === 'in' ? { icon: '🧬', label: 'IM' } : { icon: sys.icon, label: sys.name };
+
+  root.innerHTML = `
+    <div class="d-eyebrow">${m.customer} <span style="opacity:.4">/</span> ${m.kind}</div>
+    <div class="d-title-row">
+      <div>
+        <div class="d-title">${m.name}</div>
+        <div class="d-sub">Senast ändrad ${m.status==='utkast' ? '— ännu inte driftsatt' : m.time}</div>
+      </div>
+      <div class="d-actions">
+        <button class="btn">Testkör</button>
+        <button class="btn primary">Spara ny version</button>
+      </div>
+    </div>
+
+    <div class="d-metabar">
+      <div class="meta-card"><div class="mc-l">Status</div><div class="mc-v"><span class="pill ${m.status}">${STATUS_LABEL[m.status]}</span></div></div>
+      <div class="meta-card"><div class="mc-l">Version</div><div class="mc-v mono">${m.version}</div></div>
+      <div class="meta-card"><div class="mc-l">Typ</div><div class="mc-v">${m.kind}</div></div>
+      <div class="meta-card"><div class="mc-l">Riktning</div><div class="mc-v">${m.dir === 'in' ? 'Inkommande → IM' : 'IM → Utgående'}</div></div>
+      ${m.hasV2 ? `<div class="meta-card"><div class="mc-l">Väntar</div><div class="mc-v" style="color:var(--teal)">v2 redo att testas</div></div>` : ''}
+    </div>
+
+    <div class="route-visual">
+      <div class="route-node"><span class="ic">${srcNode.icon}</span>${srcNode.label}</div>
+      <div class="route-arrow">→</div>
+      <div class="route-node"><span class="ic">${dstNode.icon}</span>${dstNode.label}</div>
+      <div class="route-tag">${m.kind === 'Förädling' ? 'Kör i iCore' : 'Kör i Azure'}</div>
+    </div>
+
+    <div class="view-toggle">
+      <button class="vt-btn ${viewMode==='falt'?'active':''}" data-mode="falt">Fältvy</button>
+      <button class="vt-btn ${viewMode==='kod'?'active':''}" data-mode="kod">Kod / DSL</button>
+    </div>
+
+    <div class="panel">
+      ${viewMode === 'falt' ? `
+        <table class="field-table">
+          <thead><tr><th>Källfält</th><th></th><th>Målfält</th><th>Transform</th><th></th></tr></thead>
+          <tbody>${fieldRowsHtml(m.dir)}</tbody>
+        </table>
+        <button class="add-field">+ Lägg till fältmappning</button>
+      ` : `
+        <div class="code-panel">
+          <div class="code-head"><span class="cf">${m.customer.toLowerCase().replace(/\s+/g,'-')}/${m.sysId}-${m.dir}.json</span><span class="code-badge">LLM-redigerbar</span></div>
+          <div class="code-body">${codeHtml(m)}</div>
+        </div>
+      `}
+    </div>
+
+    <div class="d-footer">
+      <button class="btn">Visa körhistorik</button>
+      <button class="btn">Öppna i repo</button>
+    </div>
+  `;
+
+  root.querySelectorAll('.vt-btn').forEach(b => b.addEventListener('click', () => { viewMode = b.dataset.mode; renderDetail(); }));
+}
+
+function render() {
+  renderChips();
+  renderStats();
+  renderList();
+  renderDetail();
+}
+
+document.getElementById('searchInput').addEventListener('input', e => {
+  searchTerm = e.target.value.trim().toLowerCase();
+  render();
+});
+
+render();
+</script>
+</body>
+</html>
