@@ -46,7 +46,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
 .diagram{margin-top:24px;background:var(--navy);border-radius:16px;padding:32px 26px;position:relative;overflow:hidden}
 .diagram::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:28px 28px;pointer-events:none}
 .diagram-inner{position:relative;overflow-x:auto}
-.flow-row{display:flex;align-items:stretch;gap:0;min-width:760px}
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:940px}
 .step-col{flex:1;display:flex;flex-direction:column;gap:8px}
 .sys-badge{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;text-align:center;padding:4px 0;border-radius:6px 6px 0 0}
 .sys-badge.icore{background:rgba(148,163,184,.18);color:#cbd5e1}
@@ -102,10 +102,11 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
   <div class="wrap">
     <div class="eyebrow">Verkligt case · Ordermottagning → Astro WMS</div>
     <h1 class="h-title">Ett riktigt flöde, isärplockat: <span class="mono">FTP → IM → Astro</span></h1>
-    <p class="h-sub">Inte ett påhittat exempel — er faktiska orderintegration mot Astro, brutet i fyra fristående steg som triggar varandra via event. Så lite som möjligt rört i iCore. Resten byggt snabbt, med en LLM, i Azure.</p>
+    <p class="h-sub">Inte ett påhittat exempel — er faktiska orderintegration mot Astro, brutet i fem fristående steg som triggar varandra via event. Förädlingen stannar kvar i iCore, där reglerna redan bor. Resten byggt snabbt, med en LLM, i Azure.</p>
     <div class="route">
       <div class="seg">Källsystem</div><div class="ar">→ FTP</div>
-      <div class="seg">Mappning + förädling</div><div class="ar">→ IM</div>
+      <div class="seg">Mappning</div><div class="ar">→ IM</div>
+      <div class="seg">Förädling</div><div class="ar">→</div>
       <div class="seg">Mappning</div><div class="ar">→ Astro-format</div>
       <div class="seg">API</div><div class="ar">→</div>
       <div class="seg">Astro (WMS)</div>
@@ -117,7 +118,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
   <div class="wrap">
     <div class="s-eyebrow">Arkitektur</div>
     <h2 class="s-title">Var varje steg kör, och varför just där</h2>
-    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter vad som redan fungerar. FTP-hämtningen rörs inte. Allt som behöver kunna ändras, synas och byggas av en LLM flyttar till Azure — som fristående, versionerade steg.</p>
+    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter var logiken redan har ett bra hem. FTP-hämtningen rörs inte. Förädlingen rörs inte heller — den har redan tillgång till produktens regler och sättningar i iCore, och att bygga om det i Azure hade bara varit dubbelarbete. Det som flyttar är de två mappningarna och API-anropet — där vinsten med synlighet och LLM väger tyngst. Varje steg är sitt eget, tydligt avgränsade, med ett eget event in och ett eget event ut — så att komplexitet aldrig gömmer sig inuti ett annat steg.</p>
 
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--icore)"></div>iCore — oförändrat</div>
@@ -139,30 +140,40 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
           <div class="step-col">
             <div class="sys-badge azure">Azure</div>
             <div class="step-box azure-b">
-              <div class="sb-n">2 · Mappa + förädla → IM</div>
-              <div class="sb-d">Strukturerar om till kanoniskt format och berikar datan i samma steg.</div>
-              <div class="sb-tag">Anropar iCore för regler/masterdata</div>
+              <div class="sb-n">2 · Mappa → IM</div>
+              <div class="sb-d">Ren fältmappning till kanoniskt format. Inget affärslogik-beslut i det här steget.</div>
+              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning</div>
+            </div>
+          </div>
+          <div class="flow-arrow">→<span>event</span></div>
+          <div class="step-col">
+            <div class="sys-badge icore">iCore</div>
+            <div class="step-box icore-b">
+              <div class="sb-n">3 · Förädling</div>
+              <div class="sb-d">Beräkningar och regler mot produktens befintliga sättningar. Stannar där de redan bor.</div>
+              <div class="sb-tag" style="background:rgba(148,163,184,.22);color:#cbd5e1">Eget steg, eget event</div>
             </div>
           </div>
           <div class="flow-arrow">→<span>event</span></div>
           <div class="step-col">
             <div class="sys-badge azure">Azure</div>
             <div class="step-box azure-b">
-              <div class="sb-n">3 · Mappa IM → Astro-format</div>
+              <div class="sb-n">4 · Mappa → Astro-format</div>
               <div class="sb-d">Samma stegkontrakt som steg 2, egen version, byts oberoende.</div>
+              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning</div>
             </div>
           </div>
           <div class="flow-arrow">→<span>event</span></div>
           <div class="step-col">
             <div class="sys-badge azure">Azure</div>
             <div class="step-box azure-b" style="border-color:rgba(124,92,191,.45)">
-              <div class="sb-n">4 · API-anrop till Astro</div>
+              <div class="sb-n">5 · API-anrop till Astro</div>
               <div class="sb-d">Typad klient mot Astros API. Körs asynkront — svarar inte alltid direkt.</div>
               <div class="sb-tag" style="background:rgba(124,92,191,.22);color:#c4b0f0">.NET</div>
             </div>
           </div>
         </div>
-        <div class="callback">↩ <b>Steg 2</b> läser regler och masterdata direkt från iCore via API — det ni redan är bra på återanvänds, det byggs inte om.</div>
+        <div class="callback">↩ Fem separata event, fem separata ansvar — ingen kedja där ett stegs logik gömmer sig inuti ett annat.</div>
       </div>
     </div>
   </div>
@@ -171,23 +182,24 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
 <section class="alt">
   <div class="wrap">
     <div class="s-eyebrow">Före / efter</div>
-    <h2 class="s-title">Från en kedja till fyra fristående steg</h2>
+    <h2 class="s-title">Från en kedja till fem fristående steg</h2>
     <div class="ba-grid">
       <div class="ba-card before">
         <div class="ba-label">Idag</div>
-        <div class="ba-block">Hela flödet — hämta, mappa, mappa, skicka — en enda kedja i gamla developern. Ändra en del, testa hela.</div>
+        <div class="ba-block">Hela flödet — hämta, mappa, förädla, mappa, skicka — en enda kedja i gamla developern. Ändra en del, testa hela.</div>
       </div>
       <div class="ba-card after">
         <div class="ba-label">Löskopplat</div>
         <div class="ba-steps">
           <div class="ba-mini">1. FTP-hämtning — event: "fil mottagen"</div>
-          <div class="ba-mini">2. Mappa + förädla → IM — event: "IM klar"</div>
-          <div class="ba-mini">3. Mappa → Astro-format — event: "redo att skicka"</div>
-          <div class="ba-mini">4. API-anrop till Astro — event: "levererad"</div>
+          <div class="ba-mini">2. Mappa → IM — event: "IM klar"</div>
+          <div class="ba-mini">3. Förädling — event: "berikad"</div>
+          <div class="ba-mini">4. Mappa → Astro-format — event: "redo att skicka"</div>
+          <div class="ba-mini">5. API-anrop till Astro — event: "levererad"</div>
         </div>
       </div>
     </div>
-    <p class="s-desc">Fyra separata event istället för en kedja. Ett steg kan bytas, testas och driftsättas utan att röra de andra tre — och ett fel i steg 3 stoppar inte steg 1 eller 2 för nästa fil.</p>
+    <p class="s-desc">Fem separata event istället för en kedja. Ett steg kan bytas, testas och driftsättas utan att röra de andra fyra — och ett fel i steg 4 stoppar inte förädlingen eller mappningen för nästa fil.</p>
   </div>
 </section>
 
@@ -203,23 +215,27 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
       </div>
       <div class="step">
         <div class="step-num">2</div>
-        <div class="step-body"><h3>Öppna de två API:erna i iCore — bara för det här flödet</h3><p>"Hämta fil" och "trigga event", skopat till just den här integrationen. Inte hela plattformen på en gång.</p><span class="why">Minsta möjliga ändring i iCore</span></div>
+        <div class="step-body"><h3>Rör inte förädlingen</h3><p>Ge den bara ett eget, tydligt event in och ett event ut — istället för att den ligger dold inuti en större kedja som idag. Logiken och sättningarna den redan har i iCore lämnas orörda.</p><span class="why">Inget dubbelarbete</span></div>
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-body"><h3>Låt en LLM skriva de två mappningsstegen</h3><p>Mot samma stegkontrakt som redan finns och är testat (samma form som fraktkalkyl-exemplet) — bara med IM- och Astro-fälten istället för fraktdata.</p><span class="why">Ren kod, LLM:en kan faktiskt läsa och ändra den</span></div>
+        <div class="step-body"><h3>Öppna de två API:erna i iCore — bara för det här flödet</h3><p>"Hämta fil" och "trigga event", skopat till just den här integrationen. Inte hela plattformen på en gång.</p><span class="why">Minsta möjliga ändring i iCore</span></div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
-        <div class="step-body"><h3>Låt en LLM generera .NET-klienten mot Astro</h3><p>Samma stegkontrakt, men typad och byggd för ett riktigt API-anrop med retries och felhantering. Körs asynkront.</p><span class="why">Rätt verktyg för ett tyngre steg</span></div>
+        <div class="step-body"><h3>Låt en LLM skriva de två mappningsstegen</h3><p>Ren fält-till-fält-mappning som ett litet JSON-schema — mot samma stegkontrakt som redan finns och är testat (samma form som fraktkalkyl-exemplet), bara med IM- och Astro-fälten istället för fraktdata.</p><span class="why">Ren, avgränsad data — inte ny opak logik</span></div>
       </div>
       <div class="step">
         <div class="step-num">5</div>
-        <div class="step-body"><h3>Testa alla fyra offline mot exempeldata</h3><p>Innan en enda riktig order rör vid det. Samma test-innan-aktivera-mönster som redan bevisats.</p><span class="why">Ingen risk mot produktion</span></div>
+        <div class="step-body"><h3>Låt en LLM generera .NET-klienten mot Astro</h3><p>Samma stegkontrakt, men typad och byggd för ett riktigt API-anrop med retries och felhantering. Körs asynkront.</p><span class="why">Rätt verktyg för ett tyngre steg</span></div>
       </div>
       <div class="step">
         <div class="step-num">6</div>
-        <div class="step-body"><h3>Peka om en dispatch-rad i iCore — bara för Astro-flödet</h3><p>Resten av plattformen, alla andra kunder och integrationer, opåverkade.</p><span class="why">Litet, reversibelt steg</span></div>
+        <div class="step-body"><h3>Testa Azure-stegen offline mot exempeldata</h3><p>Innan en enda riktig order rör vid det. Samma test-innan-aktivera-mönster som redan bevisats.</p><span class="why">Ingen risk mot produktion</span></div>
+      </div>
+      <div class="step">
+        <div class="step-num">7</div>
+        <div class="step-body"><h3>Peka om dispatch-raderna i iCore — bara för Astro-flödet</h3><p>Resten av plattformen, alla andra kunder och integrationer, opåverkade.</p><span class="why">Litet, reversibelt steg</span></div>
       </div>
     </div>
   </div>
@@ -227,7 +243,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
 
 <div class="cta">
   <div class="wrap">
-    <h2>Ett flöde. Fyra steg. Ett bevis.</h2>
+    <h2>Ett flöde. Fem steg. Ett bevis.</h2>
     <p>Inte hela plattformen om — ett riktigt kundflöde, byggt löskopplat, för att se om resten ska följa efter.</p>
   </div>
 </div>
