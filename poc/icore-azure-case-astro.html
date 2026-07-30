@@ -118,11 +118,11 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
   <div class="wrap">
     <div class="s-eyebrow">Arkitektur</div>
     <h2 class="s-title">Var varje steg kör, och varför just där</h2>
-    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter vad varje steg faktiskt behöver nå. FTP-hämtningen rörs inte. Mappningarna och API-anropet till Astro körs i Azure, bakom den generiska gränsen (hämta fil, trigga event) — de behöver bara filen och nästa event, ingenting mer. Förädlingen är annorlunda: den behöver iCore:s egna interna funktioner och klasser, inte bara data via ett generiskt API. Den byggs därför också ny och ren — men hostas direkt i iCore, som redan kan drifta egna .NET-API:er. Samma stegkontrakt överallt, bara olika hem beroende på vad steget faktiskt behöver komma åt.</p>
+    <p class="s-desc">Gränsen dras inte efter vad som är "svårt" utan efter vad varje steg faktiskt behöver — och inte alla anrop behöver se likadana ut. De två mappningarna är snabba och tillståndslösa: iCore skickar filen, väntar, och får den mappade filen tillbaka i samma svar. Ingen mellanlagring, ingen separat hämtning — iCore äger filen hela vägen. Förädlingen är också ett direkt, synkront anrop, fast hostat i iCore självt eftersom den behöver dess interna funktioner och klasser. Sista steget är annorlunda av ett helt annat skäl: Astro är ett tredjepartssystem med sin egen svarstid, så det anropet görs asynkront — iCore väntar inte in Astro, utan får ett separat event när leveransen är bekräftad.</p>
 
     <div class="legend">
       <div class="legend-item"><div class="legend-dot" style="background:var(--icore)"></div>iCore — hostar, direkt åtkomst till interna funktioner</div>
-      <div class="legend-item"><div class="legend-dot" style="background:var(--azure)"></div>Azure — nytt, LLM-genererat, bakom extern gräns</div>
+      <div class="legend-item"><div class="legend-dot" style="background:var(--azure)"></div>Azure — nytt, LLM-genererat, svarar synkront med resultatet</div>
       <div class="legend-item"><div class="legend-dot" style="background:var(--dotnet)"></div>.NET — kompilerad tjänst, hostas där åtkomsten kräver det</div>
     </div>
 
@@ -141,8 +141,8 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
             <div class="sys-badge azure">Azure</div>
             <div class="step-box azure-b">
               <div class="sb-n">2 · Mappa → IM</div>
-              <div class="sb-d">Ren fältmappning till kanoniskt format. Inget affärslogik-beslut i det här steget.</div>
-              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning</div>
+              <div class="sb-d">iCore skickar filen i anropet. Svaret <em>är</em> den mappade filen — inget mellansteg, ingen lagring.</div>
+              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning · synkront svar</div>
             </div>
           </div>
           <div class="flow-arrow">→<span>event</span></div>
@@ -159,8 +159,8 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
             <div class="sys-badge azure">Azure</div>
             <div class="step-box azure-b">
               <div class="sb-n">4 · Mappa → Astro-format</div>
-              <div class="sb-d">Samma stegkontrakt som steg 2, egen version, byts oberoende.</div>
-              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning</div>
+              <div class="sb-d">Samma mönster som steg 2 — synkront svar med filen — men egen version, byts oberoende av steg 2.</div>
+              <div class="sb-tag" style="background:rgba(0,201,167,.2);color:#5be6cd">DSL-mappning · synkront svar</div>
             </div>
           </div>
           <div class="flow-arrow">→<span>event</span></div>
@@ -173,7 +173,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
             </div>
           </div>
         </div>
-        <div class="callback">↩ Fem separata event, fem separata ansvar — ingen kedja där ett stegs logik gömmer sig inuti ett annat.</div>
+        <div class="callback">↩ Steg 1–4 är synkrona anrop — iCores egen anropslogg räcker som källa för status och svarstid i portalen. Bara steg 5 väntar på ett separat event, eftersom det är Astro som bestämmer tempot där.</div>
       </div>
     </div>
   </div>
@@ -219,7 +219,7 @@ h2.s-title{font-size:clamp(20px,2.6vw,26px);font-weight:800;letter-spacing:-.01e
       </div>
       <div class="step">
         <div class="step-num">3</div>
-        <div class="step-body"><h3>Öppna de två API:erna i iCore — bara för det här flödet</h3><p>"Hämta fil" och "trigga event", skopat till just den här integrationen. Inte hela plattformen på en gång.</p><span class="why">Minsta möjliga ändring i iCore</span></div>
+        <div class="step-body"><h3>Öppna en enda API i iCore — bara för det här flödet</h3><p>"Trigga event", för att Astro-anropet ska kunna signalera "levererad" när det är klart. Mappningarna behöver ingen egen API — de får sitt svar direkt, i samma anrop.</p><span class="why">Ännu mindre än föreslaget</span></div>
       </div>
       <div class="step">
         <div class="step-num">4</div>
