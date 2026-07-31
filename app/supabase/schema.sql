@@ -1077,3 +1077,50 @@ create policy "Users see own polar tokens" on public.polar_tokens
 alter table public.connected_accounts drop constraint if exists connected_accounts_provider_check;
 alter table public.connected_accounts add constraint connected_accounts_provider_check
   check (provider in ('garmin', 'concept2', 'strava', 'polar'));
+
+-- friend_activity_feed() JOINed against public.follows instead of using it
+-- as an existence check — if two users had mutually accepted each other in
+-- BOTH directions (two separate accepted rows, e.g. from before the
+-- either-direction visibility fix above), the OR condition matched both
+-- rows for every one of that friend's activities, duplicating each one in
+-- the feed. Confirmed live: exactly this happened for a real pair of
+-- mutually-accepted users, every single one of their activities showed
+-- twice in "Mina vänners träningspass". Switched the join to a WHERE EXISTS
+-- clause, which can never fan out no matter how many follows rows exist
+-- between the two users.
+drop function public.friend_activity_feed();
+create function public.friend_activity_feed()
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  activity_name text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz,
+  kudos_count bigint,
+  liked_by_me boolean
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.name, a.distance, a.moving_time, a.start_date,
+    (select count(*) from public.activity_kudos k where k.activity_id = a.id),
+    exists(select 1 from public.activity_kudos k2 where k2.activity_id = a.id and k2.giver_id = auth.uid())
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  where exists (
+    select 1 from public.follows f
+    where f.status = 'accepted' and (
+      (f.follower_id = auth.uid() and f.followee_id = a.user_id) or
+      (f.followee_id = auth.uid() and f.follower_id = a.user_id)
+    )
+  )
+  order by a.start_date desc
+  limit 10;
+$$;
+revoke all on function public.friend_activity_feed() from public;
+grant execute on function public.friend_activity_feed() to authenticated;
