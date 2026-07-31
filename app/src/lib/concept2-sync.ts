@@ -48,7 +48,12 @@ export async function syncConcept2ForUser(supabase: SupabaseClient, userId: stri
 
   if (results.length > 0) {
     const rows = results.map(r => concept2ResultToActivity(r, userId))
-    await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
+    // Checked, not swallowed — an unchecked upsert here silently reported
+    // sync as successful even when zero rows actually landed (found via a
+    // real failure in the equivalent Garmin path; same unchecked pattern
+    // existed in every sync source, fixed everywhere at once).
+    const { error: upsertError } = await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
+    if (upsertError) throw new Error(`Concept2 activity upsert failed: ${upsertError.message}`)
   }
 
   const cleaned = await autoCleanupDuplicates(supabase, userId)

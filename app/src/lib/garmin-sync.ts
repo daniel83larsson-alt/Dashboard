@@ -224,12 +224,34 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
 
   const existingRows = existing ?? []
 
+  // allGarminActivities concatenates two SEPARATELY-fetched windows (the
+  // most recent 100, plus a backfill batch from further back) — if Garmin's
+  // pagination ever returns the same activity in both (a real risk right at
+  // the boundary between the two windows, especially on a brand-new
+  // account's very first sync), the same strava_id ends up twice in one
+  // upsert call. Postgres's ON CONFLICT then fails the WHOLE batch with
+  // "cannot affect row a second time" — and since the result wasn't checked
+  // for an error (see below), that failure was completely silent: the
+  // route still reported "synced: 100" while zero rows actually landed.
+  // Confirmed live: a brand-new user's first sync reported success but left
+  // her activities table empty. Deduping by strava_id here (keep the first
+  // occurrence) closes that specific failure mode outright.
+  const seenStravaIds = new Set<number>()
   const toUpsert = allGarminActivities
     .map(a => garminActivityToRow(a, userId))
     .filter(row => !existingRows.some(e => e.strava_id === row.strava_id))
+    .filter(row => {
+      if (seenStravaIds.has(row.strava_id)) return false
+      seenStravaIds.add(row.strava_id)
+      return true
+    })
 
   if (toUpsert.length > 0) {
-    await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
+    const { error: upsertError } = await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
+    // Never silently drop a failed batch write again — surfacing it here
+    // means the route's catch block reports a real error instead of a
+    // falsely successful "synced: N" that never actually landed.
+    if (upsertError) throw new Error(`Garmin activity upsert failed: ${upsertError.message}`)
   }
 
   const cleaned = await autoCleanupDuplicates(supabase, userId)
