@@ -145,7 +145,10 @@ export function stravaActivityToRow(a: StravaActivity, userId: string) {
     name: a.name || `${sportType} ${formatDate(a.start_date_local)}`,
     distance: a.distance ? Math.round(a.distance) : 0,
     moving_time: a.moving_time ?? 0,
-    elapsed_time: a.elapsed_time ?? null,
+    // elapsed_time is a NOT NULL column — see garmin.ts's garminActivityToRow
+    // for the real incident this class of bug caused (a null fallback for a
+    // NOT NULL numeric column silently failed the whole sync write).
+    elapsed_time: a.elapsed_time ?? 0,
     average_speed: a.average_speed ?? null,
     max_speed: a.max_speed ?? null,
     average_heartrate: a.average_heartrate ?? null,
