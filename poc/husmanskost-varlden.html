@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Världens Husmanskost — enkla rätter, riktig smak</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#211a17;--ink2:#2c231e;--ink3:#3a2f28;
+  --cream:#faf6ef;--card:#ffffff;--edge:#e9e0d3;
+  --paprika:#c1442e;--marigold:#e8a33d;--jade:#2f8f6e;--turmeric:#c77d1f;--clay:#a8632f;
+  --veg:#4c8c3f;--veg-bg:#eef6ea;--pesk:#2f7ea8;--pesk-bg:#eaf3f8;--kott:#a8432f;--kott-bg:#f8ece7;
+  --muted:#8a7a6c;--gray200:#e9e0d3;
+  --shadow:0 2px 10px rgba(33,26,23,.06);--shadow-lg:0 12px 40px rgba(33,26,23,.18);
+  --radius:14px;
+}
+html,body{background:var(--cream);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased;line-height:1.5}
+button,input{font-family:inherit}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+:focus-visible{outline:2px solid var(--marigold);outline-offset:2px}
+
+/* ── HEADER ── */
+header{background:var(--ink);color:#fff;padding:22px 0}
+.head-row{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.brand h1{font-size:22px;font-weight:800;letter-spacing:-.01em}
+.brand p{font-size:12.5px;color:#c9bcae;margin-top:3px}
+.head-actions{display:flex;gap:10px;align-items:center}
+.cart-btn{background:var(--marigold);color:var(--ink);border:none;border-radius:10px;padding:9px 15px;font-size:13px;font-weight:800;position:relative;cursor:pointer}
+.cart-badge{position:absolute;top:-6px;right:-6px;background:var(--paprika);color:#fff;border-radius:99px;width:19px;height:19px;font-size:10px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.key-btn{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#e7ddd0;border-radius:10px;padding:9px 13px;font-size:12px;font-weight:700;cursor:pointer}
+.key-panel{display:none;margin-top:14px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:12px 14px}
+.key-panel.open{display:block}
+.key-panel label{font-size:11.5px;color:#c9bcae;display:block;margin-bottom:6px}
+.key-row{display:flex;gap:8px}
+.key-row input{flex:1;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.16);color:#fff;padding:8px 11px;border-radius:8px;font-size:12.5px}
+.key-row button{background:var(--marigold);color:var(--ink);border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:800;cursor:pointer}
+.key-note{font-size:10.5px;color:#a89b8c;margin-top:7px}
+.key-status{font-size:11px;margin-top:6px;font-weight:700}
+.key-status.ok{color:#7ed6a7}
+.key-status.missing{color:#e8a33d}
+
+/* ── FILTERS ── */
+.filters{background:var(--card);border-bottom:1px solid var(--edge);padding:18px 0;position:sticky;top:0;z-index:20}
+.filter-group{margin-bottom:12px}
+.filter-group:last-child{margin-bottom:0}
+.fg-label{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:7px}
+.chips{display:flex;gap:7px;flex-wrap:wrap}
+.chip{background:var(--cream);border:1px solid var(--edge);color:var(--ink3);font-size:12.5px;font-weight:700;padding:7px 13px;border-radius:99px;cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--marigold)}
+.chip.active{background:var(--ink);color:#fff;border-color:var(--ink)}
+.have-row{display:flex;gap:8px;margin-top:4px}
+.have-row input{flex:1;padding:9px 13px;border:1px solid var(--edge);border-radius:9px;font-size:13px;background:var(--cream)}
+.have-row button{background:var(--jade);color:#fff;border:none;padding:9px 16px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.have-row button.clear{background:transparent;color:var(--muted);border:1px solid var(--edge)}
+
+/* ── GRID ── */
+.grid-section{padding:26px 0 60px}
+.result-line{font-size:12.5px;color:var(--muted);margin-bottom:14px;font-weight:600}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;cursor:pointer;transition:transform .12s,box-shadow .12s}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg)}
+.card-top{padding:16px 16px 0;display:flex;align-items:center;justify-content:space-between}
+.country-tag{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#fff;padding:5px 10px;border-radius:99px}
+.match-tag{font-size:10.5px;font-weight:800;color:var(--jade);background:var(--veg-bg);padding:4px 9px;border-radius:99px}
+.card-body{padding:12px 16px 14px;flex:1}
+.card-body h3{font-size:16.5px;font-weight:800;letter-spacing:-.01em}
+.card-body p{font-size:12.5px;color:var(--muted);margin-top:6px;line-height:1.5}
+.card-tags{display:flex;gap:6px;margin-top:11px;flex-wrap:wrap}
+.tag{font-size:10.5px;font-weight:800;padding:3.5px 9px;border-radius:99px;text-transform:uppercase;letter-spacing:.3px}
+.tag.veg{color:var(--veg);background:var(--veg-bg)}
+.tag.pesk{color:var(--pesk);background:var(--pesk-bg)}
+.tag.kott{color:var(--kott);background:var(--kott-bg)}
+.tag.time{color:var(--ink3);background:var(--cream);border:1px solid var(--edge)}
+.card-foot{border-top:1px solid var(--edge);padding:10px 16px;display:flex;justify-content:flex-end}
+.add-btn{background:var(--cream);border:1px solid var(--edge);color:var(--ink3);font-size:11.5px;font-weight:800;padding:7px 12px;border-radius:8px;cursor:pointer}
+.add-btn.added{background:var(--ink);color:#fff;border-color:var(--ink)}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:13.5px}
+
+/* ── OVERLAY PANELS ── */
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(33,26,23,.5);z-index:40}
+.overlay-bg.open{display:block}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--cream);z-index:41;transform:translateX(100%);transition:transform .2s ease;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.2)}
+.panel.open{transform:translateX(0)}
+.panel-head{background:var(--ink);color:#fff;padding:20px 22px;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;position:sticky;top:0;z-index:2}
+.panel-close{background:rgba(255,255,255,.1);border:none;color:#fff;width:30px;height:30px;border-radius:8px;font-size:15px;cursor:pointer;flex-shrink:0}
+.panel-body{padding:22px}
+
+/* dish detail */
+.d-country{display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:800;color:#fff;padding:5px 10px;border-radius:99px;margin-bottom:10px}
+.d-title{font-size:23px;font-weight:800;letter-spacing:-.01em}
+.d-teaser{font-size:13.5px;color:#c9bcae;margin-top:6px}
+.d-tags{display:flex;gap:6px;margin-top:12px}
+.d-block{margin-top:20px}
+.d-block h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
+.ing-list{list-style:none}
+.ing-list li{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--edge);font-size:13.5px}
+.ing-list li:last-child{border-bottom:none}
+.ing-list .amt{color:var(--muted);font-variant-numeric:tabular-nums}
+.spice-row{display:flex;gap:7px;flex-wrap:wrap}
+.spice-chip{background:var(--turmeric);color:#fff;font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px}
+.steps-list{list-style:none;counter-reset:step}
+.steps-list li{counter-increment:step;padding:10px 0 10px 34px;position:relative;font-size:13.5px;border-bottom:1px solid var(--edge)}
+.steps-list li:last-child{border-bottom:none}
+.steps-list li::before{content:counter(step);position:absolute;left:0;top:8px;width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+.ai-box{margin-top:22px;background:var(--card);border:1px solid var(--edge);border-radius:12px;padding:16px}
+.ai-box h4{font-size:12.5px;font-weight:800;color:var(--ink);margin-bottom:4px}
+.ai-box .sub{font-size:11.5px;color:var(--muted);margin-bottom:12px}
+.ai-row{display:flex;gap:8px}
+.ai-row input{flex:1;padding:9px 12px;border:1px solid var(--edge);border-radius:9px;font-size:13px}
+.ai-row button{background:var(--paprika);color:#fff;border:none;padding:9px 15px;border-radius:9px;font-size:12.5px;font-weight:800;cursor:pointer;white-space:nowrap}
+.ai-row button:disabled{opacity:.5;cursor:default}
+.ai-result{margin-top:12px;background:var(--cream);border:1px dashed var(--edge);border-radius:9px;padding:12px 14px;font-size:13px;line-height:1.6;white-space:pre-wrap;display:none}
+.ai-result.show{display:block}
+.ai-loading{font-size:12.5px;color:var(--muted);margin-top:10px;display:none}
+.ai-loading.show{display:block}
+.ai-error{font-size:12px;color:var(--paprika);margin-top:10px;display:none}
+.ai-error.show{display:block}
+.add-btn-lg{width:100%;margin-top:22px;background:var(--ink);color:#fff;border:none;padding:13px;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer}
+.add-btn-lg.added{background:var(--jade)}
+
+/* shopping list panel */
+.cart-empty{text-align:center;padding:50px 20px;color:var(--muted);font-size:13px}
+.cart-dish{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--edge);border-radius:10px;padding:11px 14px;margin-bottom:8px}
+.cart-dish .cd-name{font-size:13px;font-weight:700}
+.cart-dish .cd-remove{background:none;border:none;color:var(--muted);font-size:13px;cursor:pointer}
+.optimize-btn{width:100%;background:var(--jade);color:#fff;border:none;padding:13px;border-radius:10px;font-size:13.5px;font-weight:800;cursor:pointer;margin-top:14px}
+.optimize-btn:disabled{opacity:.5}
+.combined-list{margin-top:20px}
+.combined-list h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:10px}
+
+@media (max-width:640px){
+  .grid{grid-template-columns:1fr 1fr}
+  .filters{position:static}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="head-row">
+      <div class="brand">
+        <h1>Världens Husmanskost</h1>
+        <p>Enkla rätter från hela världen, försvenskade nog för din matbutik</p>
+      </div>
+      <div class="head-actions">
+        <button class="key-btn" id="keyToggle">⚙️ Gemini-nyckel</button>
+        <button class="cart-btn" id="cartToggle">Inköpslista<span class="cart-badge" id="cartBadge" style="display:none">0</span></button>
+      </div>
+    </div>
+    <div class="key-panel" id="keyPanel">
+      <label for="apiKeyInput">Gemini API-nyckel (används för substitut-tips och listoptimering)</label>
+      <div class="key-row">
+        <input type="password" id="apiKeyInput" placeholder="Klistra in din Gemini-nyckel"/>
+        <button id="saveKeyBtn">Spara</button>
+      </div>
+      <div class="key-status" id="keyStatus"></div>
+      <div class="key-note">Sparas bara lokalt i din webbläsare (localStorage). Skickas aldrig någon annanstans än direkt till Google vid ett AI-anrop.</div>
+    </div>
+  </div>
+</header>
+
+<div class="filters">
+  <div class="wrap">
+    <div class="filter-group">
+      <div class="fg-label">Tid</div>
+      <div class="chips" id="timeChips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="fg-label">Diet</div>
+      <div class="chips" id="dietChips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="fg-label">Land / världsdel</div>
+      <div class="chips" id="countryChips"></div>
+    </div>
+    <div class="filter-group">
+      <div class="fg-label">Vad har du hemma? (kommaseparerat, t.ex. "vitlök, kyckling, lime")</div>
+      <div class="have-row">
+        <input type="text" id="haveInput" placeholder="vitlök, kokosmjölk, kyckling …"/>
+        <button id="haveBtn">Hitta rätter</button>
+        <button class="clear" id="haveClear" style="display:none">Rensa</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid-section">
+  <div class="wrap">
+    <div class="result-line" id="resultLine"></div>
+    <div class="grid" id="grid"></div>
+  </div>
+</div>
+
+<div class="overlay-bg" id="overlayBg"></div>
+
+<div class="panel" id="detailPanel">
+  <div class="panel-head">
+    <div>
+      <div style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:#c9bcae">Recept</div>
+    </div>
+    <button class="panel-close" id="detailClose">✕</button>
+  </div>
+  <div class="panel-body" id="detailBody"></div>
+</div>
+
+<div class="panel" id="cartPanel">
+  <div class="panel-head">
+    <div style="font-size:15px;font-weight:800">Din inköpslista</div>
+    <button class="panel-close" id="cartClose">✕</button>
+  </div>
+  <div class="panel-body" id="cartBody"></div>
+</div>
+
+<script>
+const COUNTRIES = {
+  italien:      { name: 'Italien',      color: '#c1442e', flag: '🇮🇹' },
+  mexiko:       { name: 'Mexiko',       color: '#e8a33d', flag: '🇲🇽' },
+  thailand:     { name: 'Thailand',     color: '#2f8f6e', flag: '🇹🇭' },
+  indien:       { name: 'Indien',       color: '#c77d1f', flag: '🇮🇳' },
+  levanten:     { name: 'Mellanöstern', color: '#a8632f', flag: '🌍' },
+};
+
+const DIET_LABEL = { veg: 'Vegetariskt', pesk: 'Pesketariskt', kott: 'Med kött' };
+const TIME_LABEL = { snabb: 'Snabb', medel: 'Medel', middag: 'Middag' };
+
+const DISHES = [
+  { id:'it1', country:'italien', diet:'veg', time:'snabb', name:'Pasta al pomodoro',
+    teaser:'Enkel tomatsås med färsk basilika, redo på 20 minuter.',
+    ingredients:[['Spagetti','400 g'],['Krossade tomater','2 burkar'],['Vitlök','3 klyftor'],['Olivolja','1 dl'],['Färsk basilika','1 kruka'],['Parmesan (valfri)','riven'],['Salt & socker','efter smak']],
+    spices:['Färsk basilika','Torkad oregano','Chiliflakes'],
+    steps:['Koka pastan enligt anvisning.','Fräs vitlök mjuk i olivolja på låg värme.','Tillsätt tomater, salt och en nypa socker, sjud 15 min.','Blanda pastan med såsen.','Toppa med basilika och riven parmesan.'] },
+  { id:'it2', country:'italien', diet:'kott', time:'middag', name:'Kycklingcacciatore',
+    teaser:'Långkokt kyckling i tomatsås med oliver och kapris — klassisk söndagsmiddag.',
+    ingredients:[['Kycklinglår','8 st'],['Krossade tomater','1 burk'],['Gul lök','1 st'],['Vitlök','3 klyftor'],['Gröna oliver','1 näve'],['Kapris','1 msk'],['Rödvin (valfritt)','1 dl'],['Olivolja','2 msk']],
+    spices:['Torkad oregano','Timjan','Chiliflakes'],
+    steps:['Bryn kycklingen på hög värme, lyft ur.','Fräs lök och vitlök i samma panna.','Tillsätt tomater, vin och kryddor, lägg tillbaka kycklingen.','Sjud under lock 40 min tills kycklingen är mör.','Rör i oliver och kapris sista 5 minuterna.'] },
+  { id:'it3', country:'italien', diet:'pesk', time:'snabb', name:'Räkpasta med chili och vitlök',
+    teaser:'Räkor, vitlök och chili i olivolja — klart innan pastan hunnit svalna.',
+    ingredients:[['Spagetti','400 g'],['Räkor','400 g'],['Vitlök','4 klyftor'],['Röd chili','1 st'],['Olivolja','1 dl'],['Persilja','1 knippe'],['Citron','1 st']],
+    spices:['Chiliflakes','Persilja','Citronskal'],
+    steps:['Koka pastan.','Fräs vitlök och chili försiktigt i olivolja.','Vänd i räkorna, stek 2–3 min tills rosa.','Blanda med pastan, persilja och citron.'] },
+
+  { id:'mx1', country:'mexiko', diet:'kott', time:'snabb', name:'Köttfärstacos',
+    teaser:'Kryddig köttfärs, majstortillas och allt tillbehör — barnvänlig favorit.',
+    ingredients:[['Nötfärs','500 g'],['Majstortillas','8 st'],['Gul lök','1 st'],['Vitlök','2 klyftor'],['Tomat','2 st'],['Sallad','1 huvud'],['Riven ost','efter smak'],['Gräddfil & lime','till servering']],
+    spices:['Spiskummin','Chilipulver','Paprikapulver'],
+    steps:['Fräs lök och vitlök.','Bryn färsen, krydda rejält.','Värm tortillasen.','Bygg tacos med tillbehören.'] },
+  { id:'mx2', country:'mexiko', diet:'veg', time:'medel', name:'Bönchili (sin carne)',
+    teaser:'Rejäl chili på svarta bönor och majs, mättande helt utan kött.',
+    ingredients:[['Svarta bönor','2 burkar'],['Kidneybönor','1 burk'],['Majs','1 burk'],['Krossade tomater','1 burk'],['Gul lök','1 st'],['Vitlök','2 klyftor'],['Paprika','1 st']],
+    spices:['Spiskummin','Chilipulver','Torkad oregano'],
+    steps:['Fräs lök, vitlök och paprika.','Tillsätt bönor, majs, tomater och kryddor.','Sjud 25 min under lock.','Smaka av med salt och ev. lite lime.'] },
+  { id:'mx3', country:'mexiko', diet:'pesk', time:'snabb', name:'Fisktacos',
+    teaser:'Panerad vit fisk, syrlig kålsallad och chipotlemajonnäs.',
+    ingredients:[['Vit fisk','500 g'],['Majstortillas','8 st'],['Vitkål','1/4 huvud'],['Lime','2 st'],['Gräddfil','1 dl'],['Chipotle eller chili','1 msk']],
+    spices:['Spiskummin','Paprikapulver','Lime'],
+    steps:['Krydda och stek fisken gyllene.','Strimla kål, blanda med lime och salt.','Rör chipotle i gräddfilen.','Bygg tacos med fisk, kålsallad och sås.'] },
+
+  { id:'th1', country:'thailand', diet:'pesk', time:'snabb', name:'Pad thai med räkor',
+    teaser:'Wokade risnudlar med räkor, tamarind och jordnötter.',
+    ingredients:[['Risnudlar','300 g'],['Räkor','300 g'],['Ägg','2 st'],['Böngroddar','2 dl'],['Jordnötter','1 dl'],['Tamarindpasta','2 msk'],['Fisksås','2 msk'],['Lime','1 st']],
+    spices:['Fisksås','Tamarindpasta','Torkad chili'],
+    steps:['Blötlägg nudlarna enligt anvisning.','Woka räkor och ägg hastigt.','Tillsätt nudlar, sås och böngroddar.','Toppa med jordnötter och lime.'] },
+  { id:'th2', country:'thailand', diet:'kott', time:'medel', name:'Grön kycklingcurry',
+    teaser:'Krämig och het curry med kokosmjölk och thaibasilika.',
+    ingredients:[['Kycklinglår','500 g'],['Grön currypasta','3 msk'],['Kokosmjölk','1 burk'],['Aubergine eller haricots verts','2 dl'],['Thaibasilika','1 näve'],['Fisksås','1 msk']],
+    spices:['Grön currypasta','Fisksås','Thaibasilika'],
+    steps:['Fräs currypastan i lite tjock kokosgrädde.','Tillsätt kycklingen, bryn kort.','Häll i resten av kokosmjölken.','Sjud med grönsaker 15 min, avsluta med basilika.'] },
+  { id:'th3', country:'thailand', diet:'veg', time:'middag', name:'Massaman med tofu',
+    teaser:'Mild, nötig curry med potatis och jordnötter — långsam helgmiddag.',
+    ingredients:[['Fast tofu','400 g'],['Massamancurrypasta','3 msk'],['Kokosmjölk','1 burk'],['Potatis','4 st'],['Jordnötter','1 dl'],['Gul lök','1 st']],
+    spices:['Massamancurrypasta','Kanel','Kardemumma'],
+    steps:['Fräs currypastan.','Tillsätt kokosmjölk och tärnad potatis.','Sjud 20 min tills potatisen är mjuk.','Vänd i tofu och jordnötter sista minuterna.'] },
+
+  { id:'in1', country:'indien', diet:'veg', time:'snabb', name:'Dal (linssoppa)',
+    teaser:'Krämig linssoppa med gurkmeja och spiskummin — redo på 25 minuter.',
+    ingredients:[['Röda linser','3 dl'],['Gul lök','1 st'],['Vitlök','2 klyftor'],['Ingefära','1 bit'],['Krossade tomater','1 burk'],['Kokosmjölk (valfritt)','1 dl']],
+    spices:['Gurkmeja','Spiskummin','Garam masala','Färsk koriander'],
+    steps:['Fräs lök, vitlök, ingefära och kryddor.','Tillsätt linser, vatten och tomater.','Sjud 20 min tills linserna är mjuka.','Toppa med färsk koriander.'] },
+  { id:'in2', country:'indien', diet:'kott', time:'middag', name:'Kycklingcurry (butter chicken-stil)',
+    teaser:'Krämig tomatcurry, mild nog för hela familjen.',
+    ingredients:[['Kycklinglårfilé','600 g'],['Krossade tomater','1 burk'],['Vispgrädde','2 dl'],['Smör','1 msk'],['Gul lök','1 st'],['Vitlök & ingefära','2 klyftor / 1 bit']],
+    spices:['Garam masala','Spiskummin','Gurkmeja','Chilipulver'],
+    steps:['Marinera kycklingen i kryddor en stund om du hinner.','Stek kycklingen gyllene, lyft ur.','Fräs lök, vitlök och ingefära.','Tillsätt tomater och grädde, sjud med kycklingen 15 min.'] },
+  { id:'in3', country:'indien', diet:'pesk', time:'medel', name:'Fiskcurry (Goa-stil)',
+    teaser:'Syrlig, het kokoscurry med vit fisk — kustkök från södra Indien.',
+    ingredients:[['Vit fisk','500 g'],['Kokosmjölk','1 burk'],['Tamarind eller lime','1 msk'],['Gul lök','1 st'],['Tomat','2 st'],['Vitlök & ingefära','2 klyftor / 1 bit']],
+    spices:['Gurkmeja','Senapsfrön','Curryblad (eller lagerblad)','Chilipulver'],
+    steps:['Fräs kryddor och lök i lite olja.','Tillsätt tomat och kokosmjölk, sjud 10 min.','Lägg i fisken sista 8 minuterna, låt sjuda försiktigt.','Smaka av med tamarind eller lime.'] },
+
+  { id:'lv1', country:'levanten', diet:'veg', time:'medel', name:'Falafel med hummus',
+    teaser:'Krispiga kikärtsbollar, silkeslen hummus och platt bröd.',
+    ingredients:[['Kikärtor, torkade & blötlagda','3 dl'],['Gul lök','1/2 st'],['Vitlök','2 klyftor'],['Persilja','1 knippe'],['Kikärtor till hummus','1 burk'],['Tahini','2 msk'],['Citron','1 st'],['Pitabröd','till servering']],
+    spices:['Spiskummin','Malen koriander','Sumak'],
+    steps:['Mixa falafelsmeten grovt, låt vila 20 min.','Forma bollar och stek eller ugnsbaka gyllene.','Mixa hummus separat med tahini och citron.','Servera i pitabröd med sallad.'] },
+  { id:'lv2', country:'levanten', diet:'kott', time:'middag', name:'Kycklingspett med couscous',
+    teaser:'Marinerad kyckling på spett, fluffig couscous, syrlig yoghurtsås.',
+    ingredients:[['Kycklingfilé','600 g'],['Couscous','3 dl'],['Yoghurt naturell','2 dl'],['Citron','1 st'],['Gurka','1 st'],['Tomat','2 st']],
+    spices:['Sumak','Spiskummin','Za\'atar','Paprikapulver'],
+    steps:['Marinera kyckling i kryddor, olja och citron minst 30 min.','Trä på spett, grilla eller stek.','Koka couscous enligt anvisning.','Gör en enkel yoghurtsås med citron och gurka.'] },
+  { id:'lv3', country:'levanten', diet:'pesk', time:'snabb', name:'Bakad fisk med za\'atar',
+    teaser:'Ugnsbakad fisk med za\'atar, citron och olivolja — nästan ingen disk.',
+    ingredients:[['Vit fisk','500 g'],['Citron','1 st'],['Olivolja','2 msk'],['Tomater','3 st'],['Gul lök','1 st']],
+    spices:['Za\'atar','Sumak'],
+    steps:['Lägg fisk och skivade grönsaker i en ugnsform.','Ringla över olivolja, za\'atar och citron.','Ugn 200°C i 15–18 minuter.','Servera direkt ur formen.'] },
+];
+
+// ── State ──
+let filters = { time: 'alla', diet: 'alla', country: 'alla' };
+let haveList = [];
+let cart = new Set();
+let apiKey = localStorage.getItem('husmanskost_gemini_key') || '';
+
+// ── API key UI ──
+const keyPanel = document.getElementById('keyPanel');
+document.getElementById('keyToggle').addEventListener('click', () => keyPanel.classList.toggle('open'));
+document.getElementById('apiKeyInput').value = apiKey;
+updateKeyStatus();
+document.getElementById('saveKeyBtn').addEventListener('click', () => {
+  apiKey = document.getElementById('apiKeyInput').value.trim();
+  localStorage.setItem('husmanskost_gemini_key', apiKey);
+  updateKeyStatus();
+});
+function updateKeyStatus() {
+  const el = document.getElementById('keyStatus');
+  if (apiKey) { el.textContent = '✓ Nyckel sparad — AI-funktionerna är aktiva.'; el.className = 'key-status ok'; }
+  else { el.textContent = 'Ingen nyckel sparad än — AI-tipsen fungerar inte förrän en läggs till.'; el.className = 'key-status missing'; }
+}
+
+async function callGemini(prompt) {
+  if (!apiKey) throw new Error('NO_KEY');
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+  });
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new Error('API_ERROR: ' + res.status + ' ' + errText.slice(0, 200));
+  }
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error('EMPTY_RESPONSE');
+  return text.trim();
+}
+
+// ── Filter chips ──
+function buildChips(containerId, options, key) {
+  const el = document.getElementById(containerId);
+  el.innerHTML = options.map(o => `<button class="chip ${filters[key]===o.id?'active':''}" data-key="${key}" data-val="${o.id}">${o.label}</button>`).join('');
+  el.querySelectorAll('.chip').forEach(b => b.addEventListener('click', () => {
+    filters[b.dataset.key] = b.dataset.val;
+    renderAll();
+  }));
+}
+function renderChips() {
+  buildChips('timeChips', [{id:'alla',label:'Alla'},{id:'snabb',label:'Snabb'},{id:'medel',label:'Medel'},{id:'middag',label:'Middag'}], 'time');
+  buildChips('dietChips', [{id:'alla',label:'Alla'},{id:'veg',label:'Vegetariskt'},{id:'pesk',label:'Pesketariskt'},{id:'kott',label:'Med kött'}], 'diet');
+  buildChips('countryChips', [{id:'alla',label:'Alla'}, ...Object.entries(COUNTRIES).map(([id,c]) => ({id, label: c.flag + ' ' + c.name}))], 'country');
+}
+
+document.getElementById('haveBtn').addEventListener('click', () => {
+  const raw = document.getElementById('haveInput').value;
+  haveList = raw.split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+  document.getElementById('haveClear').style.display = haveList.length ? 'inline-block' : 'none';
+  renderAll();
+});
+document.getElementById('haveClear').addEventListener('click', () => {
+  haveList = [];
+  document.getElementById('haveInput').value = '';
+  document.getElementById('haveClear').style.display = 'none';
+  renderAll();
+});
+
+function matchScore(dish) {
+  if (!haveList.length) return null;
+  const dishIngredients = dish.ingredients.map(i => i[0].toLowerCase());
+  let hits = 0;
+  haveList.forEach(h => { if (dishIngredients.some(ing => ing.includes(h) || h.includes(ing))) hits++; });
+  return Math.round((hits / haveList.length) * 100);
+}
+
+function matchesFilters(d) {
+  if (filters.time !== 'alla' && d.time !== filters.time) return false;
+  if (filters.diet !== 'alla' && d.diet !== filters.diet) return false;
+  if (filters.country !== 'alla' && d.country !== filters.country) return false;
+  return true;
+}
+
+function renderGrid() {
+  let list = DISHES.filter(matchesFilters);
+  if (haveList.length) {
+    list = list.map(d => ({ d, score: matchScore(d) })).sort((a,b) => b.score - a.score).map(x => x.d);
+  }
+  document.getElementById('resultLine').textContent = haveList.length
+    ? `${list.length} rätter, sorterade efter hur mycket du redan har hemma`
+    : `${list.length} rätter`;
+  const grid = document.getElementById('grid');
+  if (!list.length) { grid.innerHTML = '<div class="empty">Inga rätter matchar just nu — testa ett annat filter.</div>'; return; }
+  grid.innerHTML = list.map(d => {
+    const c = COUNTRIES[d.country];
+    const score = haveList.length ? matchScore(d) : null;
+    return `
+    <div class="card" data-id="${d.id}">
+      <div class="card-top">
+        <span class="country-tag" style="background:${c.color}">${c.flag} ${c.name}</span>
+        ${score !== null ? `<span class="match-tag">${score}% match</span>` : ''}
+      </div>
+      <div class="card-body">
+        <h3>${d.name}</h3>
+        <p>${d.teaser}</p>
+        <div class="card-tags">
+          <span class="tag ${d.diet}">${DIET_LABEL[d.diet]}</span>
+          <span class="tag time">${TIME_LABEL[d.time]}</span>
+        </div>
+      </div>
+      <div class="card-foot">
+        <button class="add-btn ${cart.has(d.id)?'added':''}" data-add="${d.id}">${cart.has(d.id) ? '✓ I listan' : '+ Inköpslista'}</button>
+      </div>
+    </div>`;
+  }).join('');
+  grid.querySelectorAll('.card').forEach(card => card.addEventListener('click', e => {
+    if (e.target.closest('[data-add]')) return;
+    openDetail(card.dataset.id);
+  }));
+  grid.querySelectorAll('[data-add]').forEach(btn => btn.addEventListener('click', e => {
+    e.stopPropagation();
+    toggleCart(btn.dataset.add);
+  }));
+}
+
+function toggleCart(id) {
+  if (cart.has(id)) cart.delete(id);
+  else {
+    if (cart.size >= 5) { alert('Max 5 rätter i listan åt gången — ta bort en för att lägga till en ny.'); return; }
+    cart.add(id);
+  }
+  renderAll();
+}
+
+function updateCartBadge() {
+  const badge = document.getElementById('cartBadge');
+  if (cart.size) { badge.style.display = 'flex'; badge.textContent = cart.size; }
+  else badge.style.display = 'none';
+}
+
+// ── Detail panel ──
+const overlayBg = document.getElementById('overlayBg');
+const detailPanel = document.getElementById('detailPanel');
+const cartPanel = document.getElementById('cartPanel');
+
+function openDetail(id) {
+  const d = DISHES.find(x => x.id === id);
+  const c = COUNTRIES[d.country];
+  document.getElementById('detailBody').innerHTML = `
+    <span class="d-country" style="background:${c.color}">${c.flag} ${c.name}</span>
+    <div class="d-title">${d.name}</div>
+    <div class="d-teaser">${d.teaser}</div>
+    <div class="d-tags">
+      <span class="tag ${d.diet}">${DIET_LABEL[d.diet]}</span>
+      <span class="tag time">${TIME_LABEL[d.time]}</span>
+    </div>
+
+    <div class="d-block">
+      <h4>Ingredienser</h4>
+      <ul class="ing-list">${d.ingredients.map(([n,a]) => `<li><span>${n}</span><span class="amt">${a}</span></li>`).join('')}</ul>
+    </div>
+
+    <div class="d-block">
+      <h4>Nyckelkryddor — skaffa dessa, laga hela köket</h4>
+      <div class="spice-row">${d.spices.map(s => `<span class="spice-chip">${s}</span>`).join('')}</div>
+    </div>
+
+    <div class="d-block">
+      <h4>Gör så här</h4>
+      <ol class="steps-list">${d.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+    </div>
+
+    <div class="ai-box">
+      <h4>Saknar du en ingrediens?</h4>
+      <div class="sub">Fråga AI:n vad du kan byta ut den mot utan att förstöra rätten.</div>
+      <div class="ai-row">
+        <input type="text" id="subInput" placeholder="t.ex. tamarindpasta"/>
+        <button id="subBtn">Föreslå substitut</button>
+      </div>
+      <div class="ai-loading" id="subLoading">Frågar Gemini …</div>
+      <div class="ai-error" id="subError"></div>
+      <div class="ai-result" id="subResult"></div>
+    </div>
+
+    <button class="add-btn-lg ${cart.has(d.id)?'added':''}" id="detailAddBtn">${cart.has(d.id) ? '✓ I inköpslistan' : '+ Lägg till i inköpslista'}</button>
+  `;
+
+  document.getElementById('detailAddBtn').addEventListener('click', () => { toggleCart(d.id); openDetail(d.id); });
+  document.getElementById('subBtn').addEventListener('click', () => handleSubstitute(d));
+
+  overlayBg.classList.add('open');
+  detailPanel.classList.add('open');
+}
+
+async function handleSubstitute(dish) {
+  const input = document.getElementById('subInput').value.trim();
+  const loading = document.getElementById('subLoading');
+  const errorEl = document.getElementById('subError');
+  const resultEl = document.getElementById('subResult');
+  errorEl.classList.remove('show'); resultEl.classList.remove('show');
+  if (!input) return;
+  loading.classList.add('show');
+  document.getElementById('subBtn').disabled = true;
+  try {
+    const ingredientNames = dish.ingredients.map(i => i[0]).join(', ');
+    const prompt = `Jag lagar "${dish.name}" (${dish.teaser}). Fullständig ingredienslista: ${ingredientNames}. Nyckelkryddor: ${dish.spices.join(', ')}.\n\nJag har inte "${input}" hemma. Föreslå kort (max 3 meningar, på svenska) det bästa substitutet jag sannolikt redan har hemma eller lätt hittar i en vanlig svensk matbutik, och en kort mening om hur smaken/resultatet påverkas.`;
+    const text = await callGemini(prompt);
+    resultEl.textContent = text;
+    resultEl.classList.add('show');
+  } catch (err) {
+    errorEl.textContent = err.message === 'NO_KEY'
+      ? 'Lägg till en Gemini API-nyckel högst upp på sidan för att använda den här funktionen.'
+      : 'Kunde inte hämta ett förslag just nu (' + err.message + '). Försök igen om en stund.';
+    errorEl.classList.add('show');
+  } finally {
+    loading.classList.remove('show');
+    document.getElementById('subBtn').disabled = false;
+  }
+}
+
+document.getElementById('detailClose').addEventListener('click', closePanels);
+overlayBg.addEventListener('click', closePanels);
+function closePanels() {
+  overlayBg.classList.remove('open');
+  detailPanel.classList.remove('open');
+  cartPanel.classList.remove('open');
+}
+
+// ── Cart panel ──
+document.getElementById('cartToggle').addEventListener('click', openCart);
+document.getElementById('cartClose').addEventListener('click', closePanels);
+
+function openCart() {
+  renderCartBody();
+  overlayBg.classList.add('open');
+  cartPanel.classList.add('open');
+}
+
+function renderCartBody() {
+  const body = document.getElementById('cartBody');
+  const dishes = [...cart].map(id => DISHES.find(d => d.id === id));
+  if (!dishes.length) {
+    body.innerHTML = '<div class="cart-empty">Inga rätter i listan än. Lägg till upp till 5 stycken från receptvyn.</div>';
+    return;
+  }
+  body.innerHTML = `
+    ${dishes.map(d => `
+      <div class="cart-dish">
+        <span class="cd-name">${COUNTRIES[d.country].flag} ${d.name}</span>
+        <button class="cd-remove" data-remove="${d.id}">Ta bort</button>
+      </div>`).join('')}
+    <button class="optimize-btn" id="optimizeBtn">Optimera inköpslistan med AI</button>
+    <div class="ai-loading" id="optLoading">Slår ihop och tänker efter …</div>
+    <div class="ai-error" id="optError"></div>
+    <div class="ai-result" id="optResult"></div>
+
+    <div class="combined-list">
+      <h4>Rå ingredienslista (osorterad)</h4>
+      <ul class="ing-list">
+        ${dishes.flatMap(d => d.ingredients.map(([n,a]) => `<li><span>${n} <span style="color:var(--muted);font-size:11px">(${d.name})</span></span><span class="amt">${a}</span></li>`)).join('')}
+      </ul>
+    </div>
+  `;
+  body.querySelectorAll('[data-remove]').forEach(btn => btn.addEventListener('click', () => { cart.delete(btn.dataset.remove); renderAll(); renderCartBody(); }));
+  document.getElementById('optimizeBtn').addEventListener('click', () => handleOptimize(dishes));
+}
+
+async function handleOptimize(dishes) {
+  const loading = document.getElementById('optLoading');
+  const errorEl = document.getElementById('optError');
+  const resultEl = document.getElementById('optResult');
+  errorEl.classList.remove('show'); resultEl.classList.remove('show');
+  loading.classList.add('show');
+  document.getElementById('optimizeBtn').disabled = true;
+  try {
+    const listText = dishes.map(d => `${d.name}: ${d.ingredients.map(([n,a]) => `${n} (${a})`).join(', ')}`).join('\n');
+    const prompt = `Jag ska laga dessa ${dishes.length} rätter samma vecka:\n${listText}\n\nSlå ihop till en enda inköpslista på svenska. Regler: (1) Slå ihop dubbletter och räkna ihop rimlig total mängd. (2) Om något bara behövs i en liten mängd till en enda rätt — flagga tydligt att man kan hoppa över att köpa en hel förpackning och istället använda ett vanligt substitut, eller hur mycket som faktiskt behövs. (3) Gruppera efter typ (grönsaker, kryddor, skafferivaror, kött/fisk/protein). Var kort och konkret — punktlista, inga långa förklaringar. Målet är att laga roligare mat hemma utan att köpa ihjäl sig med grejer man ändå inte använder upp.`;
+    const text = await callGemini(prompt);
+    resultEl.textContent = text;
+    resultEl.classList.add('show');
+  } catch (err) {
+    errorEl.textContent = err.message === 'NO_KEY'
+      ? 'Lägg till en Gemini API-nyckel högst upp på sidan för att använda den här funktionen.'
+      : 'Kunde inte optimera listan just nu (' + err.message + '). Försök igen om en stund.';
+    errorEl.classList.add('show');
+  } finally {
+    loading.classList.remove('show');
+    document.getElementById('optimizeBtn').disabled = false;
+  }
+}
+
+function renderAll() {
+  renderChips();
+  renderGrid();
+  updateCartBadge();
+}
+renderAll();
+</script>
+</body>
+</html>
