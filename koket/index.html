@@ -1,0 +1,1895 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kökets nycklar</title>
+<meta name="description" content="Hitta en rätt att laga ikväll, eller lär dig de fyra-fem kryddorna som låser upp ett helt lands kök.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo+Black&family=Karla:wght@400;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --shelf:#1C1A17;
+  --paper:#F2EFE6;
+  --card:#242019;
+  --edge:#3A342C;
+  --muted:#9C9284;
+  --marigold:#E8A33D;
+  --jade:#2F8F6E;
+  --paprika:#C1442E;
+  --shadow:0 2px 14px rgba(0,0,0,.35);
+  --shadow-lg:0 18px 54px rgba(0,0,0,.55);
+  --topbar-h:58px;
+  --es:#A93226; --it:#4A6B3A; --jp:#2A4759; --th:#1F6F5C; --me:#8C6A2F; --in:#B07A0C; --tr:#8A4B22; --ba:#5B5566;
+  --mx:#8A3A5C; --gr:#2F5D8A; --ma:#59417A; --kr:#7D2B1B; --vn:#4F7A2E; --cn:#6B2F3A; --fr:#7A6A4E; --wa:#A0522D; --pe:#256B7A; --et:#8C3D2E;
+  --veg:#8fd6a8; --veg-bg:rgba(143,214,168,.14);
+  --pesk:#7cc0e8; --pesk-bg:rgba(124,192,232,.14);
+  --kott:#e6a08f; --kott-bg:rgba(230,160,143,.14);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+body{background:var(--shelf);color:var(--paper);font-family:'Karla',-apple-system,'Segoe UI',system-ui,sans-serif;font-size:17px;line-height:1.55;-webkit-font-smoothing:antialiased}
+button,input{font-family:inherit}
+img{max-width:100%;display:block}
+.wrap{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem)}
+:focus-visible{outline:2px solid var(--paper);outline-offset:2px}
+
+/* ── SHARED TOPBAR ── */
+header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--edge)}
+.topbar-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem);min-height:calc(var(--topbar-h) - 1px);display:flex;align-items:center;gap:1.5rem;flex-wrap:wrap}
+.wordmark{font-family:'Archivo Black',Impact,'Arial Black',sans-serif;font-size:1.1rem;letter-spacing:-.01em;text-transform:uppercase;white-space:nowrap}
+.viewnav{display:flex;gap:.4rem;margin-right:auto}
+.viewnav a{font-family:'Space Mono','SF Mono',Consolas,monospace;font-size:.72rem;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);text-decoration:none;border:1px solid transparent;padding:.5rem .8rem;border-radius:3px;transition:background .15s,color .15s}
+.viewnav a:hover{color:var(--paper)}
+.viewnav a.active{background:var(--paper);color:var(--shelf);font-weight:700}
+.key-btn{background:rgba(242,239,230,.08);border:1px solid var(--edge);color:var(--paper);border-radius:3px;padding:.5rem .8rem;font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.04em;cursor:pointer}
+.key-panel{display:none;max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem) 1rem}
+.key-panel.open{display:block}
+.key-panel label{font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.05em;color:var(--muted);display:block;margin-bottom:.5rem;text-transform:uppercase}
+.key-row{display:flex;gap:.5rem}
+.key-row input{flex:1;background:var(--card);border:1px solid var(--edge);color:var(--paper);padding:.55rem .7rem;border-radius:3px;font-size:.85rem}
+.key-row button{background:var(--marigold);color:var(--shelf);border:none;border-radius:3px;padding:.55rem .9rem;font-size:.74rem;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace}
+.key-note{font-size:.68rem;color:var(--muted);margin-top:.5rem;max-width:52ch}
+.key-status{font-size:.72rem;margin-top:.4rem;font-weight:700;font-family:'Space Mono',monospace}
+.key-status.ok{color:var(--jade)}
+.key-status.missing{color:var(--marigold)}
+
+.view[hidden]{display:none}
+
+/* ── RECEPT TOOLBAR ── */
+.toolbar-recept{background:var(--card);border-bottom:1px solid var(--edge);padding:1rem 0;position:sticky;top:var(--topbar-h);z-index:20}
+.toolbar-recept-inner{display:flex;flex-direction:column;gap:.65rem}
+.filter-group{display:flex;align-items:baseline;gap:.75rem;flex-wrap:wrap}
+.fg-label{font-family:'Space Mono',monospace;font-size:.64rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);min-width:8rem}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap}
+.chip{background:transparent;border:1px solid var(--edge);color:var(--paper);font-size:.8rem;font-weight:600;padding:.4rem .8rem;border-radius:3px;cursor:pointer;font-family:'Karla',sans-serif}
+.chip:hover{border-color:var(--marigold)}
+.chip.active{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
+.have-row{display:flex;gap:.5rem;flex:1;min-width:220px}
+.have-row input{flex:1;padding:.55rem .8rem;border:1px solid var(--edge);border-radius:3px;font-size:.85rem;background:var(--shelf);color:var(--paper)}
+.have-row input::placeholder{color:var(--muted)}
+.have-row button{background:var(--jade);color:var(--shelf);border:none;padding:.55rem .9rem;border-radius:3px;font-size:.76rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Space Mono',monospace}
+.have-row button.clear{background:transparent;color:var(--muted);border:1px solid var(--edge)}
+
+/* ── GRID ── */
+.grid-section{padding:1.5rem 0 4rem}
+.result-row{display:flex;align-items:center;justify-content:space-between;gap:1rem;margin-bottom:1rem;flex-wrap:wrap}
+.result-line{font-size:.78rem;color:var(--muted);font-weight:600;font-family:'Space Mono',monospace}
+.cart-btn{background:var(--marigold);color:var(--shelf);border:none;border-radius:3px;padding:.6rem 1rem;font-size:.78rem;font-weight:800;position:relative;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:.02em}
+.cart-badge{position:absolute;top:-7px;right:-7px;background:var(--paprika);color:var(--paper);border-radius:99px;width:20px;height:20px;font-size:.62rem;display:flex;align-items:center;justify-content:center;font-weight:800}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem}
+.card{background:var(--card);border:1px solid var(--edge);border-radius:4px;overflow:hidden;box-shadow:var(--shadow);display:flex;flex-direction:column;cursor:pointer;transition:transform .12s,box-shadow .12s,border-color .12s}
+.card:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg);border-color:var(--muted)}
+.card-top{padding:1rem 1rem 0;display:flex;align-items:center;justify-content:space-between}
+.country-tag{display:inline-flex;align-items:center;gap:.35rem;font-size:.66rem;font-weight:800;color:var(--paper);padding:.3rem .6rem;border-radius:3px;font-family:'Space Mono',monospace;letter-spacing:.02em}
+.match-tag{font-size:.64rem;font-weight:800;color:var(--jade);background:var(--veg-bg);padding:.25rem .55rem;border-radius:3px;font-family:'Space Mono',monospace}
+.card-body{padding:.75rem 1rem .85rem;flex:1}
+.card-body h3{font-family:'Archivo Black',Impact,sans-serif;font-size:1rem;letter-spacing:-.005em;text-transform:uppercase;line-height:1.15}
+.card-body p{font-size:.82rem;color:var(--muted);margin-top:.4rem;line-height:1.5}
+.card-tags{display:flex;gap:.4rem;margin-top:.7rem;flex-wrap:wrap}
+.tag{font-size:.62rem;font-weight:800;padding:.22rem .55rem;border-radius:3px;text-transform:uppercase;letter-spacing:.03em;font-family:'Space Mono',monospace}
+.tag.veg{color:var(--veg);background:var(--veg-bg)}
+.tag.pesk{color:var(--pesk);background:var(--pesk-bg)}
+.tag.kott{color:var(--kott);background:var(--kott-bg)}
+.tag.time{color:var(--muted);background:transparent;border:1px solid var(--edge)}
+.card-foot{border-top:1px solid var(--edge);padding:.6rem 1rem;display:flex;justify-content:flex-end}
+.add-btn{background:transparent;border:1px solid var(--edge);color:var(--paper);font-size:.7rem;font-weight:700;padding:.4rem .7rem;border-radius:3px;cursor:pointer;font-family:'Space Mono',monospace}
+.add-btn.added{background:var(--jade);color:var(--shelf);border-color:var(--jade)}
+.empty{text-align:center;padding:4rem 1.25rem;color:var(--muted);font-size:.85rem}
+
+/* ── OVERLAY PANELS ── */
+.overlay-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:40}
+.overlay-bg.open{display:block}
+.panel{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--shelf);z-index:41;transform:translateX(100%);transition:transform .2s ease;overflow-y:auto;box-shadow:-10px 0 40px rgba(0,0,0,.4);border-left:1px solid var(--edge)}
+.panel.open{transform:translateX(0)}
+.panel-head{background:var(--card);color:var(--paper);padding:1.2rem 1.35rem;display:flex;align-items:flex-start;justify-content:space-between;gap:.85rem;position:sticky;top:0;z-index:2;border-bottom:1px solid var(--edge)}
+.panel-close{background:rgba(242,239,230,.08);border:1px solid var(--edge);color:var(--paper);width:30px;height:30px;border-radius:3px;font-size:.9rem;cursor:pointer;flex-shrink:0}
+.panel-body{padding:1.35rem}
+
+.d-country{display:inline-flex;align-items:center;gap:.35rem;font-size:.66rem;font-weight:800;color:var(--paper);padding:.3rem .6rem;border-radius:3px;margin-bottom:.6rem;font-family:'Space Mono',monospace}
+.d-title{font-family:'Archivo Black',Impact,sans-serif;font-size:1.35rem;letter-spacing:-.01em;text-transform:uppercase}
+.d-teaser{font-size:.85rem;color:var(--muted);margin-top:.4rem}
+.d-tags{display:flex;gap:.4rem;margin-top:.75rem}
+.d-block{margin-top:1.3rem}
+.d-block h4{font-family:'Space Mono',monospace;font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem}
+.ing-list{list-style:none}
+.ing-list li{display:flex;justify-content:space-between;padding:.5rem 0;border-bottom:1px solid var(--edge);font-size:.85rem}
+.ing-list li:last-child{border-bottom:none}
+.ing-list .amt{color:var(--muted);font-variant-numeric:tabular-nums}
+.spice-row{display:flex;gap:.45rem;flex-wrap:wrap}
+.spice-chip{background:rgba(232,163,61,.16);border:1px solid rgba(232,163,61,.4);color:var(--marigold);font-size:.74rem;font-weight:700;padding:.35rem .7rem;border-radius:3px;font-family:'Space Mono',monospace}
+.steps-list{list-style:none;counter-reset:step}
+.steps-list li{counter-increment:step;padding:.65rem 0 .65rem 2.1rem;position:relative;font-size:.85rem;border-bottom:1px solid var(--edge)}
+.steps-list li:last-child{border-bottom:none}
+.steps-list li::before{content:counter(step);position:absolute;left:0;top:.5rem;width:1.4rem;height:1.4rem;border-radius:50%;background:var(--paper);color:var(--shelf);font-size:.66rem;font-weight:800;display:flex;align-items:center;justify-content:center}
+
+.ai-box{margin-top:1.4rem;background:var(--card);border:1px solid var(--edge);border-radius:4px;padding:1rem}
+.ai-box h4{font-size:.8rem;font-weight:800;color:var(--paper);margin-bottom:.25rem}
+.ai-box .sub{font-size:.72rem;color:var(--muted);margin-bottom:.75rem}
+.ai-row{display:flex;gap:.5rem}
+.ai-row input{flex:1;padding:.55rem .75rem;border:1px solid var(--edge);border-radius:3px;font-size:.82rem;background:var(--shelf);color:var(--paper)}
+.ai-row button{background:var(--paprika);color:var(--paper);border:none;padding:.55rem .9rem;border-radius:3px;font-size:.74rem;font-weight:700;cursor:pointer;white-space:nowrap;font-family:'Space Mono',monospace}
+.ai-row button:disabled{opacity:.5;cursor:default}
+.ai-result{margin-top:.75rem;background:rgba(242,239,230,.04);border:1px dashed var(--edge);border-radius:3px;padding:.75rem .9rem;font-size:.82rem;line-height:1.6;white-space:pre-wrap;display:none}
+.ai-result.show{display:block}
+.ai-loading{font-size:.74rem;color:var(--muted);margin-top:.6rem;display:none;font-family:'Space Mono',monospace}
+.ai-loading.show{display:block}
+.ai-error{font-size:.72rem;color:var(--paprika);margin-top:.6rem;display:none}
+.ai-error.show{display:block}
+.add-btn-lg{width:100%;margin-top:1.4rem;background:var(--marigold);color:var(--shelf);border:none;padding:.8rem;border-radius:3px;font-size:.82rem;font-weight:800;cursor:pointer;font-family:'Space Mono',monospace;letter-spacing:.02em}
+.add-btn-lg.added{background:var(--jade)}
+
+.cart-empty{text-align:center;padding:3rem 1.25rem;color:var(--muted);font-size:.8rem}
+.cart-dish{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--edge);border-radius:4px;padding:.7rem .9rem;margin-bottom:.5rem}
+.cart-dish .cd-name{font-size:.82rem;font-weight:700}
+.cart-dish .cd-remove{background:none;border:none;color:var(--muted);font-size:.76rem;cursor:pointer;text-decoration:underline}
+.optimize-btn{width:100%;background:var(--jade);color:var(--shelf);border:none;padding:.8rem;border-radius:3px;font-size:.82rem;font-weight:800;cursor:pointer;margin-top:.9rem;font-family:'Space Mono',monospace}
+.optimize-btn:disabled{opacity:.5}
+.combined-list{margin-top:1.25rem}
+.combined-list h4{font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:.6rem;font-family:'Space Mono',monospace}
+
+@media (max-width:520px){
+  .topbar-inner{gap:.5rem;flex-wrap:nowrap}
+  .wordmark{font-size:.92rem}
+  .cart-btn{padding:.45rem .65rem;font-size:.68rem}
+  .key-btn{padding:.45rem .55rem;font-size:0}
+  .key-btn::after{content:'⚙️';font-size:1rem}
+}
+
+/* ══════════ NYCKLAR VIEW ══════════ */
+.nk-hero{padding:clamp(2.25rem,8vw,5rem) clamp(1.25rem,5vw,4rem) clamp(1.5rem,4vw,2.25rem);max-width:1100px;margin:0 auto}
+.eyebrow{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--muted);margin-bottom:1.5rem}
+.nk-hero h1{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2.5rem,9vw,5.5rem);line-height:.92;letter-spacing:-.02em;text-transform:uppercase;text-wrap:balance}
+.nk-hero h1 em{font-style:normal;display:block}
+.nk-hero h1 .spill{color:var(--muted)}
+.thesis{margin-top:1.75rem;max-width:34ch;font-size:clamp(1.05rem,2.4vw,1.3rem);color:#C9C2B4}
+.thesis b{color:var(--paper);font-weight:700}
+
+.picker{position:sticky;top:var(--topbar-h);z-index:20;background:rgba(28,26,23,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--edge);padding:.85rem clamp(1.25rem,5vw,4rem)}
+.toolbar2{background:var(--card);border-bottom:1px solid var(--edge);padding:.85rem clamp(1.25rem,5vw,4rem)}
+.picker-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:.9rem;flex-wrap:wrap}
+.picker-label{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
+.picker-btns{display:flex;gap:.4rem}
+.picker button{font-family:'Space Mono',monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;color:var(--paper);background:transparent;border:1px solid #3A3630;padding:.5rem .9rem;cursor:pointer;transition:background .18s,border-color .18s,color .18s}
+.picker button:hover{border-color:#7A7267}
+.picker button[aria-pressed="true"]{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
+
+.nk-cuisinenav{max-width:1100px;margin:0 auto;padding:clamp(1.5rem,4vw,2.25rem) clamp(1.25rem,5vw,4rem) clamp(2.5rem,6vw,3.5rem);display:flex;flex-wrap:wrap;gap:.5rem}
+.nk-cuisinenav a{font-family:'Space Mono',monospace;font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;color:var(--paper);text-decoration:none;border:1px solid #3A3630;padding:.5rem .85rem;transition:background .18s,border-color .18s}
+.nk-cuisinenav a:hover{background:#2A2621;border-color:#6A625A}
+
+.band{padding:clamp(2.5rem,7vw,5rem) 0;color:var(--paper);scroll-margin-top:11.5rem}
+.band-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem);display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(2rem,5vw,4.5rem);align-items:start}
+.es{background:var(--es)}.it{background:var(--it)}.jp{background:var(--jp)}
+.th{background:var(--th)}.me{background:var(--me)}.tr{background:var(--tr)}
+.ba{background:var(--ba)}.in{background:var(--in);color:#1C1A17}
+.mx{background:var(--mx)}.gr{background:var(--gr)}.ma{background:var(--ma)}
+.kr{background:var(--kr)}.vn{background:var(--vn)}.cn{background:var(--cn)}
+.fr{background:var(--fr)}.wa{background:var(--wa);color:#1C1A17}.pe{background:var(--pe)}.et{background:var(--et)}
+.in .keys li,.in .dish-no,.wa .keys li,.wa .dish-no{border-color:rgba(28,26,23,.35)}
+.in .keys li,.wa .keys li{background:rgba(28,26,23,.12)}
+.in .why,.in .flag,.in .mins,.wa .why,.wa .flag,.wa .mins{color:rgba(28,26,23,.72)}
+.in .step b,.in .swap b,.wa .step b,.wa .swap b{color:#1C1A17}
+.in .dish,.in .swap,.wa .dish,.wa .swap{border-color:rgba(28,26,23,.3)}
+.in .tip,.wa .tip{border-color:rgba(28,26,23,.45)}
+.in figure.shot img,.wa figure.shot img{border-color:rgba(28,26,23,.3)}
+.in .drink,.wa .drink{border-color:rgba(28,26,23,.3)}
+.in .drink p,.wa .drink p{color:rgba(28,26,23,.78)}
+
+.flag{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.2em;text-transform:uppercase;color:rgba(242,239,230,.65);margin-bottom:.9rem}
+.band h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);line-height:.95;letter-spacing:-.015em;text-transform:uppercase;margin-bottom:1.4rem;text-wrap:balance}
+.keys{list-style:none;display:flex;flex-wrap:wrap;gap:.45rem;margin-bottom:1.2rem}
+.keys li{font-family:'Space Mono',monospace;font-size:.78rem;letter-spacing:.04em;padding:.42rem .7rem;border:1px solid rgba(242,239,230,.35);background:rgba(242,239,230,.1)}
+figure.shot{margin-top:1.25rem}
+figure.shot img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border:1px solid rgba(242,239,230,.3);filter:saturate(1.05)}
+figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.08em;margin-top:.45rem;opacity:.6}
+.drink{margin-top:1.1rem;padding-top:.85rem;border-top:1px solid rgba(242,239,230,.28)}
+.drink b{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;display:block;margin-bottom:.35rem;opacity:.85}
+.drink p{font-size:.93rem;color:rgba(242,239,230,.85)}
+.why{font-size:.95rem;color:rgba(242,239,230,.8);max-width:38ch}
+
+.dishes{display:grid;gap:1.75rem}
+.dish{border-top:1px solid rgba(242,239,230,.28);padding-top:1.1rem}
+.dish-head{display:flex;align-items:baseline;gap:.75rem;margin-bottom:.6rem;flex-wrap:wrap}
+.dish-no{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;padding:.2rem .5rem;border:1px solid rgba(242,239,230,.4)}
+.dish h3{font-family:'Archivo Black',Impact,sans-serif;font-size:1.18rem;letter-spacing:-.01em;text-transform:uppercase;line-height:1.1}
+.mins{font-family:'Space Mono',monospace;font-size:.78rem;color:rgba(242,239,230,.75);margin-left:auto}
+.step{font-size:1rem;line-height:1.6}
+.step b{font-weight:700}
+.swap{margin-top:.75rem;padding-top:.7rem;border-top:1px dashed rgba(242,239,230,.3);font-size:.95rem}
+.swap b{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:.25rem;opacity:.85}
+.swap span[data-p]{display:none}
+.swap span[data-p].on{display:block}
+.tip{margin-top:.7rem;font-family:'Space Mono',monospace;font-size:.76rem;line-height:1.55;opacity:.82;padding-left:.85rem;border-left:2px solid rgba(242,239,230,.45)}
+
+.pantry{background:var(--paper);color:#1C1A17;padding:clamp(2.5rem,7vw,5rem) 0;scroll-margin-top:11.5rem}
+.pantry-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem)}
+.pantry h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem}
+.pantry .lead{max-width:48ch;color:#4A443C;margin-bottom:2.5rem}
+.pantry h3{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#7A7268;margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid #CFC9BC}
+.plist{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:.1rem 2rem}
+.plist li{padding:.7rem 0;border-bottom:1px solid #DDD7CA;display:flex;gap:.8rem;align-items:baseline}
+.plist .n{font-family:'Space Mono',monospace;font-size:.7rem;color:#A29A8C;min-width:1.6rem}
+.plist .b{font-weight:700;display:block}
+.plist .d{font-size:.88rem;color:#5A5348;display:block;margin-top:.1rem}
+.plist .u{font-family:'Space Mono',monospace;font-size:.66rem;color:#1C1A17;background:#DDD7CA;padding:.1rem .4rem;white-space:nowrap;margin-left:auto}
+.plist .h{font-family:'Space Mono',monospace;font-size:.66rem;color:#8A8275;white-space:nowrap;padding-left:.55rem;min-width:5.5rem;text-align:right}
+.keepbox{margin-top:.6rem;border:1px solid #6E8A5A;background:#EEF1E8;padding:1.25rem}
+.keepbox .t{font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#4E6B3C;margin-bottom:.8rem}
+.keepbox li{list-style:none;padding:.6rem 0;border-bottom:1px solid #DCE2D2;font-size:.93rem;color:#4A443C}
+.keepbox li:last-child{border-bottom:none}
+.keepbox b{color:#1C1A17}
+.keepbox .yr{font-family:'Space Mono',monospace;font-size:.66rem;color:#4E6B3C;float:right;padding-left:.8rem}
+.trap .yr{font-family:'Space Mono',monospace;font-size:.66rem;color:#A8442F;float:right;padding-left:.8rem}
+.trap{margin-top:.6rem;border:1px solid #C4553C;background:#F7EFEA;padding:1.25rem}
+.trap .t{font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#A8442F;margin-bottom:.8rem}
+.trap li{list-style:none;padding:.6rem 0;border-bottom:1px solid #E2D3CA;font-size:.93rem;color:#4A443C}
+.trap li:last-child{border-bottom:none}
+.trap b{color:#1C1A17}
+.fresh{margin-top:.5rem;padding:1.25rem;border:1px dashed #B8B0A2;background:#EAE6DA}
+.fresh p{font-size:.92rem;color:#5A5348;max-width:60ch}
+.fresh strong{color:#1C1A17}
+.tier{display:inline-block;font-family:'Space Mono',monospace;font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;padding:.12rem .4rem;border:1px solid #B8B0A2;color:#7A7268;margin-left:.4rem;vertical-align:middle}
+
+.protein{background:#242019;padding:clamp(2.5rem,7vw,5rem) 0;scroll-margin-top:11.5rem}
+.protein-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem)}
+.protein h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem}
+.protein .lead{max-width:46ch;color:#C9C2B4;margin-bottom:2.25rem}
+.ptable{width:100%;border-collapse:collapse;margin-bottom:2.5rem}
+.ptable caption{text-align:left;font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);padding-bottom:.6rem}
+.ptable th,.ptable td{text-align:left;padding:.55rem .6rem;border-bottom:1px solid #3A342C;font-size:.95rem}
+.ptable th{font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:400}
+.ptable td:last-child{font-family:'Space Mono',monospace;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.ptable tr:last-child td{border-bottom:none}
+.builds{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:1.25rem}
+.build{border:1px solid #3A342C;padding:1.15rem}
+.build b{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:.55rem;color:var(--muted)}
+.build .sum{font-family:'Archivo Black',Impact,sans-serif;font-size:1.6rem;margin-bottom:.4rem}
+.build p{font-size:.93rem;color:#C9C2B4}
+
+.nk-footer{max-width:1100px;margin:0 auto;padding:clamp(3rem,8vw,6rem) clamp(1.25rem,5vw,4rem)}
+.nk-footer h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(1.5rem,4.5vw,2.4rem);text-transform:uppercase;letter-spacing:-.01em;margin-bottom:1.5rem}
+.rules{display:grid;gap:1rem;max-width:60ch}
+.rules div{border-left:2px solid #4A443C;padding-left:1rem;color:#C9C2B4}
+.rules b{color:var(--paper);font-family:'Space Mono',monospace;font-size:.8rem;letter-spacing:.1em;text-transform:uppercase;display:block;margin-bottom:.2rem}
+
+@media (max-width:760px){
+  .band-inner{grid-template-columns:1fr;gap:1.75rem}
+  .mins{margin-left:0;width:100%}
+  .picker-inner{gap:.55rem}
+  .picker-label{width:100%}
+}
+
+/* ── picker second row: time + "vad har du hemma" ── */
+.picker-row2 .have-row{flex:1;min-width:220px;margin-left:.5rem}
+.picker-row2 .have-row input{padding:.4rem .7rem;font-size:.78rem;background:rgba(242,239,230,.06);border:1px solid #3A3630;color:var(--paper);border-radius:2px}
+.picker-row2 .have-row input::placeholder{color:var(--muted)}
+.picker-row2 .have-row button{background:var(--jade);color:var(--shelf);border:none;padding:.4rem .8rem;font-size:.72rem;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;border-radius:2px}
+.picker-row2 .have-row button.clear{background:transparent;color:var(--muted);border:1px solid #3A3630}
+.result-line{max-width:1100px;margin:.6rem auto 0;padding:0 clamp(1.25rem,5vw,4rem);font-size:.72rem;color:var(--muted);font-family:'Space Mono',monospace;min-height:1em}
+
+/* ── per-dish image, ingredients, actions ── */
+.dish-shot{margin:.85rem 0;aspect-ratio:16/10;overflow:hidden;border:1px solid rgba(242,239,230,.25)}
+.dish-shot img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05)}
+.in .dish-shot,.wa .dish-shot{border-color:rgba(28,26,23,.3)}
+.dish .ing-list{margin:.85rem 0;background:rgba(242,239,230,.04);border:1px solid rgba(242,239,230,.15);padding:.15rem .85rem}
+.in .dish .ing-list,.wa .dish .ing-list{background:rgba(28,26,23,.06);border-color:rgba(28,26,23,.2)}
+.dish .ing-list li{border-bottom-color:rgba(242,239,230,.15);font-size:.86rem}
+.in .dish .ing-list li,.wa .dish .ing-list li{border-bottom-color:rgba(28,26,23,.2)}
+.dish-actions{display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap}
+.dish-actions .add-btn{font-size:.72rem}
+.dish-actions .add-btn.added{background:var(--jade);color:var(--shelf);border-color:var(--jade)}
+.ask-ai-btn{background:transparent;border:1px dashed rgba(242,239,230,.4);color:inherit;font-size:.72rem;font-weight:700;padding:.4rem .7rem;border-radius:3px;cursor:pointer;font-family:'Space Mono',monospace}
+.in .ask-ai-btn,.wa .ask-ai-btn{border-color:rgba(28,26,23,.4)}
+.ai-inline{margin-top:.75rem;background:rgba(0,0,0,.18);border:1px solid rgba(242,239,230,.2);border-radius:3px;padding:.85rem}
+.in .ai-inline,.wa .ai-inline{background:rgba(255,255,255,.25);border-color:rgba(28,26,23,.25)}
+.ai-inline[hidden]{display:none}
+.dish.dimmed{opacity:.28}
+.dish .match-badge{font-family:'Space Mono',monospace;font-size:.62rem;font-weight:800;color:var(--jade);background:rgba(143,214,168,.16);padding:.2rem .5rem;border-radius:2px;margin-left:.5rem}
+
+@media (max-width:640px){
+  .picker-row2{display:flex;flex-direction:column;align-items:stretch}
+  .picker-row2 .have-row{margin-left:0;margin-top:.5rem}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="wordmark">Kökets nycklar</div>
+    <button class="cart-btn" id="cartToggle">Inköpslista<span class="cart-badge" id="cartBadge" style="display:none">0</span></button>
+    <button class="key-btn" id="keyToggle">⚙️ Gemini-nyckel</button>
+  </div>
+  <div class="key-panel" id="keyPanel">
+    <label for="apiKeyInput">Gemini API-nyckel (används för substitut-tips och listoptimering)</label>
+    <div class="key-row">
+      <input type="password" id="apiKeyInput" placeholder="Klistra in din Gemini-nyckel"/>
+      <button id="saveKeyBtn">Spara</button>
+    </div>
+    <div class="key-status" id="keyStatus"></div>
+    <div class="key-note">Sparas bara lokalt i din webbläsare (localStorage). Skickas aldrig någon annanstans än direkt till Google vid ett AI-anrop.</div>
+  </div>
+</header>
+
+<main id="view-nycklar" class="view">
+
+<div class="nk-hero">
+  <p class="eyebrow">Arton kök · Trettiosex rätter · Ett skafferi</p>
+  <h1>Kökets<em>nycklar</em><em class="spill">smaken sitter i tre burkar</em></h1>
+  <p class="thesis">Varje kök i världen vilar på en handfull smaker. Har du dem hemma behöver du inte recept — du behöver bara veta <b>vilka tre burkar du ska öppna.</b></p>
+</div>
+
+<div class="picker">
+  <div class="picker-inner">
+    <span class="picker-label">Vad lagar du i dag?</span>
+    <div class="picker-btns">
+      <button data-set="kott" aria-pressed="false">Kött</button>
+      <button data-set="fisk" aria-pressed="false">Fisk</button>
+      <button data-set="veg" aria-pressed="true">Vegetariskt</button>
+    </div>
+  </div>
+</div>
+
+<div class="toolbar2">
+  <div class="picker-inner picker-row2">
+    <span class="picker-label">Tid</span>
+    <div class="picker-btns" id="timeChips">
+      <button data-time="alla" aria-pressed="true">Alla</button>
+      <button data-time="snabb" aria-pressed="false">Under 20 min</button>
+      <button data-time="medel" aria-pressed="false">20–35 min</button>
+      <button data-time="middag" aria-pressed="false">Över 35 min</button>
+    </div>
+    <div class="have-row">
+      <input type="text" id="haveInput" placeholder="Vad har du hemma? t.ex. vitlök, kyckling, lime"/>
+      <button id="haveBtn">Hitta</button>
+      <button class="clear" id="haveClear" style="display:none">Rensa</button>
+    </div>
+  </div>
+  <div class="result-line" id="resultLine"></div>
+</div>
+
+<nav class="nk-cuisinenav">
+  <a href="#spanien">Spanien</a>
+  <a href="#italien">Italien</a>
+  <a href="#turkiet">Turkiet</a>
+  <a href="#japan">Japan</a>
+  <a href="#thailand">Thailand</a>
+  <a href="#mellanostern">Mellanöstern</a>
+  <a href="#baltikum">Baltikum</a>
+  <a href="#indien">Indien</a>
+  <a href="#mexiko">Mexiko</a>
+  <a href="#grekland">Grekland</a>
+  <a href="#marocko">Marocko</a>
+  <a href="#korea">Korea</a>
+  <a href="#vietnam">Vietnam</a>
+  <a href="#kina">Kina</a>
+  <a href="#frankrike">Frankrike</a>
+  <a href="#vastafrika">Västafrika</a>
+  <a href="#peru">Peru</a>
+  <a href="#etiopien">Etiopien</a>
+  <a href="#skafferi">Skafferi</a>
+  <a href="#protein">Protein</a>
+</nav>
+
+<section class="band es" id="spanien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Andalusien · röken</p>
+      <h2>Spanien</h2>
+      <ul class="keys"><li>Rökt paprika</li><li>Saffran</li><li>Vitlök</li><li>Olivolja</li></ul>
+      <p class="why">Rökt paprika ger grillsmak utan grill. Saffran ger färgen och doften. Utan dem blir allt bara ris i tomat.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Torr cava eller fruktig rosé.</strong> Cava är gjord för saffran och skaldjur — den torra mousserande syran lyfter riset utan att ta över. Vill du ha rosé, välj en mjuk fruktig från Spanien eller Sydfrankrike, aldrig en stram.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"><figcaption>Paella · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-es1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Lunchpaella</h3><span class="mins">30 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Ris, rundkornigt</span><span class="amt">3 dl</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Röd paprika</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Rökt paprika</span><span class="amt">2 tsk</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Saffransbuljong</span><span class="amt">6 dl</span></li></ul>
+        <p class="step">Fräs lök och paprika mjuka. <b>Vitlök + 2 tsk rökt paprika</b>, rör 30 sek. Krossade tomater i, koka ihop tills det mörknar. Ris i, vänd runt. Saffransbuljong på — <b>rör aldrig igen.</b> 15 min. Höj värmen sista minuten för krispig botten.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Brynt kycklinglår läggs i tillsammans med buljongen och får koka hela tiden. Chorizo fräses med löken — då färgar fettet hela rätten rött.</span>
+          <span data-p="fisk">Räkor och musslor trycks ner i ytan de sista 5 minuterna. Koka räkskalen i buljongen först och sila — dubbelt så mycket smak.</span>
+          <span data-p="veg">En burk sköljda kikärtor de sista 5 minuterna. Lägg en bit kombu i buljongen för umami, och toppa med hårt stekt halloumi.</span>
+        </p>
+        <p class="tip">Tomatsteget är hela smaken. Stressa det inte.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-es1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-es1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-es1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-es2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Vitlöksgryta</h3><span class="mins">15 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Rökt paprika</span><span class="amt">1 tsk</span></li><li><span>Krossade tomater</span><span class="amt">2 dl</span></li><li><span>Buljong</span><span class="amt">3 dl</span></li><li><span>Spenat</span><span class="amt">1 näve</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Vitlök i olivolja, <b>1 tsk rökt paprika</b> och spiskummin. En skvätt tomat och lite buljong. Puttra 10 min. Näve spenat på slutet. Citron över.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tärnad fläskkarré, brynt hårt först och sedan puttrad med i grytan.</span>
+          <span data-p="fisk">Torskbitar eller räkor läggs i de sista 4 minuterna — de ska precis stelna, inte koka.</span>
+          <span data-p="veg">En burk kikärtor med spadet. Mosa en tredjedel — då blir det krämigt utan grädde.</span>
+        </p>
+        <p class="tip">Grovt bröd till att sopa upp med är halva rätten.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-es2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-es2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-es2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band it" id="italien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Syditalien · återhållsamheten</p>
+      <h2>Italien</h2>
+      <ul class="keys"><li>Vitlök</li><li>Chiliflingor</li><li>Bra olivolja</li><li>Citron</li></ul>
+      <p class="why">Det italienska köket handlar om vad du utelämnar. Fyra ingredienser, rätt behandlade, slår tolv.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Vermentino, eller en lätt rosé.</strong> Citron, kapris och chili vill ha något friskt och salt. Vermentino från Sardinien är klockrent. Till aglio e olio funkar även en enkel Pinot Grigio.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"><figcaption>Aglio e olio · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-it1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Aglio e olio</h3><span class="mins">12 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Spagetti</span><span class="amt">400 g</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Chiliflingor</span><span class="amt">1 tsk</span></li><li><span>Olivolja</span><span class="amt">1 dl</span></li><li><span>Persilja</span><span class="amt">1 knippe</span></li></ul>
+        <p class="step">Olivolja på svag värme med vitlök och chiliflingor tills vitlöken är gyllene — <b>aldrig brun.</b> Pastan i med en slev pastavatten och massor av persilja. <b>Ingen ost.</b></p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Krispig pancetta eller guanciale stekt först — låt fettet bli basen istället för hälften av oljan.</span>
+          <span data-p="fisk">Ta pannan från värmen och rör i 1 tsk fisksås eller colatura. Hettan förstör den om den kokar. Det här är originalet.</span>
+          <span data-p="veg">Rostat brödsmul (pangrattato) stekt i olja med vitlök, strött över på slutet. Ger krisp där osten annars suttit.</span>
+        </p>
+        <p class="tip">Pastavattnet är såsen. Häll aldrig ut allt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-it1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-it1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-it1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-it2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Pasta al limone</h3><span class="mins">12 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Spagetti</span><span class="amt">400 g</span></li><li><span>Smör</span><span class="amt">40 g</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Kapris</span><span class="amt">2 msk</span></li><li><span>Citron</span><span class="amt">2 st</span></li><li><span>Parmesan, riven</span><span class="amt">1 dl</span></li></ul>
+        <p class="step">Smör och olivolja i pannan, en näve <b>avsköljd kapris</b> 30 sek. Kokt pasta i med citronsaft, rivet skal, en slev pastavatten och rejält med parmesan. Rör tills det blir krämigt.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tunt skuren stekt kyckling vänd i citronsåsen på slutet.</span>
+          <span data-p="fisk">Varmrökt lax eller stekta räkor i på slutet — citronen är gjord för det.</span>
+          <span data-p="veg">Rostade pinjenötter och en näve ruccola. Eller ärtor rakt från frysen i pastavattnet sista minuten.</span>
+        </p>
+        <p class="tip">Kaprisens sälta är det som lyfter citronen. Hoppa inte över den.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-it2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-it2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-it2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band tr" id="turkiet">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Kolgrillen · glöden</p>
+      <h2>Turkiet</h2>
+      <ul class="keys"><li>Spiskummin</li><li>Sumak</li><li>Pul biber</li><li>Yoghurt</li><li>Granatäppelsirap</li></ul>
+      <p class="why">Turkisk grillmat är enkel: en marinad på yoghurt, sedan hög glöd. Yoghurten möras och håller kvar saften. Sumaken efteråt ger syran som skär genom röken.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Öl, eller rosé från Provence.</strong> Kolröken slår ut de flesta viner. En kall lager eller pilsner är ärligast. Vill du ha vin, ta en torr rosé — den klarar både lamm och grillade grönsaker.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"><figcaption>Adana kebab · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-tr1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Spett från kolgrillen</h3><span class="mins">20 min + marinering</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Yoghurt</span><span class="amt">2 dl</span></li><li><span>Gul lök, riven</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Pul biber</span><span class="amt">1 tsk</span></li><li><span>Sumak</span><span class="amt">till servering</span></li><li><span>Citron</span><span class="amt">1 st</span></li></ul>
+        <p class="step">Marinad: <b>yoghurt, riven lök, vitlök, olivolja, spiskummin, pul biber, salt.</b> Minst 2 timmar, gärna över natten. Trä på spett, grilla på <b>direkt hög glöd</b>, vänd ofta. Sumak och citron över direkt när de kommer av.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Lammfärs blandad med riven lök och persilja, formad på platta spett (adana). Eller tärnad lammytterfilé och kycklinglår.</span>
+          <span data-p="fisk">Fasta bitar — lax, svärdfisk eller stora räkor. Halva marineringstiden, annars bryter syran ner fisken. Lägg lagerblad mellan bitarna.</span>
+          <span data-p="veg">Halloumi, champinjoner, aubergine och paprika. Marinera bara 30 min. Aubergine tar längst tid — ge den ett eget spett.</span>
+        </p>
+        <p class="tip">Riven lök i marinaden är hemligheten. Enzymerna möras bättre än syra.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-tr1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-tr1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-tr1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-tr2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Ezme och yoghurtsås</h3><span class="mins">10 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Tomat</span><span class="amt">3 st</span></li><li><span>Gul lök</span><span class="amt">1/2 st</span></li><li><span>Paprika</span><span class="amt">1 st</span></li><li><span>Persilja</span><span class="amt">1 knippe</span></li><li><span>Granatäppelsirap</span><span class="amt">1 msk</span></li><li><span>Turkisk yoghurt</span><span class="amt">2 dl</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li></ul>
+        <p class="step">Ezme: finhackad tomat, lök, paprika och persilja med <b>granatäppelsirap, citron, olivolja och pul biber.</b> Yoghurtsås: turkisk yoghurt, riven vitlök, salt, en skvätt citron. Bägge till allt som kommer av grillen.</p>
+        <p class="swap"><b>Tillbehör</b>
+          <span data-p="kott">Grillat pitabröd som legat under köttet och sugit upp saften. Klassiskt och oslagbart.</span>
+          <span data-p="fisk">Byt granatäppelsirapen mot mer citron — fisk vill ha syra snarare än sötma.</span>
+          <span data-p="veg">Rör en sked tahini i yoghurtsåsen. Ger fyllighet som saknas när det inte finns köttfett.</span>
+        </p>
+        <p class="tip">Hacka allt smått för hand. Mixern gör soppa av ezmen.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-tr2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-tr2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-tr2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band jp" id="japan">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Umami · buljongen</p>
+      <h2>Japan</h2>
+      <ul class="keys"><li>Miso</li><li>Kombu</li><li>Soja</li><li>Risvinäger</li></ul>
+      <p class="why">Kombu löser vegetarisk umami permanent. En bit i kokvattnet och du har en buljong med djup, helt utan kött.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ljus lager eller kall grönt te.</strong> Ramen och öl hör ihop. Asahi, Sapporo eller vilken ljus lager som helst. Misosmör på grillat klarar även en torr riesling.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"><figcaption>Misoramen · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-jp1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Snabb ramen</h3><span class="mins">15 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Kombu</span><span class="amt">1 bit</span></li><li><span>Vatten</span><span class="amt">1 liter</span></li><li><span>Soja</span><span class="amt">2 msk</span></li><li><span>Miso</span><span class="amt">1 msk</span></li><li><span>Nudlar</span><span class="amt">400 g</span></li><li><span>Ägg</span><span class="amt">2 st</span></li><li><span>Vårlök</span><span class="amt">2 st</span></li></ul>
+        <p class="step">Lägg <b>kombu i kallt vatten</b>, värm sakta till strax under kokpunkt, ta upp den. Soja och en sked miso i — <b>rör ut misot av värmen</b>, det ska inte koka. Nudlar, halvkokt ägg, vårlök.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tunt skivad fläsksida, brynt hårt i pannan och lagd på toppen. Häll stekskyn i buljongen.</span>
+          <span data-p="fisk">Räkor pocherade i buljongen sista minuten, eller en skvätt fisksås i botten för extra djup.</span>
+          <span data-p="veg">Hårt stekt shiitake och stekt tofu. Lägg torkad shiitake i buljongen tillsammans med kombun.</span>
+        </p>
+        <p class="tip">Kokande miso blir grynig och tappar doften.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-jp1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-jp1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-jp1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-jp2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Misosmör från grillen</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Smör, rumsvarmt</span><span class="amt">100 g</span></li><li><span>Miso</span><span class="amt">100 g</span></li><li><span>Grönsaker/protein efter val</span><span class="amt">till grillen</span></li></ul>
+        <p class="step">Rör ihop <b>lika delar mjukt smör och miso.</b> Grilla eller ugnsrosta det du har. Klicka på misosmöret medan allt är rykande varmt så det smälter ner.</p>
+        <p class="swap"><b>Vad du lägger det på</b>
+          <span data-p="kott">Grillad entrecôte eller kycklinglår. Misosmöret ersätter både sås och kryddsmör.</span>
+          <span data-p="fisk">Lax eller torskrygg i ugn på 200°. Misosmöret på de sista fem minuterna så det inte bränns.</span>
+          <span data-p="veg">Majskolv, broccoli, sparris, aubergine. Majsen med misosmör är det bästa du gör i sommar.</span>
+        </p>
+        <p class="tip">Misosmöret håller två veckor i kylen. Gör dubbel sats.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-jp2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-jp2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-jp2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band th" id="thailand">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Balansen · fyra hörn</p>
+      <h2>Thailand</h2>
+      <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Chili</li><li>Palmsocker</li></ul>
+      <p class="why">Salt, syra, hetta, sötma. Hela det thailändska köket är de fyra i olika proportioner. Smaka och justera — det finns inget facit.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling eller kall lager.</strong> Chili och fisksås behöver antingen sötma eller kyla. Riesling med en gnutta restsötma tämjer hettan; Singha eller Chang gör samma jobb enklare.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"><figcaption>Stekt ris · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-th1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Nuoc cham</h3><span class="mins">5 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Fisksås</span><span class="amt">3 msk</span></li><li><span>Limejuice</span><span class="amt">3 msk</span></li><li><span>Socker</span><span class="amt">2 msk</span></li><li><span>Vatten</span><span class="amt">4 msk</span></li><li><span>Vitlök, riven</span><span class="amt">1 klyfta</span></li><li><span>Chili, hackad</span><span class="amt">1 st</span></li></ul>
+        <p class="step">3 msk fisksås, 3 msk limejuice, 2 msk socker, 4 msk vatten, riven vitlök och hackad chili. <b>Rör tills sockret löst sig.</b> Dipp till allt grillat, dressing till all sallad.</p>
+        <p class="swap"><b>Vad du doppar</b>
+          <span data-p="kott">Grillat fläsk eller kyckling. Pensla lite av såsen på köttet sista minuten också.</span>
+          <span data-p="fisk">Grillade räkor eller hel fisk från grillen. Den här såsen är gjord för det.</span>
+          <span data-p="veg">Byt fisksåsen mot ljus soja plus en nypa salt. Ringla över grillade grönsaker och glasnudelsallad.</span>
+        </p>
+        <p class="tip">Håller en vecka i kylen. Gör dubbel sats.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-th1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-th1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-th1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-th2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Stekt ris</h3><span class="mins">10 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Kallt kokt ris</span><span class="amt">6 dl</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Ägg</span><span class="amt">2 st</span></li><li><span>Fisksås</span><span class="amt">2 msk</span></li><li><span>Socker</span><span class="amt">1 nypa</span></li><li><span>Lime</span><span class="amt">1 st</span></li><li><span>Vårlök</span><span class="amt">2 st</span></li></ul>
+        <p class="step">Het panna, vitlök, <b>kallt ris från i går.</b> Pressa undan riset, stek ägget i mitten, blanda ihop. Fisksås och en nypa socker på slutet. Lime och vårlök över.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Fläskfärs stekt hårt först, eller rester av gårdagens grillade kyckling.</span>
+          <span data-p="fisk">Räkor i sist, 90 sekunder. Krabba är klassikern om du vill lyxa till det.</span>
+          <span data-p="veg">Två extra ägg och stekt tofu. Ljus soja istället för fisksås, plus en nypa salt.</span>
+        </p>
+        <p class="tip">Varmt ris blir gröt. Kallt ris blir stekt ris.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-th2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-th2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-th2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band me" id="mellanostern">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Levanten · syran</p>
+      <h2>Mellanöstern</h2>
+      <ul class="keys"><li>Spiskummin</li><li>Tahini</li><li>Citron</li><li>Sumak</li></ul>
+      <p class="why">Tahini plus citron plus vatten blir en sås som gör vad grädde gör, fast fräschare. Den passar till nästan allt du grillar.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Fruktig rosé eller ayran.</strong> Sumak, tahini och citron går fint med en mjuk rosé. Traditionellt dricks salt yoghurtdryck (ayran) — överraskande bra till allt rostat och kryddigt.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"><figcaption>Tahini och kikärtor · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-me1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Tahinisås</h3><span class="mins">3 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Tahini</span><span class="amt">1 dl</span></li><li><span>Vitlök, pressad</span><span class="amt">1 klyfta</span></li><li><span>Citronsaft</span><span class="amt">2 msk</span></li><li><span>Iskallt vatten</span><span class="amt">ca 1 dl</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
+        <p class="step">Tahini, pressad vitlök, citronsaft och salt. Späd med <b>iskallt vatten, lite i taget.</b> Den tjocknar först och blir sedan len och vit. Fortsätt tills den rinner som tjock grädde.</p>
+        <p class="swap"><b>Vad den går till</b>
+          <span data-p="kott">Grillat lamm. Den syrliga fetman är exakt vad lammfett behöver.</span>
+          <span data-p="fisk">Ugnsbakad hel fisk med tahinisås och rostade pinjenötter — libanesiskt och underskattat.</span>
+          <span data-p="veg">Rostade grönsaker, falafel, kikärtor, allt bakat i ugn. Den ersätter varje krämig sås du annars gjort på grädde.</span>
+        </p>
+        <p class="tip">Att den knäcker sig och blir stel är normalt. Mer vatten löser det.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-me1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-me1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-me1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-me2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Ugnsbrända grönsaker</h3><span class="mins">30 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Blomkål, morot eller broccoli</span><span class="amt">800 g</span></li><li><span>Olivolja</span><span class="amt">3 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Tahinisås</span><span class="amt">till servering</span></li><li><span>Sumak</span><span class="amt">1 tsk</span></li><li><span>Granatäpple</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Buketter eller klyftor, olivolja, <b>spiskummin, salt.</b> 225° tills det finns mörkt brända kanter. Tahinisås över, sumak, granatäpple och persilja.</p>
+        <p class="swap"><b>Gör det till en måltid</b>
+          <span data-p="kott">Kryddiga lammfärsbullar i samma form de sista 15 minuterna — fettet drar ner i grönsakerna.</span>
+          <span data-p="fisk">Lägg fiskbitar ovanpå de sista 10 minuterna, med citronskivor emellan.</span>
+          <span data-p="veg">Kikärtor i samma form från början — de blir krispiga. Servera med bulgur eller varmt bröd.</span>
+        </p>
+        <p class="tip">Bränt är rätt här. Ljusgul blomkål är understekt blomkål.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-me2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-me2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-me2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band ba" id="baltikum">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Östersjön · syrligt och svalt</p>
+      <h2>Baltikum</h2>
+      <ul class="keys"><li>Dill</li><li>Kummin</li><li>Gräddfil</li><li>Senap</li><li>Ättika</li></ul>
+      <p class="why">Det baltiska köket är närmare det svenska än du tror, men syrligare och mer dill. Gräddfil och ättika gör jobbet som citron gör i söder.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Iskall pilsner eller kvass.</strong> Dill, ättika och gräddfil vill ha något torrt och kolsyrat. Pilsner är svaret. Kvass om du hittar den — syrlig och malig, gjord för den här maten.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"><figcaption>Kall rödbetssoppa · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-ba1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Kall rödbetssoppa</h3><span class="mins">15 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Kokt rödbeta, riven</span><span class="amt">400 g</span></li><li><span>Kefir eller filmjölk</span><span class="amt">5 dl</span></li><li><span>Gurka</span><span class="amt">1/2 st</span></li><li><span>Dill</span><span class="amt">1 knippe</span></li><li><span>Ättika</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Riven kokt rödbeta, <b>kefir eller filmjölk</b>, hackad gurka, massor av dill, salt och en skvätt ättika. Ställ kallt en halvtimme. Serveras med varm kokt potatis vid sidan — den kontrasten är hela poängen.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tärnad rökt skinka i soppan, litauisk standard.</span>
+          <span data-p="fisk">Varmrökt lax eller inlagd sill vid sidan om.</span>
+          <span data-p="veg">Hårdkokt ägg i klyftor, halverat direkt i skålen.</span>
+        </p>
+        <p class="tip">Den ska vara iskall. Ljummen rödbetssoppa är ingen rätt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-ba1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-ba1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-ba1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-ba2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Stekt potatis med dillsås</h3><span class="mins">25 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Kokt potatis</span><span class="amt">800 g</span></li><li><span>Smör</span><span class="amt">40 g</span></li><li><span>Kumminfrön</span><span class="amt">1 tsk</span></li><li><span>Gräddfil</span><span class="amt">2 dl</span></li><li><span>Senap</span><span class="amt">1 msk</span></li><li><span>Dill</span><span class="amt">1/2 knippe</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Kokt kall potatis stekt hårt i smör med <b>hela kumminfrön</b> tills gyllene. Sås: gräddfil, senap, dill, citron, salt. Rör ihop kall och klicka på den varma potatisen.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Stekt fläsk eller korv i samma panna — låt fettet steka potatisen.</span>
+          <span data-p="fisk">Stekt strömming eller varmrökt makrill. Klassisk kombination runt hela Östersjön.</span>
+          <span data-p="veg">Stekt svamp i samma panna, plus ett stekt ägg med rinnig gula ovanpå.</span>
+        </p>
+        <p class="tip">Kummin och potatis är ett par. Prova innan du avfärdar det.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-ba2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-ba2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-ba2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band in" id="indien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Tadka · fettet bär doften</p>
+      <h2>Indien</h2>
+      <ul class="keys"><li>Spiskummin</li><li>Gurkmeja</li><li>Garam masala</li><li>Ingefära</li></ul>
+      <p class="why">Nyckeltekniken heter tadka: hela kryddor fräser i hett fett och hälls över maten sist. Trettio sekunder som ändrar hela rätten.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling, IPA eller lassi.</strong> Garam masala och chili blir bättre av lite sötma. Riesling eller en fruktig IPA. Mangolassi till det starkaste — mjölkfettet släcker hettan bättre än vatten.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"><figcaption>Dal tadka · Wikimedia Commons, CC BY-SA</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-in1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Dal på röda linser</h3><span class="mins">25 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Röda linser</span><span class="amt">3 dl</span></li><li><span>Gurkmeja</span><span class="amt">1 tsk</span></li><li><span>Smör</span><span class="amt">2 msk</span></li><li><span>Spiskumminfrön</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Koka röda linser med <b>gurkmeja</b> och salt tills de faller sönder. Separat panna: smör, spiskumminfrön, vitlök, chili — fräs tills det doftar. <b>Häll allt över dalen.</b> Citron.</p>
+        <p class="swap"><b>Gör det till en måltid</b>
+          <span data-p="kott">Grillade kycklingspett vid sidan, marinerade i yoghurt och garam masala.</span>
+          <span data-p="fisk">Stekta räkor vända i tadkan innan den hälls över.</span>
+          <span data-p="veg">Ris, yoghurt och en hastigt stekt spenat med vitlök. Fullständig måltid som den är.</span>
+        </p>
+        <p class="tip">Tadkan är hela rätten. Hoppa över den och du har kokta linser.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-in1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-in1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-in1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-in2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Curry på 20 minuter</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök &amp; ingefära</span><span class="amt">3 klyftor / 1 bit</span></li><li><span>Spiskummin, gurkmeja, garam masala</span><span class="amt">1 tsk vardera</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Kokosmjölk</span><span class="amt">1 burk</span></li><li><span>Koriander</span><span class="amt">till garnering</span></li></ul>
+        <p class="step">Lök mjuk, sedan vitlök och ingefära. <b>Spiskummin, gurkmeja, garam masala</b> 30 sek i oljan. Krossade tomater, koka ihop. Kokosmjölk, puttra 10 min. Koriander.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tärnat kycklinglår brynt först, sedan puttrat i såsen 15 minuter.</span>
+          <span data-p="fisk">Fasta fiskbitar eller räkor i de sista 5 minuterna. Låt det sjuda, aldrig koka.</span>
+          <span data-p="veg">Kikärtor och sötpotatis, eller blomkål och gröna ärtor.</span>
+        </p>
+        <p class="tip">Kryddorna måste möta fettet, inte vätskan. Annars smakar de mjöligt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-in2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-in2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-in2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band mx" id="mexiko">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Mesoamerika · limen</p>
+      <h2>Mexiko</h2>
+      <ul class="keys"><li>Lime</li><li>Torkad chili</li><li>Koriander</li><li>Spiskummin</li><li>Oregano</li></ul>
+      <p class="why">Mexikansk mat är inte främst het — den är syrlig. Lime går på nästan allt, och torkad chili ger rökighet och frukt snarare än ren hetta.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ljus lager med lime, eller torr cava.</strong> Kolsyra och kyla mot chili och fett. Modelo eller vilken ljus lager som helst. Cava funkar förvånansvärt bra till fisktacos.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"><figcaption>Tacos · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-mx1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Tacos från pannan</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Majstortillas</span><span class="amt">8 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Torkad oregano</span><span class="amt">1 tsk</span></li><li><span>Protein efter val</span><span class="amt">500 g</span></li><li><span>Buljong</span><span class="amt">1/2 dl</span></li><li><span>Lime</span><span class="amt">1 st</span></li></ul>
+        <p class="step">Fräs lök, <b>1 tsk spiskummin och 1 tsk torkad oregano</b>. Proteinet i, stek hårt. En skvätt buljong och lime på slutet. Värm majstortillas i torr panna tills de får svarta fläckar.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tärnad fläskkarré eller strimlad kyckling, brynt tills det finns riktigt mörka kanter.</span>
+          <span data-p="fisk">Torsk eller lax i bitar, stekt snabbt och vänd i limen. Vitkål och gräddfil ovanpå.</span>
+          <span data-p="veg">Svarta bönor mosade med spiskummin, plus stekt halloumi eller rostad blomkål.</span>
+        </p>
+        <p class="tip">Tortillan ska värmas torr, aldrig i olja. Den ska bli mjuk och fläckig, inte krispig.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-mx1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-mx1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-mx1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-mx2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Salsa och guacamole</h3><span class="mins">10 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Avokado</span><span class="amt">2 st</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Koriander</span><span class="amt">1 knippe</span></li><li><span>Lime</span><span class="amt">2 st</span></li></ul>
+        <p class="step">Salsa: rostad tomat, lök, vitlök och chili, mixad grovt med <b>lime och salt.</b> Guacamole: avokado mosad med lime, hackad rödlök, koriander, salt. Inget mer.</p>
+        <p class="swap"><b>Vad det går till</b>
+          <span data-p="kott">Grillat kött. Salsan skär genom fettet bättre än någon sås.</span>
+          <span data-p="fisk">Grillade räkor eller fisktacos. Ta extra lime i salsan.</span>
+          <span data-p="veg">Rostade grönsaker, bönor, ägg. Guacamole på morgonmackan är underskattat.</span>
+        </p>
+        <p class="tip">Rosta tomat och lök i torr panna först. Det är skillnaden mellan salsa och tomatröra.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-mx2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-mx2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-mx2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band gr" id="grekland">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Egeiska havet · enkelheten</p>
+      <h2>Grekland</h2>
+      <ul class="keys"><li>Oregano</li><li>Citron</li><li>Fetaost</li><li>Olivolja</li><li>Vitlök</li></ul>
+      <p class="why">Grekiskt kök är italienskt kök minus tomaten och plus citron. Torkad oregano är den enda kryddan du verkligen behöver.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Retsina, assyrtiko eller ouzo.</strong> Assyrtiko från Santorini är ett av världens bästa vita viner till fisk och citron. Vill du ha det billigt: en kall grekisk lager.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"><figcaption>Horiatiki · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-gr1" data-time="middag">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Ugnsbakat med citron</h3><span class="mins">40 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Potatis, klyftor</span><span class="amt">1 kg</span></li><li><span>Olivolja</span><span class="amt">1 dl</span></li><li><span>Citron</span><span class="amt">2 st</span></li><li><span>Torkad oregano</span><span class="amt">2 tsk</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li></ul>
+        <p class="step">Allt i en form: potatisklyftor, <b>rejält med olivolja, citronsaft, torkad oregano, vitlök, salt.</b> En skvätt vatten i botten. 200° tills potatisen är mjuk och kanterna bruna.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Kycklinglår ovanpå potatisen från början — fettet drar ner och steker potatisen.</span>
+          <span data-p="fisk">Hel fisk eller tjocka bitar läggs på de sista 15 minuterna, med citronskivor emellan.</span>
+          <span data-p="veg">Fetaost i en bit mitt i formen de sista 15 minuterna, plus paprika och lök.</span>
+        </p>
+        <p class="tip">Var inte rädd för citronmängden. Två hela citroner är rätt, inte för mycket.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-gr1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-gr1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-gr1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-gr2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Horiatiki</h3><span class="mins">10 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Gurka</span><span class="amt">1 st</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Kalamataoliver</span><span class="amt">1 dl</span></li><li><span>Fetaost, i en bit</span><span class="amt">200 g</span></li><li><span>Olivolja</span><span class="amt">3 msk</span></li><li><span>Torkad oregano</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Tomat i stora bitar, gurka, rödlök, oliver, <b>en hel bit feta ovanpå</b> — inte smulad. Olivolja, torkad oregano, salt. <b>Ingen sallad, ingen dressing.</b></p>
+        <p class="swap"><b>Gör det matigt</b>
+          <span data-p="kott">Servera vid sidan av grillat lamm eller kyckling. Salladen är tillbehöret.</span>
+          <span data-p="fisk">Grillad sardin eller ansjovis ovanpå. Salt möter salt.</span>
+          <span data-p="veg">Dubbel feta och varmt bröd att sopa upp oljan med. Det räcker som måltid.</span>
+        </p>
+        <p class="tip">Salta tomaten först och låt stå fem minuter. Saften som kommer ut blir dressingen.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-gr2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-gr2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-gr2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band ma" id="marocko">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Maghreb · sötman i det salta</p>
+      <h2>Marocko</h2>
+      <ul class="keys"><li>Ras el hanout</li><li>Kanel</li><li>Spiskummin</li><li>Saffran</li><li>Konserverad citron</li></ul>
+      <p class="why">Marockanskt kök blandar sött och salt utan att bli efterrätt. Kanel i en köttgryta låter fel och är rätt.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Myntate, eller en kryddig rosé.</strong> Sött myntate är det traditionella och funkar bättre än man tror till kryddig mat. Vill du ha vin: en fruktig rosé eller en lätt grenache.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"><figcaption>Tagine · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-ma1" data-time="middag">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Tagine i gryta</h3><span class="mins">45 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Gul lök</span><span class="amt">2 st</span></li><li><span>Ras el hanout</span><span class="amt">2 tsk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Kanel</span><span class="amt">1 nypa</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Buljong</span><span class="amt">3 dl</span></li><li><span>Torkade aprikoser</span><span class="amt">1 dl</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Fräs lök mjuk, <b>2 tsk ras el hanout, 1 tsk spiskummin, en nypa kanel.</b> Tomat och buljong. Puttra på låg värme. Torkade aprikoser eller russin de sista 15 minuterna. Koriander och citron.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Lammbog eller kycklinglår, brynt först och puttrat hela tiden.</span>
+          <span data-p="fisk">Fasta fiskbitar sist, 8 minuter. Byt kanelen mot mer saffran och citron.</span>
+          <span data-p="veg">Kikärtor, sötpotatis och morot. Mandel rostad i panna strött över.</span>
+        </p>
+        <p class="tip">Kanel ska anas, inte kännas. En nypa, inte en tesked.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-ma1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-ma1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-ma1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-ma2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Kryddig morotssallad</h3><span class="mins">15 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Morötter</span><span class="amt">500 g</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Paprikapulver</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li><li><span>Koriander</span><span class="amt">till garnering</span></li></ul>
+        <p class="step">Koka morotsstavar precis mjuka. Vänd varma i <b>olivolja, spiskummin, paprika, vitlök, citron och salt.</b> Låt svalna. Koriander över.</p>
+        <p class="swap"><b>Servera till</b>
+          <span data-p="kott">Grillat lamm. Den syrliga sötman är exakt vad fett lamm behöver.</span>
+          <span data-p="fisk">Ugnsbakad fisk, som en fräsch kontrast.</span>
+          <span data-p="veg">Med bröd, oliver och en kokt ägg blir det lunch.</span>
+        </p>
+        <p class="tip">Vänd morötterna varma. Kalla morötter suger inte upp kryddorna.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-ma2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-ma2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-ma2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band kr" id="korea">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Halvön · fermenteringen</p>
+      <h2>Korea</h2>
+      <ul class="keys"><li>Gochujang</li><li>Sesamolja</li><li>Soja</li><li>Vitlök</li><li>Rostade sesamfrön</li></ul>
+      <p class="why">Gochujang är fermenterad chilipasta — söt, salt, het och umami på en gång. En sked ersätter fyra andra ingredienser.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller soju.</strong> Kall lager mot het gochujang. Soju blandat med öl är det koreanska sättet. En off-dry riesling funkar också.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"><figcaption>Bibimbap · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-kr1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Bibimbap-skål</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Ris, kokt</span><span class="amt">4 port</span></li><li><span>Morot, spenat, svamp</span><span class="amt">600 g totalt</span></li><li><span>Sesamolja</span><span class="amt">2 msk</span></li><li><span>Ägg</span><span class="amt">4 st</span></li><li><span>Gochujang</span><span class="amt">2 msk</span></li><li><span>Soja</span><span class="amt">1 msk</span></li><li><span>Socker</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li></ul>
+        <p class="step">Varmt ris i botten. Ovanpå: <b>hastigt stekta grönsaker var för sig</b>, alla vända i sesamolja och salt. Stekt ägg i mitten. Sås: gochujang, sesamolja, soja, socker, vitlök. Blanda allt vid bordet.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Strimlad nötfärs stekt med soja, socker och vitlök.</span>
+          <span data-p="fisk">Varmrökt lax eller stekta räkor. Extra sesamolja.</span>
+          <span data-p="veg">Stekt tofu, morot, spenat, svamp och böngroddar. Två ägg om du vill upp i protein.</span>
+        </p>
+        <p class="tip">Grönsakerna steks var för sig. Det är hela poängen — varje sak ska smaka sig själv.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-kr1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-kr1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-kr1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-kr2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Snabbkimchi</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Vitkål</span><span class="amt">1/2 huvud</span></li><li><span>Salt</span><span class="amt">1 msk</span></li><li><span>Gochujang</span><span class="amt">2 msk</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Fisksås</span><span class="amt">1 msk</span></li><li><span>Socker</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Strimlad vitkål saltas 15 min och sköljs. Blanda med <b>gochujang, riven vitlök, ingefära, en skvätt fisksås och socker.</b> Ät direkt eller låt stå i kylen några dagar.</p>
+        <p class="swap"><b>Servera till</b>
+          <span data-p="kott">Allt grillat. Fettet och syran hör ihop.</span>
+          <span data-p="fisk">Byt fisksåsen mot mer — den hör hemma här.</span>
+          <span data-p="veg">Byt fisksåsen mot ljus soja. Ät till ris och ägg.</span>
+        </p>
+        <p class="tip">Salta kålen först. Utan det steget blir det bara kryddad kål.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-kr2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-kr2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-kr2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band vn" id="vietnam">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Mekong · örterna</p>
+      <h2>Vietnam</h2>
+      <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Mynta</li><li>Koriander</li><li>Ris­nudlar</li></ul>
+      <p class="why">Vietnamesiskt kök använder färska örter som grönsak, inte som garnering. En hel näve mynta per portion är normalt.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Iskall lager, eller iste.</strong> Bia hoi-stilen: mycket ljus, mycket kall lager. Fungerar mot fisksåsens sälta. Iste med lime är det alkoholfria svaret.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"><figcaption>Pho · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-vn1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Nudelsallad</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Risnudlar</span><span class="amt">300 g</span></li><li><span>Sallad</span><span class="amt">1/2 huvud</span></li><li><span>Gurka</span><span class="amt">1 st</span></li><li><span>Morot</span><span class="amt">1 st</span></li><li><span>Mynta &amp; koriander</span><span class="amt">2 näve</span></li><li><span>Jordnötter</span><span class="amt">1 dl</span></li><li><span>Nuoc cham</span><span class="amt">till dressing</span></li></ul>
+        <p class="step">Kokta risnudlar, kalla. Ovanpå: <b>strimlad sallad, gurka, morot, massor av mynta och koriander</b>, rostade jordnötter. Dressing: nuoc cham. Blanda i skålen.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Grillat fläsk eller kyckling i skivor, marinerat i fisksås, socker och vitlök.</span>
+          <span data-p="fisk">Grillade räkor eller stekt fisk i bitar.</span>
+          <span data-p="veg">Stekt tofu och extra jordnötter. Byt fisksåsen i dressingen mot ljus soja.</span>
+        </p>
+        <p class="tip">Örterna ska vara i näven, inte i teskedar. Dubbla mängden mot vad du tror.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-vn1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-vn1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-vn1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-vn2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Snabb pho-liknande soppa</h3><span class="mins">25 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Buljong</span><span class="amt">1,5 liter</span></li><li><span>Stjärnanis</span><span class="amt">2 st</span></li><li><span>Kanelstång</span><span class="amt">1 st</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Gul lök</span><span class="amt">1/2 st</span></li><li><span>Risnudlar</span><span class="amt">300 g</span></li><li><span>Soja &amp; fisksås</span><span class="amt">2 msk vardera</span></li></ul>
+        <p class="step">Buljong med <b>stjärnanis, kanelstång, ingefära och en halv rostad lök.</b> Sjud 20 min, sila. Soja och fisksås. Häll över nudlar. Lime, chili, böngroddar och örter vid bordet.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Tunt skivad rå oxfilé som gårs av den kokheta buljongen i skålen.</span>
+          <span data-p="fisk">Räkor pocherade i buljongen sista minuten.</span>
+          <span data-p="veg">Stekt tofu och shiitake. Lägg torkad shiitake i buljongen från start.</span>
+        </p>
+        <p class="tip">Rosta lök och ingefära i torr panna först. Det är den rökiga botten som gör soppan.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-vn2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-vn2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-vn2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band cn" id="kina">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Sichuan · domningen</p>
+      <h2>Kina</h2>
+      <ul class="keys"><li>Sichuanpeppar</li><li>Chiliolja</li><li>Svart risvinäger</li><li>Soja</li><li>Ingefära</li></ul>
+      <p class="why">Sichuanpeppar är inte stark — den domnar. Kombinationen av domning och hetta heter málà och är hela regionens signatur.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller jasminte.</strong> Kall lager mot málà. Jasminte mellan tuggorna renar munnen och är det traditionella valet.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"><figcaption>Sichuan · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-cn1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Wok med vitlök och chili</h3><span class="mins">15 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Grönsaker efter val</span><span class="amt">500 g</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Torkad chili</span><span class="amt">3 st</span></li><li><span>Sichuanpeppar, krossad</span><span class="amt">1 tsk</span></li><li><span>Soja</span><span class="amt">2 msk</span></li><li><span>Svart risvinäger</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Rykhet panna. <b>Ingefära, vitlök, torkad chili och krossad sichuanpeppar</b> i oljan 20 sekunder. Grönsakerna i, wokka hårt. Soja, en skvätt svartvinäger och socker på slutet.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Strimlat fläsk eller nötkött, marinerat i soja och majsstärkelse 10 min innan.</span>
+          <span data-p="fisk">Räkor eller bläckfisk sist, 90 sekunder. Övertillagat är förstört.</span>
+          <span data-p="veg">Aubergine, gröna bönor eller tofu. Stek aubergine i mer olja än du tror — den vill ha det.</span>
+        </p>
+        <p class="tip">Sichuanpeppar ska rostas torr och krossas nyss. Gammal färdigmald gör ingenting.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-cn1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-cn1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-cn1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-cn2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Kall gurksallad</h3><span class="mins">5 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Gurka</span><span class="amt">2 st</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Svart risvinäger</span><span class="amt">2 msk</span></li><li><span>Soja</span><span class="amt">1 msk</span></li><li><span>Sesamolja</span><span class="amt">1 msk</span></li><li><span>Chiliolja</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Krossa gurkan med bredsidan av kniven, riv i bitar. Salta 10 min, häll av. <b>Vitlök, svartvinäger, soja, sesamolja, socker, chiliolja.</b></p>
+        <p class="swap"><b>Servera till</b>
+          <span data-p="kott">Allt grillat och fett. Den här skär rakt igenom.</span>
+          <span data-p="fisk">Vid sidan av stekt fisk. Fräsch kontrast.</span>
+          <span data-p="veg">Till ris och ägg som en hel liten måltid.</span>
+        </p>
+        <p class="tip">Krossa gurkan, skär den inte. De ojämna ytorna suger upp dressingen.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-cn2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-cn2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-cn2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band fr" id="frankrike">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Bistron · smöret</p>
+      <h2>Frankrike</h2>
+      <ul class="keys"><li>Smör</li><li>Dijonsenap</li><li>Timjan</li><li>Vitt vin</li><li>Schalottenlök</li></ul>
+      <p class="why">Franskt vardagskök är inte komplicerat. Det är smör, senap och tålamod. Nästan varje sås börjar med att du löser upp det som fastnat i pannan med vin.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Det vin du lagade med.</strong> Regeln är enkel: drick samma vin du hällde i pannan. En enkel vit bourgogne eller en lätt rödvin från Loire.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"><figcaption>Vinaigrette · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-fr1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Panna med senapssås</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Protein efter val</span><span class="amt">600 g</span></li><li><span>Schalottenlök</span><span class="amt">2 st</span></li><li><span>Vitt vin</span><span class="amt">1 dl</span></li><li><span>Crème fraîche</span><span class="amt">2 dl</span></li><li><span>Dijonsenap</span><span class="amt">1 msk</span></li><li><span>Timjan</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Stek proteinet, ta upp. <b>Schalottenlök i pannan, en skvätt vitt vin</b> — skrapa loss allt brunt. Grädde eller crème fraîche, en rejäl tesked dijon, timjan. Koka ihop två minuter.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Kycklingfilé eller fläskkotlett. Låt vila under folie medan såsen kokar.</span>
+          <span data-p="fisk">Lax eller torsk. Ta bort fisken tidigt och gör såsen separat — den tål inte att koka med.</span>
+          <span data-p="veg">Stekt svamp och gröna bönor. Portabello i skivor blir förvånansvärt köttigt.</span>
+        </p>
+        <p class="tip">Senapen i sist, av värmen. Kokad dijon blir bitter.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-fr1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-fr1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-fr1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-fr2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Vinaigrette</h3><span class="mins">3 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Vinäger</span><span class="amt">1 dl</span></li><li><span>Olivolja</span><span class="amt">3 dl</span></li><li><span>Dijonsenap</span><span class="amt">1 tsk</span></li><li><span>Salt &amp; peppar</span><span class="amt">efter smak</span></li></ul>
+        <p class="step">1 del vinäger, 3 delar olja, <b>en tesked dijon, salt, peppar.</b> Skaka i en burk tills den blir tjock och ljus. Håller två veckor i kylen.</p>
+        <p class="swap"><b>Vad den går till</b>
+          <span data-p="kott">Ljummen potatissallad till grillat — vinaigrette istället för majonnäs.</span>
+          <span data-p="fisk">Över kall lax eller pocherad fisk med dill.</span>
+          <span data-p="veg">Grön sallad, kokta gröna bönor, linser. Linssallad med vinaigrette är en måltid.</span>
+        </p>
+        <p class="tip">Senapen är emulgeringsmedlet. Utan den skiktar sig dressingen direkt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-fr2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-fr2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-fr2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band wa" id="vastafrika">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Sahel · jordnöten</p>
+      <h2>Västafrika</h2>
+      <ul class="keys"><li>Jordnötssmör</li><li>Ingefära</li><li>Scotch bonnet</li><li>Tomatpuré</li><li>Lökpulver</li></ul>
+      <p class="why">Jordnötssmör i en salt gryta är Västafrikas motsvarighet till grädde. Det ger fyllighet, sötma och protein på en gång.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ingefärsdryck, eller ljus lager.</strong> Stark ingefärsdryck (ginger beer) är det klassiska och matchar hettan. Öl fungerar lika bra.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"><figcaption>Jollof · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-wa1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Jordnötsgryta</h3><span class="mins">35 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök &amp; ingefära</span><span class="amt">3 klyftor / 1 bit</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Tomatpuré</span><span class="amt">2 msk</span></li><li><span>Buljong</span><span class="amt">5 dl</span></li><li><span>Jordnötssmör</span><span class="amt">3 msk</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
+        <p class="step">Fräs lök, <b>vitlök, ingefära och chili.</b> Tomatpuré i, fräs tills den mörknar. Buljong och <b>3 msk jordnötssmör</b> utrört. Puttra 20 min tills den tjocknar. Citron på slutet.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Kycklinglår brynt först och puttrat hela tiden.</span>
+          <span data-p="fisk">Räkor eller fasta fiskbitar de sista 5 minuterna.</span>
+          <span data-p="veg">Sötpotatis, kikärtor och spenat. Jordnötssmöret ger proteinet.</span>
+        </p>
+        <p class="tip">Fräs tomatpurén ordentligt innan vätskan. Rå tomatpuré smakar burk.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-wa1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-wa1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-wa1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-wa2" data-time="middag">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Jollof-ris</h3><span class="mins">40 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Paprika</span><span class="amt">1 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Ris, långkornigt</span><span class="amt">5 dl</span></li><li><span>Buljong</span><span class="amt">7 dl</span></li></ul>
+        <p class="step">Mixa tomat, paprika, lök och chili till en slät sås. <b>Koka in den hårt i olja tills den mörknar</b> — det tar tid och är hela smaken. Ris i, buljong på, lock, låg värme 25 min. Rör inte.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Grillad eller stekt kyckling vid sidan, klassiskt.</span>
+          <span data-p="fisk">Stekt fisk ovanpå, som på gatuköken i Lagos.</span>
+          <span data-p="veg">Ärtor och morot i riset, plus stekt halloumi eller ägg ovanpå.</span>
+        </p>
+        <p class="tip">Samma princip som paellan: rör inte i riset, och låt botten bli lite bränd.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-wa2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-wa2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-wa2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band pe" id="peru">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Anderna · syran och chilin</p>
+      <h2>Peru</h2>
+      <ul class="keys"><li>Ají amarillo</li><li>Lime</li><li>Koriander</li><li>Rödlök</li><li>Spiskummin</li></ul>
+      <p class="why">Peru är limens hemland. Ají amarillo är en gul chili som är mer fruktig än het — finns som pasta i burk och håller månader.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Pisco sour, eller torr sauvignon blanc.</strong> Pisco sour är nationaldrycken och funkar till allt syrligt. Vill du ha vin: en torr sauvignon blanc eller albariño.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"><figcaption>Ceviche · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-pe1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Ceviche</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Rå vit fisk</span><span class="amt">500 g</span></li><li><span>Limejuice</span><span class="amt">2 dl</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Koriander</span><span class="amt">1 knippe</span></li><li><span>Sötpotatis &amp; majs</span><span class="amt">till servering</span></li></ul>
+        <p class="step">Tärnad rå fisk i <b>massor av limejuice, salt, tunt skivad rödlök, chili och koriander.</b> Låt stå 10–15 minuter — inte längre. Servera med kokt majs och sötpotatis.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Inte den här rätten. Gör den vegetariska varianten om du inte har fisk.</span>
+          <span data-p="fisk">Torsk, havsabborre eller hälleflundra. Absolut färskaste du hittar — den tillagas bara av limen.</span>
+          <span data-p="veg">Champinjoner eller blomkål, hastigt kokta och kalla, i samma marinad. Överraskande bra.</span>
+        </p>
+        <p class="tip">Limen tillagar fisken. För länge och den blir seg och krithård.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-pe1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-pe1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-pe1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-pe2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Ají-sås</h3><span class="mins">5 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Ají amarillo-pasta</span><span class="amt">3 msk</span></li><li><span>Lime</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Olja</span><span class="amt">1 dl</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
+        <p class="step">Mixa <b>ají amarillo-pasta, lime, vitlök, olja och salt</b> till en slät gul sås. Vill du ha den krämig: en skvätt majonnäs eller yoghurt.</p>
+        <p class="swap"><b>Vad den går till</b>
+          <span data-p="kott">Grillad kyckling. I Peru är det närmast lag.</span>
+          <span data-p="fisk">Stekt eller grillad fisk, plus extra lime.</span>
+          <span data-p="veg">Rostad potatis, majs, ägg. Sås till allt som kommer ur ugnen.</span>
+        </p>
+        <p class="tip">Ají amarillo finns som pasta i burk i asiatiska och latinamerikanska butiker. Håller månader.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-pe2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-pe2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-pe2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="band et" id="etiopien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Höglandet · berbere</p>
+      <h2>Etiopien</h2>
+      <ul class="keys"><li>Berbere</li><li>Kryddsmör</li><li>Ingefära</li><li>Kardemumma</li><li>Lök</li></ul>
+      <p class="why">Berbere är en färdig kryddblandning med chili, bockhornsklöver och kardemumma. En burk ger dig hela köket — och etiopisk mat är till stor del vegetarisk från början.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller starkt kaffe.</strong> Öl mot berberes hetta. Kaffe efteråt är en ceremoni i Etiopien och passar den kryddiga maten förvånansvärt bra.</p></div>
+      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"><figcaption>Etiopisk mat · Wikimedia Commons</figcaption></figure>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-et1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Misir wot · linsgryta</h3><span class="mins">35 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Gul lök</span><span class="amt">2 st</span></li><li><span>Berbere</span><span class="amt">2 msk</span></li><li><span>Röda linser</span><span class="amt">4 dl</span></li><li><span>Vatten</span><span class="amt">6 dl</span></li><li><span>Smör</span><span class="amt">1 msk</span></li></ul>
+        <p class="step"><b>Mycket lök, långsamt fräst tills den nästan smälter</b> — 15 minuter, det är basen. <b>2 msk berbere</b> i oljan, fräs. Röda linser och vatten. Puttra tills det tjocknar. En klick smör på slutet.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Samma gryta med tärnat lamm eller nöt, puttrat längre. Kallas då key wot.</span>
+          <span data-p="fisk">Inte traditionellt, men fasta fiskbitar sist fungerar fint.</span>
+          <span data-p="veg">Som den är — helt vegansk om du hoppar över smöret. Servera med ris, bröd eller injera.</span>
+        </p>
+        <p class="tip">Löken är rätten. Skynda inte det steget, den ska bli mörk och söt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-et1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-et1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-et1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+      <div class="dish" id="d-et2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Krispig kål och potatis</h3><span class="mins">25 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"></figure>
+        <ul class="ing-list"><li><span>Vitkål</span><span class="amt">1/2 huvud</span></li><li><span>Morot</span><span class="amt">2 st</span></li><li><span>Potatis</span><span class="amt">4 st</span></li><li><span>Olja</span><span class="amt">2 msk</span></li><li><span>Lök</span><span class="amt">1 st</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Gurkmeja</span><span class="amt">1/2 tsk</span></li></ul>
+        <p class="step">Vitkål i strimlor, morot och potatis i klyftor. Fräs i olja med <b>lök, ingefära, gurkmeja</b> och salt. Lock på, låg värme tills mjukt. Ingen berbere här — den ska vara mild.</p>
+        <p class="swap"><b>Servera till</b>
+          <span data-p="kott">Vid sidan av en het köttgryta. Kontrasten är hela poängen.</span>
+          <span data-p="fisk">Med stekt fisk och citron.</span>
+          <span data-p="veg">Tillsammans med linsgrytan. Mild bredvid het är hur etiopisk mat serveras.</span>
+        </p>
+        <p class="tip">Servera flera små rätter på samma fat. Det är så maten är tänkt att ätas.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-et2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-et2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-et2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="pantry" id="skafferi">
+  <div class="pantry-inner">
+    <h2>Bygg skafferiet</h2>
+    <p class="lead">Sorterat efter hur många av de arton köken varje sak faktiskt används i. Överst står det som betalar sig direkt; längst ner de burkar du köper för en tesked och sedan slänger. Märkt <span class="tier">Först</span> = störst skillnad per hundralapp.</p>
+    <h3>Torra kryddor</h3>
+    <ul class="plist">
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Spiskummin<span class="tier">Först</span></span><span class="d">Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru.</span></span><span class="u">7 kök</span><span class="h">2 år hela</span></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Chiliflingor<span class="tier">Först</span></span><span class="d">Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta.</span></span><span class="u">6 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Rökt paprika<span class="tier">Först</span></span><span class="d">Spanien, Marocko, Mellanöstern. Även i alla rubs du gör.</span></span><span class="u">4 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Torkad oregano<span class="tier">Först</span></span><span class="d">Grekland, Italien, Mexiko.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Gurkmeja</span><span class="d">Indien, Etiopien, Marocko.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Kanel, hel stång</span><span class="d">Marocko, Vietnam, Indien. Hel håller i evighet.</span></span><span class="u">3 kök</span><span class="h">3 år</span></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Garam masala</span><span class="d">Indien. Men gör också en snabb rub till allt grillat.</span></span><span class="u">2 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Saffran</span><span class="d">Spanien och Marocko. En ask räcker i åratal.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Torkad chili, hel</span><span class="d">Mexiko och Kina. Rosta i torr panna först.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Sumak</span><span class="d">Turkiet och Levanten. Syra som håller i pulverform.</span></span><span class="u">2 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Sesamfrön</span><span class="d">Korea, Kina, Mellanöstern. Rosta torrt.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
+    </ul>
+    <h3>Flaskor och burkar</h3>
+    <ul class="plist">
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Ljus soja<span class="tier">Först</span></span><span class="d">Japan, Korea, Kina, Vietnam. Köp en bra.</span></span><span class="u">4 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Fisksås<span class="tier">Först</span></span><span class="d">Thailand, Vietnam, Korea — och i smyg i varje tomatsås.</span></span><span class="u">4 kök</span><span class="h">3 år</span></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Sesamolja, rostad<span class="tier">Först</span></span><span class="d">Korea, Kina, Japan. Alltid finish, aldrig stekning.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Tahini</span><span class="d">Mellanöstern och Turkiet. Sås med bara citron och vatten.</span></span><span class="u">2 kök</span><span class="h">6 mån</span></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Dijonsenap</span><span class="d">Frankrike och Baltikum. Räddar varje dressing och pannsås.</span></span><span class="u">2 kök</span><span class="h">1 år i kyl</span></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Miso, ljus</span><span class="d">Japan. Men går även i smör, dressing och pastasås.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Gochujang</span><span class="d">Korea. En sked ersätter fyra andra ingredienser.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Chiliolja med krisp</span><span class="d">Kina. Ovanpå ägg, nudlar, ris, pizza — allt.</span></span><span class="u">1 kök</span><span class="h">1 år</span></li>
+    </ul>
+    <h3>Torrvaror och konserver</h3>
+    <ul class="plist">
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, billig<span class="tier">Alltid</span></span><span class="d">Pannan, grillen, ugnen. Stor flaska.</span></span><span class="u">Alla</span><span class="h">1 år</span></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, bra<span class="tier">Alltid</span></span><span class="d">Bara finish. Värms aldrig.</span></span><span class="u">Alla</span><span class="h">4 mån öppnad</span></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Neutral olja<span class="tier">Alltid</span></span><span class="d">Raps eller solros. Wok och allt över 200°.</span></span><span class="u">Alla</span><span class="h">1 år</span></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Flingsalt<span class="tier">Alltid</span></span><span class="d">Sista strösslet som får allt annat att smaka.</span></span><span class="u">Alla</span><span class="h">Evigt</span></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Grovt havssalt<span class="tier">Alltid</span></span><span class="d">Pastavattnet och all matlagning.</span></span><span class="u">Alla</span><span class="h">Evigt</span></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Krossade tomater<span class="tier">Alltid</span></span><span class="d">Basen i halva sidan. Ha sex burkar.</span></span><span class="u">9 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Tomatpuré<span class="tier">Alltid</span></span><span class="d">Fräs alltid i olja innan vätskan.</span></span><span class="u">6 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Ris, långkornigt<span class="tier">Alltid</span></span><span class="d">Basmati eller jasmin.</span></span><span class="u">7 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Ris, rundkornigt</span><span class="d">Bomba eller arborio. Paella och risotto.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Pasta, torr<span class="tier">Alltid</span></span><span class="d">Spaghetti och en kort sort.</span></span><span class="u">1 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Risnudlar</span><span class="d">Vietnam och Thailand. Kokar på tre minuter.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">12</span><span style="flex:1;min-width:11rem"><span class="b">Kikärtor på burk<span class="tier">Alltid</span></span><span class="d">Protein, krämighet, krispiga i ugn.</span></span><span class="u">6 kök</span><span class="h">3 år</span></li>
+        <li><span class="n">13</span><span style="flex:1;min-width:11rem"><span class="b">Röda linser<span class="tier">Alltid</span></span><span class="d">Kokar på tolv minuter. Billigast av allt.</span></span><span class="u">3 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">14</span><span style="flex:1;min-width:11rem"><span class="b">Kokosmjölk</span><span class="d">Indien, Thailand. Ta den feta.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">15</span><span style="flex:1;min-width:11rem"><span class="b">Kombu eller torkad shiitake</span><span class="d">Vegetarisk umami, permanent löst.</span></span><span class="u">2 kök</span><span class="h">Flera år</span></li>
+        <li><span class="n">16</span><span style="flex:1;min-width:11rem"><span class="b">Kapris i vinäger</span><span class="d">Skölj av. Sälta och syra i ett.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">17</span><span style="flex:1;min-width:11rem"><span class="b">Jordnötter, rostade</span><span class="d">Vietnam och Västafrika. Krisp och protein.</span></span><span class="u">2 kök</span><span class="h">6 mån</span></li>
+    </ul>
+    <h3>Enkelriktade men hållbara · helt ok att köpa</h3>
+    <div class="keepbox">
+      <p class="t">Ett kök — men burken står kvar och väntar</p>
+      <ul>
+        <li><span class="yr">2 år</span><b>Saffran.</b> Spanien och Marocko. Dyr men torr — den blir aldrig dålig. En ask räcker till tio paellor.</li>
+        <li><span class="yr">2 år</span><b>Sichuanpeppar.</b> Bara Kina, men helt oersättlig och håller som vilken torr krydda som helst. Köp den när suget kommer.</li>
+        <li><span class="yr">Flera år</span><b>Svart risvinäger.</b> Bara Kina. Vinäger blir inte dålig. Helt ofarligt köp.</li>
+        <li><span class="yr">1 år</span><b>Sumak.</b> Turkiet och Levanten. Torrt pulver, inga problem. Använd den även på vanlig sallad och stekt ägg.</li>
+        <li><span class="yr">2 år</span><b>Granatäppelsirap.</b> Sockerhaltig och därmed hållbar. Går även i dressingar och över yoghurt.</li>
+        <li><span class="yr">1 år</span><b>Berbere / ras el hanout.</b> Enkelriktade men torra. Vill du slippa två burkar: köp berbere, den fungerar även som rub på grillat.</li>
+        <li><span class="yr">2 år</span><b>Torkad chili, hel.</b> Mexiko och Kina. Hela torkade chilifrukter håller nästan hur länge som helst.</li>
+      </ul>
+    </div>
+
+    <h3>Enkelriktade och färska · byt ut</h3>
+    <div class="trap">
+      <p class="t">Öppnas för en tesked och möglar sedan</p>
+      <ul>
+        <li><span class="yr">Möglar</span><b>Konserverad citron.</b> Bara Marocko, och burken står öppen i kylen. <b>Ersätt med:</b> rivet citronskal plus en extra nypa salt. Nittio procent av effekten.</li>
+        <li><span class="yr">Några veckor</span><b>Ají amarillo-pasta.</b> Bara Peru. <b>Ersätt med:</b> gul paprika mixad med en chili och en tesked honung. Fruktig hetta, samma roll.</li>
+        <li><span class="yr">Dagar</span><b>Färsk galangal och citrongräs.</b> Thailand. <b>Ersätt med:</b> ingefära och citronskal. Eller köp dem frysta — de tål frysning perfekt.</li>
+        <li><span class="yr">Dagar</span><b>Färsk kaffirlime.</b> <b>Ersätt med:</b> limeskal. Eller frys bladen, de håller ett år i frysen.</li>
+        <li><span class="yr">2 veckor</span><b>Crème fraîche för en sås.</b> Frankrike. <b>Ersätt med:</b> grekisk yoghurt du ändå har hemma, tillsatt av värmen så den inte skär sig.</li>
+      </ul>
+    </div>
+
+    <h3>Det enda du behöver handla färskt</h3>
+    <div class="fresh">
+      <p><strong>Lök, vitlök, ingefära.</strong> Startpunkten i sjutton av arton kök. Lök och vitlök håller månader svalt; ingefära kan frysas hel och rivas fryst.</p>
+      <p style="margin-top:.7rem"><strong>Citron och lime.</strong> Går inte att ersätta med flaska. Riv skalet och frys det innan du pressar.</p>
+      <p style="margin-top:.7rem"><strong>Ägg, yoghurt, smör.</strong> Proteinet och fettet. Smör fryser bra, yoghurt inte.</p>
+      <p style="margin-top:.7rem"><strong>Persilja, koriander, mynta, dill.</strong> De enda örterna som inte går att byta mot torkat. Oregano är undantaget — den blir bättre torkad.</p>
+    </div>
+  </div>
+</section>
+
+<section class="protein" id="protein">
+  <div class="protein-inner">
+    <h2>Räkna hem proteinet</h2>
+    <p class="lead">Rätterna på den här sidan landar oftast på 10–20 g protein per portion. Vill du upp till 30–50 g behöver du lägga till en tydlig proteinkälla — eller två mindre. Här är siffrorna att räkna med.</p>
+
+    <table class="ptable">
+      <caption>Protein per normal portion</caption>
+      <thead><tr><th>Källa</th><th>Portion</th><th>Protein</th></tr></thead>
+      <tbody>
+        <tr><td>Kycklingfilé / lår</td><td>150 g</td><td>~33 g</td></tr>
+        <tr><td>Lammfärs, kebabspett</td><td>150 g</td><td>~26 g</td></tr>
+        <tr><td>Lax</td><td>150 g</td><td>~30 g</td></tr>
+        <tr><td>Torsk</td><td>150 g</td><td>~27 g</td></tr>
+        <tr><td>Räkor, skalade</td><td>150 g</td><td>~24 g</td></tr>
+        <tr><td>Musslor, urplockade</td><td>150 g</td><td>~18 g</td></tr>
+        <tr><td>Halloumi</td><td>100 g</td><td>~22 g</td></tr>
+        <tr><td>Fast tofu</td><td>150 g</td><td>~18 g</td></tr>
+        <tr><td>Kikärtor, avrunna</td><td>1 burk / 240 g</td><td>~20 g</td></tr>
+        <tr><td>Röda linser, torra</td><td>1 dl</td><td>~17 g</td></tr>
+        <tr><td>Ägg</td><td>2 st</td><td>~13 g</td></tr>
+        <tr><td>Grekisk yoghurt 10 %</td><td>200 g</td><td>~18 g</td></tr>
+        <tr><td>Parmesan</td><td>30 g</td><td>~11 g</td></tr>
+        <tr><td>Pasta, torr</td><td>100 g</td><td>~12 g</td></tr>
+        <tr><td>Tahini</td><td>2 msk</td><td>~5 g</td></tr>
+      </tbody>
+    </table>
+
+    <div class="builds">
+      <div class="build">
+        <b>Paella · fisk</b>
+        <div class="sum">~42 g</div>
+        <p>150 g räkor och 150 g musslor i samma panna. Riset bidrar med några gram till.</p>
+      </div>
+      <div class="build">
+        <b>Paella · vegetariskt</b>
+        <div class="sum">~46 g</div>
+        <p>En burk kikärtor i riset plus 100 g halloumi stekt hårt och lagd på toppen.</p>
+      </div>
+      <div class="build">
+        <b>Pasta · kött</b>
+        <div class="sum">~45 g</div>
+        <p>100 g pasta, 150 g kyckling och 30 g parmesan. Kaprisen och citronen gör resten.</p>
+      </div>
+      <div class="build">
+        <b>Ramen</b>
+        <div class="sum">~44 g</div>
+        <p>150 g tofu eller fläsksida, två ägg och nudlarna. Lägg i ett ägg extra om du vill över 50.</p>
+      </div>
+      <div class="build">
+        <b>Kebabspett</b>
+        <div class="sum">~44 g</div>
+        <p>150 g lammfärs plus 200 g yoghurtsås vid sidan. Yoghurten är underskattad här.</p>
+      </div>
+      <div class="build">
+        <b>Dal · vegetariskt</b>
+        <div class="sum">~35 g</div>
+        <p>2 dl torra linser per portion plus 200 g yoghurt till. Ris ger ytterligare några gram.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="nk-footer">
+  <h2>Fem regler som gäller överallt</h2>
+  <div class="rules">
+    <div><b>Krydda i fett, inte i vatten</b>Torra kryddor släpper sin doft i olja eller smör. Hälls de i en gryta med vätska smakar de mjöligt.</div>
+    <div><b>Salt och syra sist</b>Nio gånger av tio när något "saknar nåt" är svaret flingsalt eller en klyfta citron. Prova det innan du lägger till en ingrediens.</div>
+    <div><b>Låt tomaten mörkna</b>Fem minuters extra kokning innan vätskan går i är skillnaden mellan en tunn sås och en djup.</div>
+    <div><b>Den fina olivoljan värms aldrig</b>Billig olja i pannan, den goda över tallriken. Värme förstör exakt det du betalade för.</div>
+    <div><b>Torka av innan grillen</b>Blöt yta ångkokar. Fett och salt på torr yta ger stekyta. Gäller kött, fisk och halloumi lika mycket.</div>
+  </div>
+</div>
+
+</main>
+
+<div class="overlay-bg" id="overlayBg"></div>
+
+<div class="panel" id="cartPanel">
+  <div class="panel-head">
+    <div style="font-size:15px;font-weight:800">Din inköpslista</div>
+    <button class="panel-close" id="cartClose">✕</button>
+  </div>
+  <div class="panel-body" id="cartBody"></div>
+</div>
+
+<script>
+(function(){
+  // ── Protein picker (kött/fisk/veg) ──
+  var proteinBtns = document.querySelectorAll('.picker-btns button[data-set]');
+  function setProtein(mode){
+    document.querySelectorAll('.swap span[data-p]').forEach(function(s){
+      s.classList.toggle('on', s.getAttribute('data-p') === mode);
+    });
+    proteinBtns.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-set') === mode ? 'true' : 'false');
+    });
+  }
+  proteinBtns.forEach(function(b){
+    b.addEventListener('click', function(){ setProtein(b.getAttribute('data-set')); });
+  });
+  setProtein('veg');
+
+  // ── Read every dish straight from the page (single source of truth — no separate data file to drift out of sync) ──
+  var dishEls = Array.prototype.slice.call(document.querySelectorAll('.dish[id]'));
+  var dishes = dishEls.map(function(el){
+    var ingEls = el.querySelectorAll('.ing-list li');
+    var ingredients = Array.prototype.map.call(ingEls, function(li){
+      var spans = li.querySelectorAll('span');
+      return { name: (spans[0] ? spans[0].textContent : '').trim(), amount: (spans[1] ? spans[1].textContent : '').trim() };
+    });
+    var band = el.closest('.band');
+    return {
+      id: el.id,
+      el: el,
+      name: (el.querySelector('h3') || {}).textContent || '',
+      time: el.getAttribute('data-time') || 'medel',
+      cuisine: band ? (band.querySelector('h2') || {}).textContent || '' : '',
+      ingredients: ingredients,
+    };
+  });
+  var dishById = {};
+  dishes.forEach(function(d){ dishById[d.id] = d; });
+
+  // ── Time filter ──
+  var timeChips = document.querySelectorAll('#timeChips button');
+  var activeTime = 'alla';
+  timeChips.forEach(function(b){
+    b.addEventListener('click', function(){
+      activeTime = b.getAttribute('data-time');
+      timeChips.forEach(function(x){ x.setAttribute('aria-pressed', x === b ? 'true' : 'false'); });
+      applyFilters();
+    });
+  });
+
+  // ── "Vad har du hemma" ──
+  var haveInput = document.getElementById('haveInput');
+  var haveList = [];
+  document.getElementById('haveBtn').addEventListener('click', function(){
+    haveList = haveInput.value.split(',').map(function(s){ return s.trim().toLowerCase(); }).filter(Boolean);
+    document.getElementById('haveClear').style.display = haveList.length ? 'inline-block' : 'none';
+    applyFilters();
+  });
+  document.getElementById('haveClear').addEventListener('click', function(){
+    haveList = [];
+    haveInput.value = '';
+    document.getElementById('haveClear').style.display = 'none';
+    applyFilters();
+  });
+
+  function matchScore(dish){
+    if (!haveList.length) return null;
+    var names = dish.ingredients.map(function(i){ return i.name.toLowerCase(); });
+    var hits = 0;
+    haveList.forEach(function(h){
+      if (names.some(function(n){ return n.indexOf(h) !== -1 || h.indexOf(n) !== -1; })) hits++;
+    });
+    return Math.round((hits / haveList.length) * 100);
+  }
+
+  function applyFilters(){
+    var visibleCount = 0;
+    dishes.forEach(function(d){
+      var oldBadge = d.el.querySelector('.match-badge');
+      if (oldBadge) oldBadge.remove();
+      var timeOk = activeTime === 'alla' || d.time === activeTime;
+      var score = matchScore(d);
+      var haveOk = score === null || score >= 34;
+      var ok = timeOk && haveOk;
+      d.el.classList.toggle('dimmed', !ok);
+      if (ok) visibleCount++;
+      if (ok && score !== null && score > 0) {
+        var badge = document.createElement('span');
+        badge.className = 'match-badge';
+        badge.textContent = score + '% match';
+        d.el.querySelector('.dish-head').appendChild(badge);
+      }
+    });
+    var line = document.getElementById('resultLine');
+    var filtersActive = activeTime !== 'alla' || haveList.length > 0;
+    line.textContent = filtersActive ? (visibleCount + ' av ' + dishes.length + ' rätter matchar — resten tonas ner nedanför') : '';
+  }
+
+  // ── Shopping cart ──
+  var cart = new Set();
+  var overlayBg = document.getElementById('overlayBg');
+  var cartPanel = document.getElementById('cartPanel');
+
+  function updateCartBadge(){
+    var badge = document.getElementById('cartBadge');
+    if (cart.size) { badge.style.display = 'flex'; badge.textContent = cart.size; }
+    else badge.style.display = 'none';
+  }
+  function toggleCart(id){
+    var btns = document.querySelectorAll('[data-add="' + id + '"]');
+    if (cart.has(id)) {
+      cart.delete(id);
+      btns.forEach(function(b){ b.classList.remove('added'); b.textContent = '+ Inköpslista'; });
+    } else {
+      if (cart.size >= 5) { alert('Max 5 rätter i listan åt gången — ta bort en för att lägga till en ny.'); return; }
+      cart.add(id);
+      btns.forEach(function(b){ b.classList.add('added'); b.textContent = '✓ I listan'; });
+    }
+    updateCartBadge();
+  }
+  document.querySelectorAll('[data-add]').forEach(function(btn){
+    btn.addEventListener('click', function(){ toggleCart(btn.getAttribute('data-add')); });
+  });
+
+  document.getElementById('cartToggle').addEventListener('click', function(){
+    renderCartBody();
+    overlayBg.classList.add('open');
+    cartPanel.classList.add('open');
+  });
+  document.getElementById('cartClose').addEventListener('click', closePanels);
+  overlayBg.addEventListener('click', closePanels);
+  function closePanels(){
+    overlayBg.classList.remove('open');
+    cartPanel.classList.remove('open');
+  }
+
+  function renderCartBody(){
+    var body = document.getElementById('cartBody');
+    var picked = Array.from(cart).map(function(id){ return dishById[id]; }).filter(Boolean);
+    if (!picked.length) {
+      body.innerHTML = '<div class="cart-empty">Inga rätter i listan än. Lägg till upp till 5 stycken från valfritt kök.</div>';
+      return;
+    }
+    body.innerHTML = picked.map(function(d){
+      return '<div class="cart-dish"><span class="cd-name">' + d.name + ' <span style="color:var(--muted);font-weight:400">(' + d.cuisine + ')</span></span>' +
+        '<button class="cd-remove" data-remove="' + d.id + '">Ta bort</button></div>';
+    }).join('') +
+      '<button class="optimize-btn" id="optimizeBtn">Optimera inköpslistan med AI</button>' +
+      '<div class="ai-loading" id="optLoading">Slår ihop och tänker efter …</div>' +
+      '<div class="ai-error" id="optError"></div>' +
+      '<div class="ai-result" id="optResult"></div>' +
+      '<div class="combined-list"><h4>Rå ingredienslista (osorterad)</h4><ul class="ing-list">' +
+      picked.flatMap(function(d){ return d.ingredients.map(function(i){
+        return '<li><span>' + i.name + ' <span style="color:var(--muted);font-size:11px">(' + d.name + ')</span></span><span class="amt">' + i.amount + '</span></li>';
+      }); }).join('') + '</ul></div>';
+    body.querySelectorAll('[data-remove]').forEach(function(btn){
+      btn.addEventListener('click', function(){ toggleCart(btn.getAttribute('data-remove')); renderCartBody(); });
+    });
+    document.getElementById('optimizeBtn').addEventListener('click', function(){ handleOptimize(picked); });
+  }
+
+  // ── Gemini key ──
+  var keyPanel = document.getElementById('keyPanel');
+  document.getElementById('keyToggle').addEventListener('click', function(){ keyPanel.classList.toggle('open'); });
+  var apiKey = localStorage.getItem('koket_gemini_key') || '';
+  document.getElementById('apiKeyInput').value = apiKey;
+  updateKeyStatus();
+  document.getElementById('saveKeyBtn').addEventListener('click', function(){
+    apiKey = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('koket_gemini_key', apiKey);
+    updateKeyStatus();
+  });
+  function updateKeyStatus(){
+    var el = document.getElementById('keyStatus');
+    if (apiKey) { el.textContent = '✓ Nyckel sparad — AI-funktionerna är aktiva.'; el.className = 'key-status ok'; }
+    else { el.textContent = 'Ingen nyckel sparad än — AI-tipsen fungerar inte förrän en läggs till.'; el.className = 'key-status missing'; }
+  }
+  async function callGemini(prompt){
+    if (!apiKey) throw new Error('NO_KEY');
+    var url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=' + encodeURIComponent(apiKey);
+    var res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    });
+    if (!res.ok) {
+      var errText = await res.text().catch(function(){ return ''; });
+      throw new Error('API_ERROR: ' + res.status + ' ' + errText.slice(0, 200));
+    }
+    var data = await res.json();
+    var text = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+    if (!text) throw new Error('EMPTY_RESPONSE');
+    return text.trim();
+  }
+
+  // ── Inline "fråga AI om substitut" per dish ──
+  document.querySelectorAll('.ask-ai-btn').forEach(function(btn){
+    var id = btn.getAttribute('data-ask');
+    var box = document.getElementById('ai-' + id);
+    btn.addEventListener('click', function(){ box.hidden = !box.hidden; });
+  });
+  document.querySelectorAll('.ai-inline').forEach(function(box){
+    var id = box.id.replace(/^ai-/, '');
+    var dish = dishById[id];
+    if (!dish) return;
+    var input = box.querySelector('.sub-input');
+    var goBtn = box.querySelector('.sub-go');
+    var loading = box.querySelector('.ai-loading');
+    var errorEl = box.querySelector('.ai-error');
+    var resultEl = box.querySelector('.ai-result');
+    goBtn.addEventListener('click', async function(){
+      var missing = input.value.trim();
+      errorEl.classList.remove('show'); resultEl.classList.remove('show');
+      if (!missing) return;
+      loading.classList.add('show');
+      goBtn.disabled = true;
+      try {
+        var ingList = dish.ingredients.map(function(i){ return i.name; }).join(', ');
+        var activeSwap = dish.el.querySelector('.swap span.on');
+        var swapText = activeSwap ? activeSwap.textContent.trim() : '';
+        var prompt = 'Jag lagar "' + dish.name + '" (' + dish.cuisine + '). Ingredienser: ' + ingList + '. ' + (swapText ? ('Proteinval just nu: ' + swapText + '. ') : '') +
+          '\n\nJag har inte "' + missing + '" hemma. Föreslå kort (max 3 meningar, på svenska) det bästa substitutet jag sannolikt redan har hemma eller lätt hittar i en vanlig svensk matbutik, och en kort mening om hur smaken/resultatet påverkas.';
+        var text = await callGemini(prompt);
+        resultEl.textContent = text;
+        resultEl.classList.add('show');
+      } catch (err) {
+        errorEl.textContent = err.message === 'NO_KEY'
+          ? 'Lägg till en Gemini API-nyckel högst upp på sidan för att använda den här funktionen.'
+          : 'Kunde inte hämta ett förslag just nu (' + err.message + '). Försök igen om en stund.';
+        errorEl.classList.add('show');
+      } finally {
+        loading.classList.remove('show');
+        goBtn.disabled = false;
+      }
+    });
+  });
+
+  async function handleOptimize(picked){
+    var loading = document.getElementById('optLoading');
+    var errorEl = document.getElementById('optError');
+    var resultEl = document.getElementById('optResult');
+    errorEl.classList.remove('show'); resultEl.classList.remove('show');
+    loading.classList.add('show');
+    document.getElementById('optimizeBtn').disabled = true;
+    try {
+      var listText = picked.map(function(d){
+        return d.name + ': ' + d.ingredients.map(function(i){ return i.name + ' (' + i.amount + ')'; }).join(', ');
+      }).join('\n');
+      var prompt = 'Jag ska laga dessa ' + picked.length + ' rätter samma vecka:\n' + listText +
+        '\n\nSlå ihop till en enda inköpslista på svenska. Regler: (1) Slå ihop dubbletter och räkna ihop rimlig total mängd. (2) Om något bara behövs i en liten mängd till en enda rätt — flagga tydligt att man kan hoppa över att köpa en hel förpackning och istället använda ett vanligt substitut, eller hur mycket som faktiskt behövs. (3) Gruppera efter typ (grönsaker, kryddor, skafferivaror, kött/fisk/protein). Var kort och konkret — punktlista, inga långa förklaringar.';
+      var text = await callGemini(prompt);
+      resultEl.textContent = text;
+      resultEl.classList.add('show');
+    } catch (err) {
+      errorEl.textContent = err.message === 'NO_KEY'
+        ? 'Lägg till en Gemini API-nyckel högst upp på sidan för att använda den här funktionen.'
+        : 'Kunde inte optimera listan just nu (' + err.message + '). Försök igen om en stund.';
+      errorEl.classList.add('show');
+    } finally {
+      loading.classList.remove('show');
+      document.getElementById('optimizeBtn').disabled = false;
+    }
+  }
+})();
+</script>
+
+</body>
+</html>
