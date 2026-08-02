@@ -401,6 +401,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <button class="tab-btn" data-tab="basvaror" aria-pressed="false">Basvaror</button>
     <button class="tab-btn" data-tab="kryddor" aria-pressed="false">Kryddor</button>
     <button class="tab-btn" data-tab="brod" aria-pressed="false">Bröd</button>
+    <button class="tab-btn" data-tab="kebab" aria-pressed="false">Kebab</button>
   </div>
 </div>
 
@@ -1983,6 +1984,193 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 </section>
 </div><!-- /tab-brod -->
 
+<div id="tab-kebab" class="tabpanel" hidden>
+<section class="breadsection" id="kebab">
+  <div class="breadsection-inner">
+    <h2>Kebab</h2>
+    <p class="lead">Nästan varje kök har sin egen variant av kött på spett över eld. Åtta varianter från åtta länder som inte redan har ett spett bland sina två rätter — samma format som resten: nyckelingredienser, metod, en fallgrop.</p>
+    <div class="bread-grid">
+      <div class="dish bread-card" id="k-souvlaki">
+        <div class="dish-head"><h3>Souvlaki</h3><span class="mins">15 min + marinering</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Grekland</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Greek%20chicken%20souvlaki%20merida.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Marinera kort, grilla snabbt — serveras direkt i pitan med tzatziki.</p>
+        <button class="recipe-toggle" data-toggle="k-souvlaki" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-souvlaki" hidden>
+        <ul class="ing-list"><li><span>Fläskkarré eller kycklinglår, tärnad</span><span class="amt">600 g</span></li><li><span>Citron</span><span class="amt">1 st</span></li><li><span>Torkad oregano</span><span class="amt">2 tsk</span></li><li><span>Olivolja</span><span class="amt">3 msk</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
+        <p class="step">Marinera köttet i citron, oregano, olivolja, riven vitlök och salt minst 30 minuter, gärna längre. Trä på spett, grilla på hög direktvärme 8–10 minuter, vänd ofta tills ytan är brynt och saftig inuti. Servera direkt i varmt pitabröd med tzatziki, tomat och rödlök.</p>
+        <p class="tip">Korta bitar (2–3 cm) ger mer brynt yta per tugga än stora — det är ytan som ger smaken.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-souvlaki">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-souvlaki">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-souvlaki" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-seekh">
+        <div class="dish-head"><h3>Seekh kebab</h3><span class="mins">25 min</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Indien</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Chicken%20Seekh%20Kabab.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Formas runt spettet för hand — ingen grillkorg behövs, bara kladdiga fingrar.</p>
+        <button class="recipe-toggle" data-toggle="k-seekh" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-seekh" hidden>
+        <ul class="ing-list"><li><span>Lammfärs (eller nötfärs)</span><span class="amt">500 g</span></li><li><span>Gul lök, finriven</span><span class="amt">1 st</span></li><li><span>Ingefära och vitlök, rivna</span><span class="amt">1 msk vardera</span></li><li><span>Garam masala</span><span class="amt">2 tsk</span></li><li><span>Färsk koriander, hackad</span><span class="amt">1/2 knippe</span></li><li><span>Ägg, för att binda</span><span class="amt">1 st</span></li></ul>
+        <p class="step">Blanda färs med lök, ingefära, vitlök, garam masala, koriander och ägg till en jämn smet — knåda ordentligt så den binder. Fukta händerna, forma smeten runt platta metallspett i avlånga korvar. Grilla på medelhög direktvärme, vänd försiktigt, 10–12 minuter tills genomstekt.</p>
+        <p class="tip">Riven lök (inte hackad) är hemligheten — den smälter in i färsen istället för att bli klumpar som faller av spettet.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-seekh">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-seekh">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-seekh" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-kefta">
+        <div class="dish-head"><h3>Kefta-brochettes</h3><span class="mins">20 min</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Marocko</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Kafta%20shish%20kebab%20and%20grilled%20vegetables%20on%20salad%20-%20Cambridge%2C%20MA.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Samma kryddade färs som en marockansk köttbulle — bara formad runt ett spett istället.</p>
+        <button class="recipe-toggle" data-toggle="k-kefta" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-kefta" hidden>
+        <ul class="ing-list"><li><span>Lamm- eller nötfärs</span><span class="amt">500 g</span></li><li><span>Gul lök, finhackad</span><span class="amt">1/2 st</span></li><li><span>Spiskummin</span><span class="amt">2 tsk</span></li><li><span>Paprikapulver</span><span class="amt">1 tsk</span></li><li><span>Kanel</span><span class="amt">1 nypa</span></li><li><span>Persilja och koriander, hackad</span><span class="amt">1/2 knippe</span></li></ul>
+        <p class="step">Blanda färs med lök, kryddor och örter, knåda till en jämn smet. Forma runt spett i tjocka korvar. Grilla på hög direktvärme 8–10 minuter, vänd regelbundet tills ytan är brynt runt om.</p>
+        <p class="tip">En nypa kanel i köttfärsen är inte av misstag — det är precis den söta bottennoten som gör marockanska köttbullar och kebab igenkännbara.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-kefta">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-kefta">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-kefta" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-chuanr">
+        <div class="dish-head"><h3>Chuan'r · Xinjiang-spett</h3><span class="mins">15 min + marinering</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Kina</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Lamb%20kebabs%20on%20grill%20at%20Ancient%20City%20of%20Kashi%20%2820230923224509%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Xinjiangs gatumat — kryddorna strös på EFTER grillningen, inte innan.</p>
+        <button class="recipe-toggle" data-toggle="k-chuanr" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-chuanr" hidden>
+        <ul class="ing-list"><li><span>Lammlägg eller lammbog, tärnad</span><span class="amt">500 g</span></li><li><span>Lammfett eller olja, till penslning</span><span class="amt"></span></li><li><span>Spiskummin, malen</span><span class="amt">2 tsk + till servering</span></li><li><span>Sichuanpeppar, krossad</span><span class="amt">1 tsk</span></li><li><span>Chiliflingor</span><span class="amt">1 tsk</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
+        <p class="step">Trä tärnat lamm (gärna med lite fett emellan) på tunna spett. Grilla på hög direktvärme, pensla med fett under tiden. Precis innan de tas av: strö över spiskummin, sichuanpeppar, chiliflingor och salt direkt på det heta köttet så kryddorna fastnar och rostar till.</p>
+        <p class="tip">Krydda i slutet, inte i en marinad — det är kontrasten mellan brynt kött och nyrostade kryddor på ytan som är hela poängen.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-chuanr">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-chuanr">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-chuanr" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-dakkochi">
+        <div class="dish-head"><h3>Dak-kkochi</h3><span class="mins">15 min</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Korea</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Street%20Food%20-%20Chicken%20skewers%20-%20Dakkochi%20%28%EB%8B%AD%EA%BC%AC%EC%B9%98%29%20%2810585858164%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Glaseras i flera lager under grillningen — söt, salt och het på samma gång.</p>
+        <button class="recipe-toggle" data-toggle="k-dakkochi" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-dakkochi" hidden>
+        <ul class="ing-list"><li><span>Kycklinglår, tärnad</span><span class="amt">500 g</span></li><li><span>Gochujang</span><span class="amt">2 msk</span></li><li><span>Soja</span><span class="amt">2 msk</span></li><li><span>Honung eller socker</span><span class="amt">1 msk</span></li><li><span>Vitlök, riven</span><span class="amt">2 klyftor</span></li><li><span>Sesamolja</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Rör ihop gochujang, soja, honung, vitlök och sesamolja till en glaze. Trä kycklingen på spett, grilla på medelhög värme. Pensla med glazen flera gånger under grillningen — sista penslingen precis innan servering så den inte bränns.</p>
+        <p class="tip">Pensla i flera tunna lager istället för ett tjockt — annars bränns sockret i glazen innan kycklingen hunnit bli klar.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-dakkochi">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-dakkochi">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-dakkochi" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-anticuchos">
+        <div class="dish-head"><h3>Anticuchos</h3><span class="mins">15 min + 2 tim marinering</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Peru</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Anticuchos%20-%20Grilled%20Beef%20Heart%20skewers.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Perus mest ikoniska gatumat — den röda färgen kommer från torkad chilipasta, inte tomat.</p>
+        <button class="recipe-toggle" data-toggle="k-anticuchos" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-anticuchos" hidden>
+        <ul class="ing-list"><li><span>Nötkött (traditionellt hjärta, annars ytterlår), tärnat</span><span class="amt">500 g</span></li><li><span>Ají panca-pasta</span><span class="amt">3 msk</span></li><li><span>Rödvinsvinäger</span><span class="amt">2 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li></ul>
+        <p class="step">Blanda ají panca, vinäger, spiskummin och riven vitlök till en marinad, vänd köttet i den minst 2 timmar. Trä på spett, grilla på hög direktvärme 6–8 minuter, pensla med kvarvarande marinad under grillningen. Servera med kokt majs och potatis.</p>
+        <p class="tip">Ají panca-pasta finns i latinamerikanska butiker — hoppa inte över den för vanlig chilipulver, det är den rökiga sötman som gör rätten.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-anticuchos">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-anticuchos">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-anticuchos" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-suya">
+        <div class="dish-head"><h3>Suya</h3><span class="mins">15 min</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Västafrika</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Suya%20%28827408387%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Torrmarinerad i krossade jordnötter istället för olja — ger en knaprig, nötig yta.</p>
+        <button class="recipe-toggle" data-toggle="k-suya" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-suya" hidden>
+        <ul class="ing-list"><li><span>Nötkött (ytterfilé), tunt skivat</span><span class="amt">500 g</span></li><li><span>Jordnötter, rostade och grovmalda</span><span class="amt">1 dl</span></li><li><span>Cayennepeppar</span><span class="amt">1 tsk</span></li><li><span>Ingefärspulver</span><span class="amt">1 tsk</span></li><li><span>Lökpulver</span><span class="amt">1 tsk</span></li><li><span>Buljongpulver</span><span class="amt">1/2 tsk</span></li></ul>
+        <p class="step">Blanda de grovmalda jordnötterna med kryddorna till en torr rub (yaji). Vänd det tunt skivade köttet i olja, sedan i rubben tills det täcker ytan helt. Trä på spett, grilla på hög direktvärme 3–4 minuter per sida — går snabbt eftersom köttet är tunt skivat.</p>
+        <p class="tip">Skiv köttet så tunt som möjligt (lägg det i frysen 20 minuter först för att det ska gå lättare) — suya ska vara snabbstekt, inte segt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-suya">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-suya">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-suya" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-mooping">
+        <div class="dish-head"><h3>Moo ping</h3><span class="mins">10 min + marinering</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Thailand</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Moo%20Yaang%2C%20Gai%20Yaang%2C%20grilled%20chicken%2C%20pork%20and%20liver%20skewers%2C%20THB10%20per%20stick%2C%20THB5%20for%20sticky%20rice%20-%20Chiang%20Mai%2C%20Night%20Bazaar.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Söt, kladdig glaze av kokosmjölk och palmsocker — gatumat från thailändska morgnar.</p>
+        <button class="recipe-toggle" data-toggle="k-mooping" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-mooping" hidden>
+        <ul class="ing-list"><li><span>Fläskkarré, tunt skivad</span><span class="amt">500 g</span></li><li><span>Kokosmjölk</span><span class="amt">1 dl</span></li><li><span>Palmsocker eller farinsocker</span><span class="amt">2 msk</span></li><li><span>Fisksås</span><span class="amt">2 msk</span></li><li><span>Korianderrot eller stjälkar, hackade</span><span class="amt">1 msk</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li></ul>
+        <p class="step">Mixa kokosmjölk, palmsocker, fisksås, korianderrot och vitlök till en marinad. Vänd det tunt skivade fläsket i marinaden minst 1 timme, gärna över natten. Trä på spett, grilla på medelhög direktvärme tills sockret karamelliserar till en gyllenbrun yta, ca 3–4 minuter per sida.</p>
+        <p class="tip">Sockret i marinaden bränns lätt — håll värmen medelhög snarare än hög, och håll koll.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-mooping">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-mooping">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-mooping" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div><!-- /tab-kebab -->
+
 <div class="nk-footer">
   <h2>Fem regler som gäller överallt</h2>
   <div class="rules">
@@ -2292,7 +2480,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   });
 
   // ── Tabbar: Kök / Basvaror / Kryddor ──
-  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod'];
+  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod', 'kebab'];
   var KOK_ANCHORS = new Set(['kok','spanien','italien','turkiet','japan','thailand','mellanostern','baltikum','indien','mexiko','grekland','marocko','korea','vietnam','kina','frankrike','vastafrika','peru','etiopien','protein']);
   var tabBtns = document.querySelectorAll('.tab-btn');
   var tabPanels = {};
