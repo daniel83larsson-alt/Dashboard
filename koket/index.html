@@ -277,7 +277,10 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .pantry .lead{max-width:48ch;color:#4A443C;margin-bottom:2.5rem}
 .pantry h3{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#7A7268;margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid #CFC9BC}
 .plist{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:.1rem 2rem}
-.plist li{padding:.7rem 0;border-bottom:1px solid #DDD7CA;display:flex;gap:.8rem;align-items:baseline}
+.plist li{padding:.7rem 0;border-bottom:1px solid #DDD7CA;display:flex;flex-wrap:wrap;gap:.4rem .8rem;align-items:baseline}
+.plist-add{flex:0 0 auto;margin-left:auto;width:1.6rem;height:1.6rem;border-radius:3px;border:1px solid #B8B0A2;background:transparent;color:#5A5348;font-family:'Space Mono',monospace;font-size:1rem;line-height:1;cursor:pointer;padding:0}
+.plist-add:hover{border-color:#4E6B3C;color:#4E6B3C}
+.plist-add[data-added="true"]{background:var(--jade);border-color:var(--jade);color:#fff}
 .plist .n{font-family:'Space Mono',monospace;font-size:.7rem;color:#A29A8C;min-width:1.6rem}
 .plist .b{font-weight:700;display:block}
 .plist .d{font-size:.88rem;color:#5A5348;display:block;margin-top:.1rem}
@@ -1739,34 +1742,34 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <p class="lead">Allt utom kryddorna: oljor, salt, konserver och de flaskor med färdig smak som gör tunga jobb i flera kök. Sorterat efter hur många av de arton köken varje sak faktiskt används i.</p>
     <h3>Flaskor och burkar</h3>
     <ul class="plist">
-        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Ljus soja<span class="tier">Först</span></span><span class="d">Japan, Korea, Kina, Vietnam. Köp en bra.</span></span><span class="u">4 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Fisksås<span class="tier">Först</span></span><span class="d">Thailand, Vietnam, Korea — och i smyg i varje tomatsås.</span></span><span class="u">4 kök</span><span class="h">3 år</span></li>
-        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Sesamolja, rostad<span class="tier">Först</span></span><span class="d">Korea, Kina, Japan. Alltid finish, aldrig stekning.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Tahini</span><span class="d">Mellanöstern och Turkiet. Sås med bara citron och vatten.</span></span><span class="u">2 kök</span><span class="h">6 mån</span></li>
-        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Dijonsenap</span><span class="d">Frankrike och Baltikum. Räddar varje dressing och pannsås.</span></span><span class="u">2 kök</span><span class="h">1 år i kyl</span></li>
-        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Miso, ljus</span><span class="d">Japan. Men går även i smör, dressing och pastasås.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span></li>
-        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Gochujang</span><span class="d">Korea. En sked ersätter fyra andra ingredienser.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span></li>
-        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Chiliolja med krisp</span><span class="d">Kina. Ovanpå ägg, nudlar, ris, pizza — allt.</span></span><span class="u">1 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Ljus soja<span class="tier">Först</span></span><span class="d">Japan, Korea, Kina, Vietnam. Köp en bra.</span></span><span class="u">4 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Fisksås<span class="tier">Först</span></span><span class="d">Thailand, Vietnam, Korea — och i smyg i varje tomatsås.</span></span><span class="u">4 kök</span><span class="h">3 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Sesamolja, rostad<span class="tier">Först</span></span><span class="d">Korea, Kina, Japan. Alltid finish, aldrig stekning.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Tahini</span><span class="d">Mellanöstern och Turkiet. Sås med bara citron och vatten.</span></span><span class="u">2 kök</span><span class="h">6 mån</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Dijonsenap</span><span class="d">Frankrike och Baltikum. Räddar varje dressing och pannsås.</span></span><span class="u">2 kök</span><span class="h">1 år i kyl</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Miso, ljus</span><span class="d">Japan. Men går även i smör, dressing och pastasås.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Gochujang</span><span class="d">Korea. En sked ersätter fyra andra ingredienser.</span></span><span class="u">1 kök</span><span class="h">1 år i kyl</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Chiliolja med krisp</span><span class="d">Kina. Ovanpå ägg, nudlar, ris, pizza — allt.</span></span><span class="u">1 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
     <h3>Torrvaror och konserver</h3>
     <ul class="plist">
-        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, billig<span class="tier">Alltid</span></span><span class="d">Pannan, grillen, ugnen. Stor flaska.</span></span><span class="u">Alla</span><span class="h">1 år</span></li>
-        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, bra<span class="tier">Alltid</span></span><span class="d">Bara finish. Värms aldrig.</span></span><span class="u">Alla</span><span class="h">4 mån öppnad</span></li>
-        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Neutral olja<span class="tier">Alltid</span></span><span class="d">Raps eller solros. Wok och allt över 200°.</span></span><span class="u">Alla</span><span class="h">1 år</span></li>
-        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Flingsalt<span class="tier">Alltid</span></span><span class="d">Sista strösslet som får allt annat att smaka.</span></span><span class="u">Alla</span><span class="h">Evigt</span></li>
-        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Grovt havssalt<span class="tier">Alltid</span></span><span class="d">Pastavattnet och all matlagning.</span></span><span class="u">Alla</span><span class="h">Evigt</span></li>
-        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Krossade tomater<span class="tier">Alltid</span></span><span class="d">Basen i halva sidan. Ha sex burkar.</span></span><span class="u">9 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Tomatpuré<span class="tier">Alltid</span></span><span class="d">Fräs alltid i olja innan vätskan.</span></span><span class="u">6 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Ris, långkornigt<span class="tier">Alltid</span></span><span class="d">Basmati eller jasmin.</span></span><span class="u">7 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Ris, rundkornigt</span><span class="d">Bomba eller arborio. Paella och risotto.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Pasta, torr<span class="tier">Alltid</span></span><span class="d">Spaghetti och en kort sort.</span></span><span class="u">1 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Risnudlar</span><span class="d">Vietnam och Thailand. Kokar på tre minuter.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">12</span><span style="flex:1;min-width:11rem"><span class="b">Kikärtor på burk<span class="tier">Alltid</span></span><span class="d">Protein, krämighet, krispiga i ugn.</span></span><span class="u">6 kök</span><span class="h">3 år</span></li>
-        <li><span class="n">13</span><span style="flex:1;min-width:11rem"><span class="b">Röda linser<span class="tier">Alltid</span></span><span class="d">Kokar på tolv minuter. Billigast av allt.</span></span><span class="u">3 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">14</span><span style="flex:1;min-width:11rem"><span class="b">Kokosmjölk</span><span class="d">Indien, Thailand. Ta den feta.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">15</span><span style="flex:1;min-width:11rem"><span class="b">Kombu eller torkad shiitake</span><span class="d">Vegetarisk umami, permanent löst.</span></span><span class="u">2 kök</span><span class="h">Flera år</span></li>
-        <li><span class="n">16</span><span style="flex:1;min-width:11rem"><span class="b">Kapris i vinäger</span><span class="d">Skölj av. Sälta och syra i ett.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
-        <li><span class="n">17</span><span style="flex:1;min-width:11rem"><span class="b">Jordnötter, rostade</span><span class="d">Vietnam och Västafrika. Krisp och protein.</span></span><span class="u">2 kök</span><span class="h">6 mån</span></li>
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, billig<span class="tier">Alltid</span></span><span class="d">Pannan, grillen, ugnen. Stor flaska.</span></span><span class="u">Alla</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Olivolja, bra<span class="tier">Alltid</span></span><span class="d">Bara finish. Värms aldrig.</span></span><span class="u">Alla</span><span class="h">4 mån öppnad</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Neutral olja<span class="tier">Alltid</span></span><span class="d">Raps eller solros. Wok och allt över 200°.</span></span><span class="u">Alla</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Flingsalt<span class="tier">Alltid</span></span><span class="d">Sista strösslet som får allt annat att smaka.</span></span><span class="u">Alla</span><span class="h">Evigt</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Grovt havssalt<span class="tier">Alltid</span></span><span class="d">Pastavattnet och all matlagning.</span></span><span class="u">Alla</span><span class="h">Evigt</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Krossade tomater<span class="tier">Alltid</span></span><span class="d">Basen i halva sidan. Ha sex burkar.</span></span><span class="u">9 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Tomatpuré<span class="tier">Alltid</span></span><span class="d">Fräs alltid i olja innan vätskan.</span></span><span class="u">6 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Ris, långkornigt<span class="tier">Alltid</span></span><span class="d">Basmati eller jasmin.</span></span><span class="u">7 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Ris, rundkornigt</span><span class="d">Bomba eller arborio. Paella och risotto.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Pasta, torr<span class="tier">Alltid</span></span><span class="d">Spaghetti och en kort sort.</span></span><span class="u">1 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Risnudlar</span><span class="d">Vietnam och Thailand. Kokar på tre minuter.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">12</span><span style="flex:1;min-width:11rem"><span class="b">Kikärtor på burk<span class="tier">Alltid</span></span><span class="d">Protein, krämighet, krispiga i ugn.</span></span><span class="u">6 kök</span><span class="h">3 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">13</span><span style="flex:1;min-width:11rem"><span class="b">Röda linser<span class="tier">Alltid</span></span><span class="d">Kokar på tolv minuter. Billigast av allt.</span></span><span class="u">3 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">14</span><span style="flex:1;min-width:11rem"><span class="b">Kokosmjölk</span><span class="d">Indien, Thailand. Ta den feta.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">15</span><span style="flex:1;min-width:11rem"><span class="b">Kombu eller torkad shiitake</span><span class="d">Vegetarisk umami, permanent löst.</span></span><span class="u">2 kök</span><span class="h">Flera år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">16</span><span style="flex:1;min-width:11rem"><span class="b">Kapris i vinäger</span><span class="d">Skölj av. Sälta och syra i ett.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">17</span><span style="flex:1;min-width:11rem"><span class="b">Jordnötter, rostade</span><span class="d">Vietnam och Västafrika. Krisp och protein.</span></span><span class="u">2 kök</span><span class="h">6 mån</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
     <h3>Enkelriktade men hållbara · helt ok att köpa</h3>
     <div class="keepbox">
@@ -1813,29 +1816,29 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 
     <h3>Basen i grytor &amp; såser — kryddas i fett, tidigt</h3>
     <ul class="plist">
-        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Spiskummin<span class="tier">Först</span></span><span class="d">Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru.</span></span><span class="u">7 kök</span><span class="h">2 år hela</span></li>
-        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Gurkmeja</span><span class="d">Indien, Etiopien, Marocko.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Garam masala</span><span class="d">Indien. Men gör också en snabb rub till allt grillat.</span></span><span class="u">2 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Kanel, hel stång</span><span class="d">Marocko, Vietnam, Indien. Hel håller i evighet.</span></span><span class="u">3 kök</span><span class="h">3 år</span></li>
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Spiskummin<span class="tier">Först</span></span><span class="d">Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru.</span></span><span class="u">7 kök</span><span class="h">2 år hela</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Gurkmeja</span><span class="d">Indien, Etiopien, Marocko.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Garam masala</span><span class="d">Indien. Men gör också en snabb rub till allt grillat.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Kanel, hel stång</span><span class="d">Marocko, Vietnam, Indien. Hel håller i evighet.</span></span><span class="u">3 kök</span><span class="h">3 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
 
     <h3>Hetta</h3>
     <ul class="plist">
-        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Chiliflingor<span class="tier">Först</span></span><span class="d">Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta.</span></span><span class="u">6 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Torkad chili, hel</span><span class="d">Mexiko och Kina. Rosta i torr panna först.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Chiliflingor<span class="tier">Först</span></span><span class="d">Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta.</span></span><span class="u">6 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Torkad chili, hel</span><span class="d">Mexiko och Kina. Rosta i torr panna först.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
 
     <h3>Rök &amp; färg</h3>
     <ul class="plist">
-        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Rökt paprika<span class="tier">Först</span></span><span class="d">Spanien, Marocko, Mellanöstern. Även i alla rubs du gör.</span></span><span class="u">4 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Saffran</span><span class="d">Spanien och Marocko. En ask räcker i åratal.</span></span><span class="u">2 kök</span><span class="h">2 år</span></li>
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Rökt paprika<span class="tier">Först</span></span><span class="d">Spanien, Marocko, Mellanöstern. Även i alla rubs du gör.</span></span><span class="u">4 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Saffran</span><span class="d">Spanien och Marocko. En ask räcker i åratal.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
 
     <h3>Finish &amp; syra — strös på slutet, aldrig kokas med</h3>
     <ul class="plist">
-        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Sumak</span><span class="d">Turkiet och Levanten. Syra som håller i pulverform.</span></span><span class="u">2 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Torkad oregano<span class="tier">Först</span></span><span class="d">Grekland, Italien, Mexiko.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
-        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Sesamfrön</span><span class="d">Korea, Kina, Mellanöstern. Rosta torrt.</span></span><span class="u">3 kök</span><span class="h">1 år</span></li>
+        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Sumak</span><span class="d">Turkiet och Levanten. Syra som håller i pulverform.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Torkad oregano<span class="tier">Först</span></span><span class="d">Grekland, Italien, Mexiko.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Sesamfrön</span><span class="d">Korea, Kina, Mellanöstern. Rosta torrt.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
     </ul>
   </div>
 </section>
@@ -2291,12 +2294,14 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 
   // ── Shopping cart ──
   var cart = new Set();
+  var pantryCart = new Set();
   var overlayBg = document.getElementById('overlayBg');
   var cartPanel = document.getElementById('cartPanel');
 
   function updateCartBadge(){
     var badge = document.getElementById('cartBadge');
-    if (cart.size) { badge.style.display = 'flex'; badge.textContent = cart.size; }
+    var total = cart.size + pantryCart.size;
+    if (total) { badge.style.display = 'flex'; badge.textContent = total; }
     else badge.style.display = 'none';
   }
   function toggleCart(id){
@@ -2315,6 +2320,33 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     btn.addEventListener('click', function(){ toggleCart(btn.getAttribute('data-add')); });
   });
 
+  // ── Basvaror/Kryddor: lägg till enskilda varor i samma inköpslista ──
+  function plistItemName(li){
+    var b = li.querySelector('.b');
+    var clone = b.cloneNode(true);
+    var tier = clone.querySelector('.tier');
+    if (tier) tier.remove();
+    return clone.textContent.trim();
+  }
+  function togglePantryItem(name, btn){
+    if (pantryCart.has(name)) {
+      pantryCart.delete(name);
+      btn.setAttribute('data-added', 'false');
+      btn.textContent = '+';
+    } else {
+      pantryCart.add(name);
+      btn.setAttribute('data-added', 'true');
+      btn.textContent = '✓';
+    }
+    updateCartBadge();
+  }
+  document.querySelectorAll('.plist-add').forEach(function(btn){
+    btn.addEventListener('click', function(){
+      var li = btn.closest('li');
+      togglePantryItem(plistItemName(li), btn);
+    });
+  });
+
   document.getElementById('cartToggle').addEventListener('click', function(){
     renderCartBody();
     overlayBg.classList.add('open');
@@ -2330,14 +2362,23 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   function renderCartBody(){
     var body = document.getElementById('cartBody');
     var picked = Array.from(cart).map(function(id){ return dishById[id]; }).filter(Boolean);
-    if (!picked.length) {
-      body.innerHTML = '<div class="cart-empty">Inga rätter i listan än. Lägg till upp till 5 stycken från valfritt kök.</div>';
+    var pantryNames = Array.from(pantryCart);
+    if (!picked.length && !pantryNames.length) {
+      body.innerHTML = '<div class="cart-empty">Inga rätter eller varor i listan än. Lägg till upp till 5 rätter från valfritt kök, plus valfritt antal varor från Basvaror/Kryddor.</div>';
       return;
     }
-    body.innerHTML = picked.map(function(d){
+    var dishesHtml = picked.map(function(d){
       return '<div class="cart-dish"><span class="cd-name">' + d.name + ' <span style="color:var(--muted);font-weight:400">(' + d.cuisine + ')</span></span>' +
         '<button class="cd-remove" data-remove="' + d.id + '">Ta bort</button></div>';
-    }).join('') +
+    }).join('');
+    var pantryHtml = pantryNames.length ? (
+      '<h4 style="font-size:.66rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-family:\'Space Mono\',monospace;margin:1rem 0 .6rem">Skafferivaror</h4>' +
+      pantryNames.map(function(name){
+        return '<div class="cart-dish"><span class="cd-name">' + name + '</span>' +
+          '<button class="cd-remove" data-remove-pantry="' + encodeURIComponent(name) + '">Ta bort</button></div>';
+      }).join('')
+    ) : '';
+    body.innerHTML = dishesHtml + pantryHtml +
       '<button class="optimize-btn" id="optimizeBtn">Optimera inköpslistan med AI</button>' +
       '<div class="ai-loading" id="optLoading">Slår ihop och tänker efter …</div>' +
       '<div class="ai-error" id="optError"></div>' +
@@ -2345,11 +2386,25 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       '<div class="combined-list"><h4>Rå ingredienslista (osorterad)</h4><ul class="ing-list">' +
       picked.flatMap(function(d){ return d.ingredients.map(function(i){
         return '<li><span>' + i.name + ' <span style="color:var(--muted);font-size:11px">(' + d.name + ')</span></span><span class="amt">' + i.amount + '</span></li>';
-      }); }).join('') + '</ul></div>';
+      }); }).join('') +
+      pantryNames.map(function(name){
+        return '<li><span>' + name + ' <span style="color:var(--muted);font-size:11px">(skafferi)</span></span><span class="amt"></span></li>';
+      }).join('') + '</ul></div>';
     body.querySelectorAll('[data-remove]').forEach(function(btn){
       btn.addEventListener('click', function(){ toggleCart(btn.getAttribute('data-remove')); renderCartBody(); });
     });
-    document.getElementById('optimizeBtn').addEventListener('click', function(){ handleOptimize(picked); });
+    body.querySelectorAll('[data-remove-pantry]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var name = decodeURIComponent(btn.getAttribute('data-remove-pantry'));
+        pantryCart.delete(name);
+        document.querySelectorAll('.plist-add').forEach(function(b){
+          if (plistItemName(b.closest('li')) === name) { b.setAttribute('data-added','false'); b.textContent = '+'; }
+        });
+        updateCartBadge();
+        renderCartBody();
+      });
+    });
+    document.getElementById('optimizeBtn').addEventListener('click', function(){ handleOptimize(picked, pantryNames); });
   }
 
   // ── Gemini key ──
@@ -2428,7 +2483,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     });
   });
 
-  async function handleOptimize(picked){
+  async function handleOptimize(picked, pantryNames){
     var loading = document.getElementById('optLoading');
     var errorEl = document.getElementById('optError');
     var resultEl = document.getElementById('optResult');
@@ -2439,8 +2494,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       var listText = picked.map(function(d){
         return d.name + ': ' + d.ingredients.map(function(i){ return i.name + ' (' + i.amount + ')'; }).join(', ');
       }).join('\n');
-      var prompt = 'Jag ska laga dessa ' + picked.length + ' rätter samma vecka:\n' + listText +
-        '\n\nSlå ihop till en enda inköpslista på svenska. Regler: (1) Slå ihop dubbletter och räkna ihop rimlig total mängd. (2) Om något bara behövs i en liten mängd till en enda rätt — flagga tydligt att man kan hoppa över att köpa en hel förpackning och istället använda ett vanligt substitut, eller hur mycket som faktiskt behövs. (3) Gruppera efter typ (grönsaker, kryddor, skafferivaror, kött/fisk/protein). Var kort och konkret — punktlista, inga långa förklaringar.';
+      var pantryText = (pantryNames && pantryNames.length) ? ('\n\nDessutom vill jag handla dessa skafferivaror/kryddor på samma resa: ' + pantryNames.join(', ') + '.') : '';
+      var prompt = 'Jag ska laga dessa ' + picked.length + ' rätter samma vecka:\n' + listText + pantryText +
+        '\n\nSlå ihop till en enda inköpslista på svenska, indelad i tydliga avsnitt per butiksavdelning (t.ex. frukt & grönt, kött/fisk, mejeri, skafferi, kryddor) så den är enkel att bocka av i en vanlig matbutik. Regler: (1) Slå ihop dubbletter och räkna ihop rimlig total mängd. (2) Om något bara behövs i en liten mängd till en enda rätt — flagga tydligt att man kan hoppa över att köpa en hel förpackning och istället använda ett vanligt substitut, eller hur mycket som faktiskt behövs. (3) Skafferivarorna/kryddorna ovan har inga mängder angivna — lista dem som de är, en rad var. Var kort och konkret — punktlista, inga långa förklaringar.';
       var text = await callGemini(prompt);
       resultEl.textContent = text;
       resultEl.classList.add('show');
