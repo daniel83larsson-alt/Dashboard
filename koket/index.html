@@ -324,7 +324,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .result-line{max-width:1100px;margin:.6rem auto 0;padding:0 clamp(1.25rem,5vw,4rem);font-size:.72rem;color:var(--muted);font-family:'Space Mono',monospace;min-height:1em}
 
 /* ── per-dish image, ingredients, actions ── */
-.dish-shot{margin:.85rem 0;aspect-ratio:16/10;overflow:hidden;border:1px solid rgba(242,239,230,.25)}
+.dish-shot{margin:.85rem 0 0;aspect-ratio:16/10;overflow:hidden;border:1px solid rgba(242,239,230,.25)}
+.dish-teaser{font-size:.88rem;color:rgba(242,239,230,.82);margin:.6rem 0 0;line-height:1.5}
+.in .dish-teaser,.wa .dish-teaser{color:rgba(28,26,23,.75)}
 .dish-shot img{width:100%;height:100%;object-fit:cover;filter:saturate(1.05)}
 .in .dish-shot,.wa .dish-shot{border-color:rgba(28,26,23,.3)}
 .dish .ing-list{margin:.85rem 0;background:rgba(242,239,230,.04);border:1px solid rgba(242,239,230,.15);padding:.15rem .85rem}
@@ -499,12 +501,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Rökt paprika</li><li>Saffran</li><li>Vitlök</li><li>Olivolja</li></ul>
       <p class="why">Rökt paprika ger grillsmak utan grill. Saffran ger färgen och doften. Utan dem blir allt bara ris i tomat.</p>
       <div class="drink"><b>Dryck</b><p><strong>Torr cava eller fruktig rosé.</strong> Cava är gjord för saffran och skaldjur — den torra mousserande syran lyfter riset utan att ta över. Vill du ha rosé, välj en mjuk fruktig från Spanien eller Sydfrankrike, aldrig en stram.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"><figcaption>Paella · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/01_Paella_Valenciana_original.jpg?width=900" alt="Paella" onerror="this.closest('figure').remove()"><figcaption>Paella · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-es1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Lunchpaella</h3><span class="mins">30 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/01_Paella_Valenciana_original.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Saffransdoftande paella med rökt paprika — redo på 30 minuter, ingen skaldjursbuljong krävs.</p>
         <button class="recipe-toggle" data-toggle="d-es1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-es1" hidden>
         <ul class="ing-list"><li><span>Ris, rundkornigt</span><span class="amt">3 dl</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Röd paprika</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Rökt paprika</span><span class="amt">2 tsk</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Saffransbuljong</span><span class="amt">6 dl</span></li></ul>
@@ -529,7 +532,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-es2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Vitlöksgryta</h3><span class="mins">15 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/ed/01_Paella_Valenciana_original.jpg/900px-01_Paella_Valenciana_original.jpg" alt="Paella" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Sopa%20de%20Ajo.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Snabb vitlöksgryta med rökt paprika och spenat — grovt bröd att sopa upp med.</p>
         <button class="recipe-toggle" data-toggle="d-es2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-es2" hidden>
         <ul class="ing-list"><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Rökt paprika</span><span class="amt">1 tsk</span></li><li><span>Krossade tomater</span><span class="amt">2 dl</span></li><li><span>Buljong</span><span class="amt">3 dl</span></li><li><span>Spenat</span><span class="amt">1 näve</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
@@ -564,12 +568,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Vitlök</li><li>Chiliflingor</li><li>Bra olivolja</li><li>Citron</li></ul>
       <p class="why">Det italienska köket handlar om vad du utelämnar. Fyra ingredienser, rätt behandlade, slår tolv.</p>
       <div class="drink"><b>Dryck</b><p><strong>Vermentino, eller en lätt rosé.</strong> Citron, kapris och chili vill ha något friskt och salt. Vermentino från Sardinien är klockrent. Till aglio e olio funkar även en enkel Pinot Grigio.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"><figcaption>Aglio e olio · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Aglio_e_olio.jpg?width=900" alt="Aglio e olio" onerror="this.closest('figure').remove()"><figcaption>Aglio e olio · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-it1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Aglio e olio</h3><span class="mins">12 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Aglio_e_olio.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Vitlök, chili och olivolja — Italiens mest återhållsamma pastarätt, klar på 12 minuter.</p>
         <button class="recipe-toggle" data-toggle="d-it1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-it1" hidden>
         <ul class="ing-list"><li><span>Spagetti</span><span class="amt">400 g</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Chiliflingor</span><span class="amt">1 tsk</span></li><li><span>Olivolja</span><span class="amt">1 dl</span></li><li><span>Persilja</span><span class="amt">1 knippe</span></li></ul>
@@ -594,7 +599,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-it2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Pasta al limone</h3><span class="mins">12 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6f/Aglio_e_olio.jpg/900px-Aglio_e_olio.jpg" alt="Aglio e olio" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Lemon%20Spaghetti%20%2814179778117%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Krämig utan grädde — citron, kapris och parmesan vispade med pastavatten.</p>
         <button class="recipe-toggle" data-toggle="d-it2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-it2" hidden>
         <ul class="ing-list"><li><span>Spagetti</span><span class="amt">400 g</span></li><li><span>Smör</span><span class="amt">40 g</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Kapris</span><span class="amt">2 msk</span></li><li><span>Citron</span><span class="amt">2 st</span></li><li><span>Parmesan, riven</span><span class="amt">1 dl</span></li></ul>
@@ -629,12 +635,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Sumak</li><li>Pul biber</li><li>Yoghurt</li><li>Granatäppelsirap</li></ul>
       <p class="why">Turkisk grillmat är enkel: en marinad på yoghurt, sedan hög glöd. Yoghurten möras och håller kvar saften. Sumaken efteråt ger syran som skär genom röken.</p>
       <div class="drink"><b>Dryck</b><p><strong>Öl, eller rosé från Provence.</strong> Kolröken slår ut de flesta viner. En kall lager eller pilsner är ärligast. Vill du ha vin, ta en torr rosé — den klarar både lamm och grillade grönsaker.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"><figcaption>Adana kebab · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Adana_kebab.jpg?width=900" alt="Adana kebab" onerror="this.closest('figure').remove()"><figcaption>Adana kebab · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-tr1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Spett från kolgrillen</h3><span class="mins">20 min + marinering</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Adana_kebab.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Yoghurtmarinerat kött, fisk eller halloumi rakt på hög glöd — sumak och citron till.</p>
         <button class="recipe-toggle" data-toggle="d-tr1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-tr1" hidden>
         <ul class="ing-list"><li><span>Yoghurt</span><span class="amt">2 dl</span></li><li><span>Gul lök, riven</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Pul biber</span><span class="amt">1 tsk</span></li><li><span>Sumak</span><span class="amt">till servering</span></li><li><span>Citron</span><span class="amt">1 st</span></li></ul>
@@ -659,7 +666,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-tr2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Ezme och yoghurtsås</h3><span class="mins">10 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Adana_kebab.jpg/900px-Adana_kebab.jpg" alt="Adana kebab" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ezme%2C%20cac%C4%B1k%20and%20%C3%A7oban%20salata.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Finhackad tomatsallad och vitlöksyoghurt — tillbehöret till allt som kommer av grillen.</p>
         <button class="recipe-toggle" data-toggle="d-tr2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-tr2" hidden>
         <ul class="ing-list"><li><span>Tomat</span><span class="amt">3 st</span></li><li><span>Gul lök</span><span class="amt">1/2 st</span></li><li><span>Paprika</span><span class="amt">1 st</span></li><li><span>Persilja</span><span class="amt">1 knippe</span></li><li><span>Granatäppelsirap</span><span class="amt">1 msk</span></li><li><span>Turkisk yoghurt</span><span class="amt">2 dl</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li></ul>
@@ -694,12 +702,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Miso</li><li>Kombu</li><li>Soja</li><li>Risvinäger</li></ul>
       <p class="why">Kombu löser vegetarisk umami permanent. En bit i kokvattnet och du har en buljong med djup, helt utan kött.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager eller kall grönt te.</strong> Ramen och öl hör ihop. Asahi, Sapporo eller vilken ljus lager som helst. Misosmör på grillat klarar även en torr riesling.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"><figcaption>Misoramen · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Miso_Ramen.JPG?width=900" alt="Misoramen" onerror="this.closest('figure').remove()"><figcaption>Misoramen · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-jp1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Snabb ramen</h3><span class="mins">15 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Miso_Ramen.JPG?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kombubuljong, miso och nudlar på 15 minuter — vegetarisk umami helt utan kött.</p>
         <button class="recipe-toggle" data-toggle="d-jp1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-jp1" hidden>
         <ul class="ing-list"><li><span>Kombu</span><span class="amt">1 bit</span></li><li><span>Vatten</span><span class="amt">1 liter</span></li><li><span>Soja</span><span class="amt">2 msk</span></li><li><span>Miso</span><span class="amt">1 msk</span></li><li><span>Nudlar</span><span class="amt">400 g</span></li><li><span>Ägg</span><span class="amt">2 st</span></li><li><span>Vårlök</span><span class="amt">2 st</span></li></ul>
@@ -724,7 +733,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-jp2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Misosmör från grillen</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Miso_Ramen.JPG/900px-Miso_Ramen.JPG" alt="Misoramen" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Cooking%20yakitori.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Smör och miso i lika delar — smälter över allt som just kommit av grillen.</p>
         <button class="recipe-toggle" data-toggle="d-jp2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-jp2" hidden>
         <ul class="ing-list"><li><span>Smör, rumsvarmt</span><span class="amt">100 g</span></li><li><span>Miso</span><span class="amt">100 g</span></li><li><span>Grönsaker/protein efter val</span><span class="amt">till grillen</span></li></ul>
@@ -759,12 +769,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Chili</li><li>Palmsocker</li></ul>
       <p class="why">Salt, syra, hetta, sötma. Hela det thailändska köket är de fyra i olika proportioner. Smaka och justera — det finns inget facit.</p>
       <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling eller kall lager.</strong> Chili och fisksås behöver antingen sötma eller kyla. Riesling med en gnutta restsötma tämjer hettan; Singha eller Chang gör samma jobb enklare.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"><figcaption>Stekt ris · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Thai-style%20Fried%20Rice%20in%20Pineapple.jpg?width=900" alt="Thailändskt stekt ris" onerror="this.closest('figure').remove()"><figcaption>Thailändskt stekt ris · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-th1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Nuoc cham</h3><span class="mins">5 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Nam%20chim%20chaeo.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Fisksås, lime, socker och chili — Thailands fyra smaker i en enda dippsås.</p>
         <button class="recipe-toggle" data-toggle="d-th1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-th1" hidden>
         <ul class="ing-list"><li><span>Fisksås</span><span class="amt">3 msk</span></li><li><span>Limejuice</span><span class="amt">3 msk</span></li><li><span>Socker</span><span class="amt">2 msk</span></li><li><span>Vatten</span><span class="amt">4 msk</span></li><li><span>Vitlök, riven</span><span class="amt">1 klyfta</span></li><li><span>Chili, hackad</span><span class="amt">1 st</span></li></ul>
@@ -789,7 +800,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-th2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Stekt ris</h3><span class="mins">10 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d1/Thai_fried_rice.jpg/900px-Thai_fried_rice.jpg" alt="Stekt ris" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Thai-style%20Fried%20Rice%20in%20Pineapple.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kallt ris, het panna, ett ägg i mitten — redo på 10 minuter.</p>
         <button class="recipe-toggle" data-toggle="d-th2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-th2" hidden>
         <ul class="ing-list"><li><span>Kallt kokt ris</span><span class="amt">6 dl</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Ägg</span><span class="amt">2 st</span></li><li><span>Fisksås</span><span class="amt">2 msk</span></li><li><span>Socker</span><span class="amt">1 nypa</span></li><li><span>Lime</span><span class="amt">1 st</span></li><li><span>Vårlök</span><span class="amt">2 st</span></li></ul>
@@ -824,12 +836,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Tahini</li><li>Citron</li><li>Sumak</li></ul>
       <p class="why">Tahini plus citron plus vatten blir en sås som gör vad grädde gör, fast fräschare. Den passar till nästan allt du grillar.</p>
       <div class="drink"><b>Dryck</b><p><strong>Fruktig rosé eller ayran.</strong> Sumak, tahini och citron går fint med en mjuk rosé. Traditionellt dricks salt yoghurtdryck (ayran) — överraskande bra till allt rostat och kryddigt.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"><figcaption>Tahini och kikärtor · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Hummus_Dip_%2830863436677%29.jpg?width=900" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"><figcaption>Tahini och kikärtor · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-me1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Tahinisås</h3><span class="mins">3 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Hummus_Dip_%2830863436677%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Bara tahini, citron och vatten — blir len och vit på tre minuter.</p>
         <button class="recipe-toggle" data-toggle="d-me1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-me1" hidden>
         <ul class="ing-list"><li><span>Tahini</span><span class="amt">1 dl</span></li><li><span>Vitlök, pressad</span><span class="amt">1 klyfta</span></li><li><span>Citronsaft</span><span class="amt">2 msk</span></li><li><span>Iskallt vatten</span><span class="amt">ca 1 dl</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
@@ -854,7 +867,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-me2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Ugnsbrända grönsaker</h3><span class="mins">30 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/9e/Hummus_Dip_%2830863436677%29.jpg/900px-Hummus_Dip_%2830863436677%29.jpg" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Hummus_Dip_%2830863436677%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Brända kanter, tahinisås och granatäpple — het ugn gör jobbet.</p>
         <button class="recipe-toggle" data-toggle="d-me2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-me2" hidden>
         <ul class="ing-list"><li><span>Blomkål, morot eller broccoli</span><span class="amt">800 g</span></li><li><span>Olivolja</span><span class="amt">3 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Tahinisås</span><span class="amt">till servering</span></li><li><span>Sumak</span><span class="amt">1 tsk</span></li><li><span>Granatäpple</span><span class="amt">1/2 st</span></li></ul>
@@ -889,12 +903,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Dill</li><li>Kummin</li><li>Gräddfil</li><li>Senap</li><li>Ättika</li></ul>
       <p class="why">Det baltiska köket är närmare det svenska än du tror, men syrligare och mer dill. Gräddfil och ättika gör jobbet som citron gör i söder.</p>
       <div class="drink"><b>Dryck</b><p><strong>Iskall pilsner eller kvass.</strong> Dill, ättika och gräddfil vill ha något torrt och kolsyrat. Pilsner är svaret. Kvass om du hittar den — syrlig och malig, gjord för den här maten.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"><figcaption>Kall rödbetssoppa · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Borscht%20with%20cream.jpg?width=900" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"><figcaption>Kall rödbetssoppa · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-ba1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Kall rödbetssoppa</h3><span class="mins">15 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Borscht%20with%20cream.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Iskall, syrlig rödbetssoppa med dill — serveras med varm potatis vid sidan.</p>
         <button class="recipe-toggle" data-toggle="d-ba1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-ba1" hidden>
         <ul class="ing-list"><li><span>Kokt rödbeta, riven</span><span class="amt">400 g</span></li><li><span>Kefir eller filmjölk</span><span class="amt">5 dl</span></li><li><span>Gurka</span><span class="amt">1/2 st</span></li><li><span>Dill</span><span class="amt">1 knippe</span></li><li><span>Ättika</span><span class="amt">1 msk</span></li></ul>
@@ -919,7 +934,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-ba2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Stekt potatis med dillsås</h3><span class="mins">25 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2f/%C5%A0altibar%C5%A1%C4%8Diai.jpg/900px-%C5%A0altibar%C5%A1%C4%8Diai.jpg" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Borscht%20with%20cream.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kumminstekt potatis och en kall gräddfilssås med senap och dill.</p>
         <button class="recipe-toggle" data-toggle="d-ba2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-ba2" hidden>
         <ul class="ing-list"><li><span>Kokt potatis</span><span class="amt">800 g</span></li><li><span>Smör</span><span class="amt">40 g</span></li><li><span>Kumminfrön</span><span class="amt">1 tsk</span></li><li><span>Gräddfil</span><span class="amt">2 dl</span></li><li><span>Senap</span><span class="amt">1 msk</span></li><li><span>Dill</span><span class="amt">1/2 knippe</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
@@ -954,12 +970,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Gurkmeja</li><li>Garam masala</li><li>Ingefära</li></ul>
       <p class="why">Nyckeltekniken heter tadka: hela kryddor fräser i hett fett och hälls över maten sist. Trettio sekunder som ändrar hela rätten.</p>
       <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling, IPA eller lassi.</strong> Garam masala och chili blir bättre av lite sötma. Riesling eller en fruktig IPA. Mangolassi till det starkaste — mjölkfettet släcker hettan bättre än vatten.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"><figcaption>Dal tadka · Wikimedia Commons, CC BY-SA</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Tadka_Daal_%28Indian_lentil_curry%29.jpg?width=900" alt="Dal tadka" onerror="this.closest('figure').remove()"><figcaption>Dal tadka · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-in1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Dal på röda linser</h3><span class="mins">25 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Tadka_Daal_%28Indian_lentil_curry%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Röda linser och en het smörtadka hälld över på slutet — hela poängen med rätten.</p>
         <button class="recipe-toggle" data-toggle="d-in1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-in1" hidden>
         <ul class="ing-list"><li><span>Röda linser</span><span class="amt">3 dl</span></li><li><span>Gurkmeja</span><span class="amt">1 tsk</span></li><li><span>Smör</span><span class="amt">2 msk</span></li><li><span>Spiskumminfrön</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
@@ -984,7 +1001,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-in2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Curry på 20 minuter</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Tadka_Daal_%28Indian_lentil_curry%29.jpg/900px-Tadka_Daal_%28Indian_lentil_curry%29.jpg" alt="Dal tadka" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/South%20Indian%20Chicken%20curry.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Vardagscurry på krossade tomater och kokosmjölk — klar snabbare än en take-away.</p>
         <button class="recipe-toggle" data-toggle="d-in2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-in2" hidden>
         <ul class="ing-list"><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök &amp; ingefära</span><span class="amt">3 klyftor / 1 bit</span></li><li><span>Spiskummin, gurkmeja, garam masala</span><span class="amt">1 tsk vardera</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Kokosmjölk</span><span class="amt">1 burk</span></li><li><span>Koriander</span><span class="amt">till garnering</span></li></ul>
@@ -1019,12 +1037,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Lime</li><li>Torkad chili</li><li>Koriander</li><li>Spiskummin</li><li>Oregano</li></ul>
       <p class="why">Mexikansk mat är inte främst het — den är syrlig. Lime går på nästan allt, och torkad chili ger rökighet och frukt snarare än ren hetta.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager med lime, eller torr cava.</strong> Kolsyra och kyla mot chili och fett. Modelo eller vilken ljus lager som helst. Cava funkar förvånansvärt bra till fisktacos.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"><figcaption>Tacos · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Street%20Tacos%20Oaxaca.jpg?width=900" alt="Tacos" onerror="this.closest('figure').remove()"><figcaption>Tacos · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-mx1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Tacos från pannan</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Street%20Tacos%20Oaxaca.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Spiskummin och torkad oregano i pannan — tortillan värms alltid torr, aldrig i olja.</p>
         <button class="recipe-toggle" data-toggle="d-mx1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-mx1" hidden>
         <ul class="ing-list"><li><span>Majstortillas</span><span class="amt">8 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Torkad oregano</span><span class="amt">1 tsk</span></li><li><span>Protein efter val</span><span class="amt">500 g</span></li><li><span>Buljong</span><span class="amt">1/2 dl</span></li><li><span>Lime</span><span class="amt">1 st</span></li></ul>
@@ -1049,7 +1068,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-mx2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Salsa och guacamole</h3><span class="mins">10 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/cd/Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg/900px-Tacos_de_carnitas%2C_carne_asada_y_al_pastor.jpg" alt="Tacos" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Guacamole%20con%20totopos.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Rostad salsa och enkel guacamole — inget annat än lime, salt och avokado.</p>
         <button class="recipe-toggle" data-toggle="d-mx2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-mx2" hidden>
         <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Avokado</span><span class="amt">2 st</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Koriander</span><span class="amt">1 knippe</span></li><li><span>Lime</span><span class="amt">2 st</span></li></ul>
@@ -1084,12 +1104,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Oregano</li><li>Citron</li><li>Fetaost</li><li>Olivolja</li><li>Vitlök</li></ul>
       <p class="why">Grekiskt kök är italienskt kök minus tomaten och plus citron. Torkad oregano är den enda kryddan du verkligen behöver.</p>
       <div class="drink"><b>Dryck</b><p><strong>Retsina, assyrtiko eller ouzo.</strong> Assyrtiko från Santorini är ett av världens bästa vita viner till fisk och citron. Vill du ha det billigt: en kall grekisk lager.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"><figcaption>Horiatiki · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Horiatiki%20salad.jpg?width=900" alt="Horiatiki" onerror="this.closest('figure').remove()"><figcaption>Horiatiki · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-gr1" data-time="middag">
         <div class="dish-head"><span class="dish-no">01</span><h3>Ugnsbakat med citron</h3><span class="mins">40 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Horiatiki%20salad.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Potatisklyftor i en form med rejält med citron och olivolja — 40 minuter i ugnen.</p>
         <button class="recipe-toggle" data-toggle="d-gr1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-gr1" hidden>
         <ul class="ing-list"><li><span>Potatis, klyftor</span><span class="amt">1 kg</span></li><li><span>Olivolja</span><span class="amt">1 dl</span></li><li><span>Citron</span><span class="amt">2 st</span></li><li><span>Torkad oregano</span><span class="amt">2 tsk</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li></ul>
@@ -1114,7 +1135,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-gr2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Horiatiki</h3><span class="mins">10 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/67/Greek_salad_%28Horiatiki%29.jpg/900px-Greek_salad_%28Horiatiki%29.jpg" alt="Horiatiki" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Horiatiki%20salad.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Tomat, gurka, oliver och en hel bit feta — ingen sallad, ingen dressing.</p>
         <button class="recipe-toggle" data-toggle="d-gr2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-gr2" hidden>
         <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Gurka</span><span class="amt">1 st</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Kalamataoliver</span><span class="amt">1 dl</span></li><li><span>Fetaost, i en bit</span><span class="amt">200 g</span></li><li><span>Olivolja</span><span class="amt">3 msk</span></li><li><span>Torkad oregano</span><span class="amt">1 tsk</span></li></ul>
@@ -1149,12 +1171,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Ras el hanout</li><li>Kanel</li><li>Spiskummin</li><li>Saffran</li><li>Konserverad citron</li></ul>
       <p class="why">Marockanskt kök blandar sött och salt utan att bli efterrätt. Kanel i en köttgryta låter fel och är rätt.</p>
       <div class="drink"><b>Dryck</b><p><strong>Myntate, eller en kryddig rosé.</strong> Sött myntate är det traditionella och funkar bättre än man tror till kryddig mat. Vill du ha vin: en fruktig rosé eller en lätt grenache.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"><figcaption>Tagine · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Moroccan%20food-Chicken%20tagine%20with%20preserved%20lemons%20and%20olives-01.jpg?width=900" alt="Tagine" onerror="this.closest('figure').remove()"><figcaption>Tagine · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-ma1" data-time="middag">
         <div class="dish-head"><span class="dish-no">01</span><h3>Tagine i gryta</h3><span class="mins">45 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Moroccan%20food-Chicken%20tagine%20with%20preserved%20lemons%20and%20olives-01.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kanel, ras el hanout och torkad frukt — sött och salt i samma gryta.</p>
         <button class="recipe-toggle" data-toggle="d-ma1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-ma1" hidden>
         <ul class="ing-list"><li><span>Gul lök</span><span class="amt">2 st</span></li><li><span>Ras el hanout</span><span class="amt">2 tsk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Kanel</span><span class="amt">1 nypa</span></li><li><span>Krossade tomater</span><span class="amt">1 burk</span></li><li><span>Buljong</span><span class="amt">3 dl</span></li><li><span>Torkade aprikoser</span><span class="amt">1 dl</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
@@ -1179,7 +1202,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-ma2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Kryddig morotssallad</h3><span class="mins">15 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/1/1e/Tajine_de_poulet.jpg/900px-Tajine_de_poulet.jpg" alt="Tagine" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Saffron%20Carrot%20Salad.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Varma morötter vända i spiskummin och citron — serveras rumsvarm.</p>
         <button class="recipe-toggle" data-toggle="d-ma2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-ma2" hidden>
         <ul class="ing-list"><li><span>Morötter</span><span class="amt">500 g</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Spiskummin</span><span class="amt">1 tsk</span></li><li><span>Paprikapulver</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li><li><span>Koriander</span><span class="amt">till garnering</span></li></ul>
@@ -1214,12 +1238,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Gochujang</li><li>Sesamolja</li><li>Soja</li><li>Vitlök</li><li>Rostade sesamfrön</li></ul>
       <p class="why">Gochujang är fermenterad chilipasta — söt, salt, het och umami på en gång. En sked ersätter fyra andra ingredienser.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller soju.</strong> Kall lager mot het gochujang. Soju blandat med öl är det koreanska sättet. En off-dry riesling funkar också.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"><figcaption>Bibimbap · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Bibimbap.jpg?width=900" alt="Bibimbap" onerror="this.closest('figure').remove()"><figcaption>Bibimbap · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-kr1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Bibimbap-skål</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Bibimbap.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Varmt ris, hastigt stekta grönsaker och gochujangsås — blandas vid bordet.</p>
         <button class="recipe-toggle" data-toggle="d-kr1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-kr1" hidden>
         <ul class="ing-list"><li><span>Ris, kokt</span><span class="amt">4 port</span></li><li><span>Morot, spenat, svamp</span><span class="amt">600 g totalt</span></li><li><span>Sesamolja</span><span class="amt">2 msk</span></li><li><span>Ägg</span><span class="amt">4 st</span></li><li><span>Gochujang</span><span class="amt">2 msk</span></li><li><span>Soja</span><span class="amt">1 msk</span></li><li><span>Socker</span><span class="amt">1 tsk</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li></ul>
@@ -1244,7 +1269,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-kr2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Snabbkimchi</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Bibimbap.jpg/900px-Bibimbap.jpg" alt="Bibimbap" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Korean%20cuisine-Kimchi-08.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Saltad vitkål med gochujang och fisksås — ätbar direkt eller om några dagar.</p>
         <button class="recipe-toggle" data-toggle="d-kr2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-kr2" hidden>
         <ul class="ing-list"><li><span>Vitkål</span><span class="amt">1/2 huvud</span></li><li><span>Salt</span><span class="amt">1 msk</span></li><li><span>Gochujang</span><span class="amt">2 msk</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Fisksås</span><span class="amt">1 msk</span></li><li><span>Socker</span><span class="amt">1 tsk</span></li></ul>
@@ -1279,12 +1305,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Mynta</li><li>Koriander</li><li>Ris­nudlar</li></ul>
       <p class="why">Vietnamesiskt kök använder färska örter som grönsak, inte som garnering. En hel näve mynta per portion är normalt.</p>
       <div class="drink"><b>Dryck</b><p><strong>Iskall lager, eller iste.</strong> Bia hoi-stilen: mycket ljus, mycket kall lager. Fungerar mot fisksåsens sälta. Iste med lime är det alkoholfria svaret.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"><figcaption>Pho · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pho-Beef-Noodles-2008.jpg?width=900" alt="Pho" onerror="this.closest('figure').remove()"><figcaption>Pho · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-vn1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Nudelsallad</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Bun.%20BBQ%20Honey%20Pork%20-%20The%20Big%20Bowl%202024-01-14.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kalla risnudlar, näve mynta och koriander — örterna räknas som grönsak här.</p>
         <button class="recipe-toggle" data-toggle="d-vn1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-vn1" hidden>
         <ul class="ing-list"><li><span>Risnudlar</span><span class="amt">300 g</span></li><li><span>Sallad</span><span class="amt">1/2 huvud</span></li><li><span>Gurka</span><span class="amt">1 st</span></li><li><span>Morot</span><span class="amt">1 st</span></li><li><span>Mynta &amp; koriander</span><span class="amt">2 näve</span></li><li><span>Jordnötter</span><span class="amt">1 dl</span></li><li><span>Nuoc cham</span><span class="amt">till dressing</span></li></ul>
@@ -1309,7 +1336,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-vn2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Snabb pho-liknande soppa</h3><span class="mins">25 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Pho-Beef-Noodles-2008.jpg/900px-Pho-Beef-Noodles-2008.jpg" alt="Pho" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pho-Beef-Noodles-2008.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Stjärnanis och kanel i buljongen — en snabbare väg till pho-smak.</p>
         <button class="recipe-toggle" data-toggle="d-vn2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-vn2" hidden>
         <ul class="ing-list"><li><span>Buljong</span><span class="amt">1,5 liter</span></li><li><span>Stjärnanis</span><span class="amt">2 st</span></li><li><span>Kanelstång</span><span class="amt">1 st</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Gul lök</span><span class="amt">1/2 st</span></li><li><span>Risnudlar</span><span class="amt">300 g</span></li><li><span>Soja &amp; fisksås</span><span class="amt">2 msk vardera</span></li></ul>
@@ -1344,12 +1372,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Sichuanpeppar</li><li>Chiliolja</li><li>Svart risvinäger</li><li>Soja</li><li>Ingefära</li></ul>
       <p class="why">Sichuanpeppar är inte stark — den domnar. Kombinationen av domning och hetta heter málà och är hela regionens signatur.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller jasminte.</strong> Kall lager mot málà. Jasminte mellan tuggorna renar munnen och är det traditionella valet.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"><figcaption>Sichuan · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Authentic%20Mapo%20Tofu.jpg?width=900" alt="Sichuan" onerror="this.closest('figure').remove()"><figcaption>Sichuan · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-cn1" data-time="snabb">
         <div class="dish-head"><span class="dish-no">01</span><h3>Wok med vitlök och chili</h3><span class="mins">15 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Sichuan%20pepper%20chicken%20-%20air-fried%20version%20%28%E5%B7%9D%E6%A4%92%E9%9B%9E%20-%20%E6%B0%A3%E7%82%B8%E7%89%88%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Het wok, sichuanpeppar och torkad chili — málà-domningen på 15 minuter.</p>
         <button class="recipe-toggle" data-toggle="d-cn1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-cn1" hidden>
         <ul class="ing-list"><li><span>Grönsaker efter val</span><span class="amt">500 g</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Vitlök</span><span class="amt">3 klyftor</span></li><li><span>Torkad chili</span><span class="amt">3 st</span></li><li><span>Sichuanpeppar, krossad</span><span class="amt">1 tsk</span></li><li><span>Soja</span><span class="amt">2 msk</span></li><li><span>Svart risvinäger</span><span class="amt">1 msk</span></li></ul>
@@ -1374,7 +1403,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-cn2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Kall gurksallad</h3><span class="mins">5 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/4/44/Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg/900px-Mapo_doufu_%28%E9%BA%BB%E5%A9%86%E8%B1%86%E8%85%90%29.jpg" alt="Sichuan" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pai%20huang%20gua.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Krossad gurka i svartvinäger och chiliolja — skär genom allt fett från grillen.</p>
         <button class="recipe-toggle" data-toggle="d-cn2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-cn2" hidden>
         <ul class="ing-list"><li><span>Gurka</span><span class="amt">2 st</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Svart risvinäger</span><span class="amt">2 msk</span></li><li><span>Soja</span><span class="amt">1 msk</span></li><li><span>Sesamolja</span><span class="amt">1 msk</span></li><li><span>Chiliolja</span><span class="amt">1 tsk</span></li></ul>
@@ -1409,12 +1439,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Smör</li><li>Dijonsenap</li><li>Timjan</li><li>Vitt vin</li><li>Schalottenlök</li></ul>
       <p class="why">Franskt vardagskök är inte komplicerat. Det är smör, senap och tålamod. Nästan varje sås börjar med att du löser upp det som fastnat i pannan med vin.</p>
       <div class="drink"><b>Dryck</b><p><strong>Det vin du lagade med.</strong> Regeln är enkel: drick samma vin du hällde i pannan. En enkel vit bourgogne eller en lätt rödvin från Loire.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"><figcaption>Vinaigrette · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Salade%20verte.jpg?width=900" alt="Vinaigrette" onerror="this.closest('figure').remove()"><figcaption>Vinaigrette · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-fr1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Panna med senapssås</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/-2020-02-24%20Dijon%20Chicken%2C%20Cream%20of%20Mushroom%2C%20Nutmeg%2C%20Spinach%20Sauce%2C%20Bay%20Scented%20Smashed%20Roast%20Potatoes%2C%20Trimingham.JPG?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Pannstekt protein och en snabb dijonsås byggd på det som fastnat i pannan.</p>
         <button class="recipe-toggle" data-toggle="d-fr1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-fr1" hidden>
         <ul class="ing-list"><li><span>Protein efter val</span><span class="amt">600 g</span></li><li><span>Schalottenlök</span><span class="amt">2 st</span></li><li><span>Vitt vin</span><span class="amt">1 dl</span></li><li><span>Crème fraîche</span><span class="amt">2 dl</span></li><li><span>Dijonsenap</span><span class="amt">1 msk</span></li><li><span>Timjan</span><span class="amt">1 tsk</span></li></ul>
@@ -1439,7 +1470,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-fr2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Vinaigrette</h3><span class="mins">3 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/de/Salade_verte_vinaigrette.jpg/900px-Salade_verte_vinaigrette.jpg" alt="Vinaigrette" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Salade%20verte.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">En burk, tre delar olja, en del vinäger — håller två veckor i kylen.</p>
         <button class="recipe-toggle" data-toggle="d-fr2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-fr2" hidden>
         <ul class="ing-list"><li><span>Vinäger</span><span class="amt">1 dl</span></li><li><span>Olivolja</span><span class="amt">3 dl</span></li><li><span>Dijonsenap</span><span class="amt">1 tsk</span></li><li><span>Salt &amp; peppar</span><span class="amt">efter smak</span></li></ul>
@@ -1474,12 +1506,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Jordnötssmör</li><li>Ingefära</li><li>Scotch bonnet</li><li>Tomatpuré</li><li>Lökpulver</li></ul>
       <p class="why">Jordnötssmör i en salt gryta är Västafrikas motsvarighet till grädde. Det ger fyllighet, sötma och protein på en gång.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ingefärsdryck, eller ljus lager.</strong> Stark ingefärsdryck (ginger beer) är det klassiska och matchar hettan. Öl fungerar lika bra.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"><figcaption>Jollof · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Jollof_Rice.jpg?width=900" alt="Jollof" onerror="this.closest('figure').remove()"><figcaption>Jollof · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-wa1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Jordnötsgryta</h3><span class="mins">35 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Peanut%20stew.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Jordnötssmör i en salt gryta — Västafrikas svar på grädde.</p>
         <button class="recipe-toggle" data-toggle="d-wa1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-wa1" hidden>
         <ul class="ing-list"><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök &amp; ingefära</span><span class="amt">3 klyftor / 1 bit</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Tomatpuré</span><span class="amt">2 msk</span></li><li><span>Buljong</span><span class="amt">5 dl</span></li><li><span>Jordnötssmör</span><span class="amt">3 msk</span></li><li><span>Citron</span><span class="amt">1/2 st</span></li></ul>
@@ -1504,7 +1537,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-wa2" data-time="middag">
         <div class="dish-head"><span class="dish-no">02</span><h3>Jollof-ris</h3><span class="mins">40 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/Jollof_Rice.jpg/900px-Jollof_Rice.jpg" alt="Jollof" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Jollof_Rice.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Ris kokt i en hårt inkokt tomatsås — rör inte i grytan, låt botten bli lite bränd.</p>
         <button class="recipe-toggle" data-toggle="d-wa2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-wa2" hidden>
         <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Paprika</span><span class="amt">1 st</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Ris, långkornigt</span><span class="amt">5 dl</span></li><li><span>Buljong</span><span class="amt">7 dl</span></li></ul>
@@ -1539,12 +1573,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Ají amarillo</li><li>Lime</li><li>Koriander</li><li>Rödlök</li><li>Spiskummin</li></ul>
       <p class="why">Peru är limens hemland. Ají amarillo är en gul chili som är mer fruktig än het — finns som pasta i burk och håller månader.</p>
       <div class="drink"><b>Dryck</b><p><strong>Pisco sour, eller torr sauvignon blanc.</strong> Pisco sour är nationaldrycken och funkar till allt syrligt. Vill du ha vin: en torr sauvignon blanc eller albariño.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"><figcaption>Ceviche · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ceviche%20de%20pescado%20%28La%20Punta%2C%20Callao%29.jpg?width=900" alt="Ceviche" onerror="this.closest('figure').remove()"><figcaption>Ceviche · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-pe1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Ceviche</h3><span class="mins">20 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ceviche%20de%20pescado%20%28La%20Punta%2C%20Callao%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Rå fisk "tillagad" av limejuice på 15 minuter — färskast möjliga fisk krävs.</p>
         <button class="recipe-toggle" data-toggle="d-pe1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-pe1" hidden>
         <ul class="ing-list"><li><span>Rå vit fisk</span><span class="amt">500 g</span></li><li><span>Limejuice</span><span class="amt">2 dl</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Chili</span><span class="amt">1 st</span></li><li><span>Koriander</span><span class="amt">1 knippe</span></li><li><span>Sötpotatis &amp; majs</span><span class="amt">till servering</span></li></ul>
@@ -1569,7 +1604,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-pe2" data-time="snabb">
         <div class="dish-head"><span class="dish-no">02</span><h3>Ají-sås</h3><span class="mins">5 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Ceviche_de_pescado.jpg/900px-Ceviche_de_pescado.jpg" alt="Ceviche" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pasta%20de%20aji%20amarillo.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Gul chilipasta, lime och vitlök — Perus sås till nästan allt.</p>
         <button class="recipe-toggle" data-toggle="d-pe2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-pe2" hidden>
         <ul class="ing-list"><li><span>Ají amarillo-pasta</span><span class="amt">3 msk</span></li><li><span>Lime</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">1 klyfta</span></li><li><span>Olja</span><span class="amt">1 dl</span></li><li><span>Salt</span><span class="amt">efter smak</span></li></ul>
@@ -1604,12 +1640,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Berbere</li><li>Kryddsmör</li><li>Ingefära</li><li>Kardemumma</li><li>Lök</li></ul>
       <p class="why">Berbere är en färdig kryddblandning med chili, bockhornsklöver och kardemumma. En burk ger dig hela köket — och etiopisk mat är till stor del vegetarisk från början.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller starkt kaffe.</strong> Öl mot berberes hetta. Kaffe efteråt är en ceremoni i Etiopien och passar den kryddiga maten förvånansvärt bra.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"><figcaption>Etiopisk mat · Wikimedia Commons</figcaption></figure>
+      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ethiopian_food.jpg?width=900" alt="Etiopisk mat" onerror="this.closest('figure').remove()"><figcaption>Etiopisk mat · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-et1" data-time="medel">
         <div class="dish-head"><span class="dish-no">01</span><h3>Misir wot · linsgryta</h3><span class="mins">35 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ethiopian_food.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Långsamt fräst lök är hela hemligheten bakom den här linsgrytan.</p>
         <button class="recipe-toggle" data-toggle="d-et1" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-et1" hidden>
         <ul class="ing-list"><li><span>Gul lök</span><span class="amt">2 st</span></li><li><span>Berbere</span><span class="amt">2 msk</span></li><li><span>Röda linser</span><span class="amt">4 dl</span></li><li><span>Vatten</span><span class="amt">6 dl</span></li><li><span>Smör</span><span class="amt">1 msk</span></li></ul>
@@ -1634,7 +1671,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       </div>
       <div class="dish" id="d-et2" data-time="medel">
         <div class="dish-head"><span class="dish-no">02</span><h3>Krispig kål och potatis</h3><span class="mins">25 min</span></div>
-        <figure class="dish-shot"><img loading="lazy" src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/Ethiopian_food.jpg/900px-Ethiopian_food.jpg" alt="Etiopisk mat" onerror="this.closest('figure').remove()"></figure>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ethiopian_food.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Mild kontrast till het mat — vitkål, morot och potatis i samma panna.</p>
         <button class="recipe-toggle" data-toggle="d-et2" aria-expanded="false">Visa recept</button>
         <div class="dish-body" id="body-d-et2" hidden>
         <ul class="ing-list"><li><span>Vitkål</span><span class="amt">1/2 huvud</span></li><li><span>Morot</span><span class="amt">2 st</span></li><li><span>Potatis</span><span class="amt">4 st</span></li><li><span>Olja</span><span class="amt">2 msk</span></li><li><span>Lök</span><span class="amt">1 st</span></li><li><span>Ingefära</span><span class="amt">1 bit</span></li><li><span>Gurkmeja</span><span class="amt">1/2 tsk</span></li></ul>
