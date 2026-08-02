@@ -1994,7 +1994,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 <section class="breadsection" id="kebab">
   <div class="breadsection-inner">
     <h2>Kebab</h2>
-    <p class="lead">Nästan varje kök har sin egen variant av kött på spett över eld. Åtta varianter från åtta länder som inte redan har ett spett bland sina två rätter — samma format som resten: nyckelingredienser, metod, en fallgrop.</p>
+    <p class="lead">Nästan varje kök har sin egen variant av kebab — antingen på spett över eld, eller tunt skivat kött staplat och roterat på en stående grill. Tio varianter från tio länder som inte redan har en kebabrätt bland sina två andra — samma format som resten: nyckelingredienser, metod, en fallgrop.</p>
     <div class="bread-grid">
       <div class="dish bread-card" id="k-souvlaki">
         <div class="dish-head"><h3>Souvlaki</h3><span class="mins">15 min + marinering</span></div>
@@ -2165,6 +2165,50 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
           <button class="ask-ai-btn" data-ask="k-mooping">Fråga AI om substitut</button>
         </div>
         <div class="ai-inline" id="ai-k-mooping" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-doner">
+        <div class="dish-head"><h3>Hemgjord döner</h3><span class="mins">50 min + kylning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Turkiet</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Slicing%20a%20lamb%20doner%20Mamma%20Mia%20Kebab%20House%2C%20Tottenham%2C%20London%2C%20England%201.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Inget stående spett hemma — men en hårt packad och kyld köttlimpa skivar sig precis lika tunt.</p>
+        <button class="recipe-toggle" data-toggle="k-doner" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-doner" hidden>
+        <ul class="ing-list"><li><span>Lamm- eller nötfärs</span><span class="amt">800 g</span></li><li><span>Gul lök, riven och urkramad</span><span class="amt">1 st</span></li><li><span>Vitlök, riven</span><span class="amt">3 klyftor</span></li><li><span>Spiskummin</span><span class="amt">2 tsk</span></li><li><span>Paprikapulver</span><span class="amt">1 tsk</span></li><li><span>Torkad oregano</span><span class="amt">1 tsk</span></li><li><span>Salt</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Knåda färsen länge med riven (urkramad) lök, vitlök, kryddor och salt — smeten ska bli seg och kompakt, inte lös. Packa den hårt i en avlång form klädd med bakplåtspapper, tryck bort alla luftfickor. Grädda i ugn 180° ca 45 minuter till innertemperatur 70°. Låt svalna helt, gärna i kylen några timmar eller över natten. Skiva pappersunt och stek skivorna hastigt i het panna tills kanterna får färg och krisp. Servera i lavash eller dürüm-bröd med sallad, lök, tomat och vitlöksyoghurt.</p>
+        <p class="tip">Att packa smeten hårt och låta den kallna helt innan skivning är hela tricket — varm eller löst packad limpa faller isär istället för att hålla ihop som tunna skivor.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-doner">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-doner">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-doner" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="k-shawarma">
+        <div class="dish-head"><h3>Shawarma</h3><span class="mins">40 min + marinering</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Mellanöstern</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Shawarma%20closeup.png?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kycklinglåren gräddas staplade som ett block — skivningen efteråt är det som gör den till shawarma.</p>
+        <button class="recipe-toggle" data-toggle="k-shawarma" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-k-shawarma" hidden>
+        <ul class="ing-list"><li><span>Kycklinglår, urbenade</span><span class="amt">800 g</span></li><li><span>Yoghurt naturell</span><span class="amt">2 dl</span></li><li><span>Vitlök, riven</span><span class="amt">4 klyftor</span></li><li><span>Citron</span><span class="amt">1 st</span></li><li><span>Spiskummin, paprikapulver, gurkmeja</span><span class="amt">2 tsk vardera</span></li><li><span>Kanel</span><span class="amt">1 nypa</span></li></ul>
+        <p class="step">Marinera kycklinglåren i yoghurt, riven vitlök, citronsaft och kryddorna minst 2 timmar, gärna över natten. Stapla låren tätt ovanpå varandra i en liten ugnsform, som ett kompakt block. Grädda i ugn 200° ca 35–40 minuter tills genomstekt och ytan brynt. Låt vila 5 minuter, skiva sedan tunt tvärs över fibrerna. Servera i pitabröd eller lavash med tahini eller vitlökssås och picklad rödkål.</p>
+        <p class="tip">Det är stapel-tekniken som gör jobbet — köttet håller sig saftigt inuti medan de yttre lagren hinner bli brynta, precis som de yttersta skivorna på ett roterande spett.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="k-shawarma">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="k-shawarma">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-k-shawarma" hidden>
           <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. ají panca"/><button class="sub-go">Föreslå</button></div>
           <div class="ai-loading">Frågar Gemini …</div>
           <div class="ai-error"></div>
