@@ -259,6 +259,14 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .tip{margin-top:.7rem;font-family:'Space Mono',monospace;font-size:.76rem;line-height:1.55;opacity:.82;padding-left:.85rem;border-left:2px solid rgba(242,239,230,.45)}
 
 .pantry{background:var(--paper);color:#1C1A17;padding:clamp(2.5rem,7vw,5rem) 0;scroll-margin-top:11.5rem}
+.breadsection{background:var(--shelf);color:var(--paper);padding:clamp(2.5rem,7vw,5rem) 0;scroll-margin-top:11.5rem}
+.breadsection-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem)}
+.breadsection h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem}
+.breadsection .lead{max-width:52ch;color:#C9C2B4;margin-bottom:2rem}
+.bread-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:1.75rem;margin-top:1rem}
+.bread-card{border-top:1px solid rgba(242,239,230,.28);padding-top:1.3rem}
+.bread-card .dish-head{margin-bottom:0}
+.bread-card .dish-head h3{font-size:1.3rem}
 .pantry-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem)}
 .pantry h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem}
 .pantry .lead{max-width:48ch;color:#4A443C;margin-bottom:2.5rem}
@@ -387,6 +395,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <button class="tab-btn" data-tab="kok" aria-pressed="true">Kök</button>
     <button class="tab-btn" data-tab="basvaror" aria-pressed="false">Basvaror</button>
     <button class="tab-btn" data-tab="kryddor" aria-pressed="false">Kryddor</button>
+    <button class="tab-btn" data-tab="brod" aria-pressed="false">Bröd</button>
   </div>
 </div>
 
@@ -465,30 +474,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   <div class="result-line" id="resultLine"></div>
 </div>
 
-<nav class="nk-cuisinenav">
-  <a href="#spanien">Spanien</a>
-  <a href="#italien">Italien</a>
-  <a href="#turkiet">Turkiet</a>
-  <a href="#japan">Japan</a>
-  <a href="#thailand">Thailand</a>
-  <a href="#mellanostern">Mellanöstern</a>
-  <a href="#baltikum">Baltikum</a>
-  <a href="#indien">Indien</a>
-  <a href="#mexiko">Mexiko</a>
-  <a href="#grekland">Grekland</a>
-  <a href="#marocko">Marocko</a>
-  <a href="#korea">Korea</a>
-  <a href="#vietnam">Vietnam</a>
-  <a href="#kina">Kina</a>
-  <a href="#frankrike">Frankrike</a>
-  <a href="#vastafrika">Västafrika</a>
-  <a href="#peru">Peru</a>
-  <a href="#etiopien">Etiopien</a>
-  <a href="#basvaror" data-tab-link="basvaror">Basvaror</a>
-  <a href="#kryddor" data-tab-link="kryddor">Kryddor</a>
-  <a href="#protein">Protein</a>
-</nav>
-
 <section class="band es" id="spanien">
   <div class="band-inner">
     <div>
@@ -497,7 +482,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Rökt paprika</li><li>Saffran</li><li>Vitlök</li><li>Olivolja</li></ul>
       <p class="why">Rökt paprika ger grillsmak utan grill. Saffran ger färgen och doften. Utan dem blir allt bara ris i tomat.</p>
       <div class="drink"><b>Dryck</b><p><strong>Torr cava eller fruktig rosé.</strong> Cava är gjord för saffran och skaldjur — den torra mousserande syran lyfter riset utan att ta över. Vill du ha rosé, välj en mjuk fruktig från Spanien eller Sydfrankrike, aldrig en stram.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/01_Paella_Valenciana_original.jpg?width=900" alt="Paella" onerror="this.closest('figure').remove()"><figcaption>Paella · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-es1" data-time="medel">
@@ -564,7 +548,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Vitlök</li><li>Chiliflingor</li><li>Bra olivolja</li><li>Citron</li></ul>
       <p class="why">Det italienska köket handlar om vad du utelämnar. Fyra ingredienser, rätt behandlade, slår tolv.</p>
       <div class="drink"><b>Dryck</b><p><strong>Vermentino, eller en lätt rosé.</strong> Citron, kapris och chili vill ha något friskt och salt. Vermentino från Sardinien är klockrent. Till aglio e olio funkar även en enkel Pinot Grigio.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Aglio_e_olio.jpg?width=900" alt="Aglio e olio" onerror="this.closest('figure').remove()"><figcaption>Aglio e olio · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-it1" data-time="snabb">
@@ -631,7 +614,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Sumak</li><li>Pul biber</li><li>Yoghurt</li><li>Granatäppelsirap</li></ul>
       <p class="why">Turkisk grillmat är enkel: en marinad på yoghurt, sedan hög glöd. Yoghurten möras och håller kvar saften. Sumaken efteråt ger syran som skär genom röken.</p>
       <div class="drink"><b>Dryck</b><p><strong>Öl, eller rosé från Provence.</strong> Kolröken slår ut de flesta viner. En kall lager eller pilsner är ärligast. Vill du ha vin, ta en torr rosé — den klarar både lamm och grillade grönsaker.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Adana_kebab.jpg?width=900" alt="Adana kebab" onerror="this.closest('figure').remove()"><figcaption>Adana kebab · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-tr1" data-time="medel">
@@ -698,7 +680,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Miso</li><li>Kombu</li><li>Soja</li><li>Risvinäger</li></ul>
       <p class="why">Kombu löser vegetarisk umami permanent. En bit i kokvattnet och du har en buljong med djup, helt utan kött.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager eller kall grönt te.</strong> Ramen och öl hör ihop. Asahi, Sapporo eller vilken ljus lager som helst. Misosmör på grillat klarar även en torr riesling.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Miso_Ramen.JPG?width=900" alt="Misoramen" onerror="this.closest('figure').remove()"><figcaption>Misoramen · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-jp1" data-time="snabb">
@@ -765,7 +746,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Chili</li><li>Palmsocker</li></ul>
       <p class="why">Salt, syra, hetta, sötma. Hela det thailändska köket är de fyra i olika proportioner. Smaka och justera — det finns inget facit.</p>
       <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling eller kall lager.</strong> Chili och fisksås behöver antingen sötma eller kyla. Riesling med en gnutta restsötma tämjer hettan; Singha eller Chang gör samma jobb enklare.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Thai-style%20Fried%20Rice%20in%20Pineapple.jpg?width=900" alt="Thailändskt stekt ris" onerror="this.closest('figure').remove()"><figcaption>Thailändskt stekt ris · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-th1" data-time="snabb">
@@ -832,7 +812,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Tahini</li><li>Citron</li><li>Sumak</li></ul>
       <p class="why">Tahini plus citron plus vatten blir en sås som gör vad grädde gör, fast fräschare. Den passar till nästan allt du grillar.</p>
       <div class="drink"><b>Dryck</b><p><strong>Fruktig rosé eller ayran.</strong> Sumak, tahini och citron går fint med en mjuk rosé. Traditionellt dricks salt yoghurtdryck (ayran) — överraskande bra till allt rostat och kryddigt.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Hummus_Dip_%2830863436677%29.jpg?width=900" alt="Tahini och kikärtor" onerror="this.closest('figure').remove()"><figcaption>Tahini och kikärtor · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-me1" data-time="snabb">
@@ -899,7 +878,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Dill</li><li>Kummin</li><li>Gräddfil</li><li>Senap</li><li>Ättika</li></ul>
       <p class="why">Det baltiska köket är närmare det svenska än du tror, men syrligare och mer dill. Gräddfil och ättika gör jobbet som citron gör i söder.</p>
       <div class="drink"><b>Dryck</b><p><strong>Iskall pilsner eller kvass.</strong> Dill, ättika och gräddfil vill ha något torrt och kolsyrat. Pilsner är svaret. Kvass om du hittar den — syrlig och malig, gjord för den här maten.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Borscht%20with%20cream.jpg?width=900" alt="Kall rödbetssoppa" onerror="this.closest('figure').remove()"><figcaption>Kall rödbetssoppa · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-ba1" data-time="snabb">
@@ -966,7 +944,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Spiskummin</li><li>Gurkmeja</li><li>Garam masala</li><li>Ingefära</li></ul>
       <p class="why">Nyckeltekniken heter tadka: hela kryddor fräser i hett fett och hälls över maten sist. Trettio sekunder som ändrar hela rätten.</p>
       <div class="drink"><b>Dryck</b><p><strong>Off-dry riesling, IPA eller lassi.</strong> Garam masala och chili blir bättre av lite sötma. Riesling eller en fruktig IPA. Mangolassi till det starkaste — mjölkfettet släcker hettan bättre än vatten.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Tadka_Daal_%28Indian_lentil_curry%29.jpg?width=900" alt="Dal tadka" onerror="this.closest('figure').remove()"><figcaption>Dal tadka · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-in1" data-time="medel">
@@ -1033,7 +1010,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Lime</li><li>Torkad chili</li><li>Koriander</li><li>Spiskummin</li><li>Oregano</li></ul>
       <p class="why">Mexikansk mat är inte främst het — den är syrlig. Lime går på nästan allt, och torkad chili ger rökighet och frukt snarare än ren hetta.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager med lime, eller torr cava.</strong> Kolsyra och kyla mot chili och fett. Modelo eller vilken ljus lager som helst. Cava funkar förvånansvärt bra till fisktacos.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Street%20Tacos%20Oaxaca.jpg?width=900" alt="Tacos" onerror="this.closest('figure').remove()"><figcaption>Tacos · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-mx1" data-time="medel">
@@ -1100,7 +1076,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Oregano</li><li>Citron</li><li>Fetaost</li><li>Olivolja</li><li>Vitlök</li></ul>
       <p class="why">Grekiskt kök är italienskt kök minus tomaten och plus citron. Torkad oregano är den enda kryddan du verkligen behöver.</p>
       <div class="drink"><b>Dryck</b><p><strong>Retsina, assyrtiko eller ouzo.</strong> Assyrtiko från Santorini är ett av världens bästa vita viner till fisk och citron. Vill du ha det billigt: en kall grekisk lager.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Horiatiki%20salad.jpg?width=900" alt="Horiatiki" onerror="this.closest('figure').remove()"><figcaption>Horiatiki · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-gr1" data-time="middag">
@@ -1167,7 +1142,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Ras el hanout</li><li>Kanel</li><li>Spiskummin</li><li>Saffran</li><li>Konserverad citron</li></ul>
       <p class="why">Marockanskt kök blandar sött och salt utan att bli efterrätt. Kanel i en köttgryta låter fel och är rätt.</p>
       <div class="drink"><b>Dryck</b><p><strong>Myntate, eller en kryddig rosé.</strong> Sött myntate är det traditionella och funkar bättre än man tror till kryddig mat. Vill du ha vin: en fruktig rosé eller en lätt grenache.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Moroccan%20food-Chicken%20tagine%20with%20preserved%20lemons%20and%20olives-01.jpg?width=900" alt="Tagine" onerror="this.closest('figure').remove()"><figcaption>Tagine · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-ma1" data-time="middag">
@@ -1234,7 +1208,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Gochujang</li><li>Sesamolja</li><li>Soja</li><li>Vitlök</li><li>Rostade sesamfrön</li></ul>
       <p class="why">Gochujang är fermenterad chilipasta — söt, salt, het och umami på en gång. En sked ersätter fyra andra ingredienser.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller soju.</strong> Kall lager mot het gochujang. Soju blandat med öl är det koreanska sättet. En off-dry riesling funkar också.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Bibimbap.jpg?width=900" alt="Bibimbap" onerror="this.closest('figure').remove()"><figcaption>Bibimbap · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-kr1" data-time="medel">
@@ -1301,7 +1274,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Fisksås</li><li>Lime</li><li>Mynta</li><li>Koriander</li><li>Ris­nudlar</li></ul>
       <p class="why">Vietnamesiskt kök använder färska örter som grönsak, inte som garnering. En hel näve mynta per portion är normalt.</p>
       <div class="drink"><b>Dryck</b><p><strong>Iskall lager, eller iste.</strong> Bia hoi-stilen: mycket ljus, mycket kall lager. Fungerar mot fisksåsens sälta. Iste med lime är det alkoholfria svaret.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pho-Beef-Noodles-2008.jpg?width=900" alt="Pho" onerror="this.closest('figure').remove()"><figcaption>Pho · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-vn1" data-time="medel">
@@ -1368,7 +1340,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Sichuanpeppar</li><li>Chiliolja</li><li>Svart risvinäger</li><li>Soja</li><li>Ingefära</li></ul>
       <p class="why">Sichuanpeppar är inte stark — den domnar. Kombinationen av domning och hetta heter málà och är hela regionens signatur.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller jasminte.</strong> Kall lager mot málà. Jasminte mellan tuggorna renar munnen och är det traditionella valet.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Authentic%20Mapo%20Tofu.jpg?width=900" alt="Sichuan" onerror="this.closest('figure').remove()"><figcaption>Sichuan · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-cn1" data-time="snabb">
@@ -1435,7 +1406,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Smör</li><li>Dijonsenap</li><li>Timjan</li><li>Vitt vin</li><li>Schalottenlök</li></ul>
       <p class="why">Franskt vardagskök är inte komplicerat. Det är smör, senap och tålamod. Nästan varje sås börjar med att du löser upp det som fastnat i pannan med vin.</p>
       <div class="drink"><b>Dryck</b><p><strong>Det vin du lagade med.</strong> Regeln är enkel: drick samma vin du hällde i pannan. En enkel vit bourgogne eller en lätt rödvin från Loire.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Salade%20verte.jpg?width=900" alt="Vinaigrette" onerror="this.closest('figure').remove()"><figcaption>Vinaigrette · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-fr1" data-time="medel">
@@ -1502,7 +1472,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Jordnötssmör</li><li>Ingefära</li><li>Scotch bonnet</li><li>Tomatpuré</li><li>Lökpulver</li></ul>
       <p class="why">Jordnötssmör i en salt gryta är Västafrikas motsvarighet till grädde. Det ger fyllighet, sötma och protein på en gång.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ingefärsdryck, eller ljus lager.</strong> Stark ingefärsdryck (ginger beer) är det klassiska och matchar hettan. Öl fungerar lika bra.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Jollof_Rice.jpg?width=900" alt="Jollof" onerror="this.closest('figure').remove()"><figcaption>Jollof · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-wa1" data-time="medel">
@@ -1569,7 +1538,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Ají amarillo</li><li>Lime</li><li>Koriander</li><li>Rödlök</li><li>Spiskummin</li></ul>
       <p class="why">Peru är limens hemland. Ají amarillo är en gul chili som är mer fruktig än het — finns som pasta i burk och håller månader.</p>
       <div class="drink"><b>Dryck</b><p><strong>Pisco sour, eller torr sauvignon blanc.</strong> Pisco sour är nationaldrycken och funkar till allt syrligt. Vill du ha vin: en torr sauvignon blanc eller albariño.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ceviche%20de%20pescado%20%28La%20Punta%2C%20Callao%29.jpg?width=900" alt="Ceviche" onerror="this.closest('figure').remove()"><figcaption>Ceviche · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-pe1" data-time="medel">
@@ -1636,7 +1604,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <ul class="keys"><li>Berbere</li><li>Kryddsmör</li><li>Ingefära</li><li>Kardemumma</li><li>Lök</li></ul>
       <p class="why">Berbere är en färdig kryddblandning med chili, bockhornsklöver och kardemumma. En burk ger dig hela köket — och etiopisk mat är till stor del vegetarisk från början.</p>
       <div class="drink"><b>Dryck</b><p><strong>Ljus lager, eller starkt kaffe.</strong> Öl mot berberes hetta. Kaffe efteråt är en ceremoni i Etiopien och passar den kryddiga maten förvånansvärt bra.</p></div>
-      <figure class="shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ethiopian_food.jpg?width=900" alt="Etiopisk mat" onerror="this.closest('figure').remove()"><figcaption>Etiopisk mat · Wikimedia Commons</figcaption></figure>
     </div>
     <div class="dishes">
       <div class="dish" id="d-et1" data-time="medel">
@@ -1867,6 +1834,149 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   </div>
 </section>
 </div><!-- /tab-kryddor -->
+
+<div id="tab-brod" class="tabpanel" hidden>
+<section class="breadsection" id="brod">
+  <div class="breadsection-inner">
+    <h2>Bröd</h2>
+    <p class="lead">Sex bröd som hör hemma i de kök som redan finns här — och som går att göra hemma utan bageriutrustning. Injera är undantaget: den kräver några dagars planering, resten är samma dag.</p>
+    <div class="bread-grid">
+      <div class="dish bread-card" id="b-focaccia">
+        <div class="dish-head"><h3>Focaccia</h3><span class="mins">25 min + jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Italien</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Focaccia%20Bread.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Fuktig deg, gropar med fingrarna, dränkt i olivolja — mer teknik än recept.</p>
+        <button class="recipe-toggle" data-toggle="b-focaccia" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-focaccia" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">6 dl</span></li><li><span>Torrjäst</span><span class="amt">1 påse (7 g)</span></li><li><span>Ljummet vatten</span><span class="amt">4 dl</span></li><li><span>Olivolja</span><span class="amt">1 dl + till toppen</span></li><li><span>Flingsalt</span><span class="amt">1 tsk + till toppen</span></li></ul>
+        <p class="step">Rör ihop en mycket lös deg av mjöl, jäst, vatten och salt — den ska vara <b>för blöt för att knåda för hand</b>. Häll i en oljad form, låt jäsa täckt 1–2 timmar. <b>Tryck ner fingrarna hela vägen till botten</b> över hela ytan. Ringla över rejält med olivolja, strö flingsalt. In i het ugn (225°) 20–25 minuter tills gyllenbrun.</p>
+        <p class="tip">Var generös med oljan i formen och ovanpå — det är den som ger den krispiga, nästan friterade undersidan.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-focaccia">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-focaccia">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-focaccia" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-pita">
+        <div class="dish-head"><h3>Pitabröd</h3><span class="mins">15 min + jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Mellanöstern / Turkiet</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pita%20%28bread%29.JPG?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Puffar upp till en ficka i het ugn — ingen plåt, bara stenhård värme.</p>
+        <button class="recipe-toggle" data-toggle="b-pita" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-pita" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">6 dl</span></li><li><span>Torrjäst</span><span class="amt">1 påse (7 g)</span></li><li><span>Ljummet vatten</span><span class="amt">3 dl</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Salt</span><span class="amt">1 tsk</span></li></ul>
+        <p class="step">Knåda ihop en fast deg, låt jäsa 1 timme. Dela i 8 bullar, kavla tunt (ca 5 mm). Grädda på så het ugn plåten klarar (250°+), gärna på en <b>redan het</b> plåt eller pizzasten, 3–4 minuter tills de puffar upp som ballonger.</p>
+        <p class="tip">Ugnen måste vara stenhård het och plåten redan varm — kall plåt ger platta, sega bröd istället för fickan.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-pita">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-pita">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-pita" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-tortilla">
+        <div class="dish-head"><h3>Tortillas</h3><span class="mins">10 min + vila</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Mexiko</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Homemade%20tortillas%20on%20griddle.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Ingen jäsning, ingen väntan på ugnen — deg till bröd på under tio minuter.</p>
+        <button class="recipe-toggle" data-toggle="b-tortilla" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-tortilla" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">5 dl</span></li><li><span>Salt</span><span class="amt">1 tsk</span></li><li><span>Bakpulver</span><span class="amt">1/2 tsk</span></li><li><span>Neutral olja</span><span class="amt">2 msk</span></li><li><span>Varmt vatten</span><span class="amt">2 dl</span></li></ul>
+        <p class="step">Blanda mjöl, salt, bakpulver och olja, tillsätt vattnet gradvis till en mjuk deg. Dela i 8–10 bollar, <b>låt vila 10 minuter</b>, kavla papperstunt. Grädda i het, torr panna 30–60 sekunder per sida tills lätta bruna fläckar syns.</p>
+        <p class="tip">Hoppar du över vilan drar degen ihop sig igen så fort du kavlar — den behöver de tio minuterna.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-tortilla">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-tortilla">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-tortilla" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-naan">
+        <div class="dish-head"><h3>Naan</h3><span class="mins">15 min + jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Indien</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Naan%20baked%20in%20Tandoor.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Yoghurten gör degen mjuk — stekpannan gör jobbet en tandoor annars gör.</p>
+        <button class="recipe-toggle" data-toggle="b-naan" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-naan" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">6 dl</span></li><li><span>Torrjäst</span><span class="amt">1 tsk</span></li><li><span>Yoghurt naturell</span><span class="amt">2 dl</span></li><li><span>Ljummet vatten</span><span class="amt">1 dl</span></li><li><span>Smör, smält</span><span class="amt">2 msk</span></li></ul>
+        <p class="step">Blanda mjöl, jäst, yoghurt och vatten till en mjuk deg, låt jäsa 1 timme. Dela i bullar, kavla ovalt. Stek i het, torr gjutjärnspanna 1–2 minuter per sida tills bubblor bränns gyllene. Pensla med smält smör direkt från pannan.</p>
+        <p class="tip">Lock på pannan de sista sekunderna hjälper naanen puffa upp ordentligt.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-naan">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-naan">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-naan" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-lantbrod">
+        <div class="dish-head"><h3>Lantbröd utan knådning</h3><span class="mins">30 min + 12 tim jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Frankrike / allmänt</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/No-Knead%20Bread%20-%20Finished%20Loaf%20%28294068096%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Ingen knådning — tiden gör jobbet du annars hade knådat fram.</p>
+        <button class="recipe-toggle" data-toggle="b-lantbrod" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-lantbrod" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">7 dl</span></li><li><span>Torrjäst</span><span class="amt">1/4 tsk (bara en nypa)</span></li><li><span>Salt</span><span class="amt">2 tsk</span></li><li><span>Ljummet vatten</span><span class="amt">3,5 dl</span></li></ul>
+        <p class="step">Rör ihop en kladdig deg av alla ingredienser i en skål — <b>ingen knådning</b>. Täck och låt stå i rumstemperatur 12–18 timmar. Vänd ut degen på mjölad yta, vik ihop den några gånger, låt vila 30 minuter under en handduk. Grädda i en het, förvärmd gjutjärnsgryta med lock, 220°, 30 minuter med lock och 15 minuter utan.</p>
+        <p class="tip">Den långa jäsningen ersätter knådningen helt — skynda inte på den delen, resten tar bara minuter.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-lantbrod">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-lantbrod">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-lantbrod" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-injera">
+        <div class="dish-head"><h3>Injera</h3><span class="mins">5 min + 2–3 dagars jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Etiopien</p>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Injera%20from%20ivory%20teff.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kräver 2–3 dagars förjäsning — planera i förväg, men själva bakningen tar minuter.</p>
+        <button class="recipe-toggle" data-toggle="b-injera" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-injera" hidden>
+        <ul class="ing-list"><li><span>Teffmjöl</span><span class="amt">5 dl</span></li><li><span>Vatten</span><span class="amt">6 dl, plus mer under jäsningen</span></li></ul>
+        <p class="step">Rör ihop teffmjöl och vatten till en tunn smet, täck löst och låt stå i rumstemperatur 2–3 dagar tills den bubblar och doftar surt — det är den vilda jäsningen som ger den karaktäristiska syrligheten. Häll ut ett tunt lager i en het, oljad stekpanna i en spiralrörelse, lägg på lock. Grädda <b>bara på ena sidan</b> tills ytan täcks av små bubblor (2–3 minuter), ingen vändning.</p>
+        <p class="tip">Genväg om du inte har tid att vänta tre dagar: tillsätt en skvätt vinäger och lite bakpulver i smeten för en snabbare, om än mindre autentisk, syrlighet.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-injera">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-injera">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-injera" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+</div><!-- /tab-brod -->
 
 <div class="nk-footer">
   <h2>Fem regler som gäller överallt</h2>
@@ -2177,7 +2287,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   });
 
   // ── Tabbar: Kök / Basvaror / Kryddor ──
-  var TAB_IDS = ['kok', 'basvaror', 'kryddor'];
+  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod'];
   var KOK_ANCHORS = new Set(['kok','spanien','italien','turkiet','japan','thailand','mellanostern','baltikum','indien','mexiko','grekland','marocko','korea','vietnam','kina','frankrike','vastafrika','peru','etiopien','protein']);
   var tabBtns = document.querySelectorAll('.tab-btn');
   var tabPanels = {};
