@@ -460,10 +460,24 @@ async function fetchRestaurants(){
 // ---- Riktig geocoding: Nominatim (OpenStreetMap), gratis, ingen nyckel ----
 async function geocode(query){
   const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-  const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } });
-  if(!res.ok) throw new Error('Nominatim svarade ' + res.status);
-  const results = await res.json();
-  return results[0] || null;
+  // Ett återförsök, samma mönster som Overpass-anropen. Motiverat live: en
+  // användare på svagt mobilnät (2 staplar, nästan tom batteri, sett på
+  // skärmdump) fick "Load failed" — WebKits generiska nätverksfel för en
+  // avbruten anslutning, inte något servern skickade tillbaka. Ett enda
+  // tillfälligt tapp ska inte döda hela sökningen.
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } });
+      if(!res.ok) throw new Error('Nominatim svarade ' + res.status);
+      const results = await res.json();
+      return results[0] || null;
+    } catch(err){
+      lastErr = err;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
 }
 
 function setStatus(msg, cls){
