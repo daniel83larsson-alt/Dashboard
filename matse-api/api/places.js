@@ -13,6 +13,7 @@
 const FIELDS = 'name,latitude,longitude,location,categories';
 const ALLOWED_ORIGINS = new Set([
   'https://daniel83larsson-alt.github.io',
+  'https://mat-och-se.vercel.app',
 ]);
 
 function setCors(req, res) {
