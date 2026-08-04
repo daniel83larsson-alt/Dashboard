@@ -333,19 +333,30 @@ function routeBbox(padDeg){
 // (sett live under utveckling: enstaka 504:or). Ett återförsök räcker i praktiken —
 // i skarpt läge bör detta cachas server-side istället för att köras live per besök.
 async function overpassQuery(query){
-  let res;
+  // BUGFIX: den tidigare versionen kollade bara res.ok (HTTP-felstatus) i
+  // loopen — men fetch() KASTAR (avvisar promisen) vid nätverksfel som
+  // "Load failed", istället för att returnera ett svar med ok:false. Ett
+  // sånt kast hoppade rakt förbi hela retry-loopen första gången det
+  // hände, så "återförsöket" gällde bara servrar som svarade med fel
+  // statuskod — aldrig avbrutna anslutningar, som är precis det Daniel
+  // faktiskt råkade ut för. Samma bugg som geocode() hade innan den fixen.
+  let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
-    res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Accept': '*/*' },
-      body: 'data=' + encodeURIComponent(query)
-    });
-    if (res.ok) break;
-    if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+    try {
+      const res = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: { 'Accept': '*/*' },
+        body: 'data=' + encodeURIComponent(query)
+      });
+      if(!res.ok) throw new Error('Overpass svarade ' + res.status + ' (den delade instansen är ibland överlastad — testa igen om en stund)');
+      const data = await res.json();
+      return data.elements.filter(e => e.tags && e.tags.name);
+    } catch(err){
+      lastErr = err;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+    }
   }
-  if(!res.ok) throw new Error('Overpass svarade ' + res.status + ' (den delade instansen är ibland överlastad — testa igen om en stund)');
-  const data = await res.json();
-  return data.elements.filter(e => e.tags && e.tags.name);
+  throw lastErr;
 }
 
 async function fetchRealSights(){
