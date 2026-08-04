@@ -96,7 +96,7 @@
     .map-pane{position:relative; width:100%; height:100vh;}
     .mobile-toggle-btn{
       display:flex; align-items:center; gap:8px;
-      position:absolute; left:16px; bottom:20px; z-index:1000;
+      position:fixed; left:16px; bottom:20px; z-index:9999;
       background:var(--gold); color:#1C1404; border:none; border-radius:999px;
       padding:12px 18px; font-weight:700; font-size:13.5px; cursor:pointer;
       box-shadow:0 4px 14px rgba(0,0,0,0.3);
@@ -108,11 +108,19 @@
       background:var(--navy-2); border:1px solid var(--line); color:#EDEFEA;
       font-size:16px; cursor:pointer;
     }
-    /* Döljer den flytande sökknappen medan panelen redan är öppen — ren CSS
-       istället för inline JS-style, så det inte krockar med media queryn
-       om fönstret ändrar storlek medan panelen är öppen. */
-    #sidebar.open ~ .map-pane .mobile-toggle-btn{display:none;}
   }
+  /* BUGFIX: döljer den flytande sökknappen medan panelen är öppen. Tidigare
+     en CSS general-sibling-selektor (#sidebar.open ~ .map-pane ...) — kända
+     tillförlitlighetsproblem på iOS Safari när den kombineras med en CSS
+     transition på ett föregående syskon (precis det #sidebar har). Bytt mot
+     en enkel klass på body + descendant-selektor, som inte har samma
+     ombytlighet, istället för att försöka bevisa om det var just detta som
+     hände hos Daniel. position:fixed (inte absolute) så knappen inte kan
+     hamna fel om .map-pane någonsin scrollar eller ändrar sig.
+     z-index höjt till 9999 av samma anledning — inget tvivel kvar om att
+     något annat element (t.ex. Leaflets egna kontroller, som också
+     använder z-index:1000 som standard) kan ligga ovanpå och stjäla klick. */
+  body.sidebar-open .mobile-toggle-btn{display:none !important;}
 </style>
 </head>
 <body>
@@ -240,6 +248,7 @@ function makeIcon(type){
 
 const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map), stallplats:L.layerGroup().addTo(map) };
 let allPois = []; // sights (real) + mock chargers/restaurants, once loaded
+let fromMarker = null, toMarker = null; // ersätts, inte staplas, vid varje ny sökning
 
 function addPoiMarker(p){
   const marker = L.marker([p.lat,p.lng], {icon:makeIcon(p.type)});
@@ -268,9 +277,11 @@ function toggleLayer(el){
 const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
 function openSidebar(){
   document.getElementById('sidebar').classList.add('open');
+  document.body.classList.add('sidebar-open');
 }
 function closeSidebar(){
   document.getElementById('sidebar').classList.remove('open');
+  document.body.classList.remove('sidebar-open');
   setTimeout(() => map.invalidateSize(), 260);
 }
 if(isMobile()) openSidebar();
@@ -501,13 +512,16 @@ async function handleDrawRoute(userInitiated){
   const btn = document.getElementById('drawBtn');
   btn.disabled = true;
   setStatus('Söker adresser (Nominatim) …');
+
+  // BUGFIX: geocoding och POI-hämtningen låg tidigare i SAMMA try-block, så
+  // ett geocoding-fel (t.ex. "Load failed" på ett svagt mobilnät) avbröt
+  // hela sökningen — trots att sevärdheter/ställplatser/matställen inte
+  // beror på geocoding alls (ruttlinjen är fast oavsett). Precis det Daniel
+  // beskrev: "verkar göra en del men blir problem". Geocoding körs nu i sin
+  // egen try/catch som bara visar en varning — resten kör alltid.
   try {
     // Serialiserat, inte Promise.all — Nominatims användarvillkor tillåter max
-    // 1 förfrågan/sekund, och två parallella anrop (som detta var tidigare)
-    // bröt mot det vid varje enda sidladdning (även den automatiska vid start,
-    // inte bara en manuell sökning). Risken är att den delade IP-poolen blir
-    // hastighetsbegränsad eller blockerad av Nominatim, vilket skulle se ut
-    // exakt som "sökningen funkar inte" för alla besökare, inte bara en.
+    // 1 förfrågan/sekund.
     const fromRes = await geocode(document.getElementById('fromInput').value);
     await new Promise(r => setTimeout(r, 1100));
     const toRes = await geocode(document.getElementById('toInput').value);
@@ -516,11 +530,20 @@ async function handleDrawRoute(userInitiated){
     } else {
       setStatus(`Hittade: ${fromRes.display_name.split(',')[0]} → ${toRes.display_name.split(',')[0]}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
       // Rita om markörer för start/mål på de riktiga geocodade punkterna, men behåll
-      // testvägens linjeform (ingen riktig ruttmotor inkopplad än).
-      L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.display_name.split(',')[0]);
-      L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.display_name.split(',')[0]);
+      // testvägens linjeform (ingen riktig ruttmotor inkopplad än). Tar bort
+      // föregående söknings markörer först — annars staplas de upp för varje
+      // sökning istället för att ersättas.
+      if(fromMarker) map.removeLayer(fromMarker);
+      if(toMarker) map.removeLayer(toMarker);
+      fromMarker = L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.display_name.split(',')[0]);
+      toMarker = L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.display_name.split(',')[0]);
     }
+  } catch(err){
+    console.error(err);
+    setStatus('Kunde inte söka adresser just nu (' + err.message + '). Testvägen (Onsala↔Oslo) visas ändå — hämtar sevärdheter och matställen.', 'err');
+  }
 
+  try {
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
