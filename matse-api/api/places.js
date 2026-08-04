@@ -10,7 +10,7 @@
 // than add billing. If that changes later, add 'rating' to FIELDS below —
 // nothing else needs to change.
 
-const FIELDS = 'name,location,categories,geocodes';
+const FIELDS = 'name,latitude,longitude,location,categories';
 const ALLOWED_ORIGINS = new Set([
   'https://daniel83larsson-alt.github.io',
 ]);
