@@ -16,6 +16,7 @@
     --gold: #D4A73D;
     --teal: #3F9C86;
     --rose: #B5495B;
+    --plum: #7B4B94;
     --line: rgba(255,255,255,0.10);
   }
   *{box-sizing:border-box;}
@@ -84,9 +85,9 @@
 <div id="app">
   <div id="sidebar">
     <div class="brand">
-      <div class="eyebrow">Mat &amp; Se — koncept-POC v0.2</div>
+      <div class="eyebrow">Mat &amp; Se — koncept-POC v0.3</div>
       <h1>Din resa, kuraterad</h1>
-      <p>Sverige &amp; Norge · sevärdheter + geocoding är riktig data</p>
+      <p>Sverige &amp; Norge · sevärdheter, matställen och geocoding är riktig data</p>
     </div>
 
     <div class="section">
@@ -114,9 +115,14 @@
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">5</span><span class="switch on" data-layer="charger" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="toggle-row">
-        <span class="label"><span class="swatch" style="background:var(--rose)"></span>Matställen 4–5★<span class="datatag mock">Testdata</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-restaurant">4</span><span class="switch on" data-layer="restaurant" onclick="toggleLayer(this)"></span></span>
+        <span class="label"><span class="swatch" style="background:var(--rose)"></span>Matställen<span class="datatag real">Riktig data</span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-restaurant">–</span><span class="switch on" data-layer="restaurant" onclick="toggleLayer(this)"></span></span>
       </div>
+      <div class="toggle-row">
+        <span class="label"><span class="swatch" style="background:var(--plum)"></span>Värt en omväg<span class="datatag real">Riktig data</span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-detour">–</span><span class="switch on" data-layer="detour" onclick="toggleLayer(this)"></span></span>
+      </div>
+      <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (Foursquares betygsdata kräver köpta krediter, se fotnoten). Just nu bara "längre bort", inte kvalitetsbedömt.</p>
     </div>
 
     <div class="journey">
@@ -127,13 +133,13 @@
     <div class="foot">
       Sevärdheter: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
       Adressökning: Nominatim (OSM), live, ingen nyckel krävs.<br>
-      Laddardata i skarpt läge: NOBIL (CC-BY-4.0) — kräver registrerad API-nyckel, inte ansökt än.<br>
-      Matställen i skarpt läge: Google Places — kräver betald API-nyckel, inte inkopplad än.
+      Matställen &amp; "Värt en omväg": Foursquare Places, hämtas live via en liten server-proxy (matse-api) som håller nyckeln dold från den här sidan. Betyg saknas — kräver köpta Foursquare-krediter, medvetet bortvalt tills vidare.<br>
+      Laddardata i skarpt läge: NOBIL (CC-BY-4.0) — väntar på registrerad API-nyckel.
     </div>
   </div>
   <div style="position:relative;">
     <div id="map"></div>
-    <div class="badge-poc">POC v0.2 — <b>sevärdheter &amp; adressökning riktiga</b>, laddare/matställen fortfarande testdata</div>
+    <div class="badge-poc">POC v0.3 — <b>sevärdheter, matställen &amp; adressökning riktiga</b> (inga betyg än), laddare fortfarande testdata</div>
   </div>
 </div>
 
@@ -156,21 +162,18 @@ const routeCoords = [
 ];
 const CORRIDOR_KM = 15; // generösare än spec:ens 5–10 km eftersom testvägen är en gles, rak approximation av den riktiga vägen
 
-const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B' };
-const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe' };
+const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B', detour: '#7B4B94' };
+const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe', detour: 'Värt en omväg' };
+const GLYPHS = { sight: '✦', charger: '⚡', restaurant: '★', detour: '❖' };
 
-// ---- Testdata: laddare + matställen (väntar på NOBIL / Google Places API-nycklar) ----
+// ---- Testdata: bara laddare (väntar på NOBIL-nyckel). Matställen och
+// "Värt en omväg" hämtas nu på riktigt via Foursquare, se fetchRestaurants(). ----
 const mockPois = [
   {type:'charger', name:'Ionity Kungsbacka', lat:57.487, lng:12.076, sub:'150 kW · 6 platser'},
   {type:'charger', name:'Recharge Göteborg N', lat:57.75, lng:11.99, sub:'150 kW · 8 platser'},
   {type:'charger', name:'Tesla Supercharger Uddevalla', lat:58.35, lng:11.93, sub:'250 kW · 12 platser'},
   {type:'charger', name:'Recharge Strömstad', lat:58.94, lng:11.19, sub:'150 kW · 4 platser'},
-  {type:'charger', name:'Mer Fredrikstad', lat:59.22, lng:10.95, sub:'175 kW · 6 platser'},
-
-  {type:'restaurant', name:'Toftakärr Gårdskrog', lat:57.42, lng:12.09, rating:4.6, sub:'Gårdsmat, Kungsbackakusten'},
-  {type:'restaurant', name:'Fiskekrogen Uddevalla', lat:58.21, lng:11.92, rating:4.4, sub:'Skaldjur & fisk'},
-  {type:'restaurant', name:'Skagerack Strömstad', lat:58.935, lng:11.18, rating:4.7, sub:'Havsutsikt, västkustfisk'},
-  {type:'restaurant', name:'Majorstuen Bistro Oslo', lat:59.928, lng:10.716, rating:4.5, sub:'Nynordisk meny'}
+  {type:'charger', name:'Mer Fredrikstad', lat:59.22, lng:10.95, sub:'175 kW · 6 platser'}
 ];
 
 const map = L.map('map', {zoomControl:false}).setView([58.4, 11.3], 7);
@@ -185,7 +188,7 @@ map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
 
 function makeIcon(type){
   const color = COLORS[type];
-  const glyph = type==='sight' ? '✦' : type==='charger' ? '⚡' : '★';
+  const glyph = GLYPHS[type];
   return L.divIcon({
     className:'',
     html:`<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${color};transform:rotate(-45deg);display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.35);border:2px solid rgba(255,255,255,0.85);">
@@ -195,7 +198,7 @@ function makeIcon(type){
   });
 }
 
-const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map) };
+const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map) };
 let allPois = []; // sights (real) + mock chargers/restaurants, once loaded
 
 function addPoiMarker(p){
@@ -226,7 +229,7 @@ function renderStopList(){
   orderedStops.forEach(p=>{
     const div = document.createElement('div');
     div.className='stop';
-    const glyph = p.type==='sight' ? '✦' : p.type==='charger' ? '⚡' : '★';
+    const glyph = GLYPHS[p.type];
     div.innerHTML = `<div class="dot" style="background:${COLORS[p.type]}22;color:${COLORS[p.type]};">${glyph}</div>
       <div class="meta"><div class="name">${p.name}</div><div class="sub">${LABELS[p.type]}${p.rating ? ' · ★'+p.rating : ''}</div></div>`;
     div.onclick = ()=>{ map.setView([p.lat,p.lng], 11); };
@@ -310,6 +313,64 @@ async function fetchRealSights(){
     .slice(0, 20);
 }
 
+// ---- Riktiga matställen: Foursquare via matse-api (server-side proxy — se
+// matse-api/api/places.js. Nyckeln får aldrig ligga i den här klientfilen). ----
+const MATSE_API = 'https://matse-api.vercel.app/api/places';
+const ROUTE_SAMPLE_IDX = [0, 3, 5, 7, 10]; // spridda punkter längs testvägen, inte varenda waypoint — håller antalet Foursquare-anrop nere
+
+async function fetchRestaurantsNear(lat, lng, radiusM, limit){
+  const url = `${MATSE_API}?lat=${lat}&lng=${lng}&radius=${radiusM}&query=restaurant&limit=${limit}`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || ('matse-api svarade ' + res.status));
+  return (data.results || []).filter(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
+}
+
+function toPoi(r){
+  return {
+    name: r.name,
+    lat: r.latitude, lng: r.longitude,
+    sub: (r.categories && r.categories[0] && r.categories[0].name) || 'Matställe',
+    source: 'Foursquare',
+    distKm: distToRouteKm(r.latitude, r.longitude)
+  };
+}
+function dedupe(results){
+  const seen = new Set();
+  const out = [];
+  results.forEach(r => {
+    const key = r.fsq_place_id || r.name + r.latitude;
+    if(seen.has(key)) return;
+    seen.add(key);
+    out.push(r);
+  });
+  return out;
+}
+
+// Offset search centers roughly 30–45 km from the route (inland/off to the
+// side), NOT on-route points with a wider radius — tried that first and it
+// returned zero results, because Foursquare sorts by proximity to the search
+// point, so a bigger radius from an on-route point just returns more of the
+// same nearby places, never the far ones. Verified with a live test before
+// shipping this.
+const DETOUR_CENTERS = [
+  [57.20, 12.62], [58.60, 12.35], [59.05, 11.75], [59.75, 11.55]
+];
+
+async function fetchRestaurants(){
+  const samples = ROUTE_SAMPLE_IDX.map(i => routeCoords[i]);
+  const [nearRaw, detourRaw] = await Promise.all([
+    Promise.all(samples.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 20000, 10).catch(() => []))),
+    Promise.all(DETOUR_CENTERS.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 15000, 10).catch(() => [])))
+  ]);
+  const near = dedupe(nearRaw.flat()).map(toPoi);
+  const detourCandidates = dedupe(detourRaw.flat()).map(toPoi);
+
+  const nearRoute = near.filter(p => p.distKm <= CORRIDOR_KM).map(p => ({...p, type:'restaurant'}));
+  const worthDetour = detourCandidates.filter(p => p.distKm > 30 && p.distKm <= 50).map(p => ({...p, type:'detour'}));
+  return { nearRoute, worthDetour };
+}
+
 // ---- Riktig geocoding: Nominatim (OpenStreetMap), gratis, ingen nyckel ----
 async function geocode(query){
   const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
@@ -347,15 +408,25 @@ async function handleDrawRoute(){
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
-    setStatus('Hämtar riktiga sevärdheter (Overpass/OSM) längs korridoren …');
+    setStatus('Hämtar riktiga sevärdheter (Overpass/OSM) och matställen (Foursquare) …');
     layerGroups.sight.clearLayers();
-    const sights = await fetchRealSights();
+    layerGroups.restaurant.clearLayers();
+    layerGroups.detour.clearLayers();
+    const [sights, restaurantData] = await Promise.all([
+      fetchRealSights(),
+      fetchRestaurants().catch(err => { console.error(err); setStatus('Matställen (Foursquare) gick inte att hämta: ' + err.message, 'err'); return {nearRoute:[], worthDetour:[]}; })
+    ]);
+    const { nearRoute, worthDetour } = restaurantData;
     sights.forEach(addPoiMarker);
+    nearRoute.forEach(addPoiMarker);
+    worthDetour.forEach(addPoiMarker);
     document.getElementById('c-sight').textContent = sights.length;
+    document.getElementById('c-restaurant').textContent = nearRoute.length;
+    document.getElementById('c-detour').textContent = worthDetour.length;
 
-    allPois = [...sights, ...mockPois];
+    allPois = [...sights, ...mockPois, ...nearRoute, ...worthDetour];
     renderStopList();
-    setStatus(`Klart. ${sights.length} riktiga sevärdheter hittades inom ${CORRIDOR_KM} km från testvägen.`, 'ok');
+    setStatus(`Klart. ${sights.length} sevärdheter, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
   } catch(err){
     console.error(err);
     setStatus('Något gick fel mot en extern källa: ' + err.message, 'err');
@@ -364,10 +435,10 @@ async function handleDrawRoute(){
   }
 }
 
-// ---- Init: ladda testdata direkt, hämta riktiga sevärdheter automatiskt vid start ----
+// ---- Init: ladda laddstations-testdata direkt, hämta allt riktigt (sevärdheter +
+// matställen) automatiskt vid start ----
 mockPois.forEach(addPoiMarker);
 document.getElementById('c-charger').textContent = mockPois.filter(p=>p.type==='charger').length;
-document.getElementById('c-restaurant').textContent = mockPois.filter(p=>p.type==='restaurant').length;
 allPois = [...mockPois];
 renderStopList();
 handleDrawRoute();
