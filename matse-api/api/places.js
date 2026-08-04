@@ -23,6 +23,15 @@ function setCors(req, res) {
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+  // Without this, the edge cache (see Cache-Control below) keys purely on
+  // URL — two different allowed origins hitting the same lat/lng could get
+  // served each other's cached Access-Control-Allow-Origin header, which
+  // the browser would then reject client-side (mismatched origin), causing
+  // confusing intermittent failures. Found live: an evil.example.com test
+  // request got served mat-och-se.vercel.app's cached CORS header. Not an
+  // actual data leak (the browser still enforces the header must match its
+  // own origin), but a real correctness bug for legitimate origins.
+  res.setHeader('Vary', 'Origin');
 }
 
 module.exports = async function handler(req, res) {
