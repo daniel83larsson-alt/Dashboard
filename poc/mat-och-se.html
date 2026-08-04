@@ -17,6 +17,7 @@
     --teal: #3F9C86;
     --rose: #B5495B;
     --plum: #7B4B94;
+    --blue: #3D6EA5;
     --line: rgba(255,255,255,0.10);
   }
   *{box-sizing:border-box;}
@@ -37,6 +38,19 @@
   .field label{display:block;font-size:12px;color:#AEB9BC;margin-bottom:4px;}
   .field input{width:100%;background:var(--navy-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;color:#fff;font-size:13.5px;}
   .field input::placeholder{color:#6E7C81;}
+  .autocomplete-field{position:relative;}
+  .autocomplete-field input.picked{border-color:var(--teal);}
+  .autocomplete-list{
+    position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:50;
+    background:var(--navy-2); border:1px solid var(--line); border-radius:6px;
+    max-height:240px; overflow-y:auto; box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  }
+  .autocomplete-item{padding:9px 10px; cursor:pointer; font-size:13px; color:#EDEFEA; border-bottom:1px solid var(--line);}
+  .autocomplete-item:last-child{border-bottom:none;}
+  .autocomplete-item:hover, .autocomplete-item.active{background:var(--navy);}
+  .autocomplete-item .main{font-weight:600;}
+  .autocomplete-item .sub{display:block;font-size:11px;color:#8FA0A6;margin-top:1px;}
+  .autocomplete-empty{padding:9px 10px; font-size:12.5px; color:#8FA0A6;}
   .btn{width:100%;background:var(--gold);color:#1C1404;border:none;border-radius:6px;padding:10px;font-weight:700;font-size:13.5px;cursor:pointer;letter-spacing:.01em;}
   .btn:hover{filter:brightness(1.06);}
   .btn:disabled{opacity:.55;cursor:default;filter:none;}
@@ -76,14 +90,59 @@
   .popup .sub{font-size:12px;color:var(--muted);margin:2px 0;}
   .popup .rating{color:var(--gold);font-weight:700;}
   .popup .src{font-size:10.5px;color:#9AA6A0;margin-top:6px;}
+  .popup .poi-links{display:flex;flex-wrap:wrap;gap:4px 12px;margin-top:6px;}
+  .popup .poi-link{font-size:12px;color:var(--teal);text-decoration:none;font-weight:600;}
+  .popup .poi-link:hover{text-decoration:underline;}
 
   .badge-poc{position:absolute;top:16px;right:16px;background:rgba(22,35,44,0.92);color:#EDEFEA;padding:7px 12px;border-radius:8px;font-size:11.5px;z-index:1000;border:1px solid rgba(255,255,255,0.12);max-width:260px;}
   .badge-poc b{color:var(--gold);}
+
+  /* Mobil: sidopanelen blir en dold drawer istället för en fast kolumn, så
+     kartan får hela skärmen. En flytande knapp visar den igen. */
+  .mobile-toggle-btn{display:none;}
+  .sidebar-close-btn{display:none;}
+  @media (max-width: 768px){
+    #app{display:block;height:100vh;position:relative;}
+    #sidebar{
+      position:fixed; inset:0; width:100%; height:100%;
+      z-index:2000; transform:translateX(-100%);
+      transition:transform .25s ease;
+    }
+    #sidebar.open{transform:translateX(0);}
+    .map-pane{position:relative; width:100%; height:100vh;}
+    .mobile-toggle-btn{
+      display:flex; align-items:center; gap:8px;
+      position:fixed; left:16px; bottom:20px; z-index:9999;
+      background:var(--gold); color:#1C1404; border:none; border-radius:999px;
+      padding:12px 18px; font-weight:700; font-size:13.5px; cursor:pointer;
+      box-shadow:0 4px 14px rgba(0,0,0,0.3);
+    }
+    .sidebar-close-btn{
+      display:flex; align-items:center; justify-content:center;
+      position:absolute; top:20px; right:20px; z-index:10;
+      width:34px; height:34px; border-radius:50%;
+      background:var(--navy-2); border:1px solid var(--line); color:#EDEFEA;
+      font-size:16px; cursor:pointer;
+    }
+  }
+  /* BUGFIX: döljer den flytande sökknappen medan panelen är öppen. Tidigare
+     en CSS general-sibling-selektor (#sidebar.open ~ .map-pane ...) — kända
+     tillförlitlighetsproblem på iOS Safari när den kombineras med en CSS
+     transition på ett föregående syskon (precis det #sidebar har). Bytt mot
+     en enkel klass på body + descendant-selektor, som inte har samma
+     ombytlighet, istället för att försöka bevisa om det var just detta som
+     hände hos Daniel. position:fixed (inte absolute) så knappen inte kan
+     hamna fel om .map-pane någonsin scrollar eller ändrar sig.
+     z-index höjt till 9999 av samma anledning — inget tvivel kvar om att
+     något annat element (t.ex. Leaflets egna kontroller, som också
+     använder z-index:1000 som standard) kan ligga ovanpå och stjäla klick. */
+  body.sidebar-open .mobile-toggle-btn{display:none !important;}
 </style>
 </head>
 <body>
 <div id="app">
   <div id="sidebar">
+    <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Stäng och visa karta">✕</button>
     <div class="brand">
       <div class="eyebrow">Mat &amp; Se — koncept-POC v0.3</div>
       <h1>Din resa, kuraterad</h1>
@@ -92,15 +151,17 @@
 
     <div class="section">
       <h2>Resemål</h2>
-      <div class="field">
+      <div class="field autocomplete-field">
         <label>Från</label>
-        <input id="fromInput" value="Onsala, Sverige">
+        <input id="fromInput" value="Onsala, Sverige" autocomplete="off">
+        <div class="autocomplete-list" id="fromResults" hidden></div>
       </div>
-      <div class="field">
+      <div class="field autocomplete-field">
         <label>Till</label>
-        <input id="toInput" value="Oslo, Norge">
+        <input id="toInput" value="Oslo, Norge" autocomplete="off">
+        <div class="autocomplete-list" id="toResults" hidden></div>
       </div>
-      <button class="btn" id="drawBtn" onclick="handleDrawRoute()">Rita rutt &amp; hämta sevärdheter</button>
+      <button class="btn" id="drawBtn" onclick="handleDrawRoute(true)">Rita rutt &amp; hämta sevärdheter</button>
       <div class="status-line" id="statusLine">Redo. Testvägen är fast (Onsala↔Oslo) tills en riktig ruttmotor kopplas in.</div>
     </div>
 
@@ -122,7 +183,11 @@
         <span class="label"><span class="swatch" style="background:var(--plum)"></span>Värt en omväg<span class="datatag real">Riktig data</span></span>
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-detour">–</span><span class="switch on" data-layer="detour" onclick="toggleLayer(this)"></span></span>
       </div>
-      <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (Foursquares betygsdata kräver köpta krediter, se fotnoten). Just nu bara "längre bort", inte kvalitetsbedömt.</p>
+      <div class="toggle-row">
+        <span class="label"><span class="swatch" style="background:var(--blue)"></span>Ställplatser<span class="datatag real">Riktig data</span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-stallplats">–</span><span class="switch on" data-layer="stallplats" onclick="toggleLayer(this)"></span></span>
+      </div>
+      <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (Foursquares betygsdata kräver köpta krediter, se fotnoten). Ställplatser saknar också betyg — det finns inte hos någon källa vi testat, gratis eller betald. Just nu bara "hittad", inte kvalitetsbedömt.</p>
     </div>
 
     <div class="journey">
@@ -131,15 +196,16 @@
     </div>
 
     <div class="foot">
-      Sevärdheter: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
-      Adressökning: Nominatim (OSM), live, ingen nyckel krävs.<br>
+      Sevärdheter &amp; ställplatser: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
+      Adressökning: Photon (Komoot, byggt på OpenStreetMap), live förslagslista medan du skriver, ingen nyckel krävs.<br>
       Matställen &amp; "Värt en omväg": Foursquare Places, hämtas live via en liten server-proxy (matse-api) som håller nyckeln dold från den här sidan. Betyg saknas — kräver köpta Foursquare-krediter, medvetet bortvalt tills vidare.<br>
       Laddardata i skarpt läge: NOBIL (CC-BY-4.0) — väntar på registrerad API-nyckel.
     </div>
   </div>
-  <div style="position:relative;">
+  <div class="map-pane">
     <div id="map"></div>
     <div class="badge-poc">POC v0.3 — <b>sevärdheter, matställen &amp; adressökning riktiga</b> (inga betyg än), laddare fortfarande testdata</div>
+    <button class="mobile-toggle-btn" id="mobileToggleBtn" onclick="openSidebar()">🔍 Sök &amp; filter</button>
   </div>
 </div>
 
@@ -162,9 +228,9 @@ const routeCoords = [
 ];
 const CORRIDOR_KM = 15; // generösare än spec:ens 5–10 km eftersom testvägen är en gles, rak approximation av den riktiga vägen
 
-const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B', detour: '#7B4B94' };
-const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe', detour: 'Värt en omväg' };
-const GLYPHS = { sight: '✦', charger: '⚡', restaurant: '★', detour: '❖' };
+const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B', detour: '#7B4B94', stallplats: '#3D6EA5' };
+const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe', detour: 'Värt en omväg', stallplats: 'Ställplats' };
+const GLYPHS = { sight: '✦', charger: '⚡', restaurant: '★', detour: '❖', stallplats: 'Ⓟ' };
 
 // ---- Testdata: bara laddare (väntar på NOBIL-nyckel). Matställen och
 // "Värt en omväg" hämtas nu på riktigt via Foursquare, se fetchRestaurants(). ----
@@ -198,19 +264,29 @@ function makeIcon(type){
   });
 }
 
-const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map) };
+const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map), stallplats:L.layerGroup().addTo(map) };
 let allPois = []; // sights (real) + mock chargers/restaurants, once loaded
+let fromMarker = null, toMarker = null; // ersätts, inte staplas, vid varje ny sökning
 
 function addPoiMarker(p){
   const marker = L.marker([p.lat,p.lng], {icon:makeIcon(p.type)});
   const ratingHtml = p.rating ? `<span class="rating">★ ${p.rating}</span>` : '';
   const srcHtml = p.source ? `<div class="src">Källa: ${p.source}</div>` : '';
+  const telHtml = p.tel ? `<a class="poi-link" href="tel:${p.tel.replace(/\s/g,'')}">📞 ${p.tel}</a>` : '';
+  // "Läs mer" (webbsida/Wikipedia/OSM-post, beroende på vad som finns) och en
+  // Google Maps-länk alltid som extra, om de faktiskt är olika länkar —
+  // annars bara en (readMore föll redan tillbaka till mapsLink om inget
+  // bättre fanns, ingen anledning att visa exakt samma länk två gånger.
+  const readMoreHtml = p.readMore ? `<a class="poi-link" href="${p.readMore}" target="_blank" rel="noopener noreferrer">Läs mer ↗</a>` : '';
+  const mapsHtml = (p.mapsLink && p.mapsLink !== p.readMore) ? `<a class="poi-link" href="${p.mapsLink}" target="_blank" rel="noopener noreferrer">Google Maps ↗</a>` : '';
+  const linksHtml = (readMoreHtml || mapsHtml || telHtml) ? `<div class="poi-links">${readMoreHtml}${mapsHtml}${telHtml}</div>` : '';
   marker.bindPopup(`
     <div class="popup">
       <span class="tag" style="background:${COLORS[p.type]}22;color:${COLORS[p.type]};">${LABELS[p.type]}</span>
       <h3>${p.name}</h3>
       <div class="sub">${p.sub || ''}</div>
       ${ratingHtml}
+      ${linksHtml}
       ${srcHtml}
     </div>`);
   marker.addTo(layerGroups[p.type]);
@@ -221,6 +297,21 @@ function toggleLayer(el){
   const isOn = el.classList.toggle('on');
   if(isOn){ map.addLayer(layerGroups[layer]); } else { map.removeLayer(layerGroups[layer]); }
 }
+
+// ---- Mobil: sidopanelen som en dold drawer, kartan får hela skärmen när den
+// är stängd. Öppen som standard vid start (så man hinner söka/filtrera
+// innan man tittar på kartan), stängs automatiskt efter en klar sökning. ----
+const isMobile = () => window.matchMedia('(max-width: 768px)').matches;
+function openSidebar(){
+  document.getElementById('sidebar').classList.add('open');
+  document.body.classList.add('sidebar-open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.body.classList.remove('sidebar-open');
+  setTimeout(() => map.invalidateSize(), 260);
+}
+if(isMobile()) openSidebar();
 
 function renderStopList(){
   const listEl = document.getElementById('stop-list');
@@ -276,6 +367,55 @@ function routeBbox(padDeg){
     west: Math.min(...lngs)-padDeg, east: Math.max(...lngs)+padDeg
   };
 }
+// Den delade publika Overpass-instansen är gratis men kan vara långsam/överlastad
+// (sett live under utveckling: enstaka 504:or). Ett återförsök räcker i praktiken —
+// i skarpt läge bör detta cachas server-side istället för att köras live per besök.
+async function overpassQuery(query){
+  // BUGFIX: den tidigare versionen kollade bara res.ok (HTTP-felstatus) i
+  // loopen — men fetch() KASTAR (avvisar promisen) vid nätverksfel som
+  // "Load failed", istället för att returnera ett svar med ok:false. Ett
+  // sånt kast hoppade rakt förbi hela retry-loopen första gången det
+  // hände, så "återförsöket" gällde bara servrar som svarade med fel
+  // statuskod — aldrig avbrutna anslutningar, som är precis det Daniel
+  // faktiskt råkade ut för. Samma bugg som geocode() hade innan den fixen.
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch('https://overpass-api.de/api/interpreter', {
+        method: 'POST',
+        headers: { 'Accept': '*/*' },
+        body: 'data=' + encodeURIComponent(query)
+      });
+      if(!res.ok) throw new Error('Overpass svarade ' + res.status + ' (den delade instansen är ibland överlastad — testa igen om en stund)');
+      const data = await res.json();
+      return data.elements.filter(e => e.tags && e.tags.name);
+    } catch(err){
+      lastErr = err;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+    }
+  }
+  throw lastErr;
+}
+
+// "Läs mer"-länk: webbsidan om OSM-taggen har en, annars Wikipedia-artikeln
+// om den finns, annars själva OSM-posten (finns alltid) som sista utväg.
+// Plus en Google Maps-länk som alltid finns oavsett, för recensioner/bilder/
+// öppettider vi själva inte har tillgång till gratis.
+function osmLinks(e, lat, lng, name){
+  const t = e.tags || {};
+  let readMore = null;
+  if(t.website) readMore = t.website;
+  else if(t['contact:website']) readMore = t['contact:website'];
+  else if(t.wikipedia){
+    const [lang, title] = t.wikipedia.split(':');
+    readMore = `https://${lang}.wikipedia.org/wiki/${encodeURIComponent(title)}`;
+  } else {
+    readMore = `https://www.openstreetmap.org/${e.type}/${e.id}`;
+  }
+  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${lat},${lng}(${encodeURIComponent(name)})`;
+  return { readMore, mapsLink };
+}
+
 async function fetchRealSights(){
   const bb = routeBbox(0.3);
   const query = `[out:json][timeout:25];(
@@ -283,30 +423,46 @@ async function fetchRealSights(){
     node["historic"~"castle|fort|ruins|monument"](${bb.south},${bb.west},${bb.north},${bb.east});
     node["tourism"="museum"](${bb.south},${bb.west},${bb.north},${bb.east});
   );out body 200;`;
-  // Den delade publika Overpass-instansen är gratis men kan vara långsam/överlastad
-  // (sett live under utveckling: enstaka 504:or). Ett återförsök räcker i praktiken —
-  // i skarpt läge bör detta cachas server-side istället för att köras live per besök.
-  let res;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    res = await fetch('https://overpass-api.de/api/interpreter', {
-      method: 'POST',
-      headers: { 'Accept': '*/*' },
-      body: 'data=' + encodeURIComponent(query)
-    });
-    if (res.ok) break;
-    if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
-  }
-  if(!res.ok) throw new Error('Overpass svarade ' + res.status + ' (den delade instansen är ibland överlastad — testa igen om en stund)');
-  const data = await res.json();
-  const named = data.elements.filter(e => e.tags && e.tags.name);
+  const named = await overpassQuery(query);
   const withDist = named.map(e => ({
     type: 'sight',
     name: e.tags.name,
     lat: e.lat, lng: e.lon,
     sub: e.tags.historic ? ('Historisk plats · ' + e.tags.historic) : (e.tags.tourism === 'museum' ? 'Museum' : 'Sevärdhet'),
     source: 'OpenStreetMap',
-    distKm: distToRouteKm(e.lat, e.lon)
+    distKm: distToRouteKm(e.lat, e.lon),
+    ...osmLinks(e, e.lat, e.lon, e.tags.name)
   }));
+  return withDist
+    .filter(p => p.distKm <= CORRIDOR_KM)
+    .sort((a,b) => a.distKm - b.distKm)
+    .slice(0, 20);
+}
+
+// ---- Riktiga ställplatser: OpenStreetMap/Overpass, gratis, ingen nyckel ----
+// (Testat mot Foursquare också, men OSM har bättre täckning för just det här —
+// den nordiska husbils-/ställplats-communityn kartlägger flitigt — och saknar
+// betyg oavsett källa, så det förlorar man inget på.)
+async function fetchStallplatser(){
+  const bb = routeBbox(0.3);
+  const query = `[out:json][timeout:25];(
+    node["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
+    way["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
+    node["amenity"="parking"]["motorhome"="yes"](${bb.south},${bb.west},${bb.north},${bb.east});
+  );out center 100;`;
+  const named = await overpassQuery(query);
+  const withDist = named.map(e => {
+    const lat = e.lat ?? e.center?.lat, lng = e.lon ?? e.center?.lon;
+    return {
+      type: 'stallplats',
+      name: e.tags.name,
+      lat, lng,
+      sub: e.tags.fee === 'yes' ? 'Ställplats · avgift' : 'Ställplats',
+      source: 'OpenStreetMap',
+      distKm: distToRouteKm(lat, lng),
+      ...osmLinks(e, lat, lng, e.tags.name)
+    };
+  });
   return withDist
     .filter(p => p.distKm <= CORRIDOR_KM)
     .sort((a,b) => a.distKm - b.distKm)
@@ -327,12 +483,19 @@ async function fetchRestaurantsNear(lat, lng, radiusM, limit){
 }
 
 function toPoi(r){
+  // "Läs mer": webbsidan om Foursquare har en på fil, annars Google Maps.
+  // Inte Foursquares egen platssida (foursquare.com/v/{id}) — den omdirigerar
+  // till en inloggningsvägg, testat direkt, oanvändbar som publik länk.
+  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}(${encodeURIComponent(r.name)})`;
   return {
     name: r.name,
     lat: r.latitude, lng: r.longitude,
     sub: (r.categories && r.categories[0] && r.categories[0].name) || 'Matställe',
     source: 'Foursquare',
-    distKm: distToRouteKm(r.latitude, r.longitude)
+    distKm: distToRouteKm(r.latitude, r.longitude),
+    tel: r.tel || null,
+    readMore: r.website || mapsLink,
+    mapsLink
   };
 }
 function dedupe(results){
@@ -371,14 +534,105 @@ async function fetchRestaurants(){
   return { nearRoute, worthDetour };
 }
 
-// ---- Riktig geocoding: Nominatim (OpenStreetMap), gratis, ingen nyckel ----
-async function geocode(query){
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-  const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } });
-  if(!res.ok) throw new Error('Nominatim svarade ' + res.status);
-  const results = await res.json();
-  return results[0] || null;
+// ---- Riktig adressökning: Photon (Komoot, byggt på OpenStreetMap), gratis,
+// ingen nyckel. Bytte bort Nominatim för den här delen av två skäl: (1)
+// Nominatims användarvillkor avråder uttryckligen från sök-medan-du-skriver
+// mot deras publika server — Photon är byggt exakt för det. (2) Photon
+// returnerar flera träffar (så "Kyrkogatan 4" ger en lista över alla städer
+// den finns i, inte bara en gissning) — det Daniel bad om. Nominatim
+// används inte längre i klienten alls. ----
+async function photonSearch(query, limit){
+  if(!query || query.trim().length < 2) return [];
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=${limit || 6}&bbox=4,54,32,71`; // bbox ~ Norden, filtrerar bort brus från resten av världen
+  let lastErr;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    try {
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('Photon svarade ' + res.status);
+      const data = await res.json();
+      return (data.features || []).map(f => {
+        const p = f.properties;
+        const mainParts = [p.name, p.housenumber ? (p.name ? '' : '') : ''].filter(Boolean);
+        const main = p.housenumber && p.street ? `${p.street} ${p.housenumber}` : (p.street || p.name || query);
+        const subParts = [p.city || p.district, p.country].filter(Boolean);
+        return {
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+          main,
+          sub: subParts.join(', ')
+        };
+      });
+    } catch(err){
+      lastErr = err;
+      if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
+    }
+  }
+  throw lastErr;
 }
+
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// Vald koordinat per fält — sätts när användaren klickar en rad i listan,
+// nollställs så fort man skriver om (texten matchar då inte längre den
+// koordinaten). Om inget är valt när "Rita rutt" klickas görs en engångs-
+// sökning på den inskrivna texten som fallback (samma som tidigare
+// beteende, bara på Photon istället för Nominatim).
+let selectedFrom = null, selectedTo = null;
+
+function setupAutocomplete(inputId, resultsId, onSelect){
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(resultsId);
+  const run = debounce(async () => {
+    const q = input.value;
+    let results;
+    try {
+      results = await photonSearch(q, 6);
+    } catch(err){
+      list.innerHTML = `<div class="autocomplete-empty">Kunde inte söka just nu (${err.name}: ${err.message})</div>`;
+      list.hidden = false;
+      return;
+    }
+    if(!results.length){
+      list.hidden = true;
+      return;
+    }
+    list.innerHTML = results.map((r, i) =>
+      `<div class="autocomplete-item" data-i="${i}"><span class="main">${r.main}</span><span class="sub">${r.sub}</span></div>`
+    ).join('');
+    list.hidden = false;
+    list.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        const r = results[i];
+        input.value = r.sub ? `${r.main}, ${r.sub}` : r.main;
+        input.classList.add('picked');
+        list.hidden = true;
+        onSelect(r);
+      });
+    });
+  }, 350);
+  input.addEventListener('input', () => {
+    // BUGFIX: att nollställa valet låg tidigare INUTI den debounce:ade
+    // sökfunktionen (350ms fördröjning) — så precis efter man börjat skriva
+    // om stod den gamla valda koordinaten kvar som "vald" i upp till 350ms,
+    // trots att texten i fältet inte längre matchade den. Klickade man
+    // "Rita rutt" i det fönstret användes fel plats utan förvarning. Hittat
+    // genom att faktiskt mäta tajmingen, inte bara läsa koden. Nollställningen
+    // körs nu direkt vid varje tangenttryck; bara själva sökningen är
+    // debounce:ad.
+    input.classList.remove('picked');
+    onSelect(null);
+    run();
+  });
+  input.addEventListener('focus', () => { if(list.innerHTML) list.hidden = false; });
+  document.addEventListener('click', (e) => {
+    if(!input.contains(e.target) && !list.contains(e.target)) list.hidden = true;
+  });
+}
+setupAutocomplete('fromInput', 'fromResults', (r) => { selectedFrom = r; });
+setupAutocomplete('toInput', 'toResults', (r) => { selectedTo = r; });
 
 function setStatus(msg, cls){
   const el = document.getElementById('statusLine');
@@ -386,50 +640,97 @@ function setStatus(msg, cls){
   el.className = 'status-line' + (cls ? ' ' + cls : '');
 }
 
-async function handleDrawRoute(){
+async function resolveAddress(inputId, picked){
+  // Använder den valda träffen från autocomplete-listan om det finns en —
+  // ingen ny nätverksfråga alls i så fall, så det finns inget att misslyckas
+  // med. Bara om användaren inte plockade en rad (skrev och tryckte direkt
+  // på "Rita rutt") görs en engångssökning som fallback.
+  if(picked) return picked;
+  const text = document.getElementById(inputId).value;
+  const results = await photonSearch(text, 1);
+  return results[0] || null;
+}
+
+async function handleDrawRoute(userInitiated){
   const btn = document.getElementById('drawBtn');
   btn.disabled = true;
-  setStatus('Söker adresser (Nominatim) …');
+  setStatus('Söker adresser …');
+
+  // BUGFIX: geocoding och POI-hämtningen låg tidigare i SAMMA try-block, så
+  // ett geocoding-fel (t.ex. "Load failed" på ett svagt mobilnät) avbröt
+  // hela sökningen — trots att sevärdheter/ställplatser/matställen inte
+  // beror på geocoding alls (ruttlinjen är fast oavsett). Precis det Daniel
+  // beskrev: "verkar göra en del men blir problem". Geocoding körs nu i sin
+  // egen try/catch som bara visar en varning — resten kör alltid.
   try {
-    const [fromRes, toRes] = await Promise.all([
-      geocode(document.getElementById('fromInput').value),
-      geocode(document.getElementById('toInput').value)
-    ]);
+    const fromRes = await resolveAddress('fromInput', selectedFrom);
+    const toRes = await resolveAddress('toInput', selectedTo);
     if(!fromRes || !toRes){
       setStatus('Kunde inte hitta en av adresserna. Testvägen (Onsala↔Oslo) visas ändå.', 'err');
     } else {
-      setStatus(`Hittade: ${fromRes.display_name.split(',')[0]} → ${toRes.display_name.split(',')[0]}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
-      // Rita om markörer för start/mål på de riktiga geocodade punkterna, men behåll
-      // testvägens linjeform (ingen riktig ruttmotor inkopplad än).
-      L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.display_name.split(',')[0]);
-      L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.display_name.split(',')[0]);
+      setStatus(`Hittade: ${fromRes.main} → ${toRes.main}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
+      // Rita om markörer för start/mål på de riktiga punkterna, men behåll
+      // testvägens linjeform (ingen riktig ruttmotor inkopplad än). Tar bort
+      // föregående söknings markörer först — annars staplas de upp för varje
+      // sökning istället för att ersättas.
+      if(fromMarker) map.removeLayer(fromMarker);
+      if(toMarker) map.removeLayer(toMarker);
+      fromMarker = L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.main);
+      toMarker = L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.main);
     }
+  } catch(err){
+    console.error(err);
+    // Extra diagnostik i själva felmeddelandet (inte bara i konsolen, som
+    // ingen utanför utvecklarläget ser) — nästa skärmdump ska ge oss mer än
+    // bara "Load failed" att gå på: felets typ (nätverksfel vs. ett svar
+    // servern faktiskt skickade), och om telefonen självt trodde sig vara
+    // online när det hände.
+    const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : 'okänt';
+    setStatus(`Kunde inte söka adresser just nu (${err.name}: ${err.message}, uppkoppling enligt telefonen: ${online}). Testvägen (Onsala↔Oslo) visas ändå — hämtar sevärdheter och matställen.`, 'err');
+  }
 
+  try {
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
-    setStatus('Hämtar riktiga sevärdheter (Overpass/OSM) och matställen (Foursquare) …');
+    setStatus('Hämtar riktiga sevärdheter, ställplatser (Overpass/OSM) och matställen (Foursquare) …');
     layerGroups.sight.clearLayers();
     layerGroups.restaurant.clearLayers();
     layerGroups.detour.clearLayers();
-    const [sights, restaurantData] = await Promise.all([
-      fetchRealSights(),
+    layerGroups.stallplats.clearLayers();
+    // BUGFIX: fetchRealSights() saknade en .catch() här, till skillnad från de
+    // andra två — så ett enda Overpass-hack (samma delade, ibland överlastade
+    // publika server som redan gett en riktig 504 under den här sessionen)
+    // kastade hela Promise.all, och slängde bort ställplatser/matställen-data
+    // som annars hade lyckats. Exakt samma buggmönster som geocoding-kopplingen
+    // hade — borde sökt igenom alla tre anropen efter samma sak då, inte bara
+    // fixat den ena platsen som rapporterades.
+    const [sights, stallplatser, restaurantData] = await Promise.all([
+      fetchRealSights().catch(err => { console.error(err); setStatus('Sevärdheter (Overpass) gick inte att hämta: ' + err.message, 'err'); return []; }),
+      fetchStallplatser().catch(err => { console.error(err); return []; }),
       fetchRestaurants().catch(err => { console.error(err); setStatus('Matställen (Foursquare) gick inte att hämta: ' + err.message, 'err'); return {nearRoute:[], worthDetour:[]}; })
     ]);
     const { nearRoute, worthDetour } = restaurantData;
     sights.forEach(addPoiMarker);
+    stallplatser.forEach(addPoiMarker);
     nearRoute.forEach(addPoiMarker);
     worthDetour.forEach(addPoiMarker);
     document.getElementById('c-sight').textContent = sights.length;
+    document.getElementById('c-stallplats').textContent = stallplatser.length;
     document.getElementById('c-restaurant').textContent = nearRoute.length;
     document.getElementById('c-detour').textContent = worthDetour.length;
 
-    allPois = [...sights, ...mockPois, ...nearRoute, ...worthDetour];
+    allPois = [...sights, ...stallplatser, ...mockPois, ...nearRoute, ...worthDetour];
     renderStopList();
-    setStatus(`Klart. ${sights.length} sevärdheter, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
+    setStatus(`Klart. ${sights.length} sevärdheter, ${stallplatser.length} ställplatser, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
+    // Sök → dölj panelen → visa kartan, som Daniel bad om. Bara vid en
+    // användarinitierad sökning, inte vid den automatiska start-hämtningen —
+    // annars blinkar panelen upp och stängs igen direkt vid sidladdning.
+    if(userInitiated && isMobile()) closeSidebar();
   } catch(err){
     console.error(err);
-    setStatus('Något gick fel mot en extern källa: ' + err.message, 'err');
+    const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : 'okänt';
+    setStatus(`Något gick fel mot en extern källa: ${err.name}: ${err.message} (uppkoppling enligt telefonen: ${online})`, 'err');
   } finally {
     btn.disabled = false;
   }
