@@ -540,7 +540,13 @@ async function handleDrawRoute(userInitiated){
     }
   } catch(err){
     console.error(err);
-    setStatus('Kunde inte söka adresser just nu (' + err.message + '). Testvägen (Onsala↔Oslo) visas ändå — hämtar sevärdheter och matställen.', 'err');
+    // Extra diagnostik i själva felmeddelandet (inte bara i konsolen, som
+    // ingen utanför utvecklarläget ser) — nästa skärmdump ska ge oss mer än
+    // bara "Load failed" att gå på: felets typ (nätverksfel vs. ett svar
+    // servern faktiskt skickade), och om telefonen självt trodde sig vara
+    // online när det hände.
+    const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : 'okänt';
+    setStatus(`Kunde inte söka adresser just nu (${err.name}: ${err.message}, uppkoppling enligt telefonen: ${online}). Testvägen (Onsala↔Oslo) visas ändå — hämtar sevärdheter och matställen.`, 'err');
   }
 
   try {
@@ -576,7 +582,8 @@ async function handleDrawRoute(userInitiated){
     if(userInitiated && isMobile()) closeSidebar();
   } catch(err){
     console.error(err);
-    setStatus('Något gick fel mot en extern källa: ' + err.message, 'err');
+    const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : 'okänt';
+    setStatus(`Något gick fel mot en extern källa: ${err.name}: ${err.message} (uppkoppling enligt telefonen: ${online})`, 'err');
   } finally {
     btn.disabled = false;
   }
