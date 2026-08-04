@@ -38,6 +38,19 @@
   .field label{display:block;font-size:12px;color:#AEB9BC;margin-bottom:4px;}
   .field input{width:100%;background:var(--navy-2);border:1px solid var(--line);border-radius:6px;padding:9px 10px;color:#fff;font-size:13.5px;}
   .field input::placeholder{color:#6E7C81;}
+  .autocomplete-field{position:relative;}
+  .autocomplete-field input.picked{border-color:var(--teal);}
+  .autocomplete-list{
+    position:absolute; left:0; right:0; top:calc(100% + 4px); z-index:50;
+    background:var(--navy-2); border:1px solid var(--line); border-radius:6px;
+    max-height:240px; overflow-y:auto; box-shadow:0 8px 20px rgba(0,0,0,0.4);
+  }
+  .autocomplete-item{padding:9px 10px; cursor:pointer; font-size:13px; color:#EDEFEA; border-bottom:1px solid var(--line);}
+  .autocomplete-item:last-child{border-bottom:none;}
+  .autocomplete-item:hover, .autocomplete-item.active{background:var(--navy);}
+  .autocomplete-item .main{font-weight:600;}
+  .autocomplete-item .sub{display:block;font-size:11px;color:#8FA0A6;margin-top:1px;}
+  .autocomplete-empty{padding:9px 10px; font-size:12.5px; color:#8FA0A6;}
   .btn{width:100%;background:var(--gold);color:#1C1404;border:none;border-radius:6px;padding:10px;font-weight:700;font-size:13.5px;cursor:pointer;letter-spacing:.01em;}
   .btn:hover{filter:brightness(1.06);}
   .btn:disabled{opacity:.55;cursor:default;filter:none;}
@@ -135,13 +148,15 @@
 
     <div class="section">
       <h2>Resemål</h2>
-      <div class="field">
+      <div class="field autocomplete-field">
         <label>Från</label>
-        <input id="fromInput" value="Onsala, Sverige">
+        <input id="fromInput" value="Onsala, Sverige" autocomplete="off">
+        <div class="autocomplete-list" id="fromResults" hidden></div>
       </div>
-      <div class="field">
+      <div class="field autocomplete-field">
         <label>Till</label>
-        <input id="toInput" value="Oslo, Norge">
+        <input id="toInput" value="Oslo, Norge" autocomplete="off">
+        <div class="autocomplete-list" id="toResults" hidden></div>
       </div>
       <button class="btn" id="drawBtn" onclick="handleDrawRoute(true)">Rita rutt &amp; hämta sevärdheter</button>
       <div class="status-line" id="statusLine">Redo. Testvägen är fast (Onsala↔Oslo) tills en riktig ruttmotor kopplas in.</div>
@@ -179,7 +194,7 @@
 
     <div class="foot">
       Sevärdheter &amp; ställplatser: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
-      Adressökning: Nominatim (OSM), live, ingen nyckel krävs.<br>
+      Adressökning: Photon (Komoot, byggt på OpenStreetMap), live förslagslista medan du skriver, ingen nyckel krävs.<br>
       Matställen &amp; "Värt en omväg": Foursquare Places, hämtas live via en liten server-proxy (matse-api) som håller nyckeln dold från den här sidan. Betyg saknas — kräver köpta Foursquare-krediter, medvetet bortvalt tills vidare.<br>
       Laddardata i skarpt läge: NOBIL (CC-BY-4.0) — väntar på registrerad API-nyckel.
     </div>
@@ -479,21 +494,34 @@ async function fetchRestaurants(){
   return { nearRoute, worthDetour };
 }
 
-// ---- Riktig geocoding: Nominatim (OpenStreetMap), gratis, ingen nyckel ----
-async function geocode(query){
-  const url = 'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
-  // Ett återförsök, samma mönster som Overpass-anropen. Motiverat live: en
-  // användare på svagt mobilnät (2 staplar, nästan tom batteri, sett på
-  // skärmdump) fick "Load failed" — WebKits generiska nätverksfel för en
-  // avbruten anslutning, inte något servern skickade tillbaka. Ett enda
-  // tillfälligt tapp ska inte döda hela sökningen.
+// ---- Riktig adressökning: Photon (Komoot, byggt på OpenStreetMap), gratis,
+// ingen nyckel. Bytte bort Nominatim för den här delen av två skäl: (1)
+// Nominatims användarvillkor avråder uttryckligen från sök-medan-du-skriver
+// mot deras publika server — Photon är byggt exakt för det. (2) Photon
+// returnerar flera träffar (så "Kyrkogatan 4" ger en lista över alla städer
+// den finns i, inte bara en gissning) — det Daniel bad om. Nominatim
+// används inte längre i klienten alls. ----
+async function photonSearch(query, limit){
+  if(!query || query.trim().length < 2) return [];
+  const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=${limit || 6}&bbox=4,54,32,71`; // bbox ~ Norden, filtrerar bort brus från resten av världen
   let lastErr;
   for (let attempt = 0; attempt < 2; attempt++) {
     try {
-      const res = await fetch(url, { headers: { 'Accept-Language': 'sv' } });
-      if(!res.ok) throw new Error('Nominatim svarade ' + res.status);
-      const results = await res.json();
-      return results[0] || null;
+      const res = await fetch(url);
+      if(!res.ok) throw new Error('Photon svarade ' + res.status);
+      const data = await res.json();
+      return (data.features || []).map(f => {
+        const p = f.properties;
+        const mainParts = [p.name, p.housenumber ? (p.name ? '' : '') : ''].filter(Boolean);
+        const main = p.housenumber && p.street ? `${p.street} ${p.housenumber}` : (p.street || p.name || query);
+        const subParts = [p.city || p.district, p.country].filter(Boolean);
+        return {
+          lat: f.geometry.coordinates[1],
+          lon: f.geometry.coordinates[0],
+          main,
+          sub: subParts.join(', ')
+        };
+      });
     } catch(err){
       lastErr = err;
       if (attempt === 0) await new Promise(r => setTimeout(r, 1000));
@@ -502,16 +530,91 @@ async function geocode(query){
   throw lastErr;
 }
 
+function debounce(fn, ms){
+  let t;
+  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+}
+
+// Vald koordinat per fält — sätts när användaren klickar en rad i listan,
+// nollställs så fort man skriver om (texten matchar då inte längre den
+// koordinaten). Om inget är valt när "Rita rutt" klickas görs en engångs-
+// sökning på den inskrivna texten som fallback (samma som tidigare
+// beteende, bara på Photon istället för Nominatim).
+let selectedFrom = null, selectedTo = null;
+
+function setupAutocomplete(inputId, resultsId, onSelect){
+  const input = document.getElementById(inputId);
+  const list = document.getElementById(resultsId);
+  const run = debounce(async () => {
+    const q = input.value;
+    let results;
+    try {
+      results = await photonSearch(q, 6);
+    } catch(err){
+      list.innerHTML = `<div class="autocomplete-empty">Kunde inte söka just nu (${err.name}: ${err.message})</div>`;
+      list.hidden = false;
+      return;
+    }
+    if(!results.length){
+      list.hidden = true;
+      return;
+    }
+    list.innerHTML = results.map((r, i) =>
+      `<div class="autocomplete-item" data-i="${i}"><span class="main">${r.main}</span><span class="sub">${r.sub}</span></div>`
+    ).join('');
+    list.hidden = false;
+    list.querySelectorAll('.autocomplete-item').forEach((el, i) => {
+      el.addEventListener('click', () => {
+        const r = results[i];
+        input.value = r.sub ? `${r.main}, ${r.sub}` : r.main;
+        input.classList.add('picked');
+        list.hidden = true;
+        onSelect(r);
+      });
+    });
+  }, 350);
+  input.addEventListener('input', () => {
+    // BUGFIX: att nollställa valet låg tidigare INUTI den debounce:ade
+    // sökfunktionen (350ms fördröjning) — så precis efter man börjat skriva
+    // om stod den gamla valda koordinaten kvar som "vald" i upp till 350ms,
+    // trots att texten i fältet inte längre matchade den. Klickade man
+    // "Rita rutt" i det fönstret användes fel plats utan förvarning. Hittat
+    // genom att faktiskt mäta tajmingen, inte bara läsa koden. Nollställningen
+    // körs nu direkt vid varje tangenttryck; bara själva sökningen är
+    // debounce:ad.
+    input.classList.remove('picked');
+    onSelect(null);
+    run();
+  });
+  input.addEventListener('focus', () => { if(list.innerHTML) list.hidden = false; });
+  document.addEventListener('click', (e) => {
+    if(!input.contains(e.target) && !list.contains(e.target)) list.hidden = true;
+  });
+}
+setupAutocomplete('fromInput', 'fromResults', (r) => { selectedFrom = r; });
+setupAutocomplete('toInput', 'toResults', (r) => { selectedTo = r; });
+
 function setStatus(msg, cls){
   const el = document.getElementById('statusLine');
   el.textContent = msg;
   el.className = 'status-line' + (cls ? ' ' + cls : '');
 }
 
+async function resolveAddress(inputId, picked){
+  // Använder den valda träffen från autocomplete-listan om det finns en —
+  // ingen ny nätverksfråga alls i så fall, så det finns inget att misslyckas
+  // med. Bara om användaren inte plockade en rad (skrev och tryckte direkt
+  // på "Rita rutt") görs en engångssökning som fallback.
+  if(picked) return picked;
+  const text = document.getElementById(inputId).value;
+  const results = await photonSearch(text, 1);
+  return results[0] || null;
+}
+
 async function handleDrawRoute(userInitiated){
   const btn = document.getElementById('drawBtn');
   btn.disabled = true;
-  setStatus('Söker adresser (Nominatim) …');
+  setStatus('Söker adresser …');
 
   // BUGFIX: geocoding och POI-hämtningen låg tidigare i SAMMA try-block, så
   // ett geocoding-fel (t.ex. "Load failed" på ett svagt mobilnät) avbröt
@@ -520,23 +623,20 @@ async function handleDrawRoute(userInitiated){
   // beskrev: "verkar göra en del men blir problem". Geocoding körs nu i sin
   // egen try/catch som bara visar en varning — resten kör alltid.
   try {
-    // Serialiserat, inte Promise.all — Nominatims användarvillkor tillåter max
-    // 1 förfrågan/sekund.
-    const fromRes = await geocode(document.getElementById('fromInput').value);
-    await new Promise(r => setTimeout(r, 1100));
-    const toRes = await geocode(document.getElementById('toInput').value);
+    const fromRes = await resolveAddress('fromInput', selectedFrom);
+    const toRes = await resolveAddress('toInput', selectedTo);
     if(!fromRes || !toRes){
       setStatus('Kunde inte hitta en av adresserna. Testvägen (Onsala↔Oslo) visas ändå.', 'err');
     } else {
-      setStatus(`Hittade: ${fromRes.display_name.split(',')[0]} → ${toRes.display_name.split(',')[0]}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
-      // Rita om markörer för start/mål på de riktiga geocodade punkterna, men behåll
+      setStatus(`Hittade: ${fromRes.main} → ${toRes.main}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
+      // Rita om markörer för start/mål på de riktiga punkterna, men behåll
       // testvägens linjeform (ingen riktig ruttmotor inkopplad än). Tar bort
       // föregående söknings markörer först — annars staplas de upp för varje
       // sökning istället för att ersättas.
       if(fromMarker) map.removeLayer(fromMarker);
       if(toMarker) map.removeLayer(toMarker);
-      fromMarker = L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.display_name.split(',')[0]);
-      toMarker = L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.display_name.split(',')[0]);
+      fromMarker = L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.main);
+      toMarker = L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.main);
     }
   } catch(err){
     console.error(err);
