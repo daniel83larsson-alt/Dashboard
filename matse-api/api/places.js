@@ -3,14 +3,17 @@
 // The client (poc/mat-och-se.html, served from GitHub Pages) calls this
 // endpoint instead of Foursquare directly.
 //
-// Only ever requests "core" (free) fields — name, location, categories.
-// Deliberately never requests `rating`: that field is gated behind
-// Foursquare's paid credits on this account (confirmed directly against
-// their API), and Daniel's call was to run without ratings for now rather
-// than add billing. If that changes later, add 'rating' to FIELDS below —
-// nothing else needs to change.
-
-const FIELDS = 'name,latitude,longitude,location,categories';
+// Only ever requests "core" (free) fields. Deliberately never requests
+// `rating`, `hours`, or `description` — all three are gated behind
+// Foursquare's paid credits on this account (confirmed one field at a time
+// directly against their API: link/website/tel/fsq_place_id are free, hours
+// and description are not). Daniel's call was to run without ratings for
+// now rather than add billing — same reasoning covers hours/description.
+// website/tel are included for a "läs mer" link in the UI; note their own
+// consumer place-detail page (foursquare.com/v/{id}) redirects to a login
+// wall, so it's not used as a link target — website/tel or a generic map
+// link are used instead, built client-side.
+const FIELDS = 'name,latitude,longitude,location,categories,website,tel';
 const ALLOWED_ORIGINS = new Set([
   'https://daniel83larsson-alt.github.io',
   'https://mat-och-se.vercel.app',
