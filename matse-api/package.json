@@ -1,0 +1,6 @@
+{
+  "name": "matse-api",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Thin server-side proxy for Foursquare Places, used by poc/mat-och-se.html to keep the API key off the client."
+}
