@@ -658,8 +658,15 @@ async function handleDrawRoute(userInitiated){
     layerGroups.restaurant.clearLayers();
     layerGroups.detour.clearLayers();
     layerGroups.stallplats.clearLayers();
+    // BUGFIX: fetchRealSights() saknade en .catch() här, till skillnad från de
+    // andra två — så ett enda Overpass-hack (samma delade, ibland överlastade
+    // publika server som redan gett en riktig 504 under den här sessionen)
+    // kastade hela Promise.all, och slängde bort ställplatser/matställen-data
+    // som annars hade lyckats. Exakt samma buggmönster som geocoding-kopplingen
+    // hade — borde sökt igenom alla tre anropen efter samma sak då, inte bara
+    // fixat den ena platsen som rapporterades.
     const [sights, stallplatser, restaurantData] = await Promise.all([
-      fetchRealSights(),
+      fetchRealSights().catch(err => { console.error(err); setStatus('Sevärdheter (Overpass) gick inte att hämta: ' + err.message, 'err'); return []; }),
       fetchStallplatser().catch(err => { console.error(err); return []; }),
       fetchRestaurants().catch(err => { console.error(err); setStatus('Matställen (Foursquare) gick inte att hämta: ' + err.message, 'err'); return {nearRoute:[], worthDetour:[]}; })
     ]);
