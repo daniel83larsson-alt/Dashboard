@@ -41,19 +41,24 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const { lat, lng, radius, categories, limit } = req.query;
+  const { lat, lng, radius, query, limit } = req.query;
   if (!lat || !lng) {
     res.status(400).json({ error: 'lat and lng are required' });
     return;
   }
 
+  // Free-text query (e.g. "restaurant", "attraction") rather than numeric
+  // category IDs — tested both directly against Foursquare: the category-ID
+  // taxonomy this account's plan exposes didn't line up with search results
+  // (a restaurant category ID returned a castle and a grocery store), while
+  // `query` matched cleanly on both restaurant- and sight-type searches.
   const params = new URLSearchParams({
     ll: `${lat},${lng}`,
     radius: String(Math.min(Number(radius) || 20000, 100000)),
     limit: String(Math.min(Number(limit) || 20, 50)),
     fields: FIELDS,
   });
-  if (categories) params.set('categories', String(categories));
+  if (query) params.set('query', String(query));
 
   try {
     const fsqRes = await fetch(`https://places-api.foursquare.com/places/search?${params}`, {
