@@ -217,8 +217,37 @@ Utanför de här tre skälen används Sonnet. Gå gärna **ner** till Haiku för
 
 ---
 
+## Delat kunskap mellan sessioner
+
+Chatthistorik försvinner mellan sessioner och mellan personer — kunskapen ska inte göra det. Två dokument, utöver `STATUS.md`, håller den kvar. (Inspirerat av mönster från [mattpocock/skills](https://github.com/mattpocock/skills), anpassat till hur det här teamet faktiskt jobbar — idé för idé, inte en enda kodbas med issue-tracker.)
+
+### CONTEXT.md — projektets delade språk
+
+Varje projekt som har en `STATUS.md` får också en `CONTEXT.md` i sin rot. Den listar projektets egen jargong och nyckelbegrepp, kort — ett begrepp, en mening som förklarar det. Ingen lång dokumentation, bara det som gör att en ny session (eller en kollega) slipper återuppfinna orden, och att kod, variabelnamn och förklaringar till Daniel använder samma ord konsekvent.
+
+Exempel (från iCore-arbetet):
+- **Claim check** — eventet bär en pekare till filen, aldrig filen själv.
+- **Förädling** — steget med riktig affärslogik (beräkningar, regler), skiljt från ren fältmappning.
+- **IM-format** — det kanoniska mellanformatet alla mappningar går via.
+
+Uppdatera filen löpande när ett nytt begrepp etableras i samtalet — inte bara vid projektstart.
+
+### HANDOFF.md — vid långa sessioner eller bytt person
+
+När en session blir lång, eller arbetet ska tas över av en kollega eller en annan Claude-session, skriv ett kort handoff-dokument innan ni skiljs åt. Kompletterar `STATUS.md` (som visar *vad* som är kvar) med *varför*: vilka beslut togs och varför, vilka alternativ valdes bort och varför, vad som är i sving just nu.
+
+Kort format:
+- **Läge:** vad som är klart, vad som pågår
+- **Beslut:** de val som redan gjorts, med kort motivering — inte bara resultatet
+- **Nästa steg:** vad som konkret ska hända härnäst
+- **Öppna frågor:** det som väntar på svar från Daniel eller någon annan
+
+Spara som `HANDOFF.md` i projektroten, eller klistra in direkt om nästa person redan är i samma chatt.
+
+---
+
 ## Så här använder du den här filen i ett nytt projekt
 
 1. Klistra in hela filen som första meddelande i en ny Claude-konversation (eller spara den som `CLAUDE.md` i roten av det nya projektet — Claude Code läser den filen automatiskt).
-2. Skapa en tom `STATUS.md` i samma projekt om du vill ha samma spårbarhet som i originalprojektet.
+2. Skapa en tom `STATUS.md` och en `CONTEXT.md` i samma projekt om du vill ha samma spårbarhet och delade språk som i originalprojektet.
 3. Kalla på en roll (t.ex. "Alex:" eller "Maya: bygg en POC för...") för att komma igång.
