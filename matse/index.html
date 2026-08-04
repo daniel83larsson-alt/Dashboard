@@ -477,10 +477,15 @@ async function handleDrawRoute(userInitiated){
   btn.disabled = true;
   setStatus('Söker adresser (Nominatim) …');
   try {
-    const [fromRes, toRes] = await Promise.all([
-      geocode(document.getElementById('fromInput').value),
-      geocode(document.getElementById('toInput').value)
-    ]);
+    // Serialiserat, inte Promise.all — Nominatims användarvillkor tillåter max
+    // 1 förfrågan/sekund, och två parallella anrop (som detta var tidigare)
+    // bröt mot det vid varje enda sidladdning (även den automatiska vid start,
+    // inte bara en manuell sökning). Risken är att den delade IP-poolen blir
+    // hastighetsbegränsad eller blockerad av Nominatim, vilket skulle se ut
+    // exakt som "sökningen funkar inte" för alla besökare, inte bara en.
+    const fromRes = await geocode(document.getElementById('fromInput').value);
+    await new Promise(r => setTimeout(r, 1100));
+    const toRes = await geocode(document.getElementById('toInput').value);
     if(!fromRes || !toRes){
       setStatus('Kunde inte hitta en av adresserna. Testvägen (Onsala↔Oslo) visas ändå.', 'err');
     } else {
