@@ -233,6 +233,37 @@ Claude agerar alltid som den personen tills du byter.
 
 ---
 
+## Externa skills — referensbibliotek
+
+Daniel hittade [Matt Pococks skill-samling](https://github.com/mattpocock/skills) och bad teamet gå igenom den. Det här är **inte nya roller** och **inte nya default-beteenden** — bara namngivna tekniker som redan matchar saker vi gör, dokumenterade så att de går att kalla på explicit ("kör diagnosing-bugs på det här") när ett läge faktiskt kräver dem. Filosofin bakom dem matchar vår egen: små, sammansättningsbara, inget stelt processpaket.
+
+### Felsökning & granskning
+- **diagnosing-bugs** — strukturerad loop: återskapa → minimera → hypotes → mät/bevisa → fixa. Det vi redan gör ad hoc (t.ex. Garmin-felklassificeringen, Overpass-retry-buggen i Mat & Se), men skrivet ner som checklista. Poängen som bet oss själva en gång: "mät/bevisa" måste ske INNAN fixen skickas, inte efteråt — en retry-loop som "ser robust ut" utan ett bevis att den faktiskt fångar rätt sorts fel är inte klar.
+- **code-review** — kör granskning mot kodstandard OCH ursprunglig spec **parallellt**, inte sekventiellt. Skärper hur Riley redan jobbar.
+- **resolving-merge-conflicts** — löser git-konflikter genom att spåra vad varje sida faktiskt avsåg, inte bara vilken text som "vinner".
+
+### Planering & spec
+- **grill-with-docs** — intervjustil-planering som bygger en begreppsmodell och uppdaterar dokumentationen live under samtalet. Formaliserar Alex regel "fråga innan du antar" till en konkret intervjuprocess istället för fria följdfrågor.
+- **to-spec** — sammanfattar en diskussion till en spårbar spec. Passar när en idé (som Mat & Se) växer från lös konversation till ett dokument värt att bygga mot.
+- **to-tickets** — bryter en plan i "tracer bullet"-tickets med beroenden mellan dem. Relevant när Chris ska ta en validerad POC till produkt (steg 4 i Arbetsflödet).
+- **implement** — kör en spec med TDD + inbyggd kodgranskning i samma flöde. Chris kan kalla på det här specifikt för DL Trainer-backend där testsviter redan finns.
+- **wayfinder** — planerar stort arbete som spänner över flera sessioner som en "investigation map" istället för en enda lista. Värt att ha till hands för längre resor som DL Trainer eller Mat & Se, där kontext annars måste återuppbyggas varje session.
+- **improve-codebase-architecture** — genererar en HTML-rapport över arkitektoniska svagheter. Ett konkret verktyg Sam kan använda istället för att bara anteckna teknisk skuld i löptext.
+
+### Multi-session & överlämning
+- **handoff** — skriver en överlämningstext till nästa agent/session. Kompletterar `STATUS.md` (som redan är Alex ansvar) snarare än ersätter den — särskilt användbart när en session hoppar mellan flera orelaterade projekt i rad, som idag (Kökets nycklar → DL Trainer → Mat & Se).
+- **teach** — instruerar över flera sessioner när något behöver läras in stegvis snarare än förklaras en gång.
+
+### Reflektion & intervjuteknik
+- **grill-me** — djupintervju om ett beslut eller en plan innan den låses fast. Kan användas av Alex vid större vägval, likt hur Retro redan ställer en enda skarp fråga efter ett bygge.
+- **domain-modeling** / **codebase-design** — tekniker Sam redan i praktiken tillämpar (begreppsmodeller, djupa moduler) men nu med namn att referera till.
+- **prototype** — namnet på det Maya redan gör (kasta-bort-prototyper för att validera design) — ingen ny teknik, bara samma sak dokumenterad hos Matt Pocock också.
+- **writing-great-skills** — referens för hur man skriver en bra skill, om vi någon gång vill paketera något eget team-specifikt (t.ex. "kör Robins modellval" eller "kör Noas loop-checklista") som en riktig Claude-skill istället för bara en rad i den här filen.
+
+**Aktivera:** Nämn skillnamnet direkt ("kör diagnosing-bugs på det här felet") när ett läge matchar. Ingen av rollerna ovan behöver byta arbetssätt som standard bara för att de här finns dokumenterade.
+
+---
+
 ## Regler för teamet
 
 - **Förklara enkelt.** Daniel är inte teknisk – undvik jargong utan förklaring.
