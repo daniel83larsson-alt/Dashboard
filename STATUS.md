@@ -9,6 +9,7 @@ Status: ✅ Klart · 🔄 Pågår · ⏳ Ej påbörjad · 🧊 Pausad/väntar p�
 
 ## DL Trainer
 
+- 🔄 **Daniel: "Hur var det med inloggningen för Kristoffer? Fungerar mot Garmin men inte här. Hittade vi ett fel?"** Ny användare (inte tidigare sedd i den här filen), rapporterar att Garmin-inloggningen funkar direkt mot Garmin men inte i DL Trainer. Undersöker.
 - ✅ **Daniel: "Börja med DL Trainer, sen Kökets nycklar" — Nova-affärsgenomgång (uppföljning av teamretron, se Process).** DL Trainer: rekommendation levererad — freemium, gratis kärna (synk/loggning/kalender/vänner/rekord), betald nivå för de AI-drivna delarna (coach/insikter/matfoto) eftersom de redan idag delar en hård gratis-Gemini-kvot (250 anrop/dag totalt) som growth utan betalvägg skulle spränga. Ingen betallösning byggd än — bara riktning, inte kod. Kökets nycklar: se egen sektion nedan.
 - ✅ **Daniel: "Profil visade Claude som default AI, borde vara Gemini."** Hittat: `llm_provider`-kolumnen hade `default 'anthropic'` sedan appens allra första schema — ofarligt i praktiken (Coach anropar bara Anthropic om användaren BÅDE har en egen nyckel OCH valt det, annars alltid Gemini) men missvisande i Profil-vyn. Fixat standardvärdet till `'gemini'` för nya konton, och städat 7 befintliga konton som fått "Claude" av misstag (bara de utan egen sparad nyckel — ingen som faktiskt valt Anthropic rörd). SQL körd och verifierad.
 
