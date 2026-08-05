@@ -1,0 +1,127 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../../layouts/Base.astro';
+import { delaFetstil } from '../../../lib/markdown-bold';
+import {
+  genereraRecipeJsonLd,
+  genereraBreadcrumbJsonLd,
+} from '../../../lib/recipe-schema';
+
+export async function getStaticPaths() {
+  const ratterList = await getCollection('ratter');
+  const kokList = await getCollection('kok');
+  const kokById = new Map(kokList.map((k) => [k.id, k]));
+
+  return ratterList.map((ratt) => {
+    const landSlug = ratt.data.land.id;
+    const rattSlug = ratt.id.split('--').slice(1).join('--');
+    const kok = kokById.get(landSlug);
+    if (!kok) {
+      throw new Error(`Byggfel: rätten "${ratt.id}" refererar till okänt kök "${landSlug}".`);
+    }
+    let crossLinkKok = null;
+    if (ratt.data.crossLink) {
+      crossLinkKok = kokById.get(ratt.data.crossLink.land.id) ?? null;
+    }
+    return {
+      params: { land: landSlug, ratt: rattSlug },
+      props: { ratt, kok, crossLinkKok },
+    };
+  });
+}
+
+const { ratt, kok, crossLinkKok } = Astro.props;
+const d = ratt.data;
+const rattSlug = ratt.id.split('--').slice(1).join('--');
+const canonical = `/${kok.data.slug}/${rattSlug}/`;
+
+const typLabel = d.typ === 'brod' ? 'Bröd' : d.typ === 'kebab' ? 'Kebab' : 'Huvudrätt';
+
+const jsonLd = [
+  genereraRecipeJsonLd(ratt, kok),
+  genereraBreadcrumbJsonLd([
+    { namn: 'Hem', url: '/' },
+    { namn: kok.data.land, url: `/${kok.data.slug}/` },
+    { namn: d.titel, url: canonical },
+  ]),
+];
+---
+<Base
+  title={`${d.titel} — recept från ${kok.data.land} | Kökets nycklar`}
+  description={d.teaser}
+  canonical={canonical}
+  ogImage={d.bild.fil}
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span>
+    <a href={`/${kok.data.slug}/`}>{kok.data.land}</a><span class="sep">/</span>
+    <span aria-current="page">{d.titel}</span>
+  </nav>
+
+  <article class="recept-single">
+    <div>
+      <span class:list={['d-country', kok.data.tema]}>{kok.data.land} · {typLabel}</span>
+      <h1 class="d-title">{d.titel}</h1>
+      <p class="d-teaser">{d.teaser}</p>
+      <figure class="shot" style="margin-top:1.25rem">
+        <img
+          src={d.bild.fil}
+          width="1600"
+          height="1200"
+          loading="eager"
+          fetchpriority="high"
+          alt={d.bild.alt}
+          style="width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;border:1px solid rgba(242,239,230,.3)"
+        />
+        <figcaption class="bildkredit">
+          Foto: {d.bild.upphovsman} · {d.bild.licens} · <a href={d.bild.kalla} target="_blank" rel="noopener noreferrer">Wikimedia Commons</a>
+        </figcaption>
+      </figure>
+
+      <div class="d-block">
+        <h4>Tid</h4>
+        <p>{d.tidText}</p>
+      </div>
+
+      {crossLinkKok && d.crossLink && (
+        <div class="crosslink-box">
+          {d.crossLink.notis} <a href={`/${crossLinkKok.data.slug}/`}>Se {crossLinkKok.data.land} →</a>
+        </div>
+      )}
+    </div>
+
+    <div>
+      <div class="d-block" style="margin-top:0">
+        <h4>Ingredienser</h4>
+        <ul class="ing-list">
+          {d.ingredienser.map((ing) => (
+            <li><span>{ing.namn}</span>{ing.mangd && <span class="amt">{ing.mangd}</span>}</li>
+          ))}
+        </ul>
+      </div>
+
+      <div class="d-block">
+        <h4>Gör så här</h4>
+        <ol class="steps-list">
+          {d.steg.map((steg) => (
+            <li>{delaFetstil(steg).map((del) => (del.fet ? <b>{del.text}</b> : del.text))}</li>
+          ))}
+        </ol>
+      </div>
+
+      {d.protein && (
+        <div class="d-block">
+          <h4>Byt protein</h4>
+          <div class="swap" style="border-top:none;padding-top:0;margin-top:0">
+            <p><b style="font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:.35rem;opacity:.85">Kött</b>{d.protein.kott}</p>
+            <p style="margin-top:.85rem"><b style="font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:.35rem;opacity:.85">Fisk</b>{d.protein.fisk}</p>
+            <p style="margin-top:.85rem"><b style="font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.14em;text-transform:uppercase;display:block;margin-bottom:.35rem;opacity:.85">Vegetariskt</b>{d.protein.veg}</p>
+          </div>
+        </div>
+      )}
+
+      <p class="tip">{d.tips}</p>
+    </div>
+  </article>
+</Base>

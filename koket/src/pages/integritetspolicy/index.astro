@@ -1,0 +1,45 @@
+---
+import Base from '../../layouts/Base.astro';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Integritetspolicy', url: '/integritetspolicy/' },
+]);
+const uppdaterad = '5 augusti 2026';
+---
+<Base
+  title="Integritetspolicy | Kökets nycklar"
+  description="Vilka uppgifter Kökets nycklar samlar in — och vilka vi inte samlar in. Ingen inloggning, inga konton, ingen persondata utöver vanliga serverloggar hos driftleverantören."
+  canonical="/integritetspolicy/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Integritetspolicy</span>
+  </nav>
+
+  <div class="statisksida">
+    <h1>Integritetspolicy</h1>
+    <p>Senast uppdaterad: {uppdaterad}</p>
+
+    <p>Kökets nycklar är en receptsajt utan konton, inloggning eller formulär som samlar in personuppgifter. Den här sidan beskriver vad som faktiskt sker med data när du besöker sajten.</p>
+
+    <h2>Vad vi samlar in</h2>
+    <p>Vi samlar i dagsläget inte in några personuppgifter direkt via sajten — det finns inga konton, inga formulär utöver en mejllänk på kontaktsidan, och ingen inloggning.</p>
+
+    <h2>Driftleverantör</h2>
+    <p>Sajten driftas som en statisk webbplats hos Vercel. Som alla webbservrar kan Vercel föra grundläggande tekniska driftloggar (t.ex. IP-adress, tidpunkt och vilken sida som anropades) för att sajten ska fungera, hållas säker och kunna felsökas. Det här är standardbeteende hos i princip alla webbhotell och sker oavsett vilken sajt som driftas där — vi har inte lagt till någon egen insamling utöver det.</p>
+
+    <h2>Om du mejlar oss</h2>
+    <p>Skickar du ett mejl via adressen på <a href="/kontakt/">kontaktsidan</a> hanterar vi din mejladress och det du skriver enbart för att kunna svara dig. Vi säljer eller delar aldrig den informationen vidare.</p>
+
+    <h2>Cookies</h2>
+    <p>Se vår separata <a href="/cookies/">cookiepolicy</a> för exakt vad som gäller där.</p>
+
+    <h2>Dina rättigheter</h2>
+    <p>Eftersom vi inte samlar in eller lagrar personuppgifter om besökare i någon databas finns det i normalfallet ingenting att begära utdrag av eller radering av. Har du ändå frågor om hur vi hanterar information om dig, kontakta oss via <a href="/kontakt/">kontaktsidan</a>.</p>
+
+    <h2>Ändringar</h2>
+    <p>Om vi längre fram lägger till funktioner som samlar in mer data (till exempel annonsering eller ett konto-system) uppdaterar vi den här policyn i god tid och beskriver exakt vad som ändras.</p>
+  </div>
+</Base>

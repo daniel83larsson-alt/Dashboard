@@ -1,0 +1,51 @@
+---
+import Base from '../../layouts/Base.astro';
+import data from '../../data/kryddor.json';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Kryddor', url: '/kryddor/' },
+]);
+---
+<Base
+  title="Kryddor — elva kryddor som håller ihop arton kök | Kökets nycklar"
+  description="Samma elva kryddor som håller ihop de arton köken — sorterade efter vad de faktiskt gör i grytan: bas, hetta, rök och färg, eller finish och syra."
+  canonical="/kryddor/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Kryddor</span>
+  </nav>
+
+  <section class="pantry">
+    <div class="pantry-inner">
+      <h1 style="font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem">Kryddor</h1>
+      <p class="lead">Samma elva kryddor som håller ihop de arton köken — men sorterade efter vad de faktiskt gör i grytan, inte efter hur många kök som råkar använda dem.</p>
+
+      {data.grupper.map((grupp) => (
+        <>
+          <h3>{grupp.rubrik}</h3>
+          <ul class="plist">
+            {grupp.varor.map((vara, i) => (
+              <li>
+                <span class="n">{String(i + 1).padStart(2, '0')}</span>
+                <span style="flex:1;min-width:11rem">
+                  <span class="b">{vara.namn}{vara.tier && <span class="tier">{vara.tier}</span>}</span>
+                  <span class="d">{vara.beskrivning}</span>
+                </span>
+                <span class="u">{vara.kok}</span>
+                <span class="h">{vara.hallbarhet}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+
+      <p class="lead" style="margin-top:2rem">
+        Fler har du redan lärt dig i de enskilda köken — svartpeppar, lagerblad, kanel i övrigt.
+        De elva ovan är de som annars är lätta att missa, men som gör mest skillnad.
+      </p>
+    </div>
+  </section>
+</Base>

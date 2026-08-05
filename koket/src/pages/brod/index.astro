@@ -1,0 +1,51 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { genereraBreadcrumbJsonLd, genereraItemListJsonLd } from '../../lib/recipe-schema';
+
+const alla = await getCollection('ratter');
+const brod = alla.filter((r) => r.data.typ === 'brod').sort((a, b) => a.data.ordning - b.data.ordning);
+const kokList = await getCollection('kok');
+const kokById = new Map(kokList.map((k) => [k.id, k]));
+
+const jsonLd = [
+  genereraBreadcrumbJsonLd([{ namn: 'Hem', url: '/' }, { namn: 'Bröd', url: '/brod/' }]),
+  genereraItemListJsonLd(
+    'Bröd',
+    brod.map((r) => ({ namn: r.data.titel, url: `/${r.data.land.id}/${r.id.split('--').slice(1).join('--')}/` })),
+  ),
+];
+---
+<Base
+  title="Bröd — sex bröd från arton kök | Kökets nycklar"
+  description="Sex bröd som hör hemma i köken på den här sajten och går att göra hemma utan bageriutrustning — focaccia, pitabröd, tortillas, naan, lantbröd och injera."
+  canonical="/brod/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Bröd</span>
+  </nav>
+
+  <section class="breadsection">
+    <div class="breadsection-inner">
+      <h1 style="font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem">Bröd</h1>
+      <p class="lead">Sex bröd som hör hemma i de kök som redan finns här — och som går att göra hemma utan bageriutrustning. Injera är undantaget: den kräver några dagars planering, resten är samma dag. Varje recept lever på sitt lands egen sida — länkarna nedan tar dig dit.</p>
+      <div class="bread-grid">
+        {brod.map((r) => {
+          const kok = kokById.get(r.data.land.id);
+          const slug = r.id.split('--').slice(1).join('--');
+          return (
+            <a class="dish bread-card" href={`/${r.data.land.id}/${slug}/`} style="color:inherit;text-decoration:none;display:block">
+              <div class="dish-head"><h3>{r.data.titel}</h3><span class="mins">{r.data.tidText}</span></div>
+              <p class="flag" style="margin:.3rem 0 0">{kok?.data.land}</p>
+              <figure class="dish-shot">
+                <img src={r.data.bild.fil} width="1600" height="1000" loading="lazy" alt={r.data.bild.alt} />
+              </figure>
+              <p class="dish-teaser">{r.data.teaser}</p>
+            </a>
+          );
+        })}
+      </div>
+    </div>
+  </section>
+</Base>

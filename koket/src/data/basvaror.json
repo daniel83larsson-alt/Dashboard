@@ -1,0 +1,247 @@
+{
+  "grupper": [
+    {
+      "rubrik": "Flaskor och burkar",
+      "varor": [
+        {
+          "namn": "Ljus soja",
+          "tier": "Först",
+          "beskrivning": "Japan, Korea, Kina, Vietnam. Köp en bra.",
+          "kok": "4 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Fisksås",
+          "tier": "Först",
+          "beskrivning": "Thailand, Vietnam, Korea — och i smyg i varje tomatsås.",
+          "kok": "4 kök",
+          "hallbarhet": "3 år"
+        },
+        {
+          "namn": "Sesamolja, rostad",
+          "tier": "Först",
+          "beskrivning": "Korea, Kina, Japan. Alltid finish, aldrig stekning.",
+          "kok": "3 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Tahini",
+          "tier": null,
+          "beskrivning": "Mellanöstern och Turkiet. Sås med bara citron och vatten.",
+          "kok": "2 kök",
+          "hallbarhet": "6 mån"
+        },
+        {
+          "namn": "Dijonsenap",
+          "tier": null,
+          "beskrivning": "Frankrike och Baltikum. Räddar varje dressing och pannsås.",
+          "kok": "2 kök",
+          "hallbarhet": "1 år i kyl"
+        },
+        {
+          "namn": "Miso, ljus",
+          "tier": null,
+          "beskrivning": "Japan. Men går även i smör, dressing och pastasås.",
+          "kok": "1 kök",
+          "hallbarhet": "1 år i kyl"
+        },
+        {
+          "namn": "Gochujang",
+          "tier": null,
+          "beskrivning": "Korea. En sked ersätter fyra andra ingredienser.",
+          "kok": "1 kök",
+          "hallbarhet": "1 år i kyl"
+        },
+        {
+          "namn": "Chiliolja med krisp",
+          "tier": null,
+          "beskrivning": "Kina. Ovanpå ägg, nudlar, ris, pizza — allt.",
+          "kok": "1 kök",
+          "hallbarhet": "1 år"
+        }
+      ]
+    },
+    {
+      "rubrik": "Torrvaror och konserver",
+      "varor": [
+        {
+          "namn": "Olivolja, billig",
+          "tier": "Alltid",
+          "beskrivning": "Pannan, grillen, ugnen. Stor flaska.",
+          "kok": "Alla",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Olivolja, bra",
+          "tier": "Alltid",
+          "beskrivning": "Bara finish. Värms aldrig.",
+          "kok": "Alla",
+          "hallbarhet": "4 mån öppnad"
+        },
+        {
+          "namn": "Neutral olja",
+          "tier": "Alltid",
+          "beskrivning": "Raps eller solros. Wok och allt över 200°.",
+          "kok": "Alla",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Flingsalt",
+          "tier": "Alltid",
+          "beskrivning": "Sista strösslet som får allt annat att smaka.",
+          "kok": "Alla",
+          "hallbarhet": "Evigt"
+        },
+        {
+          "namn": "Grovt havssalt",
+          "tier": "Alltid",
+          "beskrivning": "Pastavattnet och all matlagning.",
+          "kok": "Alla",
+          "hallbarhet": "Evigt"
+        },
+        {
+          "namn": "Krossade tomater",
+          "tier": "Alltid",
+          "beskrivning": "Basen i halva sidan. Ha sex burkar.",
+          "kok": "9 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Tomatpuré",
+          "tier": "Alltid",
+          "beskrivning": "Fräs alltid i olja innan vätskan.",
+          "kok": "6 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Ris, långkornigt",
+          "tier": "Alltid",
+          "beskrivning": "Basmati eller jasmin.",
+          "kok": "7 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Ris, rundkornigt",
+          "tier": null,
+          "beskrivning": "Bomba eller arborio. Paella och risotto.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Pasta, torr",
+          "tier": "Alltid",
+          "beskrivning": "Spaghetti och en kort sort.",
+          "kok": "1 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Risnudlar",
+          "tier": null,
+          "beskrivning": "Vietnam och Thailand. Kokar på tre minuter.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Kikärtor på burk",
+          "tier": "Alltid",
+          "beskrivning": "Protein, krämighet, krispiga i ugn.",
+          "kok": "6 kök",
+          "hallbarhet": "3 år"
+        },
+        {
+          "namn": "Röda linser",
+          "tier": "Alltid",
+          "beskrivning": "Kokar på tolv minuter. Billigast av allt.",
+          "kok": "3 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Kokosmjölk",
+          "tier": null,
+          "beskrivning": "Indien, Thailand. Ta den feta.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Kombu eller torkad shiitake",
+          "tier": null,
+          "beskrivning": "Vegetarisk umami, permanent löst.",
+          "kok": "2 kök",
+          "hallbarhet": "Flera år"
+        },
+        {
+          "namn": "Kapris i vinäger",
+          "tier": null,
+          "beskrivning": "Skölj av. Sälta och syra i ett.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        },
+        {
+          "namn": "Jordnötter, rostade",
+          "tier": null,
+          "beskrivning": "Vietnam och Västafrika. Krisp och protein.",
+          "kok": "2 kök",
+          "hallbarhet": "6 mån"
+        }
+      ]
+    }
+  ],
+  "keepbox": [
+    {
+      "yr": "2 år",
+      "text": "**Saffran.** Spanien och Marocko. Dyr men torr — den blir aldrig dålig. En ask räcker till tio paellor."
+    },
+    {
+      "yr": "2 år",
+      "text": "**Sichuanpeppar.** Bara Kina, men helt oersättlig och håller som vilken torr krydda som helst. Köp den när suget kommer."
+    },
+    {
+      "yr": "Flera år",
+      "text": "**Svart risvinäger.** Bara Kina. Vinäger blir inte dålig. Helt ofarligt köp."
+    },
+    {
+      "yr": "1 år",
+      "text": "**Sumak.** Turkiet och Levanten. Torrt pulver, inga problem. Använd den även på vanlig sallad och stekt ägg."
+    },
+    {
+      "yr": "2 år",
+      "text": "**Granatäppelsirap.** Sockerhaltig och därmed hållbar. Går även i dressingar och över yoghurt."
+    },
+    {
+      "yr": "1 år",
+      "text": "**Berbere / ras el hanout.** Enkelriktade men torra. Vill du slippa två burkar: köp berbere, den fungerar även som rub på grillat."
+    },
+    {
+      "yr": "2 år",
+      "text": "**Torkad chili, hel.** Mexiko och Kina. Hela torkade chilifrukter håller nästan hur länge som helst."
+    }
+  ],
+  "trap": [
+    {
+      "yr": "Möglar",
+      "text": "**Konserverad citron.** Bara Marocko, och burken står öppen i kylen. **Ersätt med:** rivet citronskal plus en extra nypa salt. Nittio procent av effekten."
+    },
+    {
+      "yr": "Några veckor",
+      "text": "**Ají amarillo-pasta.** Bara Peru. **Ersätt med:** gul paprika mixad med en chili och en tesked honung. Fruktig hetta, samma roll."
+    },
+    {
+      "yr": "Dagar",
+      "text": "**Färsk galangal och citrongräs.** Thailand. **Ersätt med:** ingefära och citronskal. Eller köp dem frysta — de tål frysning perfekt."
+    },
+    {
+      "yr": "Dagar",
+      "text": "**Färsk kaffirlime.** **Ersätt med:** limeskal. Eller frys bladen, de håller ett år i frysen."
+    },
+    {
+      "yr": "2 veckor",
+      "text": "**Crème fraîche för en sås.** Frankrike. **Ersätt med:** grekisk yoghurt du ändå har hemma, tillsatt av värmen så den inte skär sig."
+    }
+  ],
+  "fresh": [
+    "<strong>Lök, vitlök, ingefära.</strong> Startpunkten i sjutton av arton kök. Lök och vitlök håller månader svalt; ingefära kan frysas hel och rivas fryst.",
+    "<strong>Citron och lime.</strong> Går inte att ersätta med flaska. Riv skalet och frys det innan du pressar.",
+    "<strong>Ägg, yoghurt, smör.</strong> Proteinet och fettet. Smör fryser bra, yoghurt inte.",
+    "<strong>Persilja, koriander, mynta, dill.</strong> De enda örterna som inte går att byta mot torkat. Oregano är undantaget — den blir bättre torkad."
+  ]
+}

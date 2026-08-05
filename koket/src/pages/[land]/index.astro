@@ -1,0 +1,89 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { RESERVERADE_SLUGS } from '../../content.config';
+import {
+  genereraBreadcrumbJsonLd,
+  genereraItemListJsonLd,
+} from '../../lib/recipe-schema';
+
+export async function getStaticPaths() {
+  const kokList = await getCollection('kok');
+  const ratterList = await getCollection('ratter');
+
+  return kokList.map((kok) => {
+    if ((RESERVERADE_SLUGS as readonly string[]).includes(kok.data.slug)) {
+      throw new Error(
+        `Byggfel: köks-slug "${kok.data.slug}" krockar med en reserverad rutt. Se RESERVERADE_SLUGS i content.config.ts.`,
+      );
+    }
+    const ratter = ratterList
+      .filter((r) => r.data.land.id === kok.data.slug)
+      .sort((a, b) => {
+        // Länderrätter först i sin ordning, sedan ev. bröd/kebab som hör hit.
+        const typOrdning = { ratt: 0, brod: 1, kebab: 2 } as const;
+        if (a.data.typ !== b.data.typ) return typOrdning[a.data.typ] - typOrdning[b.data.typ];
+        return a.data.ordning - b.data.ordning;
+      });
+    return { params: { land: kok.data.slug }, props: { kok, ratter } };
+  });
+}
+
+const { kok, ratter } = Astro.props;
+const { land, tagline, nycklar, why, tema, dryck } = kok.data;
+
+const jsonLd = [
+  genereraBreadcrumbJsonLd([
+    { namn: 'Hem', url: '/' },
+    { namn: land, url: `/${kok.data.slug}/` },
+  ]),
+  genereraItemListJsonLd(
+    `Rätter från ${land}`,
+    ratter.map((r) => ({ namn: r.data.titel, url: `/${kok.data.slug}/${r.id.split('--').slice(1).join('--')}/` })),
+  ),
+];
+---
+<Base
+  title={`${land} — ${tagline} | Kökets nycklar`}
+  description={why}
+  canonical={`/${kok.data.slug}/`}
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">{land}</span>
+  </nav>
+
+  <section class:list={['band', tema]}>
+    <div class="band-inner">
+      <div>
+        <p class="flag">{tagline}</p>
+        <h1 style="font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);line-height:.95;letter-spacing:-.015em;text-transform:uppercase;margin-bottom:1.4rem">{land}</h1>
+        <ul class="keys">
+          {nycklar.map((n) => <li>{n}</li>)}
+        </ul>
+        <p class="why">{why}</p>
+        <div class="drink">
+          <b>Dryck</b>
+          <p>{dryck.beskrivning}</p>
+          <a class="drink-link" href={dryck.url} target="_blank" rel="noopener noreferrer">Sök på Systembolaget →</a>
+        </div>
+      </div>
+      <div class="dishes">
+        {ratter.map((r, i) => (
+          <div class="dish">
+            <div class="dish-head">
+              <span class="dish-no">{String(i + 1).padStart(2, '0')}</span>
+              <h3><a href={`/${kok.data.slug}/${r.id.split('--').slice(1).join('--')}/`} style="color:inherit;text-decoration:none">{r.data.titel}</a></h3>
+              <span class="mins">{r.data.tidText}</span>
+            </div>
+            <figure class="dish-shot">
+              <img src={r.data.bild.fil} width="1600" height="1000" loading="lazy" alt={r.data.bild.alt} />
+            </figure>
+            <p class="dish-teaser">{r.data.teaser}</p>
+            <a href={`/${kok.data.slug}/${r.id.split('--').slice(1).join('--')}/`} class="recipe-toggle" style="display:block;text-align:center;text-decoration:none">Visa recept →</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

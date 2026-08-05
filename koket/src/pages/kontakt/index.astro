@@ -1,0 +1,26 @@
+---
+import Base from '../../layouts/Base.astro';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Kontakt', url: '/kontakt/' },
+]);
+---
+<Base
+  title="Kontakt | Kökets nycklar"
+  description="Hittade du ett fel i ett recept, eller har du en fråga om Kökets nycklar? Så når du oss."
+  canonical="/kontakt/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Kontakt</span>
+  </nav>
+
+  <div class="statisksida">
+    <h1>Kontakt</h1>
+    <p>Hittade du ett fel i ett recept, en trasig länk, eller har du en fråga om Kökets nycklar? Skicka ett mejl så kollar vi på det.</p>
+    <p><a href="mailto:hej@koket-nycklar.se">hej@koket-nycklar.se</a></p>
+    <p>Vi svarar så snart vi kan, vanligtvis inom några dagar.</p>
+  </div>
+</Base>

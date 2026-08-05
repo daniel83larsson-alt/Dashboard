@@ -1,0 +1,77 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import WorldMap from '../components/WorldMap.astro';
+import { SITE_BESKRIVNING } from '../lib/site';
+import { genereraOrganizationJsonLd, genereraWebSiteJsonLd, genereraItemListJsonLd } from '../lib/recipe-schema';
+
+const kokList = (await getCollection('kok')).sort((a, b) => a.data.land.localeCompare(b.data.land, 'sv'));
+const allaRatter = await getCollection('ratter');
+
+// Utvalda recept på startsidan: första länderrätten (ordning 1, typ "ratt") från åtta
+// olika kök, spridda över kartan — inte bara de första åtta filerna i bokstavsordning.
+const utvaldaSlugs = ['spanien', 'japan', 'mexiko', 'indien', 'marocko', 'vietnam', 'grekland', 'peru'];
+const featured = utvaldaSlugs
+  .map((slug) => allaRatter.find((r) => r.data.land.id === slug && r.data.typ === 'ratt' && r.data.ordning === 1))
+  .filter((r): r is NonNullable<typeof r> => Boolean(r));
+
+const kokBySlug = new Map(kokList.map((k) => [k.data.slug, k]));
+
+const jsonLd = [
+  genereraOrganizationJsonLd(),
+  genereraWebSiteJsonLd(),
+  genereraItemListJsonLd(
+    'De arton köken',
+    kokList.map((k) => ({ namn: k.data.land, url: `/${k.data.slug}/` })),
+  ),
+];
+---
+<Base
+  title="Kökets nycklar — hitta rätten, lär dig skafferinycklarna"
+  description={SITE_BESKRIVNING}
+  canonical="/"
+  jsonLd={jsonLd}
+>
+  <div class="home-hero">
+    <p class="eyebrow">Arton kök · Femtiosex rätter · Ett skafferi</p>
+    <h1>Kökets<em>nycklar</em><em class="spill">smaken sitter i tre burkar</em></h1>
+    <p class="thesis">Varje kök i världen vilar på en handfull smaker. Har du dem hemma behöver du inte recept — du behöver bara veta <b>vilka tre burkar du ska öppna.</b></p>
+  </div>
+
+  <div class="mapwrap">
+    <div class="wrap mapwrap-inner">
+      <WorldMap />
+      <div class="map-info">
+        <p class="map-hint">Arton kök, en handfull nycklar vardera. Utforska dem i listan nedanför kartan.</p>
+      </div>
+    </div>
+  </div>
+
+  <nav class="cuisine-grid-nav" aria-label="Alla kök">
+    {kokList.map((k) => (
+      <a href={`/${k.data.slug}/`}>{k.data.land}</a>
+    ))}
+  </nav>
+
+  <div class="section-heading">
+    <h2>Några rätter att börja med</h2>
+    <p>Ett urval från olika hörn av kartan — hela listan finns under respektive kök.</p>
+  </div>
+  <div class="featured-grid">
+    {featured.map((r) => {
+      const kok = kokBySlug.get(r.data.land.id);
+      const slug = kok?.data.slug ?? '';
+      const tema = kok?.data.tema ?? '';
+      return (
+        <a class="featured-card" href={`/${slug}/${r.id.split('--').slice(1).join('--')}/`}>
+          <img src={r.data.bild.fil} width="1600" height="1000" loading="lazy" alt={r.data.bild.alt} />
+          <div class="fc-body">
+            <span class={`fc-country ${tema}`}>{kok?.data.land}</span>
+            <h3>{r.data.titel}</h3>
+            <p>{r.data.teaser}</p>
+          </div>
+        </a>
+      );
+    })}
+  </div>
+</Base>

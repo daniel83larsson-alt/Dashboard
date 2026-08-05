@@ -1,0 +1,111 @@
+{
+  "rader": [
+    {
+      "kalla": "Kycklingfilé / lår",
+      "portion": "150 g",
+      "protein": "~33 g"
+    },
+    {
+      "kalla": "Lammfärs, kebabspett",
+      "portion": "150 g",
+      "protein": "~26 g"
+    },
+    {
+      "kalla": "Lax",
+      "portion": "150 g",
+      "protein": "~30 g"
+    },
+    {
+      "kalla": "Torsk",
+      "portion": "150 g",
+      "protein": "~27 g"
+    },
+    {
+      "kalla": "Räkor, skalade",
+      "portion": "150 g",
+      "protein": "~24 g"
+    },
+    {
+      "kalla": "Musslor, urplockade",
+      "portion": "150 g",
+      "protein": "~18 g"
+    },
+    {
+      "kalla": "Halloumi",
+      "portion": "100 g",
+      "protein": "~22 g"
+    },
+    {
+      "kalla": "Fast tofu",
+      "portion": "150 g",
+      "protein": "~18 g"
+    },
+    {
+      "kalla": "Kikärtor, avrunna",
+      "portion": "1 burk / 240 g",
+      "protein": "~20 g"
+    },
+    {
+      "kalla": "Röda linser, torra",
+      "portion": "1 dl",
+      "protein": "~17 g"
+    },
+    {
+      "kalla": "Ägg",
+      "portion": "2 st",
+      "protein": "~13 g"
+    },
+    {
+      "kalla": "Grekisk yoghurt 10 %",
+      "portion": "200 g",
+      "protein": "~18 g"
+    },
+    {
+      "kalla": "Parmesan",
+      "portion": "30 g",
+      "protein": "~11 g"
+    },
+    {
+      "kalla": "Pasta, torr",
+      "portion": "100 g",
+      "protein": "~12 g"
+    },
+    {
+      "kalla": "Tahini",
+      "portion": "2 msk",
+      "protein": "~5 g"
+    }
+  ],
+  "builds": [
+    {
+      "namn": "Paella · fisk",
+      "summa": "~42 g",
+      "text": "150 g räkor och 150 g musslor i samma panna. Riset bidrar med några gram till."
+    },
+    {
+      "namn": "Paella · vegetariskt",
+      "summa": "~46 g",
+      "text": "En burk kikärtor i riset plus 100 g halloumi stekt hårt och lagd på toppen."
+    },
+    {
+      "namn": "Pasta · kött",
+      "summa": "~45 g",
+      "text": "100 g pasta, 150 g kyckling och 30 g parmesan. Kaprisen och citronen gör resten."
+    },
+    {
+      "namn": "Ramen",
+      "summa": "~44 g",
+      "text": "150 g tofu eller fläsksida, två ägg och nudlarna. Lägg i ett ägg extra om du vill över 50."
+    },
+    {
+      "namn": "Kebabspett",
+      "summa": "~44 g",
+      "text": "150 g lammfärs plus 200 g yoghurtsås vid sidan. Yoghurten är underskattad här."
+    },
+    {
+      "namn": "Dal · vegetariskt",
+      "summa": "~35 g",
+      "text": "2 dl torra linser per portion plus 200 g yoghurt till. Ris ger ytterligare några gram."
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+---
+import '../styles/global.css';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import { absoluteUrl, SITE_NAMN } from '../lib/site';
+
+interface Props {
+  title: string;
+  description: string;
+  canonical: string; // sidväg, t.ex. "/spanien/"
+  ogImage?: string; // rot-relativ eller absolut bild-url
+  noindex?: boolean;
+  jsonLd?: object | object[];
+}
+
+const { title, description, canonical, ogImage, noindex = false, jsonLd } = Astro.props;
+
+// Ingen tyst standard — sidan SKA misslyckas att byggas utan dessa, per uppdraget.
+if (!title) throw new Error('Base-layouten kräver title.');
+if (!description) throw new Error('Base-layouten kräver description.');
+if (!canonical) throw new Error('Base-layouten kräver canonical.');
+
+const canonicalUrl = absoluteUrl(canonical);
+const ogImageUrl = ogImage ? absoluteUrl(ogImage) : undefined;
+const jsonLdList = Array.isArray(jsonLd) ? jsonLd : jsonLd ? [jsonLd] : [];
+---
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonicalUrl} />
+{noindex && <meta name="robots" content="noindex, nofollow" />}
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content={SITE_NAMN} />
+<meta property="og:locale" content="sv_SE" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl} />
+{ogImageUrl && <meta property="og:image" content={ogImageUrl} />}
+<meta name="twitter:card" content={ogImageUrl ? 'summary_large_image' : 'summary'} />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />
+{ogImageUrl && <meta name="twitter:image" content={ogImageUrl} />}
+{jsonLdList.map((ld) => <script type="application/ld+json" is:inline set:html={JSON.stringify(ld)} />)}
+</head>
+<body>
+<Header />
+<slot />
+<Footer />
+</body>
+</html>

@@ -1,0 +1,29 @@
+---
+import Base from '../../layouts/Base.astro';
+import data from '../../data/regler.json';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Fem regler', url: '/regler/' },
+]);
+---
+<Base
+  title="Fem regler som gäller överallt | Kökets nycklar"
+  description="Fem regler som gäller i alla arton kök på den här sajten, oavsett vilket lands smaker du lagar just idag."
+  canonical="/regler/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Fem regler</span>
+  </nav>
+
+  <div class="rules-page">
+    <h1>Fem regler som gäller överallt</h1>
+    <div class="rules">
+      {data.regler.map((r) => (
+        <div><b>{r.rubrik}</b>{r.text}</div>
+      ))}
+    </div>
+  </div>
+</Base>

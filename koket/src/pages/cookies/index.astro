@@ -1,0 +1,40 @@
+---
+import Base from '../../layouts/Base.astro';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Cookies', url: '/cookies/' },
+]);
+const uppdaterad = '5 augusti 2026';
+---
+<Base
+  title="Cookiepolicy | Kökets nycklar"
+  description="Kökets nycklar är en statisk webbplats som i dagsläget inte sätter några egna cookies. Så här ser det ut idag, och så uppdaterar vi om det ändras."
+  canonical="/cookies/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Cookies</span>
+  </nav>
+
+  <div class="statisksida">
+    <h1>Cookiepolicy</h1>
+    <p>Senast uppdaterad: {uppdaterad}</p>
+
+    <p>Kökets nycklar är i dagsläget en statisk webbplats utan inloggning, konton eller egen analysmjukvara. Vi sätter inga egna cookies för spårning, personalisering eller marknadsföring.</p>
+
+    <h2>Vad som faktiskt sker idag</h2>
+    <ul>
+      <li>Sajten är byggd med Astro och driftas som statiska filer på Vercel.</li>
+      <li>Vercel kan i sin roll som driftleverantör föra teknisk driftstatistik (t.ex. antal anrop och grundläggande felloggning) för att sajten ska fungera och kunna felsökas — det är inte cookies i webbläsaren, utan serverloggar hos driftleverantören.</li>
+      <li>Ingen tredjepartsannonsering, inga spårningspixlar och inga analysverktyg (som Google Analytics) är installerade i nuläget.</li>
+    </ul>
+
+    <h2>Om det ändras</h2>
+    <p>Skulle vi längre fram lägga till annonsering, analysverktyg eller andra funktioner som sätter cookies, uppdaterar vi den här sidan innan de aktiveras och beskriver exakt vilka cookies det handlar om, vad de gör och hur du kan tacka nej.</p>
+
+    <h2>Frågor</h2>
+    <p>Har du frågor om den här policyn, hör av dig via <a href="/kontakt/">kontaktsidan</a>.</p>
+  </div>
+</Base>

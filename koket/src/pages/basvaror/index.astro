@@ -1,0 +1,74 @@
+---
+import Base from '../../layouts/Base.astro';
+import data from '../../data/basvaror.json';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+import { delaFetstil } from '../../lib/markdown-bold';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Basvaror', url: '/basvaror/' },
+]);
+---
+<Base
+  title="Basvaror — skafferigrunden för arton kök | Kökets nycklar"
+  description="25 basvaror sorterade efter hur många av de arton köken de faktiskt används i — vad du ska ha alltid, vad som håller i frysen, och vad du bara ska köpa färskt."
+  canonical="/basvaror/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Basvaror</span>
+  </nav>
+
+  <section class="pantry">
+    <div class="pantry-inner">
+      <h1 style="font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem">Basvaror</h1>
+      <p class="lead">Allt utom kryddorna: oljor, salt, konserver och de flaskor med färdig smak som gör tunga jobb i flera kök. Sorterat efter hur många av de arton köken varje sak faktiskt används i.</p>
+
+      {data.grupper.map((grupp) => (
+        <>
+          <h3>{grupp.rubrik}</h3>
+          <ul class="plist">
+            {grupp.varor.map((vara, i) => (
+              <li>
+                <span class="n">{String(i + 1).padStart(2, '0')}</span>
+                <span style="flex:1;min-width:11rem">
+                  <span class="b">{vara.namn}{vara.tier && <span class="tier">{vara.tier}</span>}</span>
+                  <span class="d">{vara.beskrivning}</span>
+                </span>
+                <span class="u">{vara.kok}</span>
+                <span class="h">{vara.hallbarhet}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      ))}
+
+      <h3>Enkelriktade men hållbara · helt ok att köpa</h3>
+      <div class="keepbox">
+        <p class="t">Ett kök — men burken står kvar och väntar</p>
+        <ul>
+          {data.keepbox.map((rad) => (
+            <li><span class="yr">{rad.yr}</span>{delaFetstil(rad.text).map((del) => (del.fet ? <b>{del.text}</b> : del.text))}</li>
+          ))}
+        </ul>
+      </div>
+
+      <h3>Enkelriktade och färska · byt ut</h3>
+      <div class="trap">
+        <p class="t">Öppnas för en tesked och möglar sedan</p>
+        <ul>
+          {data.trap.map((rad) => (
+            <li><span class="yr">{rad.yr}</span>{delaFetstil(rad.text).map((del) => (del.fet ? <b>{del.text}</b> : del.text))}</li>
+          ))}
+        </ul>
+      </div>
+
+      <h3>Det enda du behöver handla färskt</h3>
+      <div class="fresh">
+        {data.fresh.map((p) => (
+          <p style="margin-top:.7rem">{delaFetstil(p).map((del) => (del.fet ? <strong>{del.text}</strong> : del.text))}</p>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

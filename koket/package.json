@@ -1,0 +1,23 @@
+{
+  "name": "koket-nycklar",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "extract": "node scripts/extrahera-fran-legacy.mjs",
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "verify": "node scripts/verifiera-build.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "^3.2.1",
+    "astro": "^5.1.1",
+    "sharp": "^0.33.5"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.10",
+    "linkedom": "^0.18.5",
+    "typescript": "^5.9.3"
+  }
+}

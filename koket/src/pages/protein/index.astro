@@ -1,0 +1,47 @@
+---
+import Base from '../../layouts/Base.astro';
+import data from '../../data/protein.json';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Protein', url: '/protein/' },
+]);
+---
+<Base
+  title="Räkna hem proteinet — proteintabell för recepten | Kökets nycklar"
+  description="Rätterna på den här sajten landar oftast på 10–20 g protein per portion. Här är siffrorna att räkna med om du vill upp till 30–50 g, plus sex färdiga kombinationer."
+  canonical="/protein/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Protein</span>
+  </nav>
+
+  <section class="protein">
+    <div class="protein-inner">
+      <h1 style="font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem">Räkna hem proteinet</h1>
+      <p class="lead">Rätterna på den här sidan landar oftast på 10–20 g protein per portion. Vill du upp till 30–50 g behöver du lägga till en tydlig proteinkälla — eller två mindre. Här är siffrorna att räkna med.</p>
+
+      <table class="ptable">
+        <caption>Protein per normal portion</caption>
+        <thead><tr><th>Källa</th><th>Portion</th><th>Protein</th></tr></thead>
+        <tbody>
+          {data.rader.map((r) => (
+            <tr><td>{r.kalla}</td><td>{r.portion}</td><td>{r.protein}</td></tr>
+          ))}
+        </tbody>
+      </table>
+
+      <div class="builds">
+        {data.builds.map((b) => (
+          <div class="build">
+            <b>{b.namn}</b>
+            <div class="sum">{b.summa}</div>
+            <p>{b.text}</p>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+</Base>

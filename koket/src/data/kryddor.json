@@ -1,0 +1,101 @@
+{
+  "grupper": [
+    {
+      "rubrik": "Basen i grytor & såser — kryddas i fett, tidigt",
+      "varor": [
+        {
+          "namn": "Spiskummin",
+          "tier": "Först",
+          "beskrivning": "Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru.",
+          "kok": "7 kök",
+          "hallbarhet": "2 år hela"
+        },
+        {
+          "namn": "Gurkmeja",
+          "tier": null,
+          "beskrivning": "Indien, Etiopien, Marocko.",
+          "kok": "3 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Garam masala",
+          "tier": null,
+          "beskrivning": "Indien. Men gör också en snabb rub till allt grillat.",
+          "kok": "2 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Kanel, hel stång",
+          "tier": null,
+          "beskrivning": "Marocko, Vietnam, Indien. Hel håller i evighet.",
+          "kok": "3 kök",
+          "hallbarhet": "3 år"
+        }
+      ]
+    },
+    {
+      "rubrik": "Hetta",
+      "varor": [
+        {
+          "namn": "Chiliflingor",
+          "tier": "Först",
+          "beskrivning": "Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta.",
+          "kok": "6 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Torkad chili, hel",
+          "tier": null,
+          "beskrivning": "Mexiko och Kina. Rosta i torr panna först.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        }
+      ]
+    },
+    {
+      "rubrik": "Rök & färg",
+      "varor": [
+        {
+          "namn": "Rökt paprika",
+          "tier": "Först",
+          "beskrivning": "Spanien, Marocko, Mellanöstern. Även i alla rubs du gör.",
+          "kok": "4 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Saffran",
+          "tier": null,
+          "beskrivning": "Spanien och Marocko. En ask räcker i åratal.",
+          "kok": "2 kök",
+          "hallbarhet": "2 år"
+        }
+      ]
+    },
+    {
+      "rubrik": "Finish & syra — strös på slutet, aldrig kokas med",
+      "varor": [
+        {
+          "namn": "Sumak",
+          "tier": null,
+          "beskrivning": "Turkiet och Levanten. Syra som håller i pulverform.",
+          "kok": "2 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Torkad oregano",
+          "tier": "Först",
+          "beskrivning": "Grekland, Italien, Mexiko.",
+          "kok": "3 kök",
+          "hallbarhet": "1 år"
+        },
+        {
+          "namn": "Sesamfrön",
+          "tier": null,
+          "beskrivning": "Korea, Kina, Mellanöstern. Rosta torrt.",
+          "kok": "3 kök",
+          "hallbarhet": "1 år"
+        }
+      ]
+    }
+  ]
+}

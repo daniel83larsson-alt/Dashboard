@@ -1,0 +1,35 @@
+---
+import Base from '../../layouts/Base.astro';
+import { genereraBreadcrumbJsonLd } from '../../lib/recipe-schema';
+
+const jsonLd = genereraBreadcrumbJsonLd([
+  { namn: 'Hem', url: '/' },
+  { namn: 'Om Kökets nycklar', url: '/om/' },
+]);
+---
+<Base
+  title="Om Kökets nycklar | metoden bakom sajten"
+  description="Kökets nycklar samlar arton köks-traditioner till deras minsta gemensamma nämnare: skafferinycklarna som gör att du känner igen ett lands mat utan att slå upp ett recept."
+  canonical="/om/"
+  jsonLd={jsonLd}
+>
+  <nav class="breadcrumbs" aria-label="Brödsmulor">
+    <a href="/">Hem</a><span class="sep">/</span><span aria-current="page">Om Kökets nycklar</span>
+  </nav>
+
+  <div class="statisksida">
+    <h1>Om Kökets nycklar</h1>
+
+    <p>Kökets nycklar är byggd på en enkel iakttagelse: du behöver inte hundra recept för att laga mat från arton olika delar av världen. Du behöver fyra eller fem nycklar per kök — de kryddor, såser och basvaror som gör att en gryta smakar Thailand istället för ingenting särskilt. Har du nycklarna hemma är resten teknik, inte hemligheter.</p>
+
+    <p>Metoden är densamma i varje kök på sajten: vi identifierar skafferinycklarna, förklarar varför just de gör jobbet, och visar dem i praktiken genom rätter som går att laga på vardagar. Sedan visar vi hur du byter ut proteinet — kött, fisk eller vegetariskt — utan att tappa smaken som gör rätten till vad den är.</p>
+
+    <h2>Hur innehållet blir till</h2>
+    <p>Varje kök researchas för sina faktiska, vardagliga smaknycklar — inte de mest exotiska eller de mest fotogena, utan de som gör mest skillnad flest gånger. Recepten är skrivna för ett svenskt kök och svenska butikshyllor: mått i deciliter och matskedar, ingredienser som går att hitta utan att leta i tre olika butiker.</p>
+
+    <p>Fotografierna på sajten är hämtade från Wikimedia Commons och krediteras enskilt vid varje bild, med fotografens namn och licens synlig i bildtexten. Vi hotlänkar inte bilder från andra sajter — alla foton är nedladdade och självhostade här.</p>
+
+    <h2>Vem ligger bakom</h2>
+    <p>Kökets nycklar drivs och publiceras under namnet Kökets nycklar. Har du frågor, rättelser eller vill flagga ett fel i ett recept — se <a href="/kontakt/">kontaktsidan</a>.</p>
+  </div>
+</Base>
