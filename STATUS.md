@@ -114,7 +114,8 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
 
 ## Kökets nycklar
 
-- ✅ **Daniel: "Är ju intressant om man kan tjäna pengar på sidan" — svar på Novas scope-fråga: publik trafik-sajt, inte privat.** Nova-rekommendation levererad (se svar till Daniel). Kort sammanfattning: sajten (`koket/index.html`, 18 kök/40 rätter) är **inte deployad någonstans idag** (varken Vercel eller GitHub Pages) och är byggd som EN enda sida utan egna URL:er per rätt — fel form för sökmotortrafik oavsett innehåll, måste byggas om till riktiga sidor per recept (schema.org Recipe-markup) innan annons-/affiliateintäkter är realistiskt. Ingen kod ändrad än, bara riktning — väntar på Daniels prioritering mot övrigt arbete.
+- ✅ **Daniel: "Är ju intressant om man kan tjäna pengar på sidan" — svar på Novas scope-fråga: publik trafik-sajt, inte privat.** Nova-rekommendation levererad. **Rättelse:** påstod först felaktigt att sajten inte var deployad — kollade bara git-loggen efter deploy-commits, inte den riktiga live-adressen (samma typ av miss som Vercel-hygien-fyndet tidigare: git-historik bevisar inte deploy-status, en git-kopplad Vercel-app auto-bygger utan att det syns som en egen commit). **Daniel rättade: sajten är faktiskt live på `koket-nycklar.vercel.app`** — verifierat direkt (HTTP 200, innehållet matchar repot exakt). Kärnfyndet står ändå kvar efter att ha kollat den riktiga live-sidan: EN enda sida utan egna URL:er per rätt, fel form för sökmotortrafik oavsett innehåll.
+- 🔄 **Daniel: "Kolla över och bygg om/förbättra där det behövs. Om man kan få 10 liknande siter som alla drar in någon peng är det ok med."** Påbörjat — se svar till Daniel för Robin-fråga (Opus-planering?) innan bygget sätter igång. "10 sajter"-idén (portföljstrategi, flera små intäktskällor) sparad som riktning, inte påbörjad — bevisa modellen på en sajt först.
 
 ## Mat & Se (ny app)
 
