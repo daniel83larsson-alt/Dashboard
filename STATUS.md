@@ -115,7 +115,7 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
 ## Kökets nycklar
 
 - ✅ **Daniel: "Är ju intressant om man kan tjäna pengar på sidan" — svar på Novas scope-fråga: publik trafik-sajt, inte privat.** Nova-rekommendation levererad. **Rättelse:** påstod först felaktigt att sajten inte var deployad — kollade bara git-loggen efter deploy-commits, inte den riktiga live-adressen (samma typ av miss som Vercel-hygien-fyndet tidigare: git-historik bevisar inte deploy-status, en git-kopplad Vercel-app auto-bygger utan att det syns som en egen commit). **Daniel rättade: sajten är faktiskt live på `koket-nycklar.vercel.app`** — verifierat direkt (HTTP 200, innehållet matchar repot exakt). Kärnfyndet står ändå kvar efter att ha kollat den riktiga live-sidan: EN enda sida utan egna URL:er per rätt, fel form för sökmotortrafik oavsett innehåll.
-- 🔄 **Daniel: "Kolla över och bygg om/förbättra där det behövs. Om man kan få 10 liknande siter som alla drar in någon peng är det ok med."** Påbörjat — se svar till Daniel för Robin-fråga (Opus-planering?) innan bygget sätter igång. "10 sajter"-idén (portföljstrategi, flera små intäktskällor) sparad som riktning, inte påbörjad — bevisa modellen på en sajt först.
+- 🔄 **Daniel: "Kolla över och bygg om/förbättra där det behövs. Om man kan få 10 liknande siter som alla drar in någon peng är det ok med."** Daniel svarade "ja" på Robin-frågan — Opus planerar ombyggnaden (arkitektur/URL-struktur/SEO/monetiseringskrokar/migrering) just nu i bakgrunden innan Sonnet bygger. "10 sajter"-idén sparad som riktning, inte påbörjad — bevisa modellen på en sajt först.
 
 ## Mat & Se (ny app)
 
