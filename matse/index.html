@@ -144,7 +144,7 @@
   <div id="sidebar">
     <button class="sidebar-close-btn" onclick="closeSidebar()" aria-label="Stäng och visa karta">✕</button>
     <div class="brand">
-      <div class="eyebrow">Mat &amp; Se — koncept-POC v0.3</div>
+      <div class="eyebrow">Mat &amp; Se — koncept-POC v0.4</div>
       <h1>Din resa, kuraterad</h1>
       <p>Sverige &amp; Norge · sevärdheter, matställen och geocoding är riktig data</p>
     </div>
@@ -162,7 +162,7 @@
         <div class="autocomplete-list" id="toResults" hidden></div>
       </div>
       <button class="btn" id="drawBtn" onclick="handleDrawRoute(true)">Rita rutt &amp; hämta sevärdheter</button>
-      <div class="status-line" id="statusLine">Redo. Testvägen är fast (Onsala↔Oslo) tills en riktig ruttmotor kopplas in.</div>
+      <div class="status-line" id="statusLine">Redo. Söker …</div>
     </div>
 
     <div class="section">
@@ -198,13 +198,14 @@
     <div class="foot">
       Sevärdheter &amp; ställplatser: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
       Adressökning: Photon (Komoot, byggt på OpenStreetMap), live förslagslista medan du skriver, ingen nyckel krävs.<br>
+      Vägen som ritas: OSRM (project-osrm.org), riktig bilväg mellan sökta adresser, ingen nyckel krävs. Om det misslyckas visas föregående ritade väg istället.<br>
       Matställen &amp; "Värt en omväg": Foursquare Places, hämtas live via en liten server-proxy (matse-api) som håller nyckeln dold från den här sidan. Betyg saknas — kräver köpta Foursquare-krediter, medvetet bortvalt tills vidare.<br>
       Laddstationer: NOBIL (CC-BY-4.0), hämtas live via samma server-proxy som matställena. Bara stationer märkta aktiva (Station_status 1) visas.
     </div>
   </div>
   <div class="map-pane">
     <div id="map"></div>
-    <div class="badge-poc">POC v0.3 — <b>sevärdheter, matställen, laddstationer &amp; adressökning riktiga</b> (inga betyg än)</div>
+    <div class="badge-poc">POC v0.4 — <b>sevärdheter, matställen, laddstationer, adressökning &amp; riktig väg</b> (inga betyg än)</div>
     <button class="mobile-toggle-btn" id="mobileToggleBtn" onclick="openSidebar()">🔍 Sök &amp; filter</button>
   </div>
 </div>
@@ -213,7 +214,10 @@
 <script>
 // ---- Fast testväg: Onsala -> Göteborg -> Uddevalla -> Strömstad -> Fredrikstad -> Oslo ----
 // Verklig ruttmotor (t.ex. OpenRouteService) inte inkopplad än — se STATUS/spec punkt 5.
-const routeCoords = [
+// Rak, gles approximation — bara en reservväg om geocoding/OSRM inte svarar
+// alls (t.ex. helt utan uppkoppling). Normalfallet ritar en riktig väg via
+// fetchRoute()/OSRM istället, se handleDrawRoute().
+const FALLBACK_ROUTE_COORDS = [
   [57.417, 12.001], // Onsala
   [57.508, 11.938],
   [57.708, 11.967], // Göteborg
@@ -226,7 +230,8 @@ const routeCoords = [
   [59.45, 10.85],
   [59.9139, 10.7522] // Oslo
 ];
-const CORRIDOR_KM = 15; // generösare än spec:ens 5–10 km eftersom testvägen är en gles, rak approximation av den riktiga vägen
+let routeCoords = FALLBACK_ROUTE_COORDS; // ersätts med en riktig väg så fort en sökning lyckas
+const CORRIDOR_KM = 15; // generösare än spec:ens 5–10 km — bra marginal även om OSRM ibland väljer en annan väg än förväntat
 
 const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B', detour: '#7B4B94', stallplats: '#3D6EA5' };
 const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe', detour: 'Värt en omväg', stallplats: 'Ställplats' };
@@ -347,6 +352,31 @@ function distToRouteKm(lat, lng){
     if(d < min) min = d;
   }
   return min;
+}
+
+/// Andelsbaserad sampling längs routeCoords (0 = start, 1 = mål) istället för
+// fasta index — måste funka lika bra mot den 11-punkters raka reservvägen
+// som mot en riktig OSRM-väg med tusentals punkter.
+function routeSamplePoints(fractions){
+  const lastIdx = routeCoords.length - 1;
+  return fractions.map(f => routeCoords[Math.round(f * lastIdx)]);
+}
+
+// ---- Riktig väg: OSRM:s publika, gratis, nyckelfria ruttmotor (OSM-baserad
+// vägdata, riktig bilväg — inte bara en rak linje mellan punkterna). ----
+async function fetchRoute(fromLat, fromLng, toLat, toLng){
+  const url = `https://router.project-osrm.org/route/v1/driving/${fromLng},${fromLat};${toLng},${toLat}?overview=full&geometries=geojson`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!res.ok || data.code !== 'Ok' || !data.routes || !data.routes[0]){
+    throw new Error(data.message || ('OSRM svarade ' + res.status));
+  }
+  const route = data.routes[0];
+  return {
+    coords: route.geometry.coordinates.map(([lng,lat]) => [lat,lng]), // OSRM ger [lng,lat], vi vill ha [lat,lng]
+    distanceKm: route.distance / 1000,
+    durationMin: route.duration / 60
+  };
 }
 
 // ---- Riktig sevärdhets-data: Overpass API (OpenStreetMap), gratis, ingen nyckel ----
@@ -516,12 +546,13 @@ async function fetchChargersNear(lat, lng, padDeg){
 // det trots att rutten fortsätter ~15 mil till. Samma spridda-punkter-mönster
 // som redan används för "Värt en omväg"-matställen, fast här bara för att
 // undvika trunkering, inte för att nå längre bort.
-const CHARGER_SAMPLE_IDX = [0, 2, 4, 6, 8, 9];
+const CHARGER_SAMPLE_FRACTIONS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const CHARGER_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
 
 async function fetchChargers(){
+  const samples = routeSamplePoints(CHARGER_SAMPLE_FRACTIONS);
   const results = await Promise.all(
-    CHARGER_SAMPLE_IDX.map(i => fetchChargersNear(routeCoords[i][0], routeCoords[i][1], CHARGER_SAMPLE_PAD))
+    samples.map(([lat,lng]) => fetchChargersNear(lat, lng, CHARGER_SAMPLE_PAD))
   );
   const byId = new Map();
   results.flat().forEach(c => byId.set(c.id, c));
@@ -534,7 +565,7 @@ async function fetchChargers(){
 // ---- Riktiga matställen: Foursquare via matse-api (server-side proxy — se
 // matse-api/api/places.js. Nyckeln får aldrig ligga i den här klientfilen). ----
 const MATSE_API = 'https://matse-api.vercel.app/api/places';
-const ROUTE_SAMPLE_IDX = [0, 3, 5, 7, 10]; // spridda punkter längs testvägen, inte varenda waypoint — håller antalet Foursquare-anrop nere
+const ROUTE_SAMPLE_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]; // spridda punkter längs rutten, inte varenda waypoint — håller antalet Foursquare-anrop nere. Andelsbaserat (inte fasta index) så det fortsätter sprida sig rätt även när routeCoords blir en riktig, tätpunktad OSRM-väg istället för den 11-punkters raka reservvägen.
 
 async function fetchRestaurantsNear(lat, lng, radiusM, limit){
   const url = `${MATSE_API}?lat=${lat}&lng=${lng}&radius=${radiusM}&query=restaurant&limit=${limit}`;
@@ -578,12 +609,19 @@ function dedupe(results){
 // point, so a bigger radius from an on-route point just returns more of the
 // same nearby places, never the far ones. Verified with a live test before
 // shipping this.
+// KNOWN GAP: these are fixed absolute coordinates tied to the original
+// Onsala↔Oslo corridor's geography, not derived from routeCoords — unlike
+// every other POI category, "Värt en omväg" does NOT follow a new real
+// search to a different route. Computing genuine off-route offset points for
+// an arbitrary OSRM polyline is a real geometry problem (perpendicular
+// offsets along a curved path) that wasn't in scope for wiring up real
+// routing — flagged as tech debt rather than silently left broken.
 const DETOUR_CENTERS = [
   [57.20, 12.62], [58.60, 12.35], [59.05, 11.75], [59.75, 11.55]
 ];
 
 async function fetchRestaurants(){
-  const samples = ROUTE_SAMPLE_IDX.map(i => routeCoords[i]);
+  const samples = routeSamplePoints(ROUTE_SAMPLE_FRACTIONS);
   const [nearRaw, detourRaw] = await Promise.all([
     Promise.all(samples.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 20000, 10).catch(() => []))),
     Promise.all(DETOUR_CENTERS.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 15000, 10).catch(() => [])))
@@ -728,17 +766,29 @@ async function handleDrawRoute(userInitiated){
     const fromRes = await resolveAddress('fromInput', selectedFrom);
     const toRes = await resolveAddress('toInput', selectedTo);
     if(!fromRes || !toRes){
-      setStatus('Kunde inte hitta en av adresserna. Testvägen (Onsala↔Oslo) visas ändå.', 'err');
+      setStatus('Kunde inte hitta en av adresserna. Reservvägen (Onsala↔Oslo) visas ändå.', 'err');
     } else {
-      setStatus(`Hittade: ${fromRes.main} → ${toRes.main}. Ritad väg är fortfarande testvägen — riktig ruttmotor inte inkopplad.`, 'ok');
-      // Rita om markörer för start/mål på de riktiga punkterna, men behåll
-      // testvägens linjeform (ingen riktig ruttmotor inkopplad än). Tar bort
-      // föregående söknings markörer först — annars staplas de upp för varje
-      // sökning istället för att ersättas.
+      // Tar bort föregående söknings markörer först — annars staplas de upp
+      // för varje sökning istället för att ersättas.
       if(fromMarker) map.removeLayer(fromMarker);
       if(toMarker) map.removeLayer(toMarker);
       fromMarker = L.marker([fromRes.lat, fromRes.lon]).addTo(map).bindPopup('Från: ' + fromRes.main);
       toMarker = L.marker([toRes.lat, toRes.lon]).addTo(map).bindPopup('Till: ' + toRes.main);
+
+      try {
+        const real = await fetchRoute(fromRes.lat, fromRes.lon, toRes.lat, toRes.lon);
+        routeCoords = real.coords;
+        routeLine.setLatLngs(routeCoords);
+        map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+        setStatus(`Hittade: ${fromRes.main} → ${toRes.main}. Riktig väg ritad (${real.distanceKm.toFixed(0)} km, ~${Math.round(real.durationMin/60)} tim ${Math.round(real.durationMin%60)} min).`, 'ok');
+      } catch(routeErr){
+        console.error(routeErr);
+        // Ruttlinjen/routeCoords rörs INTE här — behåller vad som redan
+        // ritats (en tidigare lyckad sökning, eller reservvägen vid start)
+        // istället för att hoppa tillbaka till Onsala↔Oslo mitt i en sökning
+        // på en annan sträcka.
+        setStatus(`Hittade adresserna men kunde inte rita den riktiga vägen (${routeErr.message}). Föregående ritade väg visas ändå.`, 'err');
+      }
     }
   } catch(err){
     console.error(err);
