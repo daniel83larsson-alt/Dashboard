@@ -122,6 +122,8 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
 
 ## Mat & Se (ny app)
 
+- 🔄 **Daniel: "Den plottar inte ut sträckan på kartan vid en ny sökning."** Känd, tidigare förklarad begränsning (se raden om hårdkodad testkorridor nedan) — bekräftas nu som ett konkret buggrapport, inte bara en teoretisk risk. Undersöker en riktig ruttmotor (OSRM, gratis/nyckelfri) för att lösa både rutt-linjen och korridor-sökningen i samma veva.
+
 Retro hittade 2026-08-04 att hela den här tråden aldrig loggats här trots flera körningar av arbete och Daniel-önskemål — eftersläpande ihopskrivning, inte skriven löpande som regeln säger. Se "Process" nedan för själva retro-fyndet.
 
 - ✅ POC byggd (`matse/index.html`, kanonisk fil): riktiga sevärdheter + ställplatser via Overpass/OSM, riktiga matställen ("vid vägen" + "Värt en omväg") via Foursquare bakom en egen server-proxy (`matse-api`, nyckeln aldrig i klientkod), live adress-autocomplete med disambigueringslista (Photon/Komoot), mobilanpassad hopfällbar sidopanel, rikare popup-info med "läs mer"-länkar (webbsida/Wikipedia/OSM/Google Maps + tel:). Betyg saknas medvetet — både Foursquare och Google Places kräver köpta krediter för det, Daniels val att köra utan tills vidare.
