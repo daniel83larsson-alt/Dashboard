@@ -122,6 +122,8 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
 
 ## Mat & Se (ny app)
 
+- 🔄 **Daniel: "Saknar helt sevärdheter, och ställplatser längst vägen. Samt värt att se."** Testade live: den delade publika Overpass-servern (overpass-api.de) gav upprepade 504:or (verifierat direkt, 2 av 3 försök misslyckades innan ett lyckades) — matchar exakt samma flakighet som redan diagnosticerats och fixad med en spegelserver-fallback (maps.mail.ru) i DL Trainers Rutter-funktion, men den fixen applicerades aldrig på Mat & Se:s egen `overpassQuery()`. "Värt att se" — om det syftar på "Värt en omväg" är det redan ett känt, separat fel (fastlåst till gamla testkorridoren, flaggat i förra svaret till Daniel).
+
 - 🔄 **Daniel: "Den plottar inte ut sträckan på kartan vid en ny sökning."** Känd, tidigare förklarad begränsning (se raden om hårdkodad testkorridor nedan) — bekräftas nu som ett konkret buggrapport, inte bara en teoretisk risk. Undersöker en riktig ruttmotor (OSRM, gratis/nyckelfri) för att lösa både rutt-linjen och korridor-sökningen i samma veva.
 
 Retro hittade 2026-08-04 att hela den här tråden aldrig loggats här trots flera körningar av arbete och Daniel-önskemål — eftersläpande ihopskrivning, inte skriven löpande som regeln säger. Se "Process" nedan för själva retro-fyndet.
