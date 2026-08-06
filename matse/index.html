@@ -390,28 +390,43 @@ function routeBbox(padDeg){
 // Den delade publika Overpass-instansen är gratis men kan vara långsam/överlastad
 // (sett live under utveckling: enstaka 504:or). Ett återförsök räcker i praktiken —
 // i skarpt läge bör detta cachas server-side istället för att köras live per besök.
+// BUGFIX: den tidigare versionen kollade bara res.ok (HTTP-felstatus) i
+// loopen — men fetch() KASTAR (avvisar promisen) vid nätverksfel som
+// "Load failed", istället för att returnera ett svar med ok:false. Ett
+// sånt kast hoppade rakt förbi hela retry-loopen första gången det
+// hände, så "återförsöket" gällde bara servrar som svarade med fel
+// statuskod — aldrig avbrutna anslutningar, som är precis det Daniel
+// faktiskt råkade ut för. Samma bugg som geocode() hade innan den fixen.
+//
+// Spegelserver: samma flakighet Daniel senare råkade ut för igen (helt
+// tomma sevärdheter/ställplatser) — verifierat live att den delade
+// overpass-api.de gav 504 två gånger i rad innan ett tredje försök
+// lyckades. DL Trainers Rutter-funktion löste exakt samma problem med en
+// spegelserver (maps.mail.ru) som sista utväg — samma mönster här istället
+// för att bara hoppas att ett tredje försök mot samma överlastade server
+// räcker.
+const OVERPASS_ENDPOINTS = [
+  { url: 'https://overpass-api.de/api/interpreter', attempts: 2 },
+  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1 }
+];
+
 async function overpassQuery(query){
-  // BUGFIX: den tidigare versionen kollade bara res.ok (HTTP-felstatus) i
-  // loopen — men fetch() KASTAR (avvisar promisen) vid nätverksfel som
-  // "Load failed", istället för att returnera ett svar med ok:false. Ett
-  // sånt kast hoppade rakt förbi hela retry-loopen första gången det
-  // hände, så "återförsöket" gällde bara servrar som svarade med fel
-  // statuskod — aldrig avbrutna anslutningar, som är precis det Daniel
-  // faktiskt råkade ut för. Samma bugg som geocode() hade innan den fixen.
   let lastErr;
-  for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      const res = await fetch('https://overpass-api.de/api/interpreter', {
-        method: 'POST',
-        headers: { 'Accept': '*/*' },
-        body: 'data=' + encodeURIComponent(query)
-      });
-      if(!res.ok) throw new Error('Overpass svarade ' + res.status + ' (den delade instansen är ibland överlastad — testa igen om en stund)');
-      const data = await res.json();
-      return data.elements.filter(e => e.tags && e.tags.name);
-    } catch(err){
-      lastErr = err;
-      if (attempt === 0) await new Promise(r => setTimeout(r, 1500));
+  for (const { url, attempts } of OVERPASS_ENDPOINTS) {
+    for (let attempt = 0; attempt < attempts; attempt++) {
+      try {
+        const res = await fetch(url, {
+          method: 'POST',
+          headers: { 'Accept': '*/*' },
+          body: 'data=' + encodeURIComponent(query)
+        });
+        if(!res.ok) throw new Error(url + ' svarade ' + res.status + ' (delade instanser är ibland överlastade — testa igen om en stund)');
+        const data = await res.json();
+        return data.elements.filter(e => e.tags && e.tags.name);
+      } catch(err){
+        lastErr = err;
+        if (attempt < attempts - 1) await new Promise(r => setTimeout(r, 1500));
+      }
     }
   }
   throw lastErr;
