@@ -128,7 +128,7 @@ Retro hittade 2026-08-04 att hela den här tråden aldrig loggats här trots fle
 - ✅ Deployad på egen adress: `mat-och-se.vercel.app` (frontend) + `matse-api.vercel.app` (proxy), samt en synkad kopia på GitHub Pages (`daniel83larsson-alt.github.io/Dashboard/poc/mat-och-se.html`) som stopgap när Vercel är blockerat (se nedan).
 - 🔄 **Vercel gratis-gränsen (100 deployer/dag) tog slut 2026-08-04 under iterativ bugfix-cykel** — både `matse-api` och `mat-och-se`-frontend blockerade från omdeploy till återställning ~2026-08-05 23:19 (svensk tid). Senaste kod (POI-popup-länkar, commit `7b032df`) pushad till GitHub men inte live på Vercel än. Stopgap: synkade `matse/index.html` direkt till `gh-pages`-grenen så det mesta (allt utom Foursquare website/tel-länkar, som fortfarande faller tillbaka på Google Maps-länk) är live nu ändå.
 - 🧊 **Känd begränsning, inte en bugg: rutt-linjen och all korridor-sökning (sevärdheter/ställplatser/matställen) är fortfarande hårdkodad mot en fast testrutt (Onsala↔Oslo)**, oavsett vilka adresser användaren faktiskt söker via autocompleten — bara nål-markörerna för från/till flyttar sig. Kräver en riktig ruttmotor (OpenRouteService, enligt ursprungsspecen) för att lösas på riktigt, inte en snabb patch. Förklarar varför en annan testad sträcka kan visa 0 ställplatser.
-- ⏳ NOBIL (elbilsladdare) — Daniel har inte registrerat API-nyckel än, laddstations-lagret visar fortsatt tydligt märkt testdata.
+- 🔄 **Daniel: "Nyckel för nobil mat och se 61f4c5d29d745dca4a2c1d449018bda0"** — NOBIL-nyckel mottagen, kopplar in riktiga laddstationer istället för testdata. Nyckeln får samma behandling som Foursquare-nyckeln: aldrig i klientkod, går via server-proxy.
 
 ## Teknisk skuld (Sam)
 
