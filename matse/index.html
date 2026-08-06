@@ -172,8 +172,8 @@
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-sight">–</span><span class="switch on" data-layer="sight" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="toggle-row">
-        <span class="label"><span class="swatch" style="background:var(--teal)"></span>Laddstationer<span class="datatag mock">Testdata</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">5</span><span class="switch on" data-layer="charger" onclick="toggleLayer(this)"></span></span>
+        <span class="label"><span class="swatch" style="background:var(--teal)"></span>Laddstationer<span class="datatag real">Riktig data</span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">–</span><span class="switch on" data-layer="charger" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--rose)"></span>Matställen<span class="datatag real">Riktig data</span></span>
@@ -199,12 +199,12 @@
       Sevärdheter &amp; ställplatser: OpenStreetMap/Overpass (ODbL), hämtas live, ingen nyckel krävs.<br>
       Adressökning: Photon (Komoot, byggt på OpenStreetMap), live förslagslista medan du skriver, ingen nyckel krävs.<br>
       Matställen &amp; "Värt en omväg": Foursquare Places, hämtas live via en liten server-proxy (matse-api) som håller nyckeln dold från den här sidan. Betyg saknas — kräver köpta Foursquare-krediter, medvetet bortvalt tills vidare.<br>
-      Laddardata i skarpt läge: NOBIL (CC-BY-4.0) — väntar på registrerad API-nyckel.
+      Laddstationer: NOBIL (CC-BY-4.0), hämtas live via samma server-proxy som matställena. Bara stationer märkta aktiva (Station_status 1) visas.
     </div>
   </div>
   <div class="map-pane">
     <div id="map"></div>
-    <div class="badge-poc">POC v0.3 — <b>sevärdheter, matställen &amp; adressökning riktiga</b> (inga betyg än), laddare fortfarande testdata</div>
+    <div class="badge-poc">POC v0.3 — <b>sevärdheter, matställen, laddstationer &amp; adressökning riktiga</b> (inga betyg än)</div>
     <button class="mobile-toggle-btn" id="mobileToggleBtn" onclick="openSidebar()">🔍 Sök &amp; filter</button>
   </div>
 </div>
@@ -231,16 +231,6 @@ const CORRIDOR_KM = 15; // generösare än spec:ens 5–10 km eftersom testväge
 const COLORS = { sight: '#D4A73D', charger: '#3F9C86', restaurant: '#B5495B', detour: '#7B4B94', stallplats: '#3D6EA5' };
 const LABELS = { sight: 'Sevärdhet', charger: 'Laddstation', restaurant: 'Matställe', detour: 'Värt en omväg', stallplats: 'Ställplats' };
 const GLYPHS = { sight: '✦', charger: '⚡', restaurant: '★', detour: '❖', stallplats: 'Ⓟ' };
-
-// ---- Testdata: bara laddare (väntar på NOBIL-nyckel). Matställen och
-// "Värt en omväg" hämtas nu på riktigt via Foursquare, se fetchRestaurants(). ----
-const mockPois = [
-  {type:'charger', name:'Ionity Kungsbacka', lat:57.487, lng:12.076, sub:'150 kW · 6 platser'},
-  {type:'charger', name:'Recharge Göteborg N', lat:57.75, lng:11.99, sub:'150 kW · 8 platser'},
-  {type:'charger', name:'Tesla Supercharger Uddevalla', lat:58.35, lng:11.93, sub:'250 kW · 12 platser'},
-  {type:'charger', name:'Recharge Strömstad', lat:58.94, lng:11.19, sub:'150 kW · 4 platser'},
-  {type:'charger', name:'Mer Fredrikstad', lat:59.22, lng:10.95, sub:'175 kW · 6 platser'}
-];
 
 const map = L.map('map', {zoomControl:false}).setView([58.4, 11.3], 7);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -464,6 +454,78 @@ async function fetchStallplatser(){
     };
   });
   return withDist
+    .filter(p => p.distKm <= CORRIDOR_KM)
+    .sort((a,b) => a.distKm - b.distKm)
+    .slice(0, 20);
+}
+
+// ---- Riktiga laddstationer: NOBIL via matse-api (server-side proxy — se
+// matse-api/api/chargers.js. Nyckeln får aldrig ligga i den här klientfilen). ----
+const MATSE_CHARGERS_API = 'https://matse-api.vercel.app/api/chargers';
+
+function parseNobilPosition(posStr){
+  // Format: "(lat,lng)"
+  const m = /\(([-\d.]+),\s*([-\d.]+)\)/.exec(posStr || '');
+  return m ? { lat: Number(m[1]), lng: Number(m[2]) } : null;
+}
+
+function toCharger(station){
+  const md = station.csmd;
+  const pos = parseNobilPosition(md.Position);
+  if(!pos) return null;
+  // Grab the first connector's power rating if present, e.g. "22 kW - 400V
+  // 3-phase max 32A" — just the leading power figure is useful in a list.
+  let power = null;
+  const conn = station.attr && station.attr.conn;
+  if(conn){
+    const firstGroup = Object.values(conn)[0];
+    const capAttr = firstGroup && firstGroup['5'];
+    if(capAttr && capAttr.trans) power = capAttr.trans.split(' - ')[0];
+  }
+  const points = md.Number_charging_points;
+  const sub = [power, points ? `${points} laddpunkt${points === 1 ? '' : 'er'}` : null].filter(Boolean).join(' · ') || 'Laddstation';
+  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${pos.lat},${pos.lng}(${encodeURIComponent(md.name)})`;
+  return {
+    id: md.id,
+    type: 'charger',
+    name: md.name,
+    lat: pos.lat, lng: pos.lng,
+    sub,
+    source: 'NOBIL',
+    distKm: distToRouteKm(pos.lat, pos.lng),
+    readMore: mapsLink,
+    mapsLink
+  };
+}
+
+async function fetchChargersNear(lat, lng, padDeg){
+  const url = `${MATSE_CHARGERS_API}?north=${lat+padDeg}&south=${lat-padDeg}&east=${lng+padDeg}&west=${lng-padDeg}&limit=100`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!res.ok) throw new Error(data.error || ('matse-api svarade ' + res.status));
+  return (data.chargerstations || [])
+    .filter(s => s.csmd && s.csmd.Station_status === 1) // 1 = i drift, hoppar över nedlagda/okända
+    .map(toCharger)
+    .filter(Boolean);
+}
+
+// En enda bbox över hela rutten missar det mesta: NOBIL svarar med max ~200
+// träffar per anrop, och Göteborgs täta kluster av laddare (flera hundra
+// inom några km) fyller hela den kvoten själv — verifierat live, en
+// helrutt-bbox gav bara träffar inom 0–8 mil från Göteborg, ingenting bortom
+// det trots att rutten fortsätter ~15 mil till. Samma spridda-punkter-mönster
+// som redan används för "Värt en omväg"-matställen, fast här bara för att
+// undvika trunkering, inte för att nå längre bort.
+const CHARGER_SAMPLE_IDX = [0, 2, 4, 6, 8, 9];
+const CHARGER_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
+
+async function fetchChargers(){
+  const results = await Promise.all(
+    CHARGER_SAMPLE_IDX.map(i => fetchChargersNear(routeCoords[i][0], routeCoords[i][1], CHARGER_SAMPLE_PAD))
+  );
+  const byId = new Map();
+  results.flat().forEach(c => byId.set(c.id, c));
+  return [...byId.values()]
     .filter(p => p.distKm <= CORRIDOR_KM)
     .sort((a,b) => a.distKm - b.distKm)
     .slice(0, 20);
@@ -693,8 +755,9 @@ async function handleDrawRoute(userInitiated){
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
-    setStatus('Hämtar riktiga sevärdheter, ställplatser (Overpass/OSM) och matställen (Foursquare) …');
+    setStatus('Hämtar riktiga sevärdheter, ställplatser (Overpass/OSM), laddstationer (NOBIL) och matställen (Foursquare) …');
     layerGroups.sight.clearLayers();
+    layerGroups.charger.clearLayers();
     layerGroups.restaurant.clearLayers();
     layerGroups.detour.clearLayers();
     layerGroups.stallplats.clearLayers();
@@ -704,25 +767,29 @@ async function handleDrawRoute(userInitiated){
     // kastade hela Promise.all, och slängde bort ställplatser/matställen-data
     // som annars hade lyckats. Exakt samma buggmönster som geocoding-kopplingen
     // hade — borde sökt igenom alla tre anropen efter samma sak då, inte bara
-    // fixat den ena platsen som rapporterades.
-    const [sights, stallplatser, restaurantData] = await Promise.all([
+    // fixat den ena platsen som rapporterades. fetchChargers() fick samma
+    // skydd direkt när den lades till, ingen anledning att upprepa missen.
+    const [sights, stallplatser, chargers, restaurantData] = await Promise.all([
       fetchRealSights().catch(err => { console.error(err); setStatus('Sevärdheter (Overpass) gick inte att hämta: ' + err.message, 'err'); return []; }),
       fetchStallplatser().catch(err => { console.error(err); return []; }),
+      fetchChargers().catch(err => { console.error(err); setStatus('Laddstationer (NOBIL) gick inte att hämta: ' + err.message, 'err'); return []; }),
       fetchRestaurants().catch(err => { console.error(err); setStatus('Matställen (Foursquare) gick inte att hämta: ' + err.message, 'err'); return {nearRoute:[], worthDetour:[]}; })
     ]);
     const { nearRoute, worthDetour } = restaurantData;
     sights.forEach(addPoiMarker);
     stallplatser.forEach(addPoiMarker);
+    chargers.forEach(addPoiMarker);
     nearRoute.forEach(addPoiMarker);
     worthDetour.forEach(addPoiMarker);
     document.getElementById('c-sight').textContent = sights.length;
     document.getElementById('c-stallplats').textContent = stallplatser.length;
+    document.getElementById('c-charger').textContent = chargers.length;
     document.getElementById('c-restaurant').textContent = nearRoute.length;
     document.getElementById('c-detour').textContent = worthDetour.length;
 
-    allPois = [...sights, ...stallplatser, ...mockPois, ...nearRoute, ...worthDetour];
+    allPois = [...sights, ...stallplatser, ...chargers, ...nearRoute, ...worthDetour];
     renderStopList();
-    setStatus(`Klart. ${sights.length} sevärdheter, ${stallplatser.length} ställplatser, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
+    setStatus(`Klart. ${sights.length} sevärdheter, ${stallplatser.length} ställplatser, ${chargers.length} laddstationer, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
     // Sök → dölj panelen → visa kartan, som Daniel bad om. Bara vid en
     // användarinitierad sökning, inte vid den automatiska start-hämtningen —
     // annars blinkar panelen upp och stängs igen direkt vid sidladdning.
@@ -736,12 +803,8 @@ async function handleDrawRoute(userInitiated){
   }
 }
 
-// ---- Init: ladda laddstations-testdata direkt, hämta allt riktigt (sevärdheter +
+// ---- Init: hämta allt riktigt (sevärdheter, ställplatser, laddstationer,
 // matställen) automatiskt vid start ----
-mockPois.forEach(addPoiMarker);
-document.getElementById('c-charger').textContent = mockPois.filter(p=>p.type==='charger').length;
-allPois = [...mockPois];
-renderStopList();
 handleDrawRoute();
 </script>
 </body>
