@@ -22,6 +22,19 @@ export const maxDuration = 60
 // to this cron.
 type CheckResult = { name: string; ok: boolean; detail?: string }
 
+// Returns both the header-authenticated client AND the raw session object —
+// NOT the same thing. The client below only carries the access token as a
+// plain Authorization header, which is enough for PostgREST/RPC calls, but
+// it never calls setSession() so the client's OWN internal auth state stays
+// empty — a later `client.auth.getSession()` on it returns null regardless
+// of the header. This was the exact cause of "crash: no session for account
+// A" on every single prod-smoke run once the crons actually started firing
+// automatically (confirmed via the real Discord alerts, all identical,
+// after the cron-scheduling fix): the route used to build the client here
+// and then separately call `.auth.getSession()` on it to recover the
+// session for the cookie-based HTTP check, which could only ever fail.
+// Returning the session we already have in hand (from verifyOtp, right
+// here) instead of trying to reconstruct it avoids the round-trip entirely.
 async function sessionClientFor(email: string) {
   const admin = createSupabaseAdminClient()
   const { data: linkData, error } = await admin.auth.admin.generateLink({ type: 'magiclink', email })
@@ -34,9 +47,10 @@ async function sessionClientFor(email: string) {
   })
   if (otpError || !otpData.session) throw new Error(`verifyOtp failed for ${email}: ${otpError?.message}`)
 
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
+  const client = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!, {
     global: { headers: { Authorization: `Bearer ${otpData.session.access_token}` } },
   })
+  return { client, session: otpData.session }
 }
 
 // The Next.js routes authenticate via @supabase/ssr reading a specific
@@ -166,9 +180,7 @@ export async function GET(request: NextRequest) {
     userIdA = createdA.user.id
     userIdB = createdB.user.id
 
-    const [clientA, clientB] = await Promise.all([sessionClientFor(emailA), sessionClientFor(emailB)])
-    const { data: { session: sessionA } } = await clientA.auth.getSession()
-    if (!sessionA) throw new Error('no session for account A')
+    const [{ client: clientA, session: sessionA }, { client: clientB }] = await Promise.all([sessionClientFor(emailA), sessionClientFor(emailB)])
 
     results.push(await checkManualActivityLog(sessionA, userIdA, admin))
     results.push(await checkDuplicateProviderRejection(clientA, clientB, marker))

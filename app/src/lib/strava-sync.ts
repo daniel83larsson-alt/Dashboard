@@ -50,7 +50,10 @@ export async function syncStravaForUser(supabase: SupabaseClient, userId: string
 
   if (activities.length > 0) {
     const rows = activities.map(a => stravaActivityToRow(a, userId))
-    await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
+    // Checked, not swallowed — see garmin-sync.ts for the real incident
+    // that surfaced this same unchecked pattern across every sync source.
+    const { error: upsertError } = await supabase.from('activities').upsert(rows, { onConflict: 'user_id,strava_id' })
+    if (upsertError) throw new Error(`Strava activity upsert failed: ${upsertError.message}`)
   }
 
   const cleaned = await autoCleanupDuplicates(supabase, userId)

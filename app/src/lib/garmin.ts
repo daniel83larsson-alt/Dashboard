@@ -55,9 +55,16 @@ export function garminActivityToRow(a: IActivity, userId: string) {
     source: 'garmin',
     sport_type: sportType,
     name: a.activityName || `${sportType} ${formatDate(a.startTimeLocal)}`,
-    distance: a.distance ? Math.round(a.distance) : null,
-    moving_time: a.movingDuration ? Math.round(a.movingDuration) : (a.duration ? Math.round(a.duration) : null),
-    elapsed_time: a.elapsedDuration ? Math.round(a.elapsedDuration) : null,
+    // distance/moving_time/elapsed_time are all NOT NULL columns — a
+    // GPS-less activity (e.g. strength training, "Styrka") genuinely has no
+    // distance from Garmin, but a falsy-value ternary here was writing
+    // `null` for it instead of `0`. Confirmed live: this was the actual
+    // cause of a brand-new user's entire first sync silently failing (see
+    // STATUS.md) — the write violated the NOT NULL constraint and the
+    // upsert's error was swallowed at the time, making it look like success.
+    distance: a.distance ? Math.round(a.distance) : 0,
+    moving_time: a.movingDuration ? Math.round(a.movingDuration) : (a.duration ? Math.round(a.duration) : 0),
+    elapsed_time: a.elapsedDuration ? Math.round(a.elapsedDuration) : 0,
     average_speed: a.averageSpeed ?? null,
     max_speed: a.maxSpeed ?? null,
     average_heartrate: a.averageHR ?? null,

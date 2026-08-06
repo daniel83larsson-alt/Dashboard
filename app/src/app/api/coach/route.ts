@@ -104,7 +104,24 @@ export async function POST(request: NextRequest) {
 
     const userApiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : null
     const moderationKey = userApiKey ?? process.env.GEMINI_API_KEY!
-    const moderation = await moderateMessage(moderationKey, message)
+
+    // Fetched here (before moderation) rather than in the big Promise.all
+    // below, since moderateMessage() needs the coach's last reply as
+    // context — without it, a short-but-substantive continuation like "Ja
+    // bra det är vad jag vill att du gör" has zero training-specific words
+    // on its own and reads as generic small talk to the topic classifier,
+    // even though it's obviously on-topic as a reply to the coach's
+    // preceding message. See moderation.ts for the full reasoning.
+    const { data: sessionData } = await supabase
+      .from('coach_sessions')
+      .select('messages')
+      .eq('user_id', user.id)
+      .eq('coach_id', coachId)
+      .single()
+    const history = (sessionData?.messages ?? []) as Message[]
+    const precedingMessage = history.length ? history[history.length - 1].content : undefined
+
+    const moderation = await moderateMessage(moderationKey, message, precedingMessage)
 
     if (moderation.blocked) {
       const flaggedAttempts = (profile?.flagged_attempts ?? 0) + 1
@@ -137,7 +154,7 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const [{ data: allActivities }, { data: goals }, { data: sessionData }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }] = await Promise.all([
+    const [{ data: allActivities }, { data: goals }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }] = await Promise.all([
       supabase
         .from('activities')
         .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts, sport_type')
@@ -149,12 +166,6 @@ export async function POST(request: NextRequest) {
         .select('goal_type, title, target_date')
         .eq('user_id', user.id)
         .eq('status', 'active'),
-      supabase
-        .from('coach_sessions')
-        .select('messages')
-        .eq('user_id', user.id)
-        .eq('coach_id', coachId)
-        .single(),
       supabase
         .from('coach_sessions')
         .select('messages')
@@ -285,7 +296,6 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const history = (sessionData?.messages ?? []) as Message[]
     const systemPrompt = coach.systemPrompt(sport, userContext)
     const userProvider = profile?.llm_provider
 

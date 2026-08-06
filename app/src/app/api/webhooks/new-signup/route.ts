@@ -22,6 +22,15 @@ export async function POST(request: NextRequest) {
     const name = record.name ?? null
     const when = record.created_at ?? new Date().toISOString()
 
+    // Every disposable test account created by the regression-test crons
+    // (isolation-check, prod-smoke) and ad-hoc verification scripts uses
+    // this domain by convention — without this filter, each nightly test
+    // run fires a real "new signup" notification to Discord for accounts
+    // that get deleted again seconds later, drowning out real signups.
+    if (typeof email === 'string' && email.toLowerCase().endsWith('@dltrainer.internal')) {
+      return NextResponse.json({ ok: true, skipped: 'test account' })
+    }
+
     const content = `🎉 Ny användare registrerad på DL Trainer\n**${name ?? email}**${name ? ` (${email})` : ''}\n${new Date(when).toLocaleString('sv-SE')}`
 
     await fetch(notifyUrl, {
