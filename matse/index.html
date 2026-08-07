@@ -481,11 +481,11 @@ function osmLinks(e, lat, lng, name){
 const POI_SAMPLE_FRACTIONS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const POI_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
 
-async function fetchOverpassAlongRoute(buildQuery){
+async function fetchOverpassAlongRoute(buildQuery, pad = POI_SAMPLE_PAD){
   const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
   const results = await Promise.all(
     samples.map(([lat,lng]) => {
-      const bb = { south: lat-POI_SAMPLE_PAD, north: lat+POI_SAMPLE_PAD, west: lng-POI_SAMPLE_PAD, east: lng+POI_SAMPLE_PAD };
+      const bb = { south: lat-pad, north: lat+pad, west: lng-pad, east: lng+pad };
       return overpassQuery(buildQuery(bb)).catch(() => []);
     })
   );
@@ -634,75 +634,70 @@ async function fetchChargers(){
   return [...byId.values()].sort((a,b) => a.distKm - b.distKm);
 }
 
-// ---- Riktiga matställen: Foursquare via matse-api (server-side proxy — se
-// matse-api/api/places.js. Nyckeln får aldrig ligga i den här klientfilen). ----
-const MATSE_API = 'https://matse-api.vercel.app/api/places';
-const ROUTE_SAMPLE_FRACTIONS = [0, 0.25, 0.5, 0.75, 1]; // spridda punkter längs rutten, inte varenda waypoint — håller antalet Foursquare-anrop nere. Andelsbaserat (inte fasta index) så det fortsätter sprida sig rätt även när routeCoords blir en riktig, tätpunktad OSRM-väg istället för den 11-punkters raka reservvägen.
+// ---- Riktiga matställen: OpenStreetMap/Overpass, gratis, ingen nyckel ----
+// Bytte bort från Foursquare (Daniel: "Tror vi får skippa foursquare") —
+// samma gratisnivå-begränsning som redan gällde (inga betyg/recensioner)
+// men med en extra nackdel Foursquare inte hade: en egen server-proxy och
+// nyckel att hålla reda på. OSM ger jämförbar träffbild (verifierat live:
+// 9 riktiga matställen nära Onsala, med `cuisine`-tagg som faktiskt är mer
+// användbar än Foursquares generiska kategorinamn) HELT UTAN nyckel/proxy,
+// och som bonus löser det samtidigt "Värt en omväg"-begränsningen nedan:
+// Overpass trunkerar inte efter närhet till sökpunkten som Foursquare
+// gjorde, så en bredare bbox runt samma rutt-punkter hittar riktiga
+// matställen 30–50 km bort utan behov av separata, fasta DETOUR_CENTERS.
+const DETOUR_SAMPLE_PAD = 0.5; // ~50 km i den här breddgraden — täcker både "vid vägen" och "värt en omväg" i en och samma fråga
 
-async function fetchRestaurantsNear(lat, lng, radiusM, limit){
-  const url = `${MATSE_API}?lat=${lat}&lng=${lng}&radius=${radiusM}&query=restaurant&limit=${limit}`;
-  const res = await fetch(url);
-  const data = await res.json();
-  if(!res.ok) throw new Error(data.error || ('matse-api svarade ' + res.status));
-  return (data.results || []).filter(r => typeof r.latitude === 'number' && typeof r.longitude === 'number');
-}
-
-function toPoi(r){
-  // "Läs mer": webbsidan om Foursquare har en på fil, annars Google Maps.
-  // Inte Foursquares egen platssida (foursquare.com/v/{id}) — den omdirigerar
-  // till en inloggningsvägg, testat direkt, oanvändbar som publik länk.
-  const mapsLink = `https://www.google.com/maps/search/?api=1&query=${r.latitude},${r.longitude}(${encodeURIComponent(r.name)})`;
+function toRestaurant(e){
+  const t = e.tags;
+  const kindLabel = { restaurant:'Restaurang', cafe:'Café', fast_food:'Snabbmat', pub:'Pub', bar:'Bar' }[t.amenity] || 'Matställe';
+  const cuisine = t.cuisine ? t.cuisine.split(';').slice(0,2).map(c => c.replace(/_/g,' ')).join(', ') : null;
+  const sub = cuisine ? `${kindLabel} · ${cuisine}` : kindLabel;
+  const links = osmLinks(e, e.lat, e.lon, t.name);
   return {
-    name: r.name,
-    lat: r.latitude, lng: r.longitude,
-    sub: (r.categories && r.categories[0] && r.categories[0].name) || 'Matställe',
-    source: 'Foursquare',
-    distKm: distToRouteKm(r.latitude, r.longitude),
-    tel: r.tel || null,
-    readMore: r.website || mapsLink,
-    mapsLink
+    id: `${e.type}:${e.id}`,
+    name: t.name,
+    lat: e.lat, lng: e.lon,
+    sub,
+    source: 'OpenStreetMap',
+    distKm: distToRouteKm(e.lat, e.lon),
+    tel: t.phone || t['contact:phone'] || null,
+    ...links
   };
 }
-function dedupe(results){
-  const seen = new Set();
-  const out = [];
-  results.forEach(r => {
-    const key = r.fsq_place_id || r.name + r.latitude;
-    if(seen.has(key)) return;
-    seen.add(key);
-    out.push(r);
-  });
-  return out;
+
+function restaurantQuery(bb){
+  return `[out:json][timeout:25];(
+    node["amenity"="restaurant"](${bb.south},${bb.west},${bb.north},${bb.east});
+    node["amenity"="cafe"](${bb.south},${bb.west},${bb.north},${bb.east});
+    node["amenity"="fast_food"](${bb.south},${bb.west},${bb.north},${bb.east});
+    node["amenity"="pub"](${bb.south},${bb.west},${bb.north},${bb.east});
+    node["amenity"="bar"](${bb.south},${bb.west},${bb.north},${bb.east});
+  );out body 200;`;
 }
 
-// Offset search centers roughly 30–45 km from the route (inland/off to the
-// side), NOT on-route points with a wider radius — tried that first and it
-// returned zero results, because Foursquare sorts by proximity to the search
-// point, so a bigger radius from an on-route point just returns more of the
-// same nearby places, never the far ones. Verified with a live test before
-// shipping this.
-// KNOWN GAP: these are fixed absolute coordinates tied to the original
-// Onsala↔Oslo corridor's geography, not derived from routeCoords — unlike
-// every other POI category, "Värt en omväg" does NOT follow a new real
-// search to a different route. Computing genuine off-route offset points for
-// an arbitrary OSRM polyline is a real geometry problem (perpendicular
-// offsets along a curved path) that wasn't in scope for wiring up real
-// routing — flagged as tech debt rather than silently left broken.
-const DETOUR_CENTERS = [
-  [57.20, 12.62], [58.60, 12.35], [59.05, 11.75], [59.75, 11.55]
-];
+// Samma per-region-kvot som laddstationerna (se CHARGERS_PER_REGION) istället
+// för ett globalt "top 20 närmast vägen" — annars kan en tät stad nära EN
+// samplad punkt fylla hela listan och lämna resten av en lång rutt tom,
+// exakt det som redan hänt en gång för laddstationer.
+const RESTAURANTS_PER_REGION = 5;
+const DETOUR_PER_REGION = 4;
 
 async function fetchRestaurants(){
-  const samples = routeSamplePoints(ROUTE_SAMPLE_FRACTIONS);
-  const [nearRaw, detourRaw] = await Promise.all([
-    Promise.all(samples.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 20000, 10).catch(() => []))),
-    Promise.all(DETOUR_CENTERS.map(([lat,lng]) => fetchRestaurantsNear(lat, lng, 15000, 10).catch(() => [])))
-  ]);
-  const near = dedupe(nearRaw.flat()).map(toPoi);
-  const detourCandidates = dedupe(detourRaw.flat()).map(toPoi);
-
-  const nearRoute = near.filter(p => p.distKm <= CORRIDOR_KM).map(p => ({...p, type:'restaurant'}));
-  const worthDetour = detourCandidates.filter(p => p.distKm > 30 && p.distKm <= 50).map(p => ({...p, type:'detour'}));
+  const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
+  const perRegion = await Promise.all(
+    samples.map(async ([lat,lng]) => {
+      const bb = { south: lat-DETOUR_SAMPLE_PAD, north: lat+DETOUR_SAMPLE_PAD, west: lng-DETOUR_SAMPLE_PAD, east: lng+DETOUR_SAMPLE_PAD };
+      const found = await overpassQuery(restaurantQuery(bb)).catch(() => []);
+      const all = found.map(toRestaurant);
+      return {
+        near: all.filter(p => p.distKm <= CORRIDOR_KM).sort((a,b) => a.distKm - b.distKm).slice(0, RESTAURANTS_PER_REGION),
+        detour: all.filter(p => p.distKm > 30 && p.distKm <= 50).sort((a,b) => a.distKm - b.distKm).slice(0, DETOUR_PER_REGION)
+      };
+    })
+  );
+  const dedupeById = (items) => [...new Map(items.map(p => [p.id, p])).values()];
+  const nearRoute = dedupeById(perRegion.flatMap(r => r.near)).map(p => ({...p, type:'restaurant'}));
+  const worthDetour = dedupeById(perRegion.flatMap(r => r.detour)).map(p => ({...p, type:'detour'}));
   return { nearRoute, worthDetour };
 }
 
@@ -742,22 +737,24 @@ async function photonSearch(query, limit){
   throw lastErr;
 }
 
-function debounce(fn, ms){
-  let t;
-  return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
-}
-
 // Vald koordinat per fält — sätts när användaren klickar en rad i listan,
 // nollställs så fort man skriver om (texten matchar då inte längre den
-// koordinaten). Om inget är valt när "Rita rutt" klickas görs en engångs-
-// sökning på den inskrivna texten som fallback (samma som tidigare
-// beteende, bara på Photon istället för Nominatim).
+// koordinaten).
 let selectedFrom = null, selectedTo = null;
 
+// BUGFIX (Daniel: "söker fram resultat samtidigt [som man skriver], vilket
+// gör att de blir segt — sökningen ska göra när man trycker på knappen"):
+// sökte tidigare mot Photon på varje tangenttryck (debounce:ad 350ms, men
+// ändå ett nätverksanrop + omritning av listan per knapptryckning på
+// mobilen). Skriver nu bara text i fältet utan att söka — själva sökningen
+// (och en eventuell flervalslista om adressen är tvetydig) triggas bara av
+// setupAutocomplete(...)-funktionens returnerade search(), som anropas från
+// resolveAddress() när knappen "Rita rutt" faktiskt trycks, inte innan.
 function setupAutocomplete(inputId, resultsId, onSelect){
   const input = document.getElementById(inputId);
   const list = document.getElementById(resultsId);
-  const run = debounce(async () => {
+
+  async function search(){
     const q = input.value;
     let results;
     try {
@@ -765,11 +762,11 @@ function setupAutocomplete(inputId, resultsId, onSelect){
     } catch(err){
       list.innerHTML = `<div class="autocomplete-empty">Kunde inte söka just nu (${err.name}: ${err.message})</div>`;
       list.hidden = false;
-      return;
+      return [];
     }
     if(!results.length){
       list.hidden = true;
-      return;
+      return [];
     }
     list.innerHTML = results.map((r, i) =>
       `<div class="autocomplete-item" data-i="${i}"><span class="main">${r.main}</span><span class="sub">${r.sub}</span></div>`
@@ -784,27 +781,23 @@ function setupAutocomplete(inputId, resultsId, onSelect){
         onSelect(r);
       });
     });
-  }, 350);
+    return results;
+  }
+
   input.addEventListener('input', () => {
-    // BUGFIX: att nollställa valet låg tidigare INUTI den debounce:ade
-    // sökfunktionen (350ms fördröjning) — så precis efter man börjat skriva
-    // om stod den gamla valda koordinaten kvar som "vald" i upp till 350ms,
-    // trots att texten i fältet inte längre matchade den. Klickade man
-    // "Rita rutt" i det fönstret användes fel plats utan förvarning. Hittat
-    // genom att faktiskt mäta tajmingen, inte bara läsa koden. Nollställningen
-    // körs nu direkt vid varje tangenttryck; bara själva sökningen är
-    // debounce:ad.
     input.classList.remove('picked');
     onSelect(null);
-    run();
+    list.hidden = true; // ingen sökning förrän knappen trycks — bara döljer en gammal, nu inaktuell lista
   });
   input.addEventListener('focus', () => { if(list.innerHTML) list.hidden = false; });
   document.addEventListener('click', (e) => {
     if(!input.contains(e.target) && !list.contains(e.target)) list.hidden = true;
   });
+
+  return search;
 }
-setupAutocomplete('fromInput', 'fromResults', (r) => { selectedFrom = r; });
-setupAutocomplete('toInput', 'toResults', (r) => { selectedTo = r; });
+const searchFromAddress = setupAutocomplete('fromInput', 'fromResults', (r) => { selectedFrom = r; });
+const searchToAddress = setupAutocomplete('toInput', 'toResults', (r) => { selectedTo = r; });
 
 function setStatus(msg, cls){
   const el = document.getElementById('statusLine');
@@ -812,15 +805,19 @@ function setStatus(msg, cls){
   el.className = 'status-line' + (cls ? ' ' + cls : '');
 }
 
-async function resolveAddress(inputId, picked){
+const AMBIGUOUS = Symbol('flera adresser hittades');
+
+async function resolveAddress(picked, search){
   // Använder den valda träffen från autocomplete-listan om det finns en —
-  // ingen ny nätverksfråga alls i så fall, så det finns inget att misslyckas
-  // med. Bara om användaren inte plockade en rad (skrev och tryckte direkt
-  // på "Rita rutt") görs en engångssökning som fallback.
+  // ingen ny nätverksfråga alls i så fall. Annars söks det (första gången)
+  // när "Rita rutt" trycks: exakt en träff används direkt, flera träffar
+  // visar listan och pausar (AMBIGUOUS) tills användaren valt och tryckt
+  // knappen igen — aldrig en gissning bland flera lika rimliga adresser.
   if(picked) return picked;
-  const text = document.getElementById(inputId).value;
-  const results = await photonSearch(text, 1);
-  return results[0] || null;
+  const results = await search();
+  if(results.length === 1) return results[0];
+  if(results.length > 1) return AMBIGUOUS;
+  return null;
 }
 
 async function handleDrawRoute(userInitiated){
@@ -835,8 +832,13 @@ async function handleDrawRoute(userInitiated){
   // beskrev: "verkar göra en del men blir problem". Geocoding körs nu i sin
   // egen try/catch som bara visar en varning — resten kör alltid.
   try {
-    const fromRes = await resolveAddress('fromInput', selectedFrom);
-    const toRes = await resolveAddress('toInput', selectedTo);
+    const fromRes = await resolveAddress(selectedFrom, searchFromAddress);
+    const toRes = await resolveAddress(selectedTo, searchToAddress);
+    if(fromRes === AMBIGUOUS || toRes === AMBIGUOUS){
+      setStatus('Flera adresser hittades — välj rätt i listan under fältet, tryck sedan på "Rita rutt" igen.', 'err');
+      btn.disabled = false;
+      return;
+    }
     if(!fromRes || !toRes){
       setStatus('Kunde inte hitta en av adresserna. Reservvägen (Onsala↔Oslo) visas ändå.', 'err');
     } else {
