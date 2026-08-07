@@ -151,16 +151,16 @@
       <h2>Resemål</h2>
       <div class="field autocomplete-field">
         <label>Från</label>
-        <input id="fromInput" value="Onsala, Sverige" autocomplete="off">
+        <input id="fromInput" placeholder="T.ex. Göteborg, Sverige" autocomplete="off">
         <div class="autocomplete-list" id="fromResults" hidden></div>
       </div>
       <div class="field autocomplete-field">
         <label>Till</label>
-        <input id="toInput" value="Oslo, Norge" autocomplete="off">
+        <input id="toInput" placeholder="T.ex. Oslo, Norge" autocomplete="off">
         <div class="autocomplete-list" id="toResults" hidden></div>
       </div>
       <button class="btn" id="drawBtn" onclick="handleDrawRoute(true)">Rita rutt &amp; hämta sevärdheter</button>
-      <div class="status-line" id="statusLine">Redo. Söker …</div>
+      <div class="status-line" id="statusLine">Ange en start- och en måladress, tryck sedan på knappen.</div>
     </div>
 
     <div class="section">
@@ -242,8 +242,11 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 18
 }).addTo(map);
 
-const routeLine = L.polyline(routeCoords, {color:'#16232C', weight:4, opacity:0.85}).addTo(map);
-map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
+// Inte tillagd på kartan än (och ingen fitBounds mot reservvägen) — Daniel:
+// "Kan ta bort default ifylld adress också." Ingen sökning görs längre
+// automatiskt vid start, så det finns ingen riktig rutt att visa förrän
+// användaren faktiskt söker. Linjen läggs till kartan först i handleDrawRoute().
+const routeLine = L.polyline(routeCoords, {color:'#16232C', weight:4, opacity:0.85});
 
 function makeIcon(type){
   const color = COLORS[type];
@@ -936,6 +939,13 @@ async function resolveAddress(picked, search){
 
 async function handleDrawRoute(userInitiated){
   const btn = document.getElementById('drawBtn');
+  // Inga default-adresser ifyllda längre (Daniel: "Kan ta bort default
+  // ifylld adress också") — inget att söka på om fälten är tomma, så det
+  // finns ingen anledning att göra några nätverksanrop alls här.
+  if(!document.getElementById('fromInput').value.trim() || !document.getElementById('toInput').value.trim()){
+    setStatus('Fyll i både Från och Till innan du trycker på "Rita rutt".', 'err');
+    return;
+  }
   btn.disabled = true;
   setStatus('Söker adresser …');
 
@@ -987,10 +997,11 @@ async function handleDrawRoute(userInitiated){
     // servern faktiskt skickade), och om telefonen självt trodde sig vara
     // online när det hände.
     const online = typeof navigator !== 'undefined' && 'onLine' in navigator ? navigator.onLine : 'okänt';
-    setStatus(`Kunde inte söka adresser just nu (${err.name}: ${err.message}, uppkoppling enligt telefonen: ${online}). Testvägen (Onsala↔Oslo) visas ändå — hämtar sevärdheter och matställen.`, 'err');
+    setStatus(`Kunde inte söka adresser just nu (${err.name}: ${err.message}, uppkoppling enligt telefonen: ${online}). Reservvägen (Onsala↔Oslo) visas ändå.`, 'err');
   }
 
   try {
+    if(!map.hasLayer(routeLine)) routeLine.addTo(map);
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
@@ -1029,9 +1040,10 @@ async function handleDrawRoute(userInitiated){
   }
 }
 
-// ---- Init: hämta allt riktigt (sevärdheter, ställplatser, laddstationer,
-// matställen) automatiskt vid start ----
-handleDrawRoute();
+// Ingen automatisk sökning vid start längre — inga default-adresser att
+// söka på (Daniel: "Kan ta bort default ifylld adress också"). Kartan visar
+// bara sin vanliga översiktsvy tills användaren skriver in egna adresser
+// och trycker på "Rita rutt".
 </script>
 </body>
 </html>
