@@ -23,6 +23,7 @@
   --topbar-h:58px;
   --es:#A93226; --it:#4A6B3A; --jp:#2A4759; --th:#1F6F5C; --me:#8C6A2F; --in:#B07A0C; --tr:#8A4B22; --ba:#5B5566;
   --mx:#8A3A5C; --gr:#2F5D8A; --ma:#59417A; --kr:#7D2B1B; --vn:#4F7A2E; --cn:#6B2F3A; --fr:#7A6A4E; --wa:#A0522D; --pe:#256B7A; --et:#8C3D2E;
+  --bs:#3E5C4A; --rs:#6B3450; --hr:#1B4E66;
   --veg:#8fd6a8; --veg-bg:rgba(143,214,168,.14);
   --pesk:#7cc0e8; --pesk-bg:rgba(124,192,232,.14);
   --kott:#e6a08f; --kott-bg:rgba(230,160,143,.14);
@@ -227,6 +228,7 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .mx{background:var(--mx)}.gr{background:var(--gr)}.ma{background:var(--ma)}
 .kr{background:var(--kr)}.vn{background:var(--vn)}.cn{background:var(--cn)}
 .fr{background:var(--fr)}.wa{background:var(--wa);color:#1C1A17}.pe{background:var(--pe)}.et{background:var(--et)}
+.bs{background:var(--bs)}.rs{background:var(--rs)}.hr{background:var(--hr)}
 .in .keys li,.in .dish-no,.wa .keys li,.wa .dish-no{border-color:rgba(28,26,23,.35)}
 .in .keys li,.wa .keys li{background:rgba(28,26,23,.12)}
 .in .why,.in .flag,.in .mins,.wa .why,.wa .flag,.wa .mins{color:rgba(28,26,23,.72)}
@@ -444,6 +446,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <g class="pin" data-target="thailand" tabindex="0" role="button" aria-label="Thailand"><title>Thailand</title><circle class="pin-hit" cx="779.2" cy="214.6" r="22" fill="transparent"/><circle class="pin-dot" cx="779.2" cy="214.6" r="9" fill="var(--th)"/></g>
     <g class="pin" data-target="mellanostern" tabindex="0" role="button" aria-label="Mellanöstern"><title>Mellanöstern</title><circle class="pin-hit" cx="598.6" cy="137.8" r="22" fill="transparent"/><circle class="pin-dot" cx="598.6" cy="137.8" r="9" fill="var(--me)"/></g>
     <g class="pin" data-target="baltikum" tabindex="0" role="button" aria-label="Baltikum"><title>Baltikum</title><circle class="pin-hit" cx="570.3" cy="58.4" r="22" fill="transparent"/><circle class="pin-dot" cx="570.3" cy="58.4" r="9" fill="var(--ba)"/></g>
+    <g class="pin" data-target="kroatien" tabindex="0" role="button" aria-label="Kroatien"><title>Kroatien</title><circle class="pin-hit" cx="544.0" cy="97.0" r="22" fill="transparent"/><circle class="pin-dot" cx="544.0" cy="97.0" r="9" fill="var(--hr)"/></g>
+    <g class="pin" data-target="bosnien" tabindex="0" role="button" aria-label="Bosnien"><title>Bosnien</title><circle class="pin-hit" cx="553.0" cy="103.0" r="22" fill="transparent"/><circle class="pin-dot" cx="553.0" cy="103.0" r="9" fill="var(--bs)"/></g>
+    <g class="pin" data-target="serbien" tabindex="0" role="button" aria-label="Serbien"><title>Serbien</title><circle class="pin-hit" cx="562.0" cy="99.0" r="22" fill="transparent"/><circle class="pin-dot" cx="562.0" cy="99.0" r="9" fill="var(--rs)"/></g>
     <g class="pin" data-target="indien" tabindex="0" role="button" aria-label="Indien"><title>Indien</title><circle class="pin-hit" cx="714.4" cy="158.1" r="22" fill="transparent"/><circle class="pin-dot" cx="714.4" cy="158.1" r="9" fill="var(--in)"/></g>
     <g class="pin" data-target="mexiko" tabindex="0" role="button" aria-label="Mexiko"><title>Mexiko</title><circle class="pin-hit" cx="224.7" cy="193.2" r="22" fill="transparent"/><circle class="pin-dot" cx="224.7" cy="193.2" r="9" fill="var(--mx)"/></g>
     <g class="pin" data-target="grekland" tabindex="0" role="button" aria-label="Grekland"><title>Grekland</title><circle class="pin-hit" cx="565.8" cy="122.2" r="22" fill="transparent"/><circle class="pin-dot" cx="565.8" cy="122.2" r="9" fill="var(--gr)"/></g>
@@ -1045,6 +1050,204 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
           <button class="ask-ai-btn" data-ask="d-ba2">Fråga AI om substitut</button>
         </div>
         <div class="ai-inline" id="ai-d-ba2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<section class="band hr" id="kroatien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Adriatiska kusten · olivolja och salt</p>
+      <h2>Kroatien</h2>
+      <ul class="keys"><li>Olivolja</li><li>Vitlök</li><li>Persilja</li><li>Citron</li><li>Torkad fisk</li></ul>
+      <p class="why">Det kroatiska köket delar sig i två: den steniga kusten med fisk, olivolja och vitlök, och inlandet med gryta och kål. Kustköket är det enklaste att laga hemma — färska råvaror, minimal bearbetning, mycket olivolja.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Malvazija, torrt vitt vin från Istrien.</strong> Kustkökets fisk och olivolja vill ha ett friskt, salt vitt vin. Malvazija är standardvalet på hela Adriatiska kusten — hittar du ingen, gå på en riesling eller vermentino istället.</p><a class="drink-link" href="https://www.systembolaget.se/sortiment/?q=malvazija" target="_blank" rel="noopener noreferrer">Sök på Systembolaget →</a></div>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-hr1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Blitva sa krumpirom</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Blitva%20dalmatinski%20%2813948266426%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Mangold och potatis stuvat mjukt i rejält med olivolja och vitlök — Dalmatiens standardtillbehör.</p>
+        <button class="recipe-toggle" data-toggle="d-hr1" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-hr1" hidden>
+        <ul class="ing-list"><li><span>Mangold</span><span class="amt">500 g</span></li><li><span>Potatis</span><span class="amt">400 g</span></li><li><span>Olivolja</span><span class="amt">1 dl</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Citron</span><span class="amt">1 st</span></li></ul>
+        <p class="step">Koka potatis i bitar tills nästan mjuk. Tillsätt grovhackad mangold sista 5 minuterna, koka tills båda är mjuka. Häll av, låt ånga av. Fräs skivad vitlök hastigt i <b>rejält med olivolja</b> tills den precis får färg, vänd ner potatis och mangold, salta och pressa över citron.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Servera under en stekt fläskkotlett eller grillad lammracka.</span>
+          <span data-p="fisk">Klassisk kombination — lägg hela pannan bredvid eller under en grillad hel fisk.</span>
+          <span data-p="veg">Toppa med rostade pinjenötter för fyllighet i stället för kött.</span>
+        </p>
+        <p class="tip">Olivoljan ska vara riklig, nästan som en sås till rätten. Snåla inte här.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-hr1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-hr1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-hr1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish" id="d-hr2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Brudet</h3><span class="mins">40 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Brudet.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Långsam fiskgryta med tomat, vitlök och vitt vin — serveras med polenta eller rostat bröd.</p>
+        <button class="recipe-toggle" data-toggle="d-hr2" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-hr2" hidden>
+        <ul class="ing-list"><li><span>Fast vit fisk (t.ex. marulk/torsk)</span><span class="amt">600 g</span></li><li><span>Bläckfisk eller räkor</span><span class="amt">200 g</span></li><li><span>Gul lök</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">4 klyftor</span></li><li><span>Krossade tomater</span><span class="amt">400 g</span></li><li><span>Vitt vin</span><span class="amt">1 dl</span></li><li><span>Persilja</span><span class="amt">1 knippe</span></li><li><span>Polenta</span><span class="amt">till servering</span></li></ul>
+        <p class="step">Fräs finhackad lök och vitlök mjukt i olivolja. Häll i krossade tomater och vitt vin, låt puttra 15 minuter till en tjock sås. Lägg i fiskbitar (och ev. skaldjur), låt sjuda försiktigt <b>utan lock</b> 10–15 minuter tills fisken precis är genomstekt. Rör inte om — skaka pannan istället. Strö över persilja, servera med varm polenta eller rostat bröd.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Byt fisken mot kycklinglår, förläng koktiden till 30 minuter under lock.</span>
+          <span data-p="fisk">Standardversionen — blanda gärna flera sorters fisk och skaldjur för djupare smak.</span>
+          <span data-p="veg">Kikärtor och zucchini istället för fisk, korta koktiden till 10 minuter totalt.</span>
+        </p>
+        <p class="tip">Rör aldrig i grytan med en sked när fisken väl ligger i — skaka pannan i stället, annars faller filéerna sönder.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-hr2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-hr2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-hr2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<section class="band bs" id="bosnien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Grillkolen · Sarajevos gator</p>
+      <h2>Bosnien</h2>
+      <ul class="keys"><li>Vitlök</li><li>Paprikapulver</li><li>Kummin</li><li>Lök</li><li>Filodeg (jufka)</li></ul>
+      <p class="why">Bosniskt kök bär tydliga spår av det osmanska riket — kolgrillat kött, tunna degblad rullade kring ost eller köttfärs, och starkt kaffe efteråt. Maten är rak och mättande, gjord för att delas mitt på bordet.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Kall pilsner, eller en klunk sljivovica (plommonbrandy) före maten.</strong> Grillkolen slår ut vin lika säkert som i Turkiet — en kall lager är det ärliga valet till maten. Sljivovica dricks kallt, i en liten klunk, innan man sätter sig.</p><a class="drink-link" href="https://www.systembolaget.se/sortiment/?q=sljivovica" target="_blank" rel="noopener noreferrer">Sök på Systembolaget →</a></div>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-bs1" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Ćevapi</h3><span class="mins">25 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Serbian%20%C4%86evapi.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Små grillade köttrullar av nöt- och lammfärs, serverade i somun-bröd med lök och ajvar.</p>
+        <button class="recipe-toggle" data-toggle="d-bs1" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-bs1" hidden>
+        <ul class="ing-list"><li><span>Nötfärs</span><span class="amt">400 g</span></li><li><span>Lammfärs</span><span class="amt">200 g</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Bikarbonat</span><span class="amt">1/2 tsk</span></li><li><span>Somun eller pitabröd</span><span class="amt">4 st</span></li><li><span>Rödlök</span><span class="amt">1 st</span></li><li><span>Ajvar</span><span class="amt">till servering</span></li></ul>
+        <p class="step">Blanda nöt- och lammfärs med pressad vitlök, salt, peppar och <b>bikarbonat</b> (gör smeten lösare i konsistensen). Forma tunna, fingertjocka rullar, ca 7 cm. Grilla hastigt på hög värme, 2–3 min per sida — lätt rosa inuti. Servera i uppvärmt somun-bröd med strimlad rödlök och en klick ajvar.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Nöt- och lammfärs i blandning är standarden — behåll bikarbonatet oavsett kött.</span>
+          <span data-p="fisk">Marinerade räkspett formade lika tunt, grilla lika hastigt på hög värme.</span>
+          <span data-p="veg">Grillade portobello-skivor eller falafelrullar formade på samma sätt.</span>
+        </p>
+        <p class="tip">Bikarbonatet är inget fusk — det ger den klassiska lösa, saftiga konsistensen som skiljer ćevapi från vanliga köttbullar.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-bs1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-bs1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-bs1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish" id="d-bs2" data-time="medel">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Burek sa sirom</h3><span class="mins">40 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Burek%20sa%20sirom.JPG?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Krispig filodegspaj rullad i spiral, fylld med fetaost och ägg.</p>
+        <button class="recipe-toggle" data-toggle="d-bs2" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-bs2" hidden>
+        <ul class="ing-list"><li><span>Filodeg (jufka)</span><span class="amt">400 g</span></li><li><span>Fetaost</span><span class="amt">300 g</span></li><li><span>Keso</span><span class="amt">200 g</span></li><li><span>Ägg</span><span class="amt">2 st</span></li><li><span>Smör, smält</span><span class="amt">100 g</span></li><li><span>Kolsyrat vatten</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Smula fetaost och blanda med keso och 1 ägg. Bred ut ett filodegsblad, pensla med smält smör, lägg en sträng fyllning längs kanten och rulla ihop till en lång orm. Snurra ormen till en spiral i en smord form, upprepa med resten av degen. Pensla med uppvispat ägg och en skvätt <b>kolsyrat vatten</b> (ger extra krispighet), grädda i 200°C tills gyllenbrun, ca 30 min.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Blanda i 300 g stekt köttfärs tillsammans med osten (burek sa mesom).</span>
+          <span data-p="fisk">Servera en bit rökt lax vid sidan om osttfyllningen — inte inbakad, bara som tillbehör.</span>
+          <span data-p="veg">Byt osten mot spenat och fetaost i lika delar (burek sa spanać) för en lättare variant.</span>
+        </p>
+        <p class="tip">Kolsyrat vatten i penslingen är ett bosniskt trick — det gör ytan extra krispig i ugnen.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-bs2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-bs2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-bs2" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+      </div>
+        </div>
+    </div>
+  </div>
+</section>
+
+<section class="band rs" id="serbien">
+  <div class="band-inner">
+    <div>
+      <p class="flag">Kafanan · grillrök och paprika</p>
+      <h2>Serbien</h2>
+      <ul class="keys"><li>Paprikapulver</li><li>Ajvar</li><li>Vitlök</li><li>Fetaost</li><li>Lök</li></ul>
+      <p class="why">Serbisk mat är grillrök, mycket paprika och stora skålar att dela. Kafanorna — de gamla värdshusen — serverar fortfarande maten som den alltid gjorts: enkelt, kryddstarkt och gjort för långa middagar.</p>
+      <div class="drink"><b>Dryck</b><p><strong>Rakija, eller en kall öl till maten.</strong> Rakija dricks som skål innan man sätter sig, inte till maten. Till själva grillköttet fungerar en enkel lager bäst — samma logik som i resten av Balkan.</p><a class="drink-link" href="https://www.systembolaget.se/sortiment/?q=rakija" target="_blank" rel="noopener noreferrer">Sök på Systembolaget →</a></div>
+    </div>
+    <div class="dishes">
+      <div class="dish" id="d-rs1" data-time="medel">
+        <div class="dish-head"><span class="dish-no">01</span><h3>Pljeskavica</h3><span class="mins">20 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pljeskavica%20at%20Znak%20Pitanja.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Kryddig hamburgerbiff fylld med kaymak eller ost, grillad och serverad i lepinja-bröd.</p>
+        <button class="recipe-toggle" data-toggle="d-rs1" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-rs1" hidden>
+        <ul class="ing-list"><li><span>Nötfärs</span><span class="amt">400 g</span></li><li><span>Fläskfärs</span><span class="amt">200 g</span></li><li><span>Gul lök, riven</span><span class="amt">1 st</span></li><li><span>Vitlök</span><span class="amt">2 klyftor</span></li><li><span>Paprikapulver</span><span class="amt">1 tsk</span></li><li><span>Bikarbonat</span><span class="amt">1/2 tsk</span></li><li><span>Kaymak eller fetaost</span><span class="amt">100 g</span></li><li><span>Lepinja eller pitabröd</span><span class="amt">4 st</span></li></ul>
+        <p class="step">Blanda nöt- och fläskfärs med finriven lök, vitlök, paprikapulver, salt och bikarbonat. Forma till en stor, tunn biff (ca 2 cm tjock, 20 cm i diameter). Gör en ficka i mitten och fyll med kaymak eller smulad fetaost, kläm ihop kanterna. Grilla på hög värme, <b>5–6 min per sida</b>. Servera i varmt lepinja-bröd med rå lök och ajvar.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Nöt- och fläskfärs i blandning är standarden, fyllningen fungerar oavsett.</span>
+          <span data-p="fisk">Byt hela biffen mot en tjock laxbiff, grillad hel och fylld med färskost på samma sätt.</span>
+          <span data-p="veg">En biff av mixade svarta bönor med grillad halloumi instängd i mitten.</span>
+        </p>
+        <p class="tip">Gör biffen tunnare i mitten än i kanten — då blir fyllningen jämnt varm utan att kanterna hinner torka ut.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-rs1">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-rs1">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-rs1" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish" id="d-rs2" data-time="snabb">
+        <div class="dish-head"><span class="dish-no">02</span><h3>Šopska salata</h3><span class="mins">10 min</span></div>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/%C5%A0opska%20salata.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Tomat, gurka, paprika och rikligt med riven fetaost — Balkans enklaste sallad.</p>
+        <button class="recipe-toggle" data-toggle="d-rs2" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-d-rs2" hidden>
+        <ul class="ing-list"><li><span>Tomat</span><span class="amt">4 st</span></li><li><span>Gurka</span><span class="amt">1 st</span></li><li><span>Grön paprika</span><span class="amt">1 st</span></li><li><span>Rödlök</span><span class="amt">1/2 st</span></li><li><span>Fetaost</span><span class="amt">200 g</span></li><li><span>Olivolja</span><span class="amt">2 msk</span></li><li><span>Rödvinsvinäger</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Skär tomat, gurka, paprika och rödlök i grova tärningar, blanda i en stor skål. Ringla över olivolja och rödvinsvinäger, salta lätt. <b>Riv fetaost rikligt över hela ytan</b> precis innan servering — den ska ligga som ett lager snö ovanpå.</p>
+        <p class="swap"><b>Protein</b>
+          <span data-p="kott">Toppa med stekta baconbitar för sälta och sting.</span>
+          <span data-p="fisk">Lägg några inlagda sardeller ovanpå osten.</span>
+          <span data-p="veg">Salladen är redan vegetarisk — lägg till svarta oliver för mer sälta.</span>
+        </p>
+        <p class="tip">Salta grönsakerna aldrig i förväg — de vattnar ur och salladen blir blaskig. Saltet kommer från osten.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="d-rs2">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="d-rs2">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-d-rs2" hidden>
           <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. tamarindpasta"/><button class="sub-go">Föreslå</button></div>
           <div class="ai-loading">Frågar Gemini …</div>
           <div class="ai-error"></div>
