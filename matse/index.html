@@ -167,11 +167,11 @@
       <h2>Lager</h2>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--gold)"></span>Sevärdheter<span class="datatag real">Riktig data</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-sight">–</span><span class="switch on" data-layer="sight" onclick="toggleLayer(this)"></span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-sight">–</span><span class="switch" data-layer="sight" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--teal)"></span>Laddstationer<span class="datatag real">Riktig data</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">–</span><span class="switch on" data-layer="charger" onclick="toggleLayer(this)"></span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">–</span><span class="switch" data-layer="charger" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="power-filter" id="powerFilter">
         <label><input type="checkbox" value="slow" checked onchange="applyPowerFilter()"> ≤22 kW</label>
@@ -180,7 +180,7 @@
       </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--rose)"></span>Matställen<span class="datatag real">Riktig data</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-restaurant">–</span><span class="switch on" data-layer="restaurant" onclick="toggleLayer(this)"></span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-restaurant">–</span><span class="switch" data-layer="restaurant" onclick="toggleLayer(this)"></span></span>
       </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--plum)"></span>Värt en omväg<span class="datatag real">Riktig data</span></span>
@@ -188,7 +188,7 @@
       </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--blue)"></span>Ställplatser<span class="datatag real">Riktig data</span></span>
-        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-stallplats">–</span><span class="switch on" data-layer="stallplats" onclick="toggleLayer(this)"></span></span>
+        <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-stallplats">–</span><span class="switch" data-layer="stallplats" onclick="toggleLayer(this)"></span></span>
       </div>
       <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (OpenStreetMap saknar recensioner/betyg helt, gratis eller betalt). Ställplatser saknar också betyg. Just nu bara "hittad", inte kvalitetsbedömt.</p>
     </div>
@@ -300,10 +300,80 @@ function addPoiMarker(p){
   marker.addTo(layerGroups[p.type]);
 }
 
-function toggleLayer(el){
+// Daniel: "Vi kan ju först ha 'värt en omväg' som default ifyllt och de
+// andra får man slå på var för sig. Och när man slå på så göra sök på just
+// den varianten." Löser samma överbelastningsproblem som fixen ovan från en
+// annan vinkel: istället för att alltid hämta alla fem kategorier på varje
+// sökning hämtas bara det som faktiskt är påslaget, en gång per kategori
+// (cachat så att man kan slå av/på en redan hämtad kategori utan att hämta
+// om). fetchAllOsmPois() täcker fortfarande sevärdheter+ställplatser+
+// matställen i EN kombinerad Overpass-fråga (samma effektivitetsvinst som
+// innan) — bara den första av de tre kategorierna som slås på triggar
+// hämtningen, de andra två får sitt svar direkt ur samma cachade resultat.
+let osmDataPromise = null, chargersPromise = null, loadedLayers = new Set();
+
+function ensureOsmData(){
+  if(!osmDataPromise){
+    osmDataPromise = fetchAllOsmPois().catch(err => {
+      console.error(err);
+      setStatus('Sevärdheter/ställplatser/matställen (OpenStreetMap) gick inte att hämta: ' + err.message, 'err');
+      return { sights: [], stallplatser: [], nearRoute: [], worthDetour: [] };
+    });
+  }
+  return osmDataPromise;
+}
+function ensureChargersData(){
+  if(!chargersPromise){
+    chargersPromise = fetchChargers().catch(err => {
+      console.error(err);
+      setStatus('Laddstationer (NOBIL) gick inte att hämta: ' + err.message, 'err');
+      return [];
+    });
+  }
+  return chargersPromise;
+}
+
+const LAYER_LOADERS = {
+  sight: async () => {
+    const { sights } = await ensureOsmData();
+    sights.forEach(addPoiMarker);
+    document.getElementById('c-sight').textContent = sights.length;
+  },
+  stallplats: async () => {
+    const { stallplatser } = await ensureOsmData();
+    stallplatser.forEach(addPoiMarker);
+    document.getElementById('c-stallplats').textContent = stallplatser.length;
+  },
+  restaurant: async () => {
+    const { nearRoute } = await ensureOsmData();
+    nearRoute.forEach(addPoiMarker);
+    document.getElementById('c-restaurant').textContent = nearRoute.length;
+  },
+  detour: async () => {
+    const { worthDetour } = await ensureOsmData();
+    worthDetour.forEach(addPoiMarker);
+    document.getElementById('c-detour').textContent = worthDetour.length;
+  },
+  charger: async () => {
+    allChargers = await ensureChargersData();
+    applyPowerFilter(); // ritar laddarna respekterande nuvarande kryssrutor, sätter c-charger
+  }
+};
+
+async function toggleLayer(el){
   const layer = el.getAttribute('data-layer');
   const isOn = el.classList.toggle('on');
-  if(isOn){ map.addLayer(layerGroups[layer]); } else { map.removeLayer(layerGroups[layer]); }
+  if(isOn){
+    map.addLayer(layerGroups[layer]);
+    if(!loadedLayers.has(layer)){
+      loadedLayers.add(layer);
+      setStatus(`Hämtar ${LABELS[layer].toLowerCase()} …`);
+      await LAYER_LOADERS[layer]();
+      setStatus(`${LABELS[layer]} hämtat.`, 'ok');
+    }
+  } else {
+    map.removeLayer(layerGroups[layer]);
+  }
 }
 
 // ---- Mobil: sidopanelen som en dold drawer, kartan får hela skärmen när den
@@ -924,34 +994,28 @@ async function handleDrawRoute(userInitiated){
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
-    setStatus('Hämtar riktiga sevärdheter, ställplatser, matställen (OpenStreetMap) och laddstationer (NOBIL) …');
+    // Ny sökning = ny rutt = allt tidigare hämtat data hör inte hemma längre.
+    // Nollställ cacherna och rita om bara de kategorier som faktiskt är
+    // påslagna just nu — inte alla fem i onödan (se LAYER_LOADERS ovan).
     layerGroups.sight.clearLayers();
     layerGroups.charger.clearLayers();
     layerGroups.restaurant.clearLayers();
     layerGroups.detour.clearLayers();
     layerGroups.stallplats.clearLayers();
-    // BUGFIX (fetchRealSights() saknade en .catch() här ursprungligen — se
-    // git-historiken) samt den större omskrivningen till fetchAllOsmPois()
-    // (en kombinerad fråga per region istället för tre separata) beskriven
-    // ovan vid combinedOsmQuery — löste en riktig användarrapporterad
-    // instabilitet, inte bara en teoretisk risk.
-    const [osmData, chargers] = await Promise.all([
-      fetchAllOsmPois().catch(err => { console.error(err); setStatus('Sevärdheter/ställplatser/matställen (OpenStreetMap) gick inte att hämta: ' + err.message, 'err'); return {sights:[], stallplatser:[], nearRoute:[], worthDetour:[]}; }),
-      fetchChargers().catch(err => { console.error(err); setStatus('Laddstationer (NOBIL) gick inte att hämta: ' + err.message, 'err'); return []; })
-    ]);
-    const { sights, stallplatser, nearRoute, worthDetour } = osmData;
-    sights.forEach(addPoiMarker);
-    stallplatser.forEach(addPoiMarker);
-    allChargers = chargers;
-    applyPowerFilter(); // ritar laddarna respekterande nuvarande kryssrutor, sätter c-charger
-    nearRoute.forEach(addPoiMarker);
-    worthDetour.forEach(addPoiMarker);
-    document.getElementById('c-sight').textContent = sights.length;
-    document.getElementById('c-stallplats').textContent = stallplatser.length;
-    document.getElementById('c-restaurant').textContent = nearRoute.length;
-    document.getElementById('c-detour').textContent = worthDetour.length;
+    osmDataPromise = null;
+    chargersPromise = null;
+    loadedLayers = new Set();
+    document.getElementById('c-sight').textContent = '–';
+    document.getElementById('c-stallplats').textContent = '–';
+    document.getElementById('c-restaurant').textContent = '–';
+    document.getElementById('c-detour').textContent = '–';
+    document.getElementById('c-charger').textContent = '–';
 
-    setStatus(`Klart. ${sights.length} sevärdheter, ${stallplatser.length} ställplatser, ${chargers.length} laddstationer, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
+    const activeLayers = [...document.querySelectorAll('.switch[data-layer].on')].map(el => el.getAttribute('data-layer'));
+    setStatus(activeLayers.length ? `Hämtar ${activeLayers.map(l => LABELS[l].toLowerCase()).join(', ')} …` : 'Klart. Slå på ett lager i sidopanelen för att hämta det.');
+    await Promise.all(activeLayers.map(layer => { loadedLayers.add(layer); return LAYER_LOADERS[layer](); }));
+
+    if(activeLayers.length) setStatus('Klart.', 'ok');
     // Sök → dölj panelen → visa kartan, som Daniel bad om. Bara vid en
     // användarinitierad sökning, inte vid den automatiska start-hämtningen —
     // annars blinkar panelen upp och stängs igen direkt vid sidladdning.
