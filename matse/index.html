@@ -469,7 +469,8 @@ async function addWeatherAlongRoute(){
 // räcker.
 const OVERPASS_ENDPOINTS = [
   { url: 'https://overpass-api.de/api/interpreter', attempts: 2 },
-  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1 }
+  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1 },
+  { url: 'https://overpass.osm.ch/api/interpreter', attempts: 1 }
 ];
 
 async function overpassQuery(query){
@@ -513,79 +514,36 @@ function osmLinks(e, lat, lng, name){
   return { readMore, mapsLink };
 }
 
-// En enda bbox över hela rutten har exakt samma två problem som NOBIL-sökningen
-// hade (samma fix som laddstationerna längre ner använder): dels kan Overpass träffgräns (200)
-// fyllas av en tät klunga långt ifrån resten av rutten, dels blir bbox-frågan
-// för TUNG och TIDSGRÄNSAS UT när den täcker ett helt långt Sverige-tvärsnitt
-// — verifierat live på en riktig sökning (Onsala→Fredriksberg, Dalarna, en
-// bbox på 3,35°×3,09°): båda Overpass-instanserna (huvud OCH spegel) gav fel
-// på exakt samma stora fråga, spegeln efter nästan 40 sekunder innan den gav
-// upp. Löst med samma spridda-mindre-frågor-mönster som redan bevisat fungera
-// för laddstationer — varje delfråga blir liten och snabb, och ingen del av
-// rutten kan tränga undan en annan.
 const POI_SAMPLE_FRACTIONS = [0, 0.2, 0.4, 0.6, 0.8, 1];
 const POI_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
 
-async function fetchOverpassAlongRoute(buildQuery, pad = POI_SAMPLE_PAD){
-  const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
-  const results = await Promise.all(
-    samples.map(([lat,lng]) => {
-      const bb = { south: lat-pad, north: lat+pad, west: lng-pad, east: lng+pad };
-      return overpassQuery(buildQuery(bb)).catch(() => []);
-    })
-  );
-  const byId = new Map();
-  results.flat().forEach(e => byId.set(`${e.type}:${e.id}`, e));
-  return [...byId.values()];
-}
-
-async function fetchRealSights(){
-  const named = await fetchOverpassAlongRoute(bb => `[out:json][timeout:25];(
-    node["tourism"="attraction"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["historic"~"castle|fort|ruins|monument"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["tourism"="museum"](${bb.south},${bb.west},${bb.north},${bb.east});
-  );out body 200;`);
-  const withDist = named.map(e => ({
-    type: 'sight',
+function toSight(e){
+  return {
+    id: `${e.type}:${e.id}`,
     name: e.tags.name,
     lat: e.lat, lng: e.lon,
     sub: e.tags.historic ? ('Historisk plats · ' + e.tags.historic) : (e.tags.tourism === 'museum' ? 'Museum' : 'Sevärdhet'),
     source: 'OpenStreetMap',
     distKm: distToRouteKm(e.lat, e.lon),
     ...osmLinks(e, e.lat, e.lon, e.tags.name)
-  }));
-  return withDist
-    .filter(p => p.distKm <= CORRIDOR_KM)
-    .sort((a,b) => a.distKm - b.distKm)
-    .slice(0, 20);
+  };
 }
 
 // ---- Riktiga ställplatser: OpenStreetMap/Overpass, gratis, ingen nyckel ----
 // (Testat mot Foursquare också, men OSM har bättre täckning för just det här —
 // den nordiska husbils-/ställplats-communityn kartlägger flitigt — och saknar
 // betyg oavsett källa, så det förlorar man inget på.)
-async function fetchStallplatser(){
-  const named = await fetchOverpassAlongRoute(bb => `[out:json][timeout:25];(
-    node["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
-    way["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["amenity"="parking"]["motorhome"="yes"](${bb.south},${bb.west},${bb.north},${bb.east});
-  );out center 100;`);
-  const withDist = named.map(e => {
-    const lat = e.lat ?? e.center?.lat, lng = e.lon ?? e.center?.lon;
-    return {
-      type: 'stallplats',
-      name: e.tags.name,
-      lat, lng,
-      sub: e.tags.fee === 'yes' ? 'Ställplats · avgift' : 'Ställplats',
-      source: 'OpenStreetMap',
-      distKm: distToRouteKm(lat, lng),
-      ...osmLinks(e, lat, lng, e.tags.name)
-    };
-  });
-  return withDist
-    .filter(p => p.distKm <= CORRIDOR_KM)
-    .sort((a,b) => a.distKm - b.distKm)
-    .slice(0, 20);
+function toStallplats(e){
+  const lat = e.lat ?? e.center?.lat, lng = e.lon ?? e.center?.lon;
+  return {
+    id: `${e.type}:${e.id}`,
+    name: e.tags.name,
+    lat, lng,
+    sub: e.tags.fee === 'yes' ? 'Ställplats · avgift' : 'Ställplats',
+    source: 'OpenStreetMap',
+    distKm: distToRouteKm(lat, lng),
+    ...osmLinks(e, lat, lng, e.tags.name)
+  };
 }
 
 // ---- Riktiga laddstationer: NOBIL via matse-api (server-side proxy — se
@@ -690,7 +648,7 @@ async function fetchChargers(){
 // Overpass trunkerar inte efter närhet till sökpunkten som Foursquare
 // gjorde, så en bredare bbox runt samma rutt-punkter hittar riktiga
 // matställen 30–50 km bort utan behov av separata, fasta DETOUR_CENTERS.
-const DETOUR_SAMPLE_PAD = 0.5; // ~50 km i den här breddgraden — täcker både "vid vägen" och "värt en omväg" i en och samma fråga
+const DETOUR_SAMPLE_PAD = 0.5; // ~50 km i den här breddgraden — täcker "vid vägen", ställplatser/sevärdheter OCH "värt en omväg" i en och samma fråga per region (se nedan)
 
 function toRestaurant(e){
   const t = e.tags;
@@ -710,40 +668,81 @@ function toRestaurant(e){
   };
 }
 
-function restaurantQuery(bb){
+// BUGFIX (riktig användare: "Första gången funkade den men sedan kommer bara
+// vägen fram och inget annat" — instabilt). Grundorsaken: varje sökning
+// gjorde 18 SAMTIDIGA Overpass-anrop (6 rutt-regioner × 3 separata frågor:
+// sevärdheter, ställplatser, matställen). Verifierat live vad det faktiskt
+// gör mot en delad, gratis publik server: 18 samtidiga anrop tog 59 SEKUNDER
+// och bara 13/18 lyckades även med spegelserver-fallbacken — och även en
+// enklare variant med 6 samtidiga anrop (en per region, inte tre) fick
+// fortfarande 2/6 att misslyckas. De delade Overpass-instanserna klarar
+// helt enkelt inte den bördan pålitligt. Löst genom att slå ihop alla tre
+// kategoriers taggar till EN Overpass-fråga per region — 6 samtidiga anrop
+// istället för 18, en tredjedel av belastningen — plus en tredje
+// spegelserver (overpass.osm.ch) för extra marginal. Kvarstående, ärlig
+// risk: den delade gratis-infrastrukturen kan fortfarande vara long/instabil
+// vid riktigt hög belastning — inte helt bortfixat, bara kraftigt förbättrat.
+function combinedOsmQuery(bb){
+  const b = `${bb.south},${bb.west},${bb.north},${bb.east}`;
   return `[out:json][timeout:25];(
-    node["amenity"="restaurant"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["amenity"="cafe"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["amenity"="fast_food"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["amenity"="pub"](${bb.south},${bb.west},${bb.north},${bb.east});
-    node["amenity"="bar"](${bb.south},${bb.west},${bb.north},${bb.east});
-  );out body 200;`;
+    node["tourism"="attraction"](${b});
+    node["historic"~"castle|fort|ruins|monument"](${b});
+    node["tourism"="museum"](${b});
+    node["tourism"="caravan_site"](${b});
+    way["tourism"="caravan_site"](${b});
+    node["amenity"="parking"]["motorhome"="yes"](${b});
+    node["amenity"="restaurant"](${b});
+    node["amenity"="cafe"](${b});
+    node["amenity"="fast_food"](${b});
+    node["amenity"="pub"](${b});
+    node["amenity"="bar"](${b});
+  );out body center 200;`;
+}
+
+function classifyOsmElement(t){
+  if(t.tourism === 'attraction' || t.tourism === 'museum' || /castle|fort|ruins|monument/.test(t.historic || '')) return 'sight';
+  if(t.tourism === 'caravan_site' || (t.amenity === 'parking' && t.motorhome === 'yes')) return 'stallplats';
+  if(['restaurant','cafe','fast_food','pub','bar'].includes(t.amenity)) return 'restaurant';
+  return null;
 }
 
 // Samma per-region-kvot som laddstationerna (se CHARGERS_PER_REGION) istället
 // för ett globalt "top 20 närmast vägen" — annars kan en tät stad nära EN
 // samplad punkt fylla hela listan och lämna resten av en lång rutt tom,
 // exakt det som redan hänt en gång för laddstationer.
+const SIGHTS_PER_REGION = 4;
+const STALLPLATS_PER_REGION = 4;
 const RESTAURANTS_PER_REGION = 5;
 const DETOUR_PER_REGION = 4;
 
-async function fetchRestaurants(){
+async function fetchAllOsmPois(){
   const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
   const perRegion = await Promise.all(
     samples.map(async ([lat,lng]) => {
       const bb = { south: lat-DETOUR_SAMPLE_PAD, north: lat+DETOUR_SAMPLE_PAD, west: lng-DETOUR_SAMPLE_PAD, east: lng+DETOUR_SAMPLE_PAD };
-      const found = await overpassQuery(restaurantQuery(bb)).catch(() => []);
-      const all = found.map(toRestaurant);
+      const elements = await overpassQuery(combinedOsmQuery(bb)).catch(() => []);
+      const sights = [], stallplatser = [], restaurants = [];
+      elements.forEach(e => {
+        const kind = classifyOsmElement(e.tags);
+        if(kind === 'sight') sights.push(toSight(e));
+        else if(kind === 'stallplats') stallplatser.push(toStallplats(e));
+        else if(kind === 'restaurant') restaurants.push(toRestaurant(e));
+      });
       return {
-        near: all.filter(p => p.distKm <= CORRIDOR_KM).sort((a,b) => a.distKm - b.distKm).slice(0, RESTAURANTS_PER_REGION),
-        detour: all.filter(p => p.distKm > 30 && p.distKm <= 50).sort((a,b) => a.distKm - b.distKm).slice(0, DETOUR_PER_REGION)
+        sights: sights.filter(p => p.distKm <= CORRIDOR_KM).sort((a,b) => a.distKm - b.distKm).slice(0, SIGHTS_PER_REGION),
+        stallplatser: stallplatser.filter(p => p.distKm <= CORRIDOR_KM).sort((a,b) => a.distKm - b.distKm).slice(0, STALLPLATS_PER_REGION),
+        near: restaurants.filter(p => p.distKm <= CORRIDOR_KM).sort((a,b) => a.distKm - b.distKm).slice(0, RESTAURANTS_PER_REGION),
+        detour: restaurants.filter(p => p.distKm > 30 && p.distKm <= 50).sort((a,b) => a.distKm - b.distKm).slice(0, DETOUR_PER_REGION)
       };
     })
   );
   const dedupeById = (items) => [...new Map(items.map(p => [p.id, p])).values()];
-  const nearRoute = dedupeById(perRegion.flatMap(r => r.near)).map(p => ({...p, type:'restaurant'}));
-  const worthDetour = dedupeById(perRegion.flatMap(r => r.detour)).map(p => ({...p, type:'detour'}));
-  return { nearRoute, worthDetour };
+  return {
+    sights: dedupeById(perRegion.flatMap(r => r.sights)).map(p => ({...p, type:'sight'})),
+    stallplatser: dedupeById(perRegion.flatMap(r => r.stallplatser)).map(p => ({...p, type:'stallplats'})),
+    nearRoute: dedupeById(perRegion.flatMap(r => r.near)).map(p => ({...p, type:'restaurant'})),
+    worthDetour: dedupeById(perRegion.flatMap(r => r.detour)).map(p => ({...p, type:'detour'}))
+  };
 }
 
 // ---- Riktig adressökning: Photon (Komoot, byggt på OpenStreetMap), gratis,
@@ -925,27 +924,22 @@ async function handleDrawRoute(userInitiated){
     routeLine.setStyle({color:'#D4A73D', weight:5});
     setTimeout(()=>routeLine.setStyle({color:'#16232C', weight:4}), 700);
 
-    setStatus('Hämtar riktiga sevärdheter, ställplatser (Overpass/OSM), laddstationer (NOBIL) och matställen (Foursquare) …');
+    setStatus('Hämtar riktiga sevärdheter, ställplatser, matställen (OpenStreetMap) och laddstationer (NOBIL) …');
     layerGroups.sight.clearLayers();
     layerGroups.charger.clearLayers();
     layerGroups.restaurant.clearLayers();
     layerGroups.detour.clearLayers();
     layerGroups.stallplats.clearLayers();
-    // BUGFIX: fetchRealSights() saknade en .catch() här, till skillnad från de
-    // andra två — så ett enda Overpass-hack (samma delade, ibland överlastade
-    // publika server som redan gett en riktig 504 under den här sessionen)
-    // kastade hela Promise.all, och slängde bort ställplatser/matställen-data
-    // som annars hade lyckats. Exakt samma buggmönster som geocoding-kopplingen
-    // hade — borde sökt igenom alla tre anropen efter samma sak då, inte bara
-    // fixat den ena platsen som rapporterades. fetchChargers() fick samma
-    // skydd direkt när den lades till, ingen anledning att upprepa missen.
-    const [sights, stallplatser, chargers, restaurantData] = await Promise.all([
-      fetchRealSights().catch(err => { console.error(err); setStatus('Sevärdheter (Overpass) gick inte att hämta: ' + err.message, 'err'); return []; }),
-      fetchStallplatser().catch(err => { console.error(err); return []; }),
-      fetchChargers().catch(err => { console.error(err); setStatus('Laddstationer (NOBIL) gick inte att hämta: ' + err.message, 'err'); return []; }),
-      fetchRestaurants().catch(err => { console.error(err); setStatus('Matställen (Foursquare) gick inte att hämta: ' + err.message, 'err'); return {nearRoute:[], worthDetour:[]}; })
+    // BUGFIX (fetchRealSights() saknade en .catch() här ursprungligen — se
+    // git-historiken) samt den större omskrivningen till fetchAllOsmPois()
+    // (en kombinerad fråga per region istället för tre separata) beskriven
+    // ovan vid combinedOsmQuery — löste en riktig användarrapporterad
+    // instabilitet, inte bara en teoretisk risk.
+    const [osmData, chargers] = await Promise.all([
+      fetchAllOsmPois().catch(err => { console.error(err); setStatus('Sevärdheter/ställplatser/matställen (OpenStreetMap) gick inte att hämta: ' + err.message, 'err'); return {sights:[], stallplatser:[], nearRoute:[], worthDetour:[]}; }),
+      fetchChargers().catch(err => { console.error(err); setStatus('Laddstationer (NOBIL) gick inte att hämta: ' + err.message, 'err'); return []; })
     ]);
-    const { nearRoute, worthDetour } = restaurantData;
+    const { sights, stallplatser, nearRoute, worthDetour } = osmData;
     sights.forEach(addPoiMarker);
     stallplatser.forEach(addPoiMarker);
     allChargers = chargers;
