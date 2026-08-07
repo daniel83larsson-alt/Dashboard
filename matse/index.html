@@ -66,6 +66,9 @@
   .switch.on{background:var(--teal);}
   .switch::after{content:"";position:absolute;top:2px;left:2px;width:15px;height:15px;background:#fff;border-radius:50%;transition:left .15s;}
   .switch.on::after{left:17px;}
+  .power-filter{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 10px 19px;}
+  .power-filter label{display:flex;align-items:center;gap:4px;font-size:11.5px;color:#AEBDBF;background:#16232C;border:1px solid rgba(255,255,255,0.08);border-radius:6px;padding:3px 8px;cursor:pointer;}
+  .power-filter input{accent-color:var(--teal);}
   .datatag{font-size:9px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;padding:1px 6px;border-radius:999px;margin-left:8px;}
   .datatag.real{background:rgba(63,156,134,.22);color:#7FCDB8;}
   .datatag.mock{background:rgba(181,73,91,.22);color:#E29AA6;}
@@ -175,6 +178,11 @@
         <span class="label"><span class="swatch" style="background:var(--teal)"></span>Laddstationer<span class="datatag real">Riktig data</span></span>
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-charger">–</span><span class="switch on" data-layer="charger" onclick="toggleLayer(this)"></span></span>
       </div>
+      <div class="power-filter" id="powerFilter">
+        <label><input type="checkbox" value="slow" checked onchange="applyPowerFilter()"> ≤22 kW</label>
+        <label><input type="checkbox" value="medium" checked onchange="applyPowerFilter()"> 23–99 kW</label>
+        <label><input type="checkbox" value="fast" checked onchange="applyPowerFilter()"> 100+ kW</label>
+      </div>
       <div class="toggle-row">
         <span class="label"><span class="swatch" style="background:var(--rose)"></span>Matställen<span class="datatag real">Riktig data</span></span>
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-restaurant">–</span><span class="switch on" data-layer="restaurant" onclick="toggleLayer(this)"></span></span>
@@ -261,6 +269,22 @@ function makeIcon(type){
 
 const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map), stallplats:L.layerGroup().addTo(map) };
 let allPois = []; // sights (real) + mock chargers/restaurants, once loaded
+let allChargers = []; // senaste hämtningen, sparad separat så effektfiltret kan rita om utan ny NOBIL-hämtning
+
+function powerTier(kw){
+  if(kw === null || kw === undefined) return 'medium'; // okänd effekt — hellre synlig än att gissa fel bort den
+  if(kw <= 22) return 'slow';
+  if(kw < 100) return 'medium';
+  return 'fast';
+}
+
+function applyPowerFilter(){
+  const checked = new Set([...document.querySelectorAll('#powerFilter input:checked')].map(el => el.value));
+  layerGroups.charger.clearLayers();
+  const visible = allChargers.filter(c => checked.has(powerTier(c.powerKw)));
+  visible.forEach(addPoiMarker);
+  document.getElementById('c-charger').textContent = visible.length + (visible.length < allChargers.length ? ` av ${allChargers.length}` : '');
+}
 let fromMarker = null, toMarker = null; // ersätts, inte staplas, vid varje ny sökning
 
 function addPoiMarker(p){
@@ -380,13 +404,6 @@ async function fetchRoute(fromLat, fromLng, toLat, toLng){
 }
 
 // ---- Riktig sevärdhets-data: Overpass API (OpenStreetMap), gratis, ingen nyckel ----
-function routeBbox(padDeg){
-  const lats = routeCoords.map(c=>c[0]), lngs = routeCoords.map(c=>c[1]);
-  return {
-    south: Math.min(...lats)-padDeg, north: Math.max(...lats)+padDeg,
-    west: Math.min(...lngs)-padDeg, east: Math.max(...lngs)+padDeg
-  };
-}
 // Den delade publika Overpass-instansen är gratis men kan vara långsam/överlastad
 // (sett live under utveckling: enstaka 504:or). Ett återförsök räcker i praktiken —
 // i skarpt läge bör detta cachas server-side istället för att köras live per besök.
@@ -451,14 +468,38 @@ function osmLinks(e, lat, lng, name){
   return { readMore, mapsLink };
 }
 
+// En enda bbox över hela rutten har exakt samma två problem som NOBIL-sökningen
+// hade (samma fix som laddstationerna längre ner använder): dels kan Overpass träffgräns (200)
+// fyllas av en tät klunga långt ifrån resten av rutten, dels blir bbox-frågan
+// för TUNG och TIDSGRÄNSAS UT när den täcker ett helt långt Sverige-tvärsnitt
+// — verifierat live på en riktig sökning (Onsala→Fredriksberg, Dalarna, en
+// bbox på 3,35°×3,09°): båda Overpass-instanserna (huvud OCH spegel) gav fel
+// på exakt samma stora fråga, spegeln efter nästan 40 sekunder innan den gav
+// upp. Löst med samma spridda-mindre-frågor-mönster som redan bevisat fungera
+// för laddstationer — varje delfråga blir liten och snabb, och ingen del av
+// rutten kan tränga undan en annan.
+const POI_SAMPLE_FRACTIONS = [0, 0.2, 0.4, 0.6, 0.8, 1];
+const POI_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
+
+async function fetchOverpassAlongRoute(buildQuery){
+  const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
+  const results = await Promise.all(
+    samples.map(([lat,lng]) => {
+      const bb = { south: lat-POI_SAMPLE_PAD, north: lat+POI_SAMPLE_PAD, west: lng-POI_SAMPLE_PAD, east: lng+POI_SAMPLE_PAD };
+      return overpassQuery(buildQuery(bb)).catch(() => []);
+    })
+  );
+  const byId = new Map();
+  results.flat().forEach(e => byId.set(`${e.type}:${e.id}`, e));
+  return [...byId.values()];
+}
+
 async function fetchRealSights(){
-  const bb = routeBbox(0.3);
-  const query = `[out:json][timeout:25];(
+  const named = await fetchOverpassAlongRoute(bb => `[out:json][timeout:25];(
     node["tourism"="attraction"](${bb.south},${bb.west},${bb.north},${bb.east});
     node["historic"~"castle|fort|ruins|monument"](${bb.south},${bb.west},${bb.north},${bb.east});
     node["tourism"="museum"](${bb.south},${bb.west},${bb.north},${bb.east});
-  );out body 200;`;
-  const named = await overpassQuery(query);
+  );out body 200;`);
   const withDist = named.map(e => ({
     type: 'sight',
     name: e.tags.name,
@@ -479,13 +520,11 @@ async function fetchRealSights(){
 // den nordiska husbils-/ställplats-communityn kartlägger flitigt — och saknar
 // betyg oavsett källa, så det förlorar man inget på.)
 async function fetchStallplatser(){
-  const bb = routeBbox(0.3);
-  const query = `[out:json][timeout:25];(
+  const named = await fetchOverpassAlongRoute(bb => `[out:json][timeout:25];(
     node["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
     way["tourism"="caravan_site"](${bb.south},${bb.west},${bb.north},${bb.east});
     node["amenity"="parking"]["motorhome"="yes"](${bb.south},${bb.west},${bb.north},${bb.east});
-  );out center 100;`;
-  const named = await overpassQuery(query);
+  );out center 100;`);
   const withDist = named.map(e => {
     const lat = e.lat ?? e.center?.lat, lng = e.lon ?? e.center?.lon;
     return {
@@ -518,17 +557,23 @@ function toCharger(station){
   const md = station.csmd;
   const pos = parseNobilPosition(md.Position);
   if(!pos) return null;
-  // Grab the first connector's power rating if present, e.g. "22 kW - 400V
-  // 3-phase max 32A" — just the leading power figure is useful in a list.
-  let power = null;
+  // Grab the HÖGSTA effekten bland stationens kontakter (inte bara den
+  // första) — en station har ofta flera kontakttyper med olika effekt, och
+  // det är den snabbaste som avgör om den duger för en snabbladdning.
+  let powerKw = null;
   const conn = station.attr && station.attr.conn;
   if(conn){
-    const firstGroup = Object.values(conn)[0];
-    const capAttr = firstGroup && firstGroup['5'];
-    if(capAttr && capAttr.trans) power = capAttr.trans.split(' - ')[0];
+    Object.values(conn).forEach(group => {
+      const capAttr = group && group['5'];
+      const m = capAttr && capAttr.trans && /^(\d+(?:[.,]\d+)?)\s*kW/.exec(capAttr.trans);
+      if(m){
+        const kw = Number(m[1].replace(',', '.'));
+        if(powerKw === null || kw > powerKw) powerKw = kw;
+      }
+    });
   }
   const points = md.Number_charging_points;
-  const sub = [power, points ? `${points} laddpunkt${points === 1 ? '' : 'er'}` : null].filter(Boolean).join(' · ') || 'Laddstation';
+  const sub = [powerKw !== null ? `${powerKw} kW` : null, points ? `${points} laddpunkt${points === 1 ? '' : 'er'}` : null].filter(Boolean).join(' · ') || 'Laddstation';
   const mapsLink = `https://www.google.com/maps/search/?api=1&query=${pos.lat},${pos.lng}(${encodeURIComponent(md.name)})`;
   return {
     id: md.id,
@@ -536,6 +581,7 @@ function toCharger(station){
     name: md.name,
     lat: pos.lat, lng: pos.lng,
     sub,
+    powerKw,
     source: 'NOBIL',
     distKm: distToRouteKm(pos.lat, pos.lng),
     readMore: mapsLink,
@@ -559,22 +605,33 @@ async function fetchChargersNear(lat, lng, padDeg){
 // inom några km) fyller hela den kvoten själv — verifierat live, en
 // helrutt-bbox gav bara träffar inom 0–8 mil från Göteborg, ingenting bortom
 // det trots att rutten fortsätter ~15 mil till. Samma spridda-punkter-mönster
-// som redan används för "Värt en omväg"-matställen, fast här bara för att
-// undvika trunkering, inte för att nå längre bort.
-const CHARGER_SAMPLE_FRACTIONS = [0, 0.2, 0.4, 0.6, 0.8, 1];
-const CHARGER_SAMPLE_PAD = 0.14; // ~15 km i den här breddgraden, matchar CORRIDOR_KM
+// som POI_SAMPLE_FRACTIONS ovan (delad konstant — samma fix, samma orsak).
+//
+// BUGFIX: att sedan sortera ALLA träffar globalt på avstånd och ta topp 20
+// återinför nästan samma problem en nivå upp — Daniel testade en lång rutt
+// (Onsala→Fredriksberg i Dalarna) och fick 249 laddare inom korridoren, men
+// 157 av dem låg i Göteborgstrakten (tätt) mot bara 4 vid Dalarna-änden
+// (glest) — så en global "20 närmast vägen"-sortering fylldes helt av
+// Göteborg, och den glesa norra sträckan (där räckviddsångest faktiskt är
+// ett problem) visade noll laddare. Löst genom att ta de N närmaste PER
+// samplad region istället för ett globalt urval — garanterar spridning
+// längs hela rutten oavsett hur ojämnt laddare är fördelade geografiskt.
+const CHARGERS_PER_REGION = 4;
 
 async function fetchChargers(){
-  const samples = routeSamplePoints(CHARGER_SAMPLE_FRACTIONS);
-  const results = await Promise.all(
-    samples.map(([lat,lng]) => fetchChargersNear(lat, lng, CHARGER_SAMPLE_PAD))
+  const samples = routeSamplePoints(POI_SAMPLE_FRACTIONS);
+  const perRegion = await Promise.all(
+    samples.map(async ([lat,lng]) => {
+      const found = await fetchChargersNear(lat, lng, POI_SAMPLE_PAD);
+      return found
+        .filter(p => p.distKm <= CORRIDOR_KM)
+        .sort((a,b) => a.distKm - b.distKm)
+        .slice(0, CHARGERS_PER_REGION);
+    })
   );
   const byId = new Map();
-  results.flat().forEach(c => byId.set(c.id, c));
-  return [...byId.values()]
-    .filter(p => p.distKm <= CORRIDOR_KM)
-    .sort((a,b) => a.distKm - b.distKm)
-    .slice(0, 20);
+  perRegion.flat().forEach(c => byId.set(c.id, c));
+  return [...byId.values()].sort((a,b) => a.distKm - b.distKm);
 }
 
 // ---- Riktiga matställen: Foursquare via matse-api (server-side proxy — se
@@ -843,12 +900,12 @@ async function handleDrawRoute(userInitiated){
     const { nearRoute, worthDetour } = restaurantData;
     sights.forEach(addPoiMarker);
     stallplatser.forEach(addPoiMarker);
-    chargers.forEach(addPoiMarker);
+    allChargers = chargers;
+    applyPowerFilter(); // ritar laddarna respekterande nuvarande kryssrutor, sätter c-charger
     nearRoute.forEach(addPoiMarker);
     worthDetour.forEach(addPoiMarker);
     document.getElementById('c-sight').textContent = sights.length;
     document.getElementById('c-stallplats').textContent = stallplatser.length;
-    document.getElementById('c-charger').textContent = chargers.length;
     document.getElementById('c-restaurant').textContent = nearRoute.length;
     document.getElementById('c-detour').textContent = worthDetour.length;
 
