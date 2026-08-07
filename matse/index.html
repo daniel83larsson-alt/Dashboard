@@ -73,14 +73,9 @@
   .datatag.real{background:rgba(63,156,134,.22);color:#7FCDB8;}
   .datatag.mock{background:rgba(181,73,91,.22);color:#E29AA6;}
 
-  .journey{padding:20px 24px;flex:1;}
-  .journey h2{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:#8FA0A6;margin:0 0 14px;font-weight:600;}
-  .stop{display:flex;gap:12px;padding:10px 0;cursor:pointer;border-bottom:1px solid var(--line);}
-  .stop:last-child{border-bottom:none;}
-  .stop .dot{width:22px;height:22px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;margin-top:1px;}
-  .stop .meta{min-width:0;}
-  .stop .name{font-size:13.5px;color:#EDEFEA;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-  .stop .sub{font-size:11.5px;color:#8FA0A6;margin-top:1px;}
+  .weather-badge{background:rgba(22,35,44,0.92);border:1px solid rgba(255,255,255,0.15);border-radius:10px;box-shadow:0 2px 6px rgba(0,0,0,0.35);}
+  .weather-badge .emoji{font-size:15px;line-height:1;}
+  .weather-badge .temp{font-size:11px;font-weight:600;color:#EDEFEA;}
 
   .foot{padding:14px 24px;font-size:11px;color:#697578;border-top:1px solid var(--line);}
   .foot a{color:#9FB0B5;}
@@ -195,12 +190,7 @@
         <span class="label"><span class="swatch" style="background:var(--blue)"></span>Ställplatser<span class="datatag real">Riktig data</span></span>
         <span style="display:flex;align-items:center;gap:8px;"><span class="count" id="c-stallplats">–</span><span class="switch on" data-layer="stallplats" onclick="toggleLayer(this)"></span></span>
       </div>
-      <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (Foursquares betygsdata kräver köpta krediter, se fotnoten). Ställplatser saknar också betyg — det finns inte hos någon källa vi testat, gratis eller betald. Just nu bara "hittad", inte kvalitetsbedömt.</p>
-    </div>
-
-    <div class="journey">
-      <h2>Längs vägen</h2>
-      <div id="stop-list"></div>
+      <p style="font-size:11.5px;color:#8FA0A6;margin:10px 0 0;line-height:1.4;">Matställen 30–50 km från rutten — riktiga träffar, men <b>inga betyg</b> ännu (OpenStreetMap saknar recensioner/betyg helt, gratis eller betalt). Ställplatser saknar också betyg. Just nu bara "hittad", inte kvalitetsbedömt.</p>
     </div>
 
     <div class="foot">
@@ -268,7 +258,6 @@ function makeIcon(type){
 }
 
 const layerGroups = { sight:L.layerGroup().addTo(map), charger:L.layerGroup().addTo(map), restaurant:L.layerGroup().addTo(map), detour:L.layerGroup().addTo(map), stallplats:L.layerGroup().addTo(map) };
-let allPois = []; // sights (real) + mock chargers/restaurants, once loaded
 let allChargers = []; // senaste hämtningen, sparad separat så effektfiltret kan rita om utan ny NOBIL-hämtning
 
 function powerTier(kw){
@@ -332,21 +321,6 @@ function closeSidebar(){
 }
 if(isMobile()) openSidebar();
 
-function renderStopList(){
-  const listEl = document.getElementById('stop-list');
-  listEl.innerHTML = '';
-  const orderedStops = [...allPois].sort((a,b)=>b.lat-a.lat);
-  orderedStops.forEach(p=>{
-    const div = document.createElement('div');
-    div.className='stop';
-    const glyph = GLYPHS[p.type];
-    div.innerHTML = `<div class="dot" style="background:${COLORS[p.type]}22;color:${COLORS[p.type]};">${glyph}</div>
-      <div class="meta"><div class="name">${p.name}</div><div class="sub">${LABELS[p.type]}${p.rating ? ' · ★'+p.rating : ''}</div></div>`;
-    div.onclick = ()=>{ map.setView([p.lat,p.lng], 11); };
-    listEl.appendChild(div);
-  });
-}
-
 // ---- Korridor-filtrering: kortaste avstånd (km) från en punkt till ruttlinjens segment ----
 // Enkel ekvirektangulär projektion — tillräckligt precist på den här skalan (sydöstra
 // Norge/västra Sverige, några hundra km), men INTE lika exakt som en riktig geodetisk
@@ -401,6 +375,77 @@ async function fetchRoute(fromLat, fromLng, toLat, toLng){
     distanceKm: route.distance / 1000,
     durationMin: route.duration / 60
   };
+}
+
+// ---- Riktigt väder: Open-Meteo, gratis, ingen nyckel, ingen registrering ----
+// (Daniel: "gött om kartan kan visa väder längs sträckan och där man kommer
+// fram" — täcker hela ruttens geografi, inte bara Sverige, till skillnad
+// från SMHI:s öppna API som är Sverige-fokuserat.)
+const WEATHER_CODE_EMOJI = {
+  0: '☀️', 1: '🌤️', 2: '⛅', 3: '☁️',
+  45: '🌫️', 48: '🌫️',
+  51: '🌦️', 53: '🌦️', 55: '🌦️', 56: '🌧️', 57: '🌧️',
+  61: '🌧️', 63: '🌧️', 65: '🌧️', 66: '🌨️', 67: '🌨️',
+  71: '🌨️', 73: '🌨️', 75: '🌨️', 77: '🌨️',
+  80: '🌦️', 81: '🌦️', 82: '⛈️',
+  85: '🌨️', 86: '🌨️',
+  95: '⛈️', 96: '⛈️', 99: '⛈️'
+};
+const WEATHER_CODE_TEXT = {
+  0: 'Klart', 1: 'Mest klart', 2: 'Delvis molnigt', 3: 'Mulet',
+  45: 'Dimma', 48: 'Rimfrost-dimma',
+  51: 'Lätt duggregn', 53: 'Duggregn', 55: 'Kraftigt duggregn', 56: 'Underkylt duggregn', 57: 'Underkylt duggregn',
+  61: 'Lätt regn', 63: 'Regn', 65: 'Kraftigt regn', 66: 'Underkylt regn', 67: 'Underkylt regn',
+  71: 'Lätt snöfall', 73: 'Snöfall', 75: 'Kraftigt snöfall', 77: 'Snökorn',
+  80: 'Lätta regnskurar', 81: 'Regnskurar', 82: 'Kraftiga regnskurar',
+  85: 'Lätta snöbyar', 86: 'Snöbyar',
+  95: 'Åska', 96: 'Åska med hagel', 99: 'Åska med hagel'
+};
+
+async function fetchWeather(lat, lng){
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weather_code,wind_speed_10m&timezone=auto`;
+  const res = await fetch(url);
+  const data = await res.json();
+  if(!res.ok || !data.current) throw new Error(data.reason || ('Open-Meteo svarade ' + res.status));
+  const code = data.current.weather_code;
+  return {
+    tempC: Math.round(data.current.temperature_2m),
+    windKph: Math.round(data.current.wind_speed_10m),
+    emoji: WEATHER_CODE_EMOJI[code] || '🌡️',
+    text: WEATHER_CODE_TEXT[code] || 'Okänt väder'
+  };
+}
+
+let weatherMarkers = [];
+
+function weatherIcon(w){
+  return L.divIcon({
+    className: '',
+    html: `<div class="weather-badge" style="padding:4px 8px;display:flex;align-items:center;gap:5px;white-space:nowrap;transform:translate(-50%,-100%);">
+      <span class="emoji">${w.emoji}</span><span class="temp">${w.tempC}°</span>
+    </div>`,
+    iconSize: [0, 0]
+  });
+}
+
+// Väder vid start, en punkt ungefär mitt på och vid målet — inte varenda
+// samplad punkt, väder ändras långsammare än POI-täthet så tre platser
+// räcker för att ge en känsla för resan.
+async function addWeatherAlongRoute(){
+  weatherMarkers.forEach(m => map.removeLayer(m));
+  weatherMarkers = [];
+  const points = routeSamplePoints([0, 0.5, 1]);
+  const labels = ['Vid start', 'Halvvägs', 'Vid målet'];
+  const results = await Promise.allSettled(points.map(([lat,lng]) => fetchWeather(lat,lng)));
+  results.forEach((r, i) => {
+    if(r.status !== 'fulfilled') return;
+    const w = r.value;
+    const [lat,lng] = points[i];
+    const marker = L.marker([lat,lng], {icon: weatherIcon(w), zIndexOffset: 500})
+      .addTo(map)
+      .bindPopup(`<div class="popup"><h3>${w.emoji} ${w.tempC}°C</h3><div class="sub">${labels[i]} · ${w.text} · vind ${w.windKph} km/h</div></div>`);
+    weatherMarkers.push(marker);
+  });
 }
 
 // ---- Riktig sevärdhets-data: Overpass API (OpenStreetMap), gratis, ingen nyckel ----
@@ -855,6 +900,7 @@ async function handleDrawRoute(userInitiated){
         routeLine.setLatLngs(routeCoords);
         map.fitBounds(routeLine.getBounds(), {padding:[40,40]});
         setStatus(`Hittade: ${fromRes.main} → ${toRes.main}. Riktig väg ritad (${real.distanceKm.toFixed(0)} km, ~${Math.round(real.durationMin/60)} tim ${Math.round(real.durationMin%60)} min).`, 'ok');
+        addWeatherAlongRoute().catch(err => console.error('Väder gick inte att hämta:', err));
       } catch(routeErr){
         console.error(routeErr);
         // Ruttlinjen/routeCoords rörs INTE här — behåller vad som redan
@@ -911,8 +957,6 @@ async function handleDrawRoute(userInitiated){
     document.getElementById('c-restaurant').textContent = nearRoute.length;
     document.getElementById('c-detour').textContent = worthDetour.length;
 
-    allPois = [...sights, ...stallplatser, ...chargers, ...nearRoute, ...worthDetour];
-    renderStopList();
     setStatus(`Klart. ${sights.length} sevärdheter, ${stallplatser.length} ställplatser, ${chargers.length} laddstationer, ${nearRoute.length} matställen vid vägen, ${worthDetour.length} värda en omväg.`, 'ok');
     // Sök → dölj panelen → visa kartan, som Daniel bad om. Bara vid en
     // användarinitierad sökning, inte vid den automatiska start-hämtningen —
