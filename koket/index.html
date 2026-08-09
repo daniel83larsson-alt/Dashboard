@@ -3110,7 +3110,10 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         var d = x.d;
         var missingLabels = x.trueMissing.filter(function(id){ return !PANTRY_IDS[id]; }).map(function(id){ return (VOCAB_BY_ID[id] || {}).label || id; });
         var swapLabels = x.swapOnly.map(function(id){ return (VOCAB_BY_ID[id] || {}).label || id; });
-        var chipsHtml = d.tags.slice(0, 6).map(function(id){
+        // Ingredienserna du faktiskt sökte på visas alltid, annars ser "2 av 3" ut som fel matte om den andra träffen råkar hamna utanför gränsen
+        var matchedTags = d.tags.filter(function(id){ return chosen.indexOf(id) !== -1; });
+        var otherTags = d.tags.filter(function(id){ return chosen.indexOf(id) === -1; });
+        var chipsHtml = matchedTags.concat(otherTags).slice(0, 8).map(function(id){
           var picked = chosen.indexOf(id) !== -1;
           return '<span class="chip' + (picked ? ' active' : '') + '" style="cursor:default">' + ((VOCAB_BY_ID[id] || {}).label || id) + '</span>';
         }).join('');
