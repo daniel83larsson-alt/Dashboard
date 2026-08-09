@@ -318,6 +318,15 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .plist .b{font-weight:700;display:block}
 .plist .d{font-size:.88rem;color:#5A5348;display:block;margin-top:.1rem}
 .plist .u{font-family:'Space Mono',monospace;font-size:.66rem;color:#1C1A17;background:#DDD7CA;padding:.1rem .4rem;white-space:nowrap;margin-left:auto}
+.plist .u-btn{border:none;cursor:pointer}
+.plist .u-btn:hover,.plist .u-btn[aria-expanded="true"]{background:var(--jade);color:#fff}
+.u-dishes{flex-basis:100%;width:100%;margin-top:.6rem;padding:.7rem .9rem;background:#F7F4EC;border:1px solid #DDD7CA;border-radius:3px;font-size:.82rem}
+.u-dishes[hidden]{display:none}
+.u-dish-group{margin-bottom:.6rem}
+.u-dish-group:last-child{margin-bottom:0}
+.u-dish-cuisine{font-family:'Space Mono',monospace;font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;color:#8A8275;display:block;margin-bottom:.25rem}
+.u-dishes a{color:#1C1A17;text-decoration:underline;text-decoration-color:#C9C2B2;margin-right:.7rem;display:inline-block}
+.u-dishes a:hover{color:var(--jade);text-decoration-color:var(--jade)}
 .plist .h{font-family:'Space Mono',monospace;font-size:.66rem;color:#8A8275;white-space:nowrap;padding-left:.55rem;min-width:5.5rem;text-align:right}
 .keepbox{margin-top:.6rem;border:1px solid #6E8A5A;background:#EEF1E8;padding:1.25rem}
 .keepbox .t{font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.14em;text-transform:uppercase;color:#4E6B3C;margin-bottom:.8rem}
@@ -3182,6 +3191,53 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       var li = btn.closest('li');
       togglePantryItem(plistItemName(li), btn);
     });
+  });
+
+  // ── Basvaror/Kryddor: gör "N kök"-badgen klickbar och visa exakt vilka rätter ──
+  document.querySelectorAll('#tab-basvaror .plist li, #tab-kryddor .plist li').forEach(function(li){
+    var uSpan = li.querySelector('.u');
+    if (!uSpan) return;
+    var name = plistItemName(li);
+    var ids = ingTag(name);
+    var dishIds = [];
+    ids.forEach(function(id){ (ingIndex[id] || []).forEach(function(did){ if (dishIds.indexOf(did) === -1) dishIds.push(did); }); });
+    if (!dishIds.length) return; // t.ex. "Chiliolja med krisp" — nämns aldrig i något recepts ingredienslista, lämna badgen som den var
+
+    var origText = uSpan.textContent.trim();
+    var prefix = origText.indexOf('Alla') === 0 ? 'Alla' : dishIds.length + ' kök';
+    var btn = document.createElement('button');
+    btn.className = 'u u-btn';
+    btn.type = 'button';
+    btn.setAttribute('aria-expanded', 'false');
+    btn.textContent = prefix + ' · ' + dishIds.length + ' rätt' + (dishIds.length === 1 ? '' : 'er');
+
+    var panel = document.createElement('div');
+    panel.className = 'u-dishes';
+    panel.hidden = true;
+    var byCuisine = {};
+    dishIds.forEach(function(did){
+      var d = dishById[did];
+      if (!d) return;
+      var key = d.cuisine || '';
+      (byCuisine[key] = byCuisine[key] || []).push(d);
+    });
+    panel.innerHTML = Object.keys(byCuisine).sort().map(function(cu){
+      return '<div class="u-dish-group"><span class="u-dish-cuisine">' + cu + '</span>' +
+        byCuisine[cu].map(function(d){ return '<a href="#' + d.id + '" data-open="' + d.id + '">' + d.name + '</a>'; }).join('') +
+      '</div>';
+    }).join('');
+
+    btn.addEventListener('click', function(){
+      var open = panel.hidden;
+      panel.hidden = !open;
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    panel.querySelectorAll('[data-open]').forEach(function(a){
+      a.addEventListener('click', function(e){ e.preventDefault(); openDish(a.getAttribute('data-open')); });
+    });
+
+    uSpan.replaceWith(btn);
+    li.appendChild(panel);
   });
 
   document.getElementById('cartToggle').addEventListener('click', function(){
