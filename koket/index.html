@@ -289,6 +289,32 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .plist-add:hover{border-color:#4E6B3C;color:#4E6B3C}
 .plist-add[data-added="true"]{background:var(--jade);border-color:var(--jade);color:#fff}
 .plist .n{font-family:'Space Mono',monospace;font-size:.7rem;color:#A29A8C;min-width:1.6rem}
+.hemma-input-row{display:flex;gap:.5rem;max-width:32rem;margin-bottom:.9rem}
+.hemma-input-row input{flex:1;padding:.6rem .8rem;font-size:.9rem;background:#fff;border:1px solid #C9C2B2;color:#1C1A17;border-radius:2px}
+.hemma-input-row input::placeholder{color:#A29A8C}
+.hemma-input-row button{background:var(--jade);color:#fff;border:none;padding:.6rem 1.1rem;font-size:.8rem;font-weight:700;cursor:pointer;font-family:'Space Mono',monospace;border-radius:2px}
+#hemmaChips:not(:empty){margin-bottom:1.2rem}
+.pantry .chip{border-color:#C9C2B2;color:#1C1A17}
+.pantry .chip:hover{border-color:var(--jade)}
+.chip-picked{background:var(--jade);color:#fff;border-color:var(--jade);font-weight:700}
+.chip-picked:hover{border-color:var(--jade)}
+.chip-freetext{border-style:dashed}
+.hemma-picker{margin-bottom:2rem}
+.hemma-katgroup{margin-bottom:1rem}
+.hemma-katgroup .picker-label{color:#7A7268;display:block;margin-bottom:.5rem}
+.hemma-empty{color:#7A7268;font-size:.9rem;max-width:40ch}
+.hemma-grouptitle{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:#7A7268;margin:2rem 0 .9rem;padding-bottom:.4rem;border-bottom:1px solid #CFC9BC}
+.hemma-grouptitle:first-child{margin-top:0}
+.hemma-row{background:#fff;border:1px solid #DDD7CA;border-radius:4px;padding:1rem 1.2rem;margin-bottom:.8rem}
+.hemma-row-top{display:flex;justify-content:space-between;align-items:baseline;gap:.6rem;font-size:1.02rem}
+.hemma-row-meta{font-size:.78rem;color:#7A7268;margin:.2rem 0 .6rem}
+.hemma-row .chips{margin-bottom:.5rem}
+.hemma-row .match-badge{font-family:'Space Mono',monospace;font-size:.68rem;font-weight:800;color:var(--jade);background:rgba(47,143,110,.12);padding:.2rem .5rem;border-radius:2px;white-space:nowrap}
+.hemma-missing{font-size:.82rem;color:#9A6A1E;margin:0 0 .7rem}
+.hemma-row .dish-actions{display:flex;gap:.5rem}
+.hemma-row .add-btn{background:transparent;border:1px solid #B8B0A2;color:#1C1A17;font-size:.72rem;font-weight:700;padding:.4rem .7rem;border-radius:3px;cursor:pointer;font-family:'Space Mono',monospace}
+.hemma-row .add-btn:hover{border-color:var(--jade);color:var(--jade)}
+.hemma-row .add-btn.added{background:var(--jade);color:#fff;border-color:var(--jade)}
 .plist .b{font-weight:700;display:block}
 .plist .d{font-size:.88rem;color:#5A5348;display:block;margin-top:.1rem}
 .plist .u{font-family:'Space Mono',monospace;font-size:.66rem;color:#1C1A17;background:#DDD7CA;padding:.1rem .4rem;white-space:nowrap;margin-left:auto}
@@ -369,7 +395,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .ai-inline{margin-top:.75rem;background:rgba(0,0,0,.18);border:1px solid rgba(242,239,230,.2);border-radius:3px;padding:.85rem}
 .in .ai-inline,.wa .ai-inline{background:rgba(255,255,255,.25);border-color:rgba(28,26,23,.25)}
 .ai-inline[hidden]{display:none}
-.dish.dimmed{opacity:.28}
 .recipe-toggle{display:block;width:100%;text-align:left;background:transparent;border:1px solid rgba(242,239,230,.4);color:inherit;font-family:'Space Mono',monospace;font-size:.76rem;font-weight:700;letter-spacing:.04em;padding:.6rem .85rem;margin-top:.85rem;cursor:pointer;border-radius:3px}
 .in .recipe-toggle,.wa .recipe-toggle{border-color:rgba(28,26,23,.4)}
 .dish-body{margin-top:0}
@@ -416,6 +441,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <button class="tab-btn" data-tab="kryddor" aria-pressed="false">Kryddor</button>
     <button class="tab-btn" data-tab="brod" aria-pressed="false">Bröd</button>
     <button class="tab-btn" data-tab="kebab" aria-pressed="false">Kebab</button>
+    <button class="tab-btn" data-tab="hemma" aria-pressed="false">Hemma</button>
   </div>
 </div>
 
@@ -483,18 +509,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <button data-set="veg" aria-pressed="true">Vegetariskt</button>
     </div>
   </div>
-</div>
-
-<div class="toolbar2">
-  <div class="picker-inner picker-row2">
-    <span class="picker-label">Vad har du hemma?</span>
-    <div class="have-row">
-      <input type="text" id="haveInput" placeholder="t.ex. vitlök, kyckling, lime"/>
-      <button id="haveBtn">Hitta</button>
-      <button class="clear" id="haveClear" style="display:none">Rensa</button>
-    </div>
-  </div>
-  <div class="result-line" id="resultLine"></div>
 </div>
 
 <section class="band es" id="spanien">
@@ -2609,6 +2623,22 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 </section>
 </div><!-- /tab-kebab -->
 
+<div id="tab-hemma" class="tabpanel" hidden>
+<section class="pantry" id="hemma">
+  <div class="pantry-inner">
+    <h2>Vad har du hemma?</h2>
+    <p class="lead">Skriv vad du har — t.ex. "kyckling och potatis" — och se vilka rätter som passar. Salt, olja, lök, vitlök, tomater och de andra baskryddorna räknas som självklara, dem behöver du inte skriva.</p>
+    <div class="hemma-input-row">
+      <input type="text" id="hemmaInput" placeholder="t.ex. kyckling, potatis, citron"/>
+      <button id="hemmaFindBtn">Hitta</button>
+    </div>
+    <div class="chips" id="hemmaChips"></div>
+    <div id="hemmaPicker" class="hemma-picker"></div>
+    <div id="hemmaResults" class="hemma-results"></div>
+  </div>
+</section>
+</div><!-- /tab-hemma -->
+
 <div class="nk-footer">
   <h2>Fem regler som gäller överallt</h2>
   <div class="rules">
@@ -2938,50 +2968,166 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     requestAnimationFrame(function(){ d.el.scrollIntoView({ block: 'start' }); });
   }
 
-  // ── "Vad har du hemma" (gammal, ersätts av Hemma-fliken) ──
-  var haveInput = document.getElementById('haveInput');
-  var haveList = [];
-  document.getElementById('haveBtn').addEventListener('click', function(){
-    haveList = haveInput.value.split(',').map(function(s){ return s.trim().toLowerCase(); }).filter(Boolean);
-    document.getElementById('haveClear').style.display = haveList.length ? 'inline-block' : 'none';
-    applyFilters();
-  });
-  document.getElementById('haveClear').addEventListener('click', function(){
-    haveList = [];
-    haveInput.value = '';
-    document.getElementById('haveClear').style.display = 'none';
-    applyFilters();
-  });
+  // ── Hemma-fliken: skriv/välj ingredienser du har, få rätter rankade efter träff ──
+  (function(){
+    var chipInput = document.getElementById('hemmaInput');
+    var chipRow = document.getElementById('hemmaChips');
+    var pickerEl = document.getElementById('hemmaPicker');
+    var resultsEl = document.getElementById('hemmaResults');
+    var findBtn = document.getElementById('hemmaFindBtn');
+    if (!chipInput) return; // Hemma-fliken finns inte (bör alltid finnas, men skydda ändå)
 
-  function matchScore(dish){
-    if (!haveList.length) return null;
-    var names = dish.ingredients.map(function(i){ return i.name.toLowerCase(); });
-    var hits = 0;
-    haveList.forEach(function(h){
-      if (names.some(function(n){ return n.indexOf(h) !== -1 || h.indexOf(n) !== -1; })) hits++;
+    var chosen = []; // canonical ids användaren valt/skrivit
+    var freeText = []; // ord som inte kändes igen, matchas som fritext istället
+
+    function renderChips(){
+      chipRow.innerHTML = '';
+      chosen.forEach(function(id){
+        var v = VOCAB_BY_ID[id];
+        addChipEl(v ? v.label : id, function(){ chosen = chosen.filter(function(x){ return x !== id; }); renderChips(); runSearch(); });
+      });
+      freeText.forEach(function(w){
+        var el = addChipEl(w, function(){ freeText = freeText.filter(function(x){ return x !== w; }); renderChips(); runSearch(); });
+        el.classList.add('chip-freetext');
+        el.title = 'Kändes inte igen — söks som fritext';
+      });
+    }
+    function addChipEl(label, onRemove){
+      var el = document.createElement('button');
+      el.className = 'chip chip-picked';
+      el.type = 'button';
+      el.innerHTML = label + ' <span aria-hidden="true">×</span>';
+      el.addEventListener('click', onRemove);
+      chipRow.appendChild(el);
+      return el;
+    }
+
+    function commitInput(){
+      var raw = chipInput.value;
+      chipInput.value = '';
+      raw.split(/[,\n]/).forEach(function(part){
+        var ids = ingTag(part);
+        if (ids.length) {
+          ids.forEach(function(id){ if (chosen.indexOf(id) === -1) chosen.push(id); });
+        } else {
+          var w = part.trim();
+          if (w && freeText.indexOf(w.toLowerCase()) === -1) freeText.push(w.toLowerCase());
+        }
+      });
+      renderChips();
+      runSearch();
+    }
+    chipInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); commitInput(); }
     });
-    return Math.round((hits / haveList.length) * 100);
-  }
+    chipInput.addEventListener('blur', function(){ if (chipInput.value.trim()) commitInput(); });
+    findBtn.addEventListener('click', function(){ if (chipInput.value.trim()) commitInput(); else runSearch(); });
 
-  function applyFilters(){
-    var visibleCount = 0;
-    dishes.forEach(function(d){
-      var oldBadge = d.el.querySelector('.match-badge');
-      if (oldBadge) oldBadge.remove();
-      var score = matchScore(d);
-      var ok = score === null || score >= 34;
-      d.el.classList.toggle('dimmed', !ok);
-      if (ok) visibleCount++;
-      if (ok && score !== null && score > 0) {
-        var badge = document.createElement('span');
-        badge.className = 'match-badge';
-        badge.textContent = score + '% match';
-        d.el.querySelector('.dish-head').appendChild(badge);
+    // Chip-väljare: de vanligaste icke-basvarorna, grupperade, byggd ur registret — ingen handskriven lista att glömma uppdatera.
+    (function buildPicker(){
+      var KAT_LABEL = { protein: 'Protein', gront: 'Grönsaker & frukt', kolhydrat: 'Kolhydrater', mejeri: 'Mejeri' };
+      var counts = {};
+      Object.keys(ingIndex).forEach(function(id){ counts[id] = (ingIndex[id] || []).length + Math.round((swapIndex[id] || []).length / 2); });
+      var candidates = VOCAB.filter(function(v){
+        return ['protein','gront','kolhydrat','mejeri'].indexOf(v.kat) !== -1 && !PANTRY_IDS[v.id] && counts[v.id];
+      }).sort(function(a,b){ return (counts[b.id] || 0) - (counts[a.id] || 0); }).slice(0, 24);
+      var byKat = {};
+      candidates.forEach(function(v){ (byKat[v.kat] = byKat[v.kat] || []).push(v); });
+      pickerEl.innerHTML = Object.keys(KAT_LABEL).filter(function(k){ return byKat[k]; }).map(function(k){
+        return '<div class="hemma-katgroup"><span class="picker-label">' + KAT_LABEL[k] + '</span><div class="chips">' +
+          byKat[k].map(function(v){ return '<button type="button" class="chip" data-pick="' + v.id + '">' + v.label + '</button>'; }).join('') +
+          '</div></div>';
+      }).join('');
+      pickerEl.querySelectorAll('button[data-pick]').forEach(function(b){
+        b.addEventListener('click', function(){
+          var id = b.getAttribute('data-pick');
+          if (chosen.indexOf(id) === -1) { chosen.push(id); renderChips(); runSearch(); }
+        });
+      });
+    })();
+
+    function score(dish){
+      var hits = 0, trueMissing = [], swapOnly = [];
+      chosen.forEach(function(id){
+        if (dish.tags.indexOf(id) !== -1) { hits += 1; return; }
+        var swapHit = dish.swapTags.some(function(t){ return t.id === id; });
+        if (swapHit) { hits += 0.5; swapOnly.push(id); return; } // finns bara som bytesförslag, inte i receptet som det står — räknas inte som en riktig träff i gruppindelningen
+        trueMissing.push(id);
+      });
+      var freeHits = 0;
+      freeText.forEach(function(w){
+        var inIng = dish.ingredients.some(function(i){ return ingNorm(i.name).indexOf(ingNorm(w)) !== -1; });
+        if (inIng) freeHits += 1;
+      });
+      return { hits: hits + freeHits, trueMissing: trueMissing, swapOnly: swapOnly };
+    }
+
+    function runSearch(){
+      var terms = chosen.length + freeText.length;
+      if (!terms) {
+        resultsEl.innerHTML = '<p class="hemma-empty">Skriv eller klicka en eller två ingredienser du har hemma.</p>';
+        return;
       }
-    });
-    var line = document.getElementById('resultLine');
-    line.textContent = haveList.length ? (visibleCount + ' av ' + dishes.length + ' rätter matchar — resten tonas ner nedanför') : '';
-  }
+      var scored = dishes
+        .map(function(d){ var s = score(d); return { d: d, hits: s.hits, trueMissing: s.trueMissing, swapOnly: s.swapOnly }; })
+        .filter(function(x){
+          if (x.hits <= 0) return false;
+          // rena skafferirätter (bröd, tahinisås ...) utan några "riktiga" ingredienser alls är inte vad "vad kan jag laga i kväll" frågar efter
+          var realIngCount = x.d.tags.filter(function(id){ return !PANTRY_IDS[id]; }).length;
+          return realIngCount > 0;
+        })
+        .sort(function(a,b){
+          if (b.hits !== a.hits) return b.hits - a.hits;
+          return (a.trueMissing.length + a.swapOnly.length) - (b.trueMissing.length + b.swapOnly.length);
+        });
+
+      if (!scored.length) {
+        resultsEl.innerHTML = '<p class="hemma-empty">Inga rätter matchade. Prova en annan ingrediens, eller kryssa i fler.</p>';
+        return;
+      }
+      var groupA = [], groupB = [], groupC = [];
+      scored.forEach(function(x){
+        var realMissing = x.trueMissing.filter(function(id){ return !PANTRY_IDS[id]; });
+        var unplaced = realMissing.length + x.swapOnly.length;
+        if (unplaced === 0) groupA.push(x);
+        else if (x.hits >= 1 && unplaced <= 2) groupB.push(x);
+        else groupC.push(x);
+      });
+      function renderGroup(title, list){
+        if (!list.length) return '';
+        return '<h3 class="hemma-grouptitle">' + title + '</h3>' + list.map(renderRow).join('');
+      }
+      function renderRow(x){
+        var d = x.d;
+        var missingLabels = x.trueMissing.filter(function(id){ return !PANTRY_IDS[id]; }).map(function(id){ return (VOCAB_BY_ID[id] || {}).label || id; });
+        var swapLabels = x.swapOnly.map(function(id){ return (VOCAB_BY_ID[id] || {}).label || id; });
+        var chipsHtml = d.tags.slice(0, 6).map(function(id){
+          var picked = chosen.indexOf(id) !== -1;
+          return '<span class="chip' + (picked ? ' active' : '') + '" style="cursor:default">' + ((VOCAB_BY_ID[id] || {}).label || id) + '</span>';
+        }).join('');
+        return '<div class="hemma-row">' +
+          '<div class="hemma-row-top"><b>' + d.name + '</b><span class="match-badge">' + x.hits.toFixed(x.hits % 1 ? 1 : 0) + ' av ' + (chosen.length + freeText.length) + '</span></div>' +
+          '<div class="hemma-row-meta">' + d.cuisine + (d.time ? ' · ' + d.time : '') + '</div>' +
+          '<div class="chips">' + chipsHtml + '</div>' +
+          (missingLabels.length ? '<p class="hemma-missing">Du saknar: ' + missingLabels.join(', ') + '</p>' : '') +
+          (swapLabels.length ? '<p class="hemma-missing">Kan bytas in som protein: ' + swapLabels.join(', ') + '</p>' : '') +
+          '<div class="dish-actions"><button class="add-btn hemma-go" data-open="' + d.id + '">Visa recept →</button><button class="add-btn" data-add="' + d.id + '">+ Inköpslista</button></div>' +
+        '</div>';
+      }
+      resultsEl.innerHTML =
+        renderGroup('Allt du skrev finns i', groupA) +
+        renderGroup('Nästan där — du saknar en eller två saker', groupB) +
+        renderGroup('Delvis — men värt att titta på', groupC);
+      resultsEl.querySelectorAll('[data-open]').forEach(function(b){
+        b.addEventListener('click', function(){ openDish(b.getAttribute('data-open')); });
+      });
+      resultsEl.querySelectorAll('[data-add]').forEach(function(b){
+        b.addEventListener('click', function(){ toggleCart(b.getAttribute('data-add')); });
+      });
+    }
+
+    runSearch();
+  })();
 
   // ── Shopping cart ──
   var cart = new Set();
@@ -3227,7 +3373,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   });
 
   // ── Tabbar: Kök / Basvaror / Kryddor ──
-  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod', 'kebab'];
+  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod', 'kebab', 'hemma'];
   var KOK_ANCHORS = new Set(['kok','spanien','italien','turkiet','japan','thailand','mellanostern','baltikum','kroatien','bosnien','serbien','indien','mexiko','grekland','marocko','korea','vietnam','kina','frankrike','vastafrika','peru','etiopien']);
   var BASVAROR_ANCHORS = new Set(['basvaror','protein']);
   var tabBtns = document.querySelectorAll('.tab-btn');
