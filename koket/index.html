@@ -2683,7 +2683,204 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     });
   });
 
-  // ── Read every dish straight from the page (single source of truth — no separate data file to drift out of sync) ──
+  // ── Ingrediensordlista: normaliserar fria ord ("kyckling") och recepttext
+  // ("Kycklinglår, tärnad") till samma kanoniska id, så "vad har du hemma"
+  // och Basvaror/Kryddor-visningen kan dela en enda källa. Testad mot alla
+  // 190 verkliga ingrediensrader + 138 bytespanelstexter innan den lades in
+  // här (se STATUS.md) — några få medvetet generiska rader ("Protein efter
+  // val") matchar inget, det är avsett, inte ett hål i listan. ──
+  var VOCAB = [
+    { id:'kyckling', kat:'protein', label:'Kyckling', syn:['kycklinglar','kycklingfile','kyckling'] },
+    { id:'lamm', kat:'protein', label:'Lamm', syn:['lammfars','lammlagg','lammbog','lammfett','lamm'] },
+    { id:'notkott', kat:'protein', label:'Nötkött', syn:['notfars','notkott','not'] },
+    { id:'flask', kat:'protein', label:'Fläsk', syn:['flaskfars','flaskkarre','flask'] },
+    { id:'fisk', kat:'protein', label:'Fisk', syn:['stromming','vit fisk','marulk','makrill','torsk','lax','fisk'] },
+    { id:'raka', kat:'protein', label:'Räkor', syn:['rakspett','blackfisk','rakor','raka'] },
+    { id:'krabba', kat:'protein', label:'Krabba', syn:['krabba'] },
+    { id:'skinka', kat:'protein', label:'Skinka', syn:['skinka'] },
+    { id:'bacon', kat:'protein', label:'Bacon', syn:['bacon'] },
+    { id:'kott', kat:'protein', label:'Kött (generellt)', syn:['kottfars','kottbullar','kottgryta','kott'] },
+    { id:'falafel', kat:'protein', label:'Falafel', syn:['falafelrullar','falafel'] },
+    { id:'hummus', kat:'protein', label:'Hummus', syn:['hummus'] },
+    { id:'blomkal', kat:'gront', label:'Blomkål', syn:['blomkal'] },
+    { id:'oliver', kat:'gront', label:'Oliver', syn:['kalamataoliver','oliver'] },
+    { id:'kapris', kat:'smak', label:'Kapris', syn:['kapris'] },
+    { id:'basilika', kat:'gront', label:'Basilika', syn:['basilika'] },
+    { id:'agg', kat:'protein', label:'Ägg', syn:['agg'] },
+    { id:'kikartor', kat:'protein', label:'Kikärtor', syn:['kikartor'] },
+    { id:'linser', kat:'protein', label:'Linser', syn:['linsgrytan','linser'] },
+    { id:'tofu', kat:'protein', label:'Tofu', syn:['tofu'] },
+    { id:'halloumi', kat:'protein', label:'Halloumi', syn:['halloumi'] },
+    { id:'fetaost', kat:'protein', label:'Fetaost', syn:['fetaost','feta'] },
+    { id:'jordnotssmor', kat:'smak', label:'Jordnötssmör', syn:['jordnotssmor'] },
+    { id:'jordnotter', kat:'smak', label:'Jordnötter', syn:['jordnotter'] },
+    { id:'keso', kat:'protein', label:'Keso', syn:['keso'] },
+    { id:'yoghurt', kat:'mejeri', label:'Yoghurt', syn:['turkisk yoghurt','yoghurt','kefir','filmjolk'] },
+    { id:'kaymak', kat:'smak', label:'Kaymak', syn:['kaymak'] },
+    { id:'paneer', kat:'protein', label:'Paneer', syn:['paneer'] },
+
+    { id:'lok', kat:'gront', label:'Lök', syn:['schalottenlok','rodlok','varlok','gul lok','lokpulver','lok'] },
+    { id:'vitlok', kat:'gront', label:'Vitlök', syn:['vitlok'] },
+    { id:'ingefara', kat:'gront', label:'Ingefära', syn:['ingefarspulver','ingefara'] },
+    { id:'krossadetomater', kat:'bas', label:'Krossade tomater', syn:['krossade tomater'] },
+    { id:'tomatpure', kat:'bas', label:'Tomatpuré', syn:['tomatpure'] },
+    { id:'tomat', kat:'gront', label:'Tomat', syn:['tomat'] },
+    { id:'paprika', kat:'gront', label:'Paprika', syn:['rod paprika','gron paprika','paprika'] },
+    { id:'potatis', kat:'gront', label:'Potatis', syn:['potatis'] },
+    { id:'morot', kat:'gront', label:'Morot', syn:['morotter','morot'] },
+    { id:'spenat', kat:'gront', label:'Spenat', syn:['spenat'] },
+    { id:'svamp', kat:'gront', label:'Svamp', syn:['portobello','champinjoner','shiitake','svamp'] },
+    { id:'gurka', kat:'gront', label:'Gurka', syn:['gurka'] },
+    { id:'sallad', kat:'gront', label:'Sallad', syn:['sallad'] },
+    { id:'vitkal', kat:'gront', label:'Vitkål', syn:['vitkal'] },
+    { id:'mangold', kat:'gront', label:'Mangold', syn:['mangold'] },
+    { id:'avokado', kat:'gront', label:'Avokado', syn:['avokado'] },
+    { id:'granatapplesirap', kat:'smak', label:'Granatäppelsirap', syn:['granatappelsirap'] },
+    { id:'granatapple', kat:'gront', label:'Granatäpple', syn:['granatapple'] },
+    { id:'citron', kat:'gront', label:'Citron', syn:['citronsaft','citronskal','citron'] },
+    { id:'lime', kat:'gront', label:'Lime', syn:['limejuice','lime'] },
+    { id:'koriander', kat:'gront', label:'Koriander', syn:['korianderrot','koriander'] },
+    { id:'persilja', kat:'gront', label:'Persilja', syn:['persilja'] },
+    { id:'mynta', kat:'gront', label:'Mynta', syn:['mynta'] },
+    { id:'dill', kat:'gront', label:'Dill', syn:['dill'] },
+    { id:'timjan', kat:'smak', label:'Timjan', syn:['timjan'] },
+    { id:'bongroddar', kat:'gront', label:'Böngroddar', syn:['bongroddar'] },
+    { id:'sotpotatis', kat:'gront', label:'Sötpotatis', syn:['sotpotatis'] },
+    { id:'majs', kat:'gront', label:'Majs', syn:['majs'] },
+    { id:'torkadeaprikoser', kat:'gront', label:'Torkade aprikoser', syn:['torkade aprikoser'] },
+    { id:'rodbeta', kat:'gront', label:'Rödbeta', syn:['rodbeta'] },
+
+    { id:'ris', kat:'kolhydrat', label:'Ris', syn:['ris'] },
+    { id:'risnudlar', kat:'kolhydrat', label:'Risnudlar', syn:['risnudlar'] },
+    { id:'nudlar', kat:'kolhydrat', label:'Nudlar', syn:['nudlar'] },
+    { id:'pasta', kat:'kolhydrat', label:'Pasta', syn:['spagetti','pasta'] },
+    { id:'vetemjol', kat:'bas', label:'Vetemjöl', syn:['vetemjol'] },
+    { id:'teffmjol', kat:'kolhydrat', label:'Teffmjöl', syn:['teffmjol'] },
+    { id:'grahamsmjol', kat:'kolhydrat', label:'Grahamsmjöl/rågmjöl', syn:['grahamsmjol','ragmjol'] },
+    { id:'havregryn', kat:'kolhydrat', label:'Havregryn', syn:['havregryn'] },
+    { id:'polenta', kat:'kolhydrat', label:'Polenta', syn:['polenta'] },
+    { id:'majstortillas', kat:'kolhydrat', label:'Majstortillas', syn:['majstortillas'] },
+    { id:'pitabrod', kat:'kolhydrat', label:'Pitabröd', syn:['lepinja','somun','pitabrod'] },
+    { id:'filodeg', kat:'kolhydrat', label:'Filodeg', syn:['filodeg','jufka'] },
+
+    { id:'smor', kat:'mejeri', label:'Smör', syn:['smor'] },
+    { id:'gradde', kat:'mejeri', label:'Grädde/crème fraîche', syn:['creme fraiche','gradde'] },
+    { id:'graddfil', kat:'mejeri', label:'Gräddfil', syn:['graddfil'] },
+    { id:'parmesan', kat:'mejeri', label:'Parmesan', syn:['parmesan'] },
+
+    { id:'spiskummin', kat:'smak', label:'Spiskummin', syn:['spiskumminfron','spiskummin'] },
+    { id:'kummin', kat:'smak', label:'Kummin', syn:['kumminfron','kummin'] },
+    { id:'vittvin', kat:'smak', label:'Vitt vin', syn:['vitt vin','vita vin'] },
+    { id:'gurkmeja', kat:'smak', label:'Gurkmeja', syn:['gurkmeja'] },
+    { id:'garammasala', kat:'smak', label:'Garam masala', syn:['garam masala'] },
+    { id:'kanel', kat:'smak', label:'Kanel', syn:['kanelstang','kanel'] },
+    { id:'saffran', kat:'smak', label:'Saffran', syn:['saffransbuljong','saffran'] },
+    { id:'sumak', kat:'smak', label:'Sumak', syn:['sumak'] },
+    { id:'torkadoregano', kat:'smak', label:'Torkad oregano', syn:['torkad oregano','oregano'] },
+    { id:'pulbiber', kat:'smak', label:'Pul biber', syn:['pul biber'] },
+    { id:'chiliflingor', kat:'smak', label:'Chiliflingor', syn:['chiliflingor'] },
+    { id:'torkadchili', kat:'smak', label:'Torkad chili', syn:['torkad chili'] },
+    { id:'chili', kat:'gront', label:'Chili', syn:['chili'] },
+    { id:'cayennepeppar', kat:'smak', label:'Cayennepeppar', syn:['cayennepeppar'] },
+    { id:'raselhanout', kat:'smak', label:'Ras el hanout', syn:['ras el hanout'] },
+    { id:'berbere', kat:'smak', label:'Berbere', syn:['berbere'] },
+    { id:'gochujang', kat:'smak', label:'Gochujang', syn:['gochujang'] },
+    { id:'miso', kat:'smak', label:'Miso', syn:['miso'] },
+    { id:'kombu', kat:'smak', label:'Kombu', syn:['kombu'] },
+    { id:'sichuanpeppar', kat:'smak', label:'Sichuanpeppar', syn:['sichuanpeppar'] },
+    { id:'ajiamarillo', kat:'smak', label:'Ají amarillo', syn:['aji amarillo'] },
+    { id:'ajipanca', kat:'smak', label:'Ají panca', syn:['aji panca'] },
+    { id:'tamarind', kat:'smak', label:'Tamarindpasta', syn:['tamarindpasta','tamarind'] },
+    { id:'nuoccham', kat:'smak', label:'Nuoc cham', syn:['nuoc cham'] },
+    { id:'tahini', kat:'smak', label:'Tahini', syn:['tahinisas','tahini'] },
+    { id:'ajvar', kat:'smak', label:'Ajvar', syn:['ajvar'] },
+    { id:'fisksas', kat:'smak', label:'Fisksås', syn:['fisksas'] },
+    { id:'soja', kat:'smak', label:'Soja', syn:['soja'] },
+    { id:'sesamolja', kat:'bas', label:'Sesamolja', syn:['sesamolja'] },
+    { id:'chiliolja', kat:'bas', label:'Chiliolja', syn:['chiliolja'] },
+    { id:'olivolja', kat:'bas', label:'Olivolja', syn:['olivolja'] },
+    { id:'rokpaprika', kat:'smak', label:'Rökt paprika', syn:['rokt paprika'] },
+    { id:'paprikapulver', kat:'smak', label:'Paprikapulver', syn:['paprikapulver'] },
+    { id:'svartrisvinager', kat:'smak', label:'Svart risvinäger', syn:['svart risvinager'] },
+    { id:'rodvinsvinager', kat:'smak', label:'Rödvinsvinäger', syn:['rodvinsvinager'] },
+    { id:'attika', kat:'bas', label:'Ättika', syn:['attika'] },
+    { id:'dijonsenap', kat:'smak', label:'Dijonsenap', syn:['dijonsenap'] },
+    { id:'senap', kat:'smak', label:'Senap', syn:['senap'] },
+    { id:'honung', kat:'smak', label:'Honung', syn:['honung'] },
+    { id:'farinsocker', kat:'bas', label:'Farinsocker', syn:['farinsocker'] },
+    { id:'palmsocker', kat:'bas', label:'Palmsocker', syn:['palmsocker'] },
+    { id:'morksirap', kat:'bas', label:'Mörk sirap', syn:['mork sirap'] },
+    { id:'stjarnanis', kat:'smak', label:'Stjärnanis', syn:['stjarnanis'] },
+    { id:'kolsyratvatten', kat:'bas', label:'Kolsyrat vatten', syn:['kolsyrat vatten'] },
+
+    { id:'salt', kat:'bas', label:'Salt', syn:['flingsalt','havssalt','salt'] },
+    { id:'peppar', kat:'bas', label:'Peppar', syn:['peppar'] },
+    { id:'vatten', kat:'bas', label:'Vatten', syn:['vatten'] },
+    { id:'buljong', kat:'bas', label:'Buljong', syn:['buljongpulver','buljong'] },
+    { id:'olja', kat:'bas', label:'Olja', syn:['neutral olja','olja'] },
+    { id:'vinager', kat:'bas', label:'Vinäger', syn:['vinager'] },
+    { id:'socker', kat:'bas', label:'Socker', syn:['socker'] },
+    { id:'torrjast', kat:'bas', label:'Torrjäst', syn:['torrjast'] },
+    { id:'bakpulver', kat:'bas', label:'Bakpulver', syn:['bakpulver'] },
+    { id:'bikarbonat', kat:'bas', label:'Bikarbonat', syn:['bikarbonat'] },
+    { id:'kokosmjolk', kat:'bas', label:'Kokosmjölk', syn:['kokosmjolk'] },
+  ];
+  var VOCAB_BY_ID = {};
+  VOCAB.forEach(function(v){ VOCAB_BY_ID[v.id] = v; });
+
+  function ingNorm(s){
+    s = s.toLowerCase();
+    s = s.replace(/å/g,'a').replace(/ä/g,'a').replace(/ö/g,'o');
+    s = s.replace(/&amp;/g,' ');
+    s = s.normalize('NFD').replace(/[̀-ͯ]/g,''); // é, è, î, ü, ç … efter å/ä/ö-bytet ovan
+    s = s.replace(/[^a-z0-9]+/g,' ').trim().replace(/\s+/g,' ');
+    return s;
+  }
+  var VOCAB_FLAT = [];
+  VOCAB.forEach(function(v){ v.syn.forEach(function(s){ VOCAB_FLAT.push([ingNorm(s), v.id]); }); });
+  VOCAB_FLAT.sort(function(a,b){ return b[0].length - a[0].length; }); // längsta ordet vinner alltid (t.ex. "svart risvinäger" innan "ris")
+
+  function ingTag(raw){
+    var s = ' ' + ingNorm(raw) + ' ';
+    var found = [];
+    VOCAB_FLAT.forEach(function(pair){
+      var syn = pair[0], id = pair[1];
+      if (!syn) return;
+      var searchFrom = 0;
+      while (true) {
+        var idx = s.indexOf(syn, searchFrom);
+        if (idx === -1) break;
+        var startOk = s[idx-1] === ' ', endOk = s[idx+syn.length] === ' ';
+        if (startOk || endOk) {
+          found.push(id);
+          s = s.slice(0, idx) + ' ' + s.slice(idx + syn.length); // konsumera träffen så kortare ord inte kan matcha inuti den
+          searchFrom = 0;
+        } else {
+          searchFrom = idx + 1;
+        }
+      }
+    });
+    var uniq = [];
+    found.forEach(function(id){ if (uniq.indexOf(id) === -1) uniq.push(id); });
+    return uniq;
+  }
+
+  // ── Basvaror man alltid antas ha hemma — behöver aldrig skrivas i "Hemma"-fliken ──
+  var PANTRY_IDS = (function(){
+    var ids = {};
+    document.querySelectorAll('#tab-basvaror .plist li, #tab-kryddor .plist li').forEach(function(li){
+      var tier = li.querySelector('.tier');
+      if (!tier) return;
+      var t = tier.textContent.trim();
+      if (t !== 'Alltid' && t !== 'Först') return;
+      ingTag(plistItemName(li)).forEach(function(id){ ids[id] = true; });
+    });
+    // Basvaror som alltid finns i praktiken men inte är egna rader i Basvaror-listan (t.ex. bakningsbaser).
+    ['vatten','socker','peppar','buljong','vetemjol','torrjast','bakpulver','vinager','olja'].forEach(function(id){ ids[id] = true; });
+    return ids;
+  })();
+
+  // ── Läs varje rätt direkt från sidan (enda källan — ingen separat datafil att glida isär från) ──
   var dishEls = Array.prototype.slice.call(document.querySelectorAll('.dish[id]'));
   var dishes = dishEls.map(function(el){
     var ingEls = el.querySelectorAll('.ing-list li');
@@ -2692,19 +2889,56 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       return { name: (spans[0] ? spans[0].textContent : '').trim(), amount: (spans[1] ? spans[1].textContent : '').trim() };
     });
     var band = el.closest('.band');
+    var tags = [];
+    ingredients.forEach(function(i){ ingTag(i.name).forEach(function(id){ if (tags.indexOf(id) === -1) tags.push(id); }); });
+    var swapTags = [];
+    el.querySelectorAll('.swap span[data-p]').forEach(function(s){
+      var p = s.getAttribute('data-p');
+      ingTag(s.textContent).forEach(function(id){ swapTags.push({ id: id, p: p }); });
+    });
+    var panelEl = el.closest('.tabpanel');
     return {
       id: el.id,
       el: el,
       name: (el.querySelector('h3') || {}).textContent || '',
       time: el.getAttribute('data-time') || 'medel',
-      cuisine: band ? (band.querySelector('h2') || {}).textContent || '' : '',
+      cuisine: band ? (band.querySelector('h2') || {}).textContent || '' : ((el.querySelector('.flag') || {}).textContent || ''),
       ingredients: ingredients,
+      tags: tags,
+      swapTags: swapTags,
+      tab: panelEl ? panelEl.id.replace('tab-', '') : 'kok',
     };
   });
   var dishById = {};
   dishes.forEach(function(d){ dishById[d.id] = d; });
 
-  // ── "Vad har du hemma" ──
+  // ── Omvänt register: kanoniskt ingrediens-id → vilka rätter som använder det ──
+  var ingIndex = {};   // id -> [dishId, ...]   (från ing-list, "riktiga" ingredienser)
+  var swapIndex = {};  // id -> [{dishId, p}, ...]  (från bytespanelens kött/fisk/veg-text)
+  dishes.forEach(function(d){
+    d.tags.forEach(function(id){
+      (ingIndex[id] = ingIndex[id] || []).push(d.id);
+    });
+    d.swapTags.forEach(function(t){
+      (swapIndex[t.id] = swapIndex[t.id] || []).push({ dishId: d.id, p: t.p });
+    });
+  });
+
+  // ── Öppna en rätt oavsett vilken flik den ligger i — delas av Hemma-fliken och Basvaror/Kryddor ──
+  function openDish(dishId){
+    var d = dishById[dishId];
+    if (!d) return;
+    showTab(d.tab);
+    var body = document.getElementById('body-' + dishId);
+    var toggle = d.el.querySelector('.recipe-toggle');
+    if (body && body.hidden) {
+      body.hidden = false;
+      if (toggle) { toggle.setAttribute('aria-expanded', 'true'); toggle.textContent = 'Dölj recept'; }
+    }
+    requestAnimationFrame(function(){ d.el.scrollIntoView({ block: 'start' }); });
+  }
+
+  // ── "Vad har du hemma" (gammal, ersätts av Hemma-fliken) ──
   var haveInput = document.getElementById('haveInput');
   var haveList = [];
   document.getElementById('haveBtn').addEventListener('click', function(){
@@ -3020,6 +3254,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 
   function routeFromHash(){
     var h = (location.hash || '#kok').slice(1) || 'kok';
+    if (dishById[h]) { openDish(h); return; } // djuplänk direkt till en rätt, t.ex. delad från Hemma-fliken
     var tab = KOK_ANCHORS.has(h) ? 'kok' : (BASVAROR_ANCHORS.has(h) ? 'basvaror' : (TAB_IDS.indexOf(h) !== -1 ? h : 'kok'));
     showTab(tab, h);
   }
