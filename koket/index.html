@@ -67,7 +67,9 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .chips{display:flex;gap:.4rem;flex-wrap:wrap}
 .chip{background:transparent;border:1px solid var(--edge);color:var(--paper);font-size:.8rem;font-weight:600;padding:.4rem .8rem;border-radius:3px;cursor:pointer;font-family:'Karla',sans-serif}
 .chip:hover{border-color:var(--marigold)}
-.chip.active{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
+.chip.active,.chip[aria-pressed="true"]{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
+.brod-filter{display:flex;align-items:center;gap:.9rem;flex-wrap:wrap;margin-bottom:1.6rem}
+.brodtyp-tag{display:inline-block;font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);border:1px solid rgba(242,239,230,.25);border-radius:3px;padding:.15rem .5rem;margin:.35rem 0 0}
 .have-row{display:flex;gap:.5rem;flex:1;min-width:220px}
 .have-row input{flex:1;padding:.55rem .8rem;border:1px solid var(--edge);border-radius:3px;font-size:.85rem;background:var(--shelf);color:var(--paper)}
 .have-row input::placeholder{color:var(--muted)}
@@ -2162,11 +2164,20 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 <section class="breadsection" id="brod">
   <div class="breadsection-inner">
     <h2>Bröd</h2>
-    <p class="lead">Sex bröd som hör hemma i de kök som redan finns här — och som går att göra hemma utan bageriutrustning. Injera är undantaget: den kräver några dagars planering, resten är samma dag.</p>
+    <p class="lead">Nio bröd, i två roller: bröd som hör till maten — från kök som redan finns här, inget kräver bageriutrustning — och enkla frukostbröd från det svenska köket, som inte är en av de arton cuisinerna men ändå hör hemma på ett skafferi. Injera är undantaget bland matbröden: den kräver några dagars planering, resten är samma dag.</p>
+    <div class="brod-filter">
+      <span class="picker-label">Visa</span>
+      <div class="chips" id="brodFilterBtns">
+        <button class="chip" data-brodfilter="alla" aria-pressed="true">Alla</button>
+        <button class="chip" data-brodfilter="mat" aria-pressed="false">Till maten</button>
+        <button class="chip" data-brodfilter="frukost" aria-pressed="false">Frukost</button>
+      </div>
+    </div>
+    <div class="result-line" id="brodResultLine"></div>
     <div class="bread-grid">
-      <div class="dish bread-card" id="b-focaccia">
+      <div class="dish bread-card" id="b-focaccia" data-brodtyp="mat">
         <div class="dish-head"><h3>Focaccia</h3><span class="mins">25 min + jäsning</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Italien</p>
+        <p class="flag" style="margin:.3rem 0 0">Italien</p><span class="brodtyp-tag">Till maten</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Focaccia%20Bread.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Fuktig deg, gropar med fingrarna, dränkt i olivolja — mer teknik än recept.</p>
         <button class="recipe-toggle" data-toggle="b-focaccia" aria-expanded="false">Visa recept</button>
@@ -2186,9 +2197,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         </div>
         </div>
       </div>
-      <div class="dish bread-card" id="b-pita">
+      <div class="dish bread-card" id="b-pita" data-brodtyp="mat">
         <div class="dish-head"><h3>Pitabröd</h3><span class="mins">15 min + jäsning</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Mellanöstern / Turkiet</p>
+        <p class="flag" style="margin:.3rem 0 0">Mellanöstern / Turkiet</p><span class="brodtyp-tag">Till maten</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Pita%20%28bread%29.JPG?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Puffar upp till en ficka i het ugn — ingen plåt, bara stenhård värme.</p>
         <button class="recipe-toggle" data-toggle="b-pita" aria-expanded="false">Visa recept</button>
@@ -2208,9 +2219,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         </div>
         </div>
       </div>
-      <div class="dish bread-card" id="b-tortilla">
+      <div class="dish bread-card" id="b-tortilla" data-brodtyp="mat">
         <div class="dish-head"><h3>Tortillas</h3><span class="mins">10 min + vila</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Mexiko</p>
+        <p class="flag" style="margin:.3rem 0 0">Mexiko</p><span class="brodtyp-tag">Till maten</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Homemade%20tortillas%20on%20griddle.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Ingen jäsning, ingen väntan på ugnen — deg till bröd på under tio minuter.</p>
         <button class="recipe-toggle" data-toggle="b-tortilla" aria-expanded="false">Visa recept</button>
@@ -2230,9 +2241,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         </div>
         </div>
       </div>
-      <div class="dish bread-card" id="b-naan">
+      <div class="dish bread-card" id="b-naan" data-brodtyp="mat">
         <div class="dish-head"><h3>Naan</h3><span class="mins">15 min + jäsning</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Indien</p>
+        <p class="flag" style="margin:.3rem 0 0">Indien</p><span class="brodtyp-tag">Till maten</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Naan%20baked%20in%20Tandoor.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Yoghurten gör degen mjuk — stekpannan gör jobbet en tandoor annars gör.</p>
         <button class="recipe-toggle" data-toggle="b-naan" aria-expanded="false">Visa recept</button>
@@ -2252,9 +2263,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         </div>
         </div>
       </div>
-      <div class="dish bread-card" id="b-lantbrod">
+      <div class="dish bread-card" id="b-lantbrod" data-brodtyp="mat frukost">
         <div class="dish-head"><h3>Lantbröd utan knådning</h3><span class="mins">30 min + 12 tim jäsning</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Frankrike / allmänt</p>
+        <p class="flag" style="margin:.3rem 0 0">Frankrike / allmänt</p><span class="brodtyp-tag">Till maten &amp; frukost</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/No-Knead%20Bread%20-%20Finished%20Loaf%20%28294068096%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Ingen knådning — tiden gör jobbet du annars hade knådat fram.</p>
         <button class="recipe-toggle" data-toggle="b-lantbrod" aria-expanded="false">Visa recept</button>
@@ -2274,9 +2285,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
         </div>
         </div>
       </div>
-      <div class="dish bread-card" id="b-injera">
+      <div class="dish bread-card" id="b-injera" data-brodtyp="mat">
         <div class="dish-head"><h3>Injera</h3><span class="mins">5 min + 2–3 dagars jäsning</span></div>
-        <p class="flag" style="margin:.3rem 0 0">Etiopien</p>
+        <p class="flag" style="margin:.3rem 0 0">Etiopien</p><span class="brodtyp-tag">Till maten</span>
         <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Injera%20from%20ivory%20teff.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
         <p class="dish-teaser">Kräver 2–3 dagars förjäsning — planera i förväg, men själva bakningen tar minuter.</p>
         <button class="recipe-toggle" data-toggle="b-injera" aria-expanded="false">Visa recept</button>
@@ -2289,6 +2300,72 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
           <button class="ask-ai-btn" data-ask="b-injera">Fråga AI om substitut</button>
         </div>
         <div class="ai-inline" id="ai-b-injera" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-frallor" data-brodtyp="frukost">
+        <div class="dish-head"><h3>Kalljästa frallor</h3><span class="mins">10 min + 12 tim i kylen</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Sverige</p><span class="brodtyp-tag">Frukost</span>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Scottish%20Morning%20Rolls.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Rörs ihop på kvällen, gräddas direkt ur kylen på morgonen — ingen knådning, inget formande.</p>
+        <button class="recipe-toggle" data-toggle="b-frallor" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-frallor" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">7 dl</span></li><li><span>Vatten, kallt</span><span class="amt">4 dl</span></li><li><span>Torrjäst</span><span class="amt">1/4 tsk (bara en nypa)</span></li><li><span>Salt</span><span class="amt">1,5 tsk</span></li><li><span>Neutral olja</span><span class="amt">1 msk</span></li></ul>
+        <p class="step">Rör ihop en lös, kladdig deg av alla ingredienser direkt i bunken — <b>ingen knådning</b>. Täck bunken och ställ i kylen minst 12 timmar, gärna upp till ett dygn. På morgonen: skopa upp klumpar direkt ur den kalla degen med en sked (den är för lös för att formas för hand) och lägg dem glest på en plåt med bakplåtspapper. Grädda i 250° i 12–15 minuter tills gyllenbruna.</p>
+        <p class="tip">Mängden jäst är avsiktligt liten — hela poängen är den långa, kalla jäsningen. En hel påse jäst gör att de jäser ut och faller ihop i kylen under natten.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-frallor">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-frallor">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-frallor" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-scones" data-brodtyp="frukost">
+        <div class="dish-head"><h3>Frukostscones</h3><span class="mins">20 min, ingen jäsning</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Skottland / fikabordet</p><span class="brodtyp-tag">Frukost</span>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Buttermilk-Scones-batch.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Ingen jäsning alls — mixad, formad och i ugnen på fem minuter.</p>
+        <button class="recipe-toggle" data-toggle="b-scones" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-scones" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">5 dl</span></li><li><span>Bakpulver</span><span class="amt">2 tsk</span></li><li><span>Salt</span><span class="amt">1/2 tsk</span></li><li><span>Smör, kallt</span><span class="amt">75 g</span></li><li><span>Kefir eller filmjölk</span><span class="amt">2,5 dl</span></li></ul>
+        <p class="step">Blanda mjöl, bakpulver och salt. Skiva ner det kalla smöret och nyp ihop med fingrarna till en grov, smulig blandning — det ska fortfarande synas små smörklumpar. Häll i kefir eller filmjölk, <b>rör ihop med så få tag som möjligt</b> till en mjuk deg. Platta ut degen till ca 2 cm tjocklek på mjölad yta, sticka ut runda scones eller skär i klyftor. Grädda i 225° i 10–12 minuter tills gyllenbruna.</p>
+        <p class="tip">Ju mindre du rör i degen desto luftigare blir sconesen — arbeta den bara tills den precis håller ihop.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-scones">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-scones">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-scones" hidden>
+          <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
+          <div class="ai-loading">Frågar Gemini …</div>
+          <div class="ai-error"></div>
+          <div class="ai-result"></div>
+        </div>
+        </div>
+      </div>
+      <div class="dish bread-card" id="b-formbrod" data-brodtyp="mat frukost">
+        <div class="dish-head"><h3>Grovt formbröd med havregryn</h3><span class="mins">10 min + 1 tim jäsning + 60 min ugn</span></div>
+        <p class="flag" style="margin:.3rem 0 0">Sverige</p><span class="brodtyp-tag">Till maten &amp; frukost</span>
+        <figure class="dish-shot"><img loading="lazy" src="https://commons.wikimedia.org/wiki/Special:FilePath/Wholemeal%20tin%20loaf%20%288371640548%29.jpg?width=900" alt="" onerror="this.closest('figure').remove()"></figure>
+        <p class="dish-teaser">Blandas i en skål, jäser i formen — inget knådande, inget formande för hand.</p>
+        <button class="recipe-toggle" data-toggle="b-formbrod" aria-expanded="false">Visa recept</button>
+        <div class="dish-body" id="body-b-formbrod" hidden>
+        <ul class="ing-list"><li><span>Vetemjöl</span><span class="amt">5 dl</span></li><li><span>Grahamsmjöl eller rågmjöl</span><span class="amt">3 dl</span></li><li><span>Havregryn</span><span class="amt">2 dl + till toppen</span></li><li><span>Torrjäst</span><span class="amt">1 påse (7 g)</span></li><li><span>Mörk sirap</span><span class="amt">1 msk</span></li><li><span>Salt</span><span class="amt">1,5 tsk</span></li><li><span>Ljummet vatten</span><span class="amt">5 dl</span></li></ul>
+        <p class="step">Blanda alla ingredienser till en lös deg direkt i en bunke — <b>ingen knådning behövs.</b> Häll degen direkt i en smord avlång brödform, strö havregryn ovanpå. Låt jäsa övertäckt ca 1 timme tills degen nästan nått formens kant. Grädda i nedre delen av ugnen på 175° i 55–60 minuter tills brödet låter ihåligt när man knackar på undersidan.</p>
+        <p class="tip">Låt brödet svalna helt på galler innan det skärs — varmt formbröd blir kladdigt och tappar formen under kniven.</p>
+        <div class="dish-actions">
+          <button class="add-btn" data-add="b-formbrod">+ Inköpslista</button>
+          <button class="ask-ai-btn" data-ask="b-formbrod">Fråga AI om substitut</button>
+        </div>
+        <div class="ai-inline" id="ai-b-formbrod" hidden>
           <div class="ai-row"><input type="text" class="sub-input" placeholder="t.ex. teffmjöl"/><button class="sub-go">Föreslå</button></div>
           <div class="ai-loading">Frågar Gemini …</div>
           <div class="ai-error"></div>
@@ -2571,6 +2648,28 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     b.addEventListener('click', function(){ setProtein(b.getAttribute('data-set')); });
   });
   setProtein('veg');
+
+  // ── Bröd-filter (alla / till maten / frukost) ──
+  var brodBtns = document.querySelectorAll('#brodFilterBtns button[data-brodfilter]');
+  var brodCards = document.querySelectorAll('.bread-card[data-brodtyp]');
+  var brodResultLine = document.getElementById('brodResultLine');
+  function setBrodFilter(mode){
+    var shown = 0;
+    brodCards.forEach(function(card){
+      var types = (card.getAttribute('data-brodtyp') || '').split(' ');
+      var match = mode === 'alla' || types.indexOf(mode) !== -1;
+      card.hidden = !match;
+      if (match) shown++;
+    });
+    brodBtns.forEach(function(b){
+      b.setAttribute('aria-pressed', b.getAttribute('data-brodfilter') === mode ? 'true' : 'false');
+    });
+    if (brodResultLine) brodResultLine.textContent = shown + ' av ' + brodCards.length + ' bröd';
+  }
+  brodBtns.forEach(function(b){
+    b.addEventListener('click', function(){ setBrodFilter(b.getAttribute('data-brodfilter')); });
+  });
+  setBrodFilter('alla');
 
   // ── Recept gömda som standard — klicka fram för att spara utrymme ──
   document.querySelectorAll('.recipe-toggle').forEach(function(btn){
