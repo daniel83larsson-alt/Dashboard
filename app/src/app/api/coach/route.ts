@@ -296,7 +296,13 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const systemPrompt = coach.systemPrompt(sport, userContext)
+    // Andra skyddslager utöver moderateMessage() ovan — om ett meddelande ändå
+    // slinker igenom (t.ex. en ny fras klassificeraren inte känner igen), ska
+    // själva coachen ändå vägra ge produktrekommendationer för alkohol/droger
+    // och styra tillbaka till träning, istället för att bara svara på frågan
+    // för att den råkar nämna ett kost-ord. Bifogas alla coacher, inte bara en.
+    const scopeGuardrail = '\n\nVIKTIGT: Du ger ALDRIG rekommendationer på specifika alkoholmärken, alkoholhaltiga drycker eller andra produkter som inte rör träning/kost för prestation. Om användaren frågar om detta, svara kort att det ligger utanför vad du hjälper till med och styr tillbaka till träning.'
+    const systemPrompt = coach.systemPrompt(sport, userContext) + scopeGuardrail
     const userProvider = profile?.llm_provider
 
     let reply: string
