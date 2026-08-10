@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Hela Azure-arkitekturen — miljöer, portaler, konfiguration, lasttest</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--teal:#00c9a7;--purple:#7c5cbf;--orange:#f59e0b;
+  --icore:#94a3b8;--azure:#00c9a7;--dotnet:#7c5cbf;--cfg:#f59e0b;
+  --dev:#64748b;--uat:#c77d1f;--prod:#c1442e;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --shadow:0 4px 24px rgba(0,0,0,.08);--line:#cbd5e1;
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+.mono{font-family:'SF Mono',Consolas,monospace}
+.wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+.hero{background:var(--navy);color:#fff;padding:60px 0 48px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(0,201,167,.13);color:#5be6cd;border:1px solid rgba(0,201,167,.35);padding:6px 13px;border-radius:99px;margin-bottom:20px}
+h1.h-title{font-size:clamp(25px,3.6vw,34px);font-weight:800;line-height:1.22;letter-spacing:-.01em;max-width:26ch;text-wrap:balance}
+.h-sub{font-size:15px;color:#b6c2d9;margin-top:14px;max-width:66ch;line-height:1.6}
+
+section{padding:44px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:9px}
+h2.s-title{font-size:clamp(19px,2.4vw,24px);font-weight:800;letter-spacing:-.01em;max-width:34ch;text-wrap:balance}
+.s-desc{font-size:14px;color:var(--gray600);margin-top:11px;max-width:70ch;line-height:1.65}
+
+.diagram{margin-top:22px;background:var(--navy);border-radius:16px;padding:28px 24px;position:relative;overflow:hidden}
+.diagram::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px);background-size:26px 26px;pointer-events:none}
+.diagram-inner{position:relative;overflow-x:auto}
+
+/* env lanes */
+.env-row{display:flex;gap:16px;min-width:820px}
+.env-col{flex:1;display:flex;flex-direction:column}
+.env-head{text-align:center;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;padding:8px 0;border-radius:8px 8px 0 0;color:#fff}
+.env-head.dev{background:var(--dev)}
+.env-head.uat{background:var(--uat)}
+.env-head.prod{background:var(--prod)}
+.env-body{background:var(--navy3);border:1px solid rgba(255,255,255,.1);border-top:none;border-radius:0 0 10px 10px;padding:12px;flex:1;display:flex;flex-direction:column;gap:8px}
+.res-chip{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;font-size:11px;color:#dbe4f5;display:flex;align-items:center;gap:7px}
+.res-chip b{color:#fff;font-weight:700}
+.res-chip.apim{background:rgba(0,201,167,.1);border-color:rgba(0,201,167,.35)}
+.res-chip.dim{opacity:.45}
+.env-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:16px;flex-direction:column;padding:0 2px}
+.env-arrow span{font-size:8px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-top:2px;white-space:nowrap;text-align:center}
+.env-note{margin-top:14px;font-size:11px;color:#93a3bf;text-align:center}
+
+/* config separation diagram */
+.cfg-row{display:flex;align-items:center;gap:0;min-width:720px}
+.cfg-box{background:var(--navy3);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 16px;text-align:center;flex:1}
+.cfg-box.hi{border-color:rgba(245,158,11,.5)}
+.cfg-box .cb-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--cfg);margin-bottom:5px}
+.cfg-box .cb-n{font-size:12px;font-weight:700;color:#fff}
+.cfg-box .cb-d{font-size:10px;color:#93a3bf;margin-top:5px}
+.cfg-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:14px;padding:0 8px;flex-direction:column}
+.cfg-arrow span{font-size:8px;color:var(--cfg);font-weight:700;white-space:nowrap;margin-top:2px}
+.cfg-readarrow{display:flex;justify-content:center;margin-top:10px;color:#5b6f8f;font-size:12px}
+
+/* portal cards */
+.portal-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:24px}
+.portal-card{background:var(--white);border:1px solid var(--gray200);border-radius:14px;padding:22px;box-shadow:var(--shadow)}
+.portal-card h3{font-size:15px;font-weight:800;margin-bottom:4px}
+.portal-card .pc-sub{font-size:11.5px;color:var(--gray400);font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+.pc-list{list-style:none;display:flex;flex-direction:column;gap:7px}
+.pc-list li{font-size:12.5px;color:var(--gray600);padding-left:16px;position:relative}
+.pc-list li::before{content:'→';position:absolute;left:0;color:var(--blue);font-weight:700}
+
+/* load test */
+.lt-row{display:flex;align-items:stretch;gap:0;min-width:640px}
+.lt-box{background:var(--navy3);border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:14px 16px;text-align:center;flex:1}
+.lt-box.agent{border-color:rgba(124,92,191,.5)}
+.lt-box .lb-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:5px}
+.lt-box.agent .lb-t{color:#c4b0f0}
+.lt-box .lb-n{font-size:12px;font-weight:700;color:#fff}
+.lt-box .lb-d{font-size:10px;color:#93a3bf;margin-top:5px}
+.lt-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:14px;padding:0 8px}
+
+/* summary table */
+.sum-table{width:100%;border-collapse:collapse;margin-top:22px;background:var(--white);border:1px solid var(--gray200);border-radius:12px;overflow:hidden;font-size:12.5px}
+.sum-table th{text-align:left;background:var(--gray50);font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--gray400);padding:10px 14px;border-bottom:1px solid var(--gray200)}
+.sum-table td{padding:10px 14px;border-bottom:1px solid var(--gray100);color:var(--gray600);vertical-align:top}
+.sum-table tr:last-child td{border-bottom:none}
+.sum-table td.svc{font-weight:700;color:var(--navy)}
+.pill-env{display:inline-block;font-size:9.5px;font-weight:800;padding:2px 7px;border-radius:99px;margin-right:4px;color:#fff}
+.pill-env.dev{background:var(--dev)}
+.pill-env.uat{background:var(--uat)}
+.pill-env.prod{background:var(--prod)}
+
+.cta{background:var(--navy);color:#fff;padding:44px 0;text-align:center}
+.cta h2{font-size:19px;font-weight:800;margin-bottom:8px}
+.cta p{color:#b6c2d9;font-size:13px;max-width:56ch;margin:0 auto}
+
+@media (max-width:640px){.portal-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Konsoliderad arkitektur · Allt i Azure</div>
+    <h1 class="h-title">En bild: allt som behöver finnas i Azure för hela kedjan</h1>
+    <p class="h-sub">Miljöer (Dev → UAT → Prod), mappningar separerade från koden men versionerade, två portaler, och lasttest drivet av agenter — samlat på ett ställe istället för utspritt över hela konversationen.</p>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">1 · Miljöerna</div>
+    <h2 class="s-title">Dev → UAT → Prod, samma kod, tre lägen</h2>
+    <p class="s-desc">Samma byggda artefakt flyttas mellan lägena — den byggs aldrig om på vägen. Tekniskt: <span class="mono">deployment slots</span> i samma Azure Function App, med slot-swap som promotion. Dev testas rakt mot funktionens egen URL (manuellt och med agenter). UAT och Prod ligger bakom API Management — samma gateway, samma policyer, så UAT faktiskt testar det Prod kommer uppleva.</p>
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="env-row">
+          <div class="env-col">
+            <div class="env-head dev">Dev</div>
+            <div class="env-body">
+              <div class="res-chip"><b>Function App</b> (dev-slot)</div>
+              <div class="res-chip">Key Vault</div>
+              <div class="res-chip">Application Insights</div>
+              <div class="res-chip dim">Ingen APIM — testas direkt mot funktions-URL</div>
+            </div>
+          </div>
+          <div class="env-arrow">→<span>manuell + agent-test godkänd</span></div>
+          <div class="env-col">
+            <div class="env-head uat">UAT</div>
+            <div class="env-body">
+              <div class="res-chip"><b>Function App</b> (uat-slot)</div>
+              <div class="res-chip">Key Vault</div>
+              <div class="res-chip">Application Insights</div>
+              <div class="res-chip apim">API Management</div>
+              <div class="res-chip">Blob Storage (claim-check)</div>
+            </div>
+          </div>
+          <div class="env-arrow">→<span>mänskligt godkännande</span></div>
+          <div class="env-col">
+            <div class="env-head prod">Prod</div>
+            <div class="env-body">
+              <div class="res-chip"><b>Function App</b> (prod-slot)</div>
+              <div class="res-chip">Key Vault</div>
+              <div class="res-chip">Application Insights</div>
+              <div class="res-chip apim">API Management</div>
+              <div class="res-chip">Blob Storage (claim-check)</div>
+            </div>
+          </div>
+        </div>
+        <div class="env-note">iCores dispatch-tabell pekar bara någonsin mot Prod — Dev och UAT nås aldrig av en riktig order.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">2 · Mappningar separerade från koden</div>
+    <h2 class="s-title">Ändra en mappning ska inte kräva en ny kodversion</h2>
+    <p class="s-desc">Git förblir sanningen för <em>historik</em> — vem ändrade vad, när. Men det som Function-koden faktiskt läser vid körning är en separat, snabb datakälla, inte filer bakade in i kodpaketet. Två olika saker att driftsätta, två olika hastigheter.</p>
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="cfg-row">
+          <div class="cfg-box hi"><div class="cb-t">Git-repo</div><div class="cb-n">Mappnings-JSON</div><div class="cb-d">Versionshistorik, PR-granskning</div></div>
+          <div class="cfg-arrow">→<span>config-pipeline</span></div>
+          <div class="cfg-box hi"><div class="cb-t">Publiceras till</div><div class="cb-n">Blob Storage / App Configuration</div><div class="cb-d">Den faktiska körtids-källan</div></div>
+        </div>
+        <div class="cfg-readarrow">↓ läses av</div>
+        <div class="cfg-row" style="min-width:auto;margin-top:10px">
+          <div class="cfg-box"><div class="cb-t">Vid varje anrop</div><div class="cb-n">Function App</div><div class="cb-d">Hämtar rätt mappnings-version för kund+steg, ingen omdeploy krävd</div></div>
+        </div>
+      </div>
+    </div>
+    <p class="s-desc" style="margin-top:14px">Konsekvens: en ändrad mappning går genom samma gren → granskning → godkännande-gate som allt annat, men <strong>driftsätts separat och snabbare</strong> än en kodändring i själva stegmotorn.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">3 · De två portalerna</div>
+    <h2 class="s-title">Läsa och skriva är olika jobb, olika personer</h2>
+    <div class="portal-grid">
+      <div class="portal-card">
+        <div class="pc-sub">Läs — drift & felsökning</div>
+        <h3>Felsökningsportalen</h3>
+        <ul class="pc-list">
+          <li>Frågar Application Insights (KQL) för status/tider per steg</li>
+          <li>Frågar iCore för vilken version som är aktiv per kund</li>
+          <li>Läser mappnings-JSON från konfigurationskällan (steg 2 ovan) för att visa den faktiska mappningen</li>
+          <li>Sök på ordernummer/korrelations-id — en specifik orders resa</li>
+        </ul>
+      </div>
+      <div class="portal-card">
+        <div class="pc-sub">Skriv — bygga & justera</div>
+        <h3>Scenario-portalen</h3>
+        <ul class="pc-list">
+          <li>Skapar/ändrar mappnings-JSON — skriver till git, triggar config-pipeline</li>
+          <li>Drag-and-drop för sista-steget-justeringar, samma JSON-schema</li>
+          <li>Aktiverar en ny version för en kund — det mänskliga godkännande-klicket</li>
+          <li>Startar ett lasttest mot UAT (se nästa avsnitt)</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">4 · Lasttest med agenter</div>
+    <h2 class="s-title">Alltid mot UAT, aldrig mot Prod</h2>
+    <p class="s-desc"><span class="mono">Azure Load Testing</span> är den namngivna tjänsten — kör skriptade lastprofiler mot en URL, mäter svarstid/felfrekvens under belastning. Agent-delen sitter i två ändar av det: en LLM genererar realistiska, varierade testpayloads utifrån de faktiska mappnings-scheman (inte bara samma exempelorder om och om igen), och en LLM tolkar resultatet efteråt och flaggar avvikelser istället för att någon manuellt läser en graf.</p>
+    <div class="diagram">
+      <div class="diagram-inner">
+        <div class="lt-row">
+          <div class="lt-box agent"><div class="lb-t">Agent</div><div class="lb-n">Genererar testpayloads</div><div class="lb-d">Varierade, realistiska, från mappnings-schemat</div></div>
+          <div class="lt-arrow">→</div>
+          <div class="lt-box"><div class="lb-t">Azure Load Testing</div><div class="lb-n">Kör mot UAT</div><div class="lb-d">Mäter svarstid, felfrekvens, genomströmning</div></div>
+          <div class="lt-arrow">→</div>
+          <div class="lt-box agent"><div class="lb-t">Agent</div><div class="lb-n">Tolkar resultatet</div><div class="lb-d">Flaggar regressioner mot förra körningen</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Sammanfattning</div>
+    <h2 class="s-title">Allt i Azure, en lista</h2>
+    <div style="overflow-x:auto">
+      <table class="sum-table">
+        <thead><tr><th>Tjänst</th><th>I vilka miljöer</th><th>Roll</th></tr></thead>
+        <tbody>
+          <tr><td class="svc">Azure Functions</td><td><span class="pill-env dev">Dev</span><span class="pill-env uat">UAT</span><span class="pill-env prod">Prod</span></td><td>Stegkörningen — mappningarna och API-klienten mot Astro, som slots i samma app</td></tr>
+          <tr><td class="svc">API Management</td><td><span class="pill-env uat">UAT</span><span class="pill-env prod">Prod</span></td><td>Stabil framdörr, samma policyer i UAT som Prod. Dev testas direkt.</td></tr>
+          <tr><td class="svc">Key Vault</td><td><span class="pill-env dev">Dev</span><span class="pill-env uat">UAT</span><span class="pill-env prod">Prod</span></td><td>Kundens egna hemligheter, en instans per miljö — aldrig delad mellan Dev och Prod</td></tr>
+          <tr><td class="svc">Application Insights</td><td><span class="pill-env dev">Dev</span><span class="pill-env uat">UAT</span><span class="pill-env prod">Prod</span></td><td>Loggning per miljö, matar felsökningsportalen</td></tr>
+          <tr><td class="svc">Blob Storage / App Configuration</td><td><span class="pill-env uat">UAT</span><span class="pill-env prod">Prod</span></td><td>Mappnings-JSON:s körtidskälla (separat från git) + claim-check för async-steget</td></tr>
+          <tr><td class="svc">Azure Load Testing</td><td><span class="pill-env uat">UAT</span></td><td>Lastprofiler drivna av en agent, alltid mot UAT, aldrig Prod</td></tr>
+          <tr><td class="svc">GitHub + Actions (OIDC)</td><td>Alla</td><td>Två pipelines: kod (bygg → slot-swap Dev→UAT→Prod) och konfiguration (mappnings-JSON → Blob/App Config), separata hastigheter</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>Sju tjänster, tre miljöer, två portaler.</h2>
+    <p>Inte mer än så — varje bit finns för att den löser något vi redan stött på i det här samtalet, inget är med "för säkerhets skull".</p>
+  </div>
+</div>
+
+</body>
+</html>
