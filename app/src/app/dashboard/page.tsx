@@ -207,6 +207,16 @@ export default async function DashboardPage() {
   const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
   const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
 
+  // Nudge for the fields that unlock the VO2max-skala (Hälsa) and mer exakt
+  // kalorier/förbränning (denna sidan) — samma fyra fält, valfria vid signup,
+  // så många konton saknar dem helt. Försvinner av sig själv när allt är ifyllt.
+  const missingPersonalInfo = [
+    !profile?.birth_year && 'Ålder',
+    !profile?.biological_sex && 'Kön',
+    !profile?.weight_kg && 'Vikt',
+    !profile?.height_cm && 'Längd',
+  ].filter((v): v is string => !!v)
+
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
   const greeting = hour < 10 ? 'God morgon' : hour < 18 ? 'Hej' : 'God kväll'
@@ -279,6 +289,21 @@ export default async function DashboardPage() {
           <SyncAllButton />
         </div>
       </div>
+
+      {/* ── Saknad personinfo ─────────────────────────────────────────────────── */}
+      {missingPersonalInfo.length > 0 && (
+        <a
+          href="/dashboard/profil"
+          className="flex items-center justify-between gap-3 bg-card border border-edge rounded-2xl px-4 py-3 hover:border-accent/30 transition-colors"
+        >
+          <div className="text-xs">
+            <span className="text-fg font-medium">Denna info saknas: </span>
+            <span className="text-muted">{missingPersonalInfo.join(', ')}</span>
+            <span className="text-muted"> — ger bättre VO2max-skala och kaloriberäkning</span>
+          </div>
+          <span className="text-accent text-xs flex-shrink-0">Fyll i →</span>
+        </a>
+      )}
 
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
