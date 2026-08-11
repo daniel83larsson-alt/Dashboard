@@ -7,6 +7,7 @@ const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space
 const jetbrainsMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-jb' })
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://dltrainer.se'),
   title: 'DL Trainer',
   description: 'Din personliga AI-träningsdashboard',
   appleWebApp: {

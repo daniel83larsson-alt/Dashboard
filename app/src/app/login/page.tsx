@@ -15,10 +15,15 @@ export default function LoginPage() {
   useEffect(() => {
     // Plain window.location read instead of useSearchParams — this page is
     // statically rendered and useSearchParams would force a Suspense
-    // boundary just for a one-off error flag from the reset-password link.
-    if (new URLSearchParams(window.location.search).get('resetError')) {
+    // boundary just for a one-off error flag from the reset-password link
+    // (and now the landing page's "Skapa konto" link).
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('resetError')) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
+    }
+    if (params.get('mode') === 'signup') {
+      setMode('signup')
     }
   }, [])
 
