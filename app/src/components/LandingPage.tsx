@@ -11,6 +11,29 @@ function Eyebrow({ children }: { children: React.ReactNode }) {
   )
 }
 
+function ArrowIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M7 17 17 7M9 7h8v8" />
+    </svg>
+  )
+}
+
+// Rounded pill CTA with the nested "button-in-button" arrow — the detail
+// Daniel pointed at from the high-end design comparison specifically.
+function PrimaryCta({ href, children, size = 'md' }: { href: string; children: React.ReactNode; size?: 'sm' | 'md' }) {
+  const pad = size === 'sm' ? 'pl-4 pr-1.5 py-1.5 gap-2 text-sm' : 'pl-6 pr-2 py-2 gap-3 text-[15px]'
+  const isle = size === 'sm' ? 'w-7 h-7' : 'w-9 h-9'
+  return (
+    <Link href={href} className={`inline-flex items-center whitespace-nowrap bg-accent text-bg font-semibold rounded-full hover:opacity-90 transition-opacity group ${pad}`}>
+      {children}
+      <span className={`rounded-full bg-bg/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${isle}`}>
+        <ArrowIcon />
+      </span>
+    </Link>
+  )
+}
+
 function FeatureCard({ icon, title, children, wide }: { icon: string; title: string; children: React.ReactNode; wide?: boolean }) {
   return (
     <div className={`bg-card border border-edge rounded-2xl p-5 flex flex-col gap-3 hover:border-accent/35 transition-colors ${wide ? 'sm:col-span-2' : ''}`}>
@@ -34,11 +57,17 @@ function Step({ n, title, children }: { n: string; title: string; children: Reac
 export default function LandingPage() {
   return (
     <div className="min-h-full">
-      {/* ── Topbar ─────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-40 bg-bg/85 backdrop-blur border-b border-edge/60">
-        <div className="max-w-6xl mx-auto flex items-center justify-between gap-4 px-6 py-3.5">
+      {/* ── Topbar — flytande pill, alltid synlig ────────────────────────
+          position:fixed, inte sticky — appens globals.css sätter medvetet
+          overflow-x:hidden på <body> (skydd mot en mobil Safari-bugg), vilket
+          gör att sticky-positionerade element tappar sin fasta position så
+          fort man skrollar bortom sin ursprungsplats i flödet (bekräftat med
+          en riktig skrollning i headless browser, inte bara läst i koden).
+          fixed påverkas inte av förälderns overflow på samma sätt. ────── */}
+      <div className="fixed inset-x-0 top-4 z-40 flex justify-center px-4">
+        <header className="w-full max-w-6xl flex items-center justify-between gap-4 bg-card/90 backdrop-blur border border-edge rounded-full pl-5 pr-2 py-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-accent text-bg flex items-center justify-center font-mono font-extrabold text-sm">DL</div>
+            <div className="w-8 h-8 rounded-full bg-accent text-bg flex items-center justify-center font-mono font-extrabold text-sm">DL</div>
             <span className="font-semibold text-[15px]">DL <span className="text-accent">Trainer</span></span>
           </div>
           <nav className="hidden sm:flex items-center gap-7 text-sm text-muted">
@@ -46,16 +75,16 @@ export default function LandingPage() {
             <a href="#sa-funkar-det" className="hover:text-fg transition-colors">Så funkar det</a>
             <a href="#klockor" className="hover:text-fg transition-colors">Din klocka</a>
           </nav>
-          <div className="flex items-center gap-2.5">
-            <Link href="/login" className="font-mono text-[13px] border border-edge rounded-xl px-4 py-2 hover:border-accent hover:text-accent transition-colors">
+          <div className="flex items-center gap-2">
+            <Link href="/login" className="font-mono text-[13px] whitespace-nowrap border border-edge rounded-full px-4 py-2 hover:border-accent hover:text-accent transition-colors">
               Logga in
             </Link>
-            <Link href="/login?mode=signup" className="bg-accent text-bg font-semibold text-sm rounded-xl px-4 py-2 hover:opacity-90 transition-opacity">
-              Skapa konto
-            </Link>
+            <PrimaryCta href="/login?mode=signup" size="sm">Skapa konto</PrimaryCta>
           </div>
-        </div>
-      </header>
+        </header>
+      </div>
+      {/* Spacer — ersätter höjden headern skulle tagit upp i flödet nu när den är fixed */}
+      <div className="h-[72px]" aria-hidden="true" />
 
       <main>
         {/* ── Hero ─────────────────────────────────────────────────────── */}
@@ -77,10 +106,8 @@ export default function LandingPage() {
                 DL Trainer samlar dina pass, din sömn, din mat och din puls på ett ställe. Varje sportgren har sin egen AI-coach, och planen anpassas efter din vecka — inte samma mall för alla.
               </p>
               <div className="flex items-center gap-3.5 mt-8 flex-wrap">
-                <Link href="/login?mode=signup" className="bg-accent text-bg font-semibold text-[15px] rounded-xl px-6 py-3.5 hover:opacity-90 transition-opacity">
-                  Skapa konto — gratis att börja
-                </Link>
-                <Link href="/login" className="border border-edge rounded-xl px-5.5 py-3.5 text-[15px] font-semibold hover:border-lcd-dim transition-colors">
+                <PrimaryCta href="/login?mode=signup">Skapa konto — gratis att börja</PrimaryCta>
+                <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">
                   Logga in
                 </Link>
               </div>
@@ -224,10 +251,8 @@ export default function LandingPage() {
             <h2 className="relative text-[1.7rem] sm:text-[2.1rem] font-bold text-balance">Redo att sätta igång på riktigt?</h2>
             <p className="relative text-muted text-[15px] mt-3">Gratis att komma igång. Inget kreditkort krävs, ingen bindningstid.</p>
             <div className="relative flex items-center justify-center gap-3.5 mt-7 flex-wrap">
-              <Link href="/login?mode=signup" className="bg-accent text-bg font-semibold text-[15px] rounded-xl px-6 py-3.5 hover:opacity-90 transition-opacity">
-                Skapa konto
-              </Link>
-              <Link href="/login" className="border border-edge rounded-xl px-5.5 py-3.5 text-[15px] font-semibold hover:border-lcd-dim transition-colors">
+              <PrimaryCta href="/login?mode=signup">Skapa konto</PrimaryCta>
+              <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">
                 Logga in
               </Link>
             </div>
