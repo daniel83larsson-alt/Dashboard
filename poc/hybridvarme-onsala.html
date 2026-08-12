@@ -84,7 +84,7 @@
   }
 
   .summary{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
     background:var(--grid-strong);
     border:1px solid var(--grid-strong);
     border-radius:var(--radius);
@@ -216,6 +216,7 @@
       <p class="eyebrow">Installationsschema · Hybridvärmesystem</p>
       <h1>Luft/vatten-värmepump som huvudkälla, befintlig pelletspanna som backup</h1>
       <p class="obj">Villa, byggår 1957 · Onsala, Kungsbacka · 205 m² (135 m² golvvärme + 70 m² källare) · Lokalt uppmätt vinterminimum −11 till −17 °C</p>
+      <p class="obj" style="margin-top:.3rem">En vanlig kall vecka hanteras av värmepumpen ensam (Normal vinter). Bara de sällsynta dagarna under ≈−15°C — inom husets uppmätta spann — växlar systemet till pannan (Extremkyla), se avsnitt 03.</p>
     </div>
     <div class="tb-meta mono">
       <div class="row"><span>Ritning</span><b>VVS-01</b></div>
@@ -231,12 +232,34 @@
       <div class="v">15 500–16 500<small> kr/år</small></div>
     </div>
     <div class="cell pos">
+      <div class="k">Ny uppskattad kostnad</div>
+      <div class="v">≈ 6 100–7 100<small> kr/år</small></div>
+    </div>
+    <div class="cell pos">
       <div class="k">Bekräftad besparing</div>
       <div class="v">≈ 9 400<small> kr/år</small></div>
     </div>
     <div class="cell">
-      <div class="k">Netto efter ROT</div>
+      <div class="k">Netto efter ROT <small style="text-transform:none; letter-spacing:0">(uppskattat)</small></div>
       <div class="v">≈ 91 000<small> kr</small></div>
+    </div>
+  </div>
+  <p style="color:var(--muted-dim); font-size:.76rem; margin:-24px 0 30px">Ny kostnad = nuvarande kostnad minus bekräftad besparing. De underliggande styckpriserna (kr/kWh el, kr/kg pellets) som besparingen är räknad på är inte specificerade i detta dokument — själva förbrukningsdatan (pellets 2 496 kg/år, elpatron ≈2 850 kWh/år) är dock verklig och uppmätt, se avsnitt 05.</p>
+
+  <div class="paper" style="margin-bottom:40px">
+    <h3>Ordlista</h3>
+    <p class="lede">Facktermer som används i schemat och tabellerna nedan, i vanligt språk.</p>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px 24px; font-size:.84rem; color:var(--paper-ink)">
+      <div><b>VVX1 / VVX2</b> — växelventil. En automatisk ventil som väljer vilken väg vattnet ska ta, t.ex. från värmepumpen eller från pannan.</div>
+      <div><b>SCOP / COP</b> — mått på hur mycket värme pumpen ger per insatt kWh el. Högre siffra = billigare drift.</div>
+      <div><b>BVU</b> — buffertank för golvvärmen (en ren "värmelagringstank", inget tappvatten i den).</div>
+      <div><b>BVP</b> — buffert-/beredartank för tappvarmvatten, med en inbyggd slinga som värmer upp kranvattnet på väg genom tanken.</div>
+      <div><b>Genomströmning / "legionellafri"</b> — kranvattnet lagras aldrig varmt i en tank, utan värms i stunden det rinner genom en slinga. Minskar risken för legionellabakterier, som annars kan växa till i stillastående ljummet vatten.</div>
+      <div><b>R290</b> — köldmediet i värmepumpen, en miljövänlig variant (propan) med lågt klimatavtryck.</div>
+      <div><b>Modbus</b> — ett standardprotokoll som låter t.ex. smarta hem-systemet Homey läsa av och styra värmepumpen, bland annat efter elpriset.</div>
+      <div><b>Lastvakt</b> — en säkerhetsfunktion som stänger av lägre prioriterad el (t.ex. en elpatron) om för mycket drar ström samtidigt, så husets huvudsäkring inte löser ut.</div>
+      <div><b>Shunt</b> — blandar ner det varma vattnet till rätt temperatur innan det går ut i golvvärmerören.</div>
+      <div><b>Backventil</b> — släpper bara igenom flöde åt ett håll, för att skydda värmepumpen mot för varmt returvatten.</div>
     </div>
   </div>
 
@@ -345,7 +368,7 @@
           <text x="640" y="533" class="box-sub">Slinga SS316, Ø28mm, 33 m</text>
           <text x="640" y="549" class="box-sub">Genomströmning — legionellafri</text>
           <text x="640" y="565" class="box-sub">Elpatron-spets vid hög belastning</text>
-          <text x="640" y="586" class="box-sub" font-size="9">Vänster: värmekrets (mantel) · Höger: DHW-slinga</text>
+          <text x="640" y="586" class="box-sub" font-size="9">Vänster: värmekrets (mantel) · Höger: tappvarmvatten-slinga</text>
           <g transform="translate(785,530)" class="icon-stroke">
             <rect x="-14" y="-30" width="28" height="60" rx="6"/>
             <path d="M-9,-20 q9,6 0,12 q-9,6 0,12" />
@@ -361,7 +384,7 @@
           <!-- termostat -->
           <rect class="box" x="900" y="620" width="120" height="34" rx="2"/>
           <text x="960" y="636" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
-          <text x="960" y="648" class="box-sub" text-anchor="middle" font-size="7.5">dykficka på BVP:s DHW-utlopp</text>
+          <text x="960" y="648" class="box-sub" text-anchor="middle" font-size="7.5">dykficka på BVP:s tappvarmvatten-utlopp</text>
           <path class="flow-sig" d="M960,620 L945,562"/>
 
           <!-- kallvatten in to VVX2 -->
@@ -481,7 +504,7 @@
           <tr>
             <td class="mono">6</td>
             <td><b>Termostat</b></td>
-            <td class="spec">Styr växelventil 2 · känselkropp i dykficka på BVP:s DHW-utlopp</td>
+            <td class="spec">Styr växelventil 2 · känselkropp i dykficka på BVP:s tappvarmvatten-utlopp</td>
             <td class="role">Automatisk styrning av tappvattenväg — endast denna krets kräver elpunkt</td>
             <td class="num">990 kr</td>
           </tr>
@@ -516,10 +539,10 @@
             <td></td><td colspan="3">Summa före ROT</td><td class="num">≈ 101 000 kr</td>
           </tr>
           <tr>
-            <td></td><td colspan="3" class="role">ROT-avdrag (≈9%)</td><td class="num">− 10 000 kr</td>
+            <td></td><td colspan="3" class="role">ROT-avdrag — 30% av arbetskostnaden (installationen), inte av materialet, vilket ger ≈9% av totalsumman</td><td class="num">− 10 000 kr</td>
           </tr>
           <tr class="sum-row">
-            <td></td><td colspan="3">Netto efter ROT</td><td class="num" style="color:#3a6b3a">≈ 91 000 kr</td>
+            <td></td><td colspan="3">Netto efter ROT <span class="pill">Uppskattat</span></td><td class="num" style="color:#3a6b3a">≈ 91 000 kr</td>
           </tr>
         </tbody>
       </table>
@@ -569,6 +592,7 @@
         <ul>
           <li>LT-1230 klarar dokumenterat hela husets behov ensam ner till −25°C</li>
           <li>Konsekvens: högre elkostnad de kallaste dagarna — inte ett kallt hus</li>
+          <li>Vad du gör: bo som vanligt, kontakta installatör/servicetekniker för reparation när det passar — inget akut läge</li>
         </ul>
         <div class="notice">Inget kallt hus. Befintlig panna är redan ≈7 år — systemet är inte beroende av att den fungerar i all framtid.</div>
       </div>
@@ -588,10 +612,10 @@
         <tr><td>Golvvärmens temperatur</td><td><span class="atag auto">Automatisk</span></td><td class="how">Befintlig shunt, utegivare</td></tr>
         <tr><td>VP:s egen värmekurva</td><td><span class="atag auto">Automatisk</span></td><td class="how">Inbyggd i LT-1230, engångsinställd</td></tr>
         <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230</td></tr>
-        <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
-        <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Fysisk påfyllning vid behov</td></tr>
+        <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä, endast vid hög samtidig tappvattenbelastning. Hur ofta det blir är inte uppskattat än — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
+        <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Kontrollera nivån inför vintersäsongen och igen vid längre köldperioder — det enda som kräver framförhållning innan behovet uppstår</td></tr>
         <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde (≈ −15°C), kräver bränsle i förråd</td></tr>
-        <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis kontroll</td></tr>
+        <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis rutinkontroll — inte framförhållning, bara regelbunden tillsyn</td></tr>
       </tbody>
     </table>
   </section>
@@ -614,7 +638,7 @@
         <h4>Fortfarande öppet</h4>
         <ul>
           <li><b>Installationskostnad</b> — endast uppskattad (≈28 000 kr), ej offererad</li>
-          <li><b>Samtidig drift BVU/BVP</b> — ej bekräftat att LT-1230 kan hålla en separat, lägre kurva mot BVU samtidigt som BVP kräver högre temperatur</li>
+          <li><b>Samtidig drift BVU/BVP</b> — ej bekräftat att LT-1230 kan hålla en separat, lägre kurva mot BVU samtidigt som BVP kräver högre temperatur. I vardagen: om det stämmer inte fullt ut kan t.ex. duschvattnet bli något svalare de dagar golvvärmen samtidigt drar mycket — ingen säkerhetsfråga, men påverkar komforten tills bekräftat</li>
           <li><b>Exakt rördragning</b> — fysisk placering av cirkulationspumpar i pannrummet är inte fastställd; diagrammet ovan visar principflöde, inte exakt rörledningsdragning</li>
           <li><b>Lastbalansering i pannrummet</b> — VP (12 kW, 3-fas), BVP:s elpatron-spets och pannans egen elpatron (9 kW) kan potentiellt vara aktiva samtidigt; ingen lastvakt mot husets huvudsäkring är inritad eller offererad ännu</li>
           <li><b>Brytpunkten vid extremkyla (≈ −15°C)</b> — att panna är billigare i drift än VP:n under just den tröskeln är ännu inte räknat mot ett verkligt elpris och pelletspris; siffran är en bedömning, inte en bekräftad kalkyl som besparingssiffran (9 400 kr/år) är</li>
