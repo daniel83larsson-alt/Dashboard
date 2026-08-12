@@ -161,7 +161,7 @@
   .sum-row td{font-weight:800; border-top:2px solid var(--paper-ink); border-bottom:none !important}
 
   /* driftlägen */
-  .modes{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px}
+  .modes{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px; align-items:start}
   .mode-card{
     background:var(--bg); border:1px solid var(--grid-strong); border-radius:var(--radius);
     padding:18px 18px 20px; position:relative;
@@ -222,7 +222,7 @@
       <div class="row"><span>Ritning</span><b>VVS-01</b></div>
       <div class="row"><span>Skala</span><b>Principskiss</b></div>
       <div class="row"><span>Objekt</span><b>Onsala 1957</b></div>
-      <div class="rev">REV. 01</div>
+      <div class="rev">REV. 02</div>
     </div>
   </div>
 
@@ -397,8 +397,8 @@
           <path class="flow-blue" d="M900,520 L820,510" marker-end="url(#arrB)"/>
           <text x="855" y="503" class="pipe-label" font-size="8">kallt</text>
 
-          <!-- VVX2 output B: to panna's own slinga (long path, copper) -->
-          <path class="flow-copper" d="M900,545 C 700,610 450,650 325,600" marker-end="url(#arrC)"/>
+          <!-- VVX2 output B: to panna's own slinga, routed below the BVP box instead of through it -->
+          <path class="flow-copper" d="M900,545 C 850,640 750,690 620,690 C 500,690 400,650 325,600" marker-end="url(#arrC)"/>
           <text x="560" y="655" class="note-label">Pannans egen slinga — alternativ tappvattenväg (kallt in, varmt ut)</text>
 
           <!-- BVP DHW hot-out to Tappvarmvatten -->
@@ -587,7 +587,7 @@
           <li>VP bär golvvärmen via BVU på låg kurva (35–40°C) — maximerar COP</li>
           <li>Panna eldar pellets och boostar BVP periodvis till 70–80°C vid hög samtidig tappvattenbelastning (t.ex. dusch + disk samtidigt)</li>
         </ul>
-        <div class="notice" style="color:var(--copper); border-top:none; padding-top:0">Hur ofta det blir är inte uppskattat än — pelletsnivån är därför värd att kontrollera med jämna mellanrum under vintern, inte bara inför Extremkyla.</div>
+        <div class="notice" style="color:var(--copper)">Hur ofta det blir är inte uppskattat än — pelletsnivån är därför värd att kontrollera med jämna mellanrum under vintern, inte bara inför Extremkyla.</div>
       </div>
       <div class="mode-card warn">
         <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--copper)" stroke-width="1.6"><path d="M12 2 L2 21 H22 Z" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke-linecap="round"/></svg>
@@ -664,7 +664,7 @@
   </section>
 
   <footer class="mono">
-    <span>VVS-01 · Hybridvärmesystem Onsala · Rev. 01</span>
+    <span>VVS-01 · Hybridvärmesystem Onsala · Rev. 02</span>
     <span>Principskiss, ej skalenlig</span>
   </footer>
 
