@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hybridvärmesystem — Onsala</title>
+<style>
+  :root{
+    --bg:#0e2a3d;
+    --bg-deep:#0a2030;
+    --grid:rgba(255,255,255,.055);
+    --grid-strong:rgba(255,255,255,.09);
+    --ink:#eaf2f6;
+    --muted:#9fb8c8;
+    --muted-dim:#6f8ea0;
+    --paper:#f7f3ea;
+    --paper-ink:#1b2a33;
+    --paper-muted:#5a6b74;
+    --paper-edge:#e2dbc9;
+    --red:#e0563a;
+    --red-dim:#8a3a2c;
+    --blue:#4fa3d1;
+    --blue-dim:#2f6484;
+    --copper:#d19a52;
+    --green:#5fb583;
+    --amber:#e8b34c;
+    --line-w:2.5;
+    --radius:3px;
+    --shadow: 0 14px 32px -12px rgba(0,0,0,.55), 0 2px 8px rgba(0,0,0,.35);
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:
+      linear-gradient(var(--grid) 1px, transparent 1px) 0 0/40px 40px,
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px) 0 0/40px 40px,
+      radial-gradient(ellipse at 20% -10%, #143850 0%, var(--bg) 45%, var(--bg-deep) 100%);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    padding:32px 20px 80px;
+  }
+  .wrap{max-width:1180px;margin:0 auto}
+  .mono{font-family:ui-monospace,"SF Mono","Cascadia Code","Roboto Mono",Consolas,monospace}
+  .eyebrow{
+    font-size:.72rem; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--amber);
+  }
+  h1,h2,h3{text-wrap:balance; margin:0}
+  a{color:inherit}
+
+  /* ---------- title block ---------- */
+  .titleblock{
+    display:grid;
+    grid-template-columns:1fr auto;
+    gap:20px;
+    border:1px solid var(--grid-strong);
+    border-radius:var(--radius);
+    padding:26px 28px;
+    background:linear-gradient(180deg, rgba(255,255,255,.025), transparent);
+    margin-bottom:28px;
+  }
+  .titleblock h1{
+    font-size:clamp(1.7rem, 3.2vw, 2.5rem);
+    font-weight:800;
+    letter-spacing:-.01em;
+    line-height:1.08;
+    margin-top:.5rem;
+  }
+  .titleblock .obj{
+    color:var(--muted); font-size:.95rem; margin-top:.6rem; max-width:56ch;
+  }
+  .tb-meta{
+    text-align:right; font-size:.78rem; color:var(--muted-dim);
+    border-left:1px solid var(--grid-strong); padding-left:20px;
+    display:flex; flex-direction:column; gap:6px; justify-content:center;
+    min-width:180px;
+  }
+  .tb-meta .row{display:flex; justify-content:space-between; gap:14px}
+  .tb-meta .row b{color:var(--muted); font-weight:600}
+  .tb-meta .rev{
+    margin-top:6px; padding-top:8px; border-top:1px dashed var(--grid-strong);
+    color:var(--amber); font-weight:700; letter-spacing:.04em;
+  }
+
+  .summary{
+    display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+    background:var(--grid-strong);
+    border:1px solid var(--grid-strong);
+    border-radius:var(--radius);
+    margin-bottom:36px;
+    overflow:hidden;
+  }
+  .summary .cell{background:var(--bg); padding:18px 20px}
+  .summary .cell .k{font-size:.68rem; text-transform:uppercase; letter-spacing:.1em; color:var(--muted-dim); font-weight:700}
+  .summary .cell .v{font-size:1.35rem; font-weight:800; margin-top:6px; font-variant-numeric:tabular-nums}
+  .summary .cell .v small{font-size:.6em; font-weight:600; color:var(--muted)}
+  .summary .cell.pos .v{color:var(--green)}
+
+  /* ---------- section framing ---------- */
+  section{margin-bottom:44px}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:16px}
+  .sec-head .num{font-family:ui-monospace,monospace; color:var(--amber); font-weight:700; font-size:.85rem}
+  .sec-head h2{font-size:1.3rem; font-weight:800; letter-spacing:-.005em}
+  .sec-head .rule{flex:1; height:1px; background:var(--grid-strong)}
+
+  /* ---------- schematic canvas ---------- */
+  .schematic-frame{
+    border:1px solid var(--grid-strong); border-radius:var(--radius);
+    background:linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+    padding:6px;
+  }
+  .schematic-scroll{overflow-x:auto}
+  svg.schema{display:block; width:100%; min-width:900px; height:auto}
+  .zone-label{fill:var(--muted-dim); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase; font-family:inherit}
+  .box{fill:rgba(255,255,255,.035); stroke:var(--grid-strong); stroke-width:1.4}
+  .box.prod{stroke:var(--red-dim)}
+  .box.store{stroke:var(--blue-dim)}
+  .box.dist{stroke:var(--muted-dim)}
+  .box-title{fill:var(--ink); font-size:14px; font-weight:800; font-family:inherit}
+  .box-sub{fill:var(--muted); font-size:10.5px; font-family:inherit}
+  .valve{fill:var(--bg); stroke:var(--amber); stroke-width:1.6}
+  .valve-label{fill:var(--amber); font-size:10.5px; font-weight:800; font-family:ui-monospace,monospace}
+  .flow-red{stroke:var(--red); stroke-width:var(--line-w); fill:none}
+  .flow-blue{stroke:var(--blue); stroke-width:var(--line-w); fill:none}
+  .flow-copper{stroke:var(--copper); stroke-width:var(--line-w); fill:none; stroke-dasharray:7 5}
+  .flow-sig{stroke:var(--green); stroke-width:1.6; fill:none; stroke-dasharray:2 4}
+  .flow-sensor{stroke:var(--muted-dim); stroke-width:1.2; fill:none; stroke-dasharray:1 3}
+  .pipe-label{fill:var(--muted); font-size:9.5px; font-family:ui-monospace,monospace}
+  .note-label{fill:var(--amber); font-size:9.5px; font-weight:700; font-family:inherit}
+  .icon-stroke{fill:none; stroke:var(--muted); stroke-width:1.4; stroke-linecap:round; stroke-linejoin:round}
+
+  .legend{display:flex; flex-wrap:wrap; gap:18px; padding:14px 18px; border-top:1px solid var(--grid-strong)}
+  .legend .li{display:flex; align-items:center; gap:8px; font-size:.76rem; color:var(--muted)}
+  .legend .swatch{width:22px; height:0; border-top:3px solid; display:inline-block}
+  .legend .swatch.dash{border-top-style:dashed}
+  .legend .swatch.dot{border-top-style:dotted; border-top-width:2px}
+
+  /* ---------- paper cards ---------- */
+  .paper{
+    background:var(--paper); color:var(--paper-ink); border-radius:2px;
+    box-shadow:var(--shadow);
+    border:1px solid var(--paper-edge);
+    padding:26px 28px;
+  }
+  .paper h3{font-size:1.02rem; font-weight:800; margin-bottom:4px}
+  .paper .lede{color:var(--paper-muted); font-size:.88rem; margin-bottom:16px; max-width:70ch}
+
+  /* component table */
+  table{width:100%; border-collapse:collapse; font-size:.86rem}
+  table caption{caption-side:top; text-align:left}
+  .ctable th, .ctable td{padding:9px 10px; text-align:left; border-bottom:1px solid var(--paper-edge); vertical-align:top}
+  .ctable th{font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:var(--paper-muted); font-weight:700; border-bottom:2px solid var(--paper-ink)}
+  .ctable td.num{font-family:ui-monospace,monospace; text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap}
+  .ctable td.spec{color:var(--paper-muted); font-size:.82rem}
+  .ctable tr:last-child td{border-bottom:none}
+  .ctable .role{font-size:.78rem; color:var(--paper-muted)}
+  .pill{display:inline-block; font-size:.66rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; padding:2px 7px; border-radius:20px; background:#e7e0cc; color:#6b5b2c}
+  .pill.included{background:#d9ead9; color:#3a6b3a}
+
+  .sum-row td{font-weight:800; border-top:2px solid var(--paper-ink); border-bottom:none !important}
+
+  /* driftlägen */
+  .modes{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:16px}
+  .mode-card{
+    background:var(--bg); border:1px solid var(--grid-strong); border-radius:var(--radius);
+    padding:18px 18px 20px; position:relative;
+  }
+  .mode-card .mi{width:34px; height:34px}
+  .mode-card .mtitle{font-weight:800; font-size:1.02rem; margin:12px 0 2px}
+  .mode-card .mwhen{font-size:.72rem; color:var(--muted-dim); text-transform:uppercase; letter-spacing:.06em; font-weight:700}
+  .mode-card ul{margin:12px 0 0; padding-left:18px; font-size:.83rem; color:var(--muted); line-height:1.55}
+  .mode-card ul li{margin-bottom:6px}
+  .mode-card .notice{margin-top:14px; padding-top:12px; border-top:1px dashed var(--grid-strong); font-size:.78rem; color:var(--ink); font-weight:600}
+  .mode-card.warn{border-color:var(--copper)}
+  .mode-card.safe{border-color:var(--green)}
+
+  /* automatik table (dark) */
+  .atable{width:100%; border-collapse:collapse; font-size:.85rem}
+  .atable th, .atable td{padding:11px 12px; border-bottom:1px solid var(--grid-strong); text-align:left}
+  .atable th{font-size:.68rem; text-transform:uppercase; letter-spacing:.07em; color:var(--muted-dim); font-weight:700}
+  .atag{display:inline-flex; align-items:center; gap:6px; font-size:.72rem; font-weight:700; padding:3px 9px; border-radius:20px}
+  .atag.auto{background:rgba(95,181,131,.14); color:var(--green)}
+  .atag.manual{background:rgba(224,86,58,.14); color:var(--red)}
+  .atag.half{background:rgba(232,179,76,.14); color:var(--amber)}
+  .atable .how{color:var(--muted); font-size:.82rem}
+
+  /* open questions */
+  .qa-grid{display:grid; grid-template-columns:1fr 1fr; gap:22px}
+  .qa-col h4{font-size:.78rem; text-transform:uppercase; letter-spacing:.08em; margin-bottom:10px}
+  .qa-col.open h4{color:var(--copper)}
+  .qa-col.done h4{color:var(--green)}
+  .qa-col ul{margin:0; padding-left:18px; font-size:.86rem; line-height:1.6; color:var(--muted)}
+  .qa-col ul li{margin-bottom:9px}
+  .qa-col ul li b{color:var(--ink)}
+
+  footer{
+    margin-top:56px; padding-top:20px; border-top:1px solid var(--grid-strong);
+    display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;
+    font-size:.74rem; color:var(--muted-dim); font-family:ui-monospace,monospace;
+  }
+
+  @media (max-width:760px){
+    .titleblock{grid-template-columns:1fr}
+    .tb-meta{border-left:none; border-top:1px solid var(--grid-strong); padding-left:0; padding-top:14px; text-align:left}
+    .summary{grid-template-columns:1fr}
+    .qa-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="titleblock">
+    <div>
+      <p class="eyebrow">Installationsschema · Hybridvärmesystem</p>
+      <h1>Luft/vatten-värmepump som huvudkälla, befintlig pelletspanna som backup</h1>
+      <p class="obj">Villa, byggår 1957 · Onsala, Kungsbacka · 205 m² (135 m² golvvärme + 70 m² källare) · Lokalt uppmätt vinterminimum −11 till −17 °C</p>
+    </div>
+    <div class="tb-meta mono">
+      <div class="row"><span>Ritning</span><b>VVS-01</b></div>
+      <div class="row"><span>Skala</span><b>Principskiss</b></div>
+      <div class="row"><span>Objekt</span><b>Onsala 1957</b></div>
+      <div class="rev">REV. 01</div>
+    </div>
+  </div>
+
+  <div class="summary mono">
+    <div class="cell">
+      <div class="k">Nuvarande kostnad</div>
+      <div class="v">15 500–16 500<small> kr/år</small></div>
+    </div>
+    <div class="cell pos">
+      <div class="k">Bekräftad besparing</div>
+      <div class="v">≈ 9 400<small> kr/år</small></div>
+    </div>
+    <div class="cell">
+      <div class="k">Netto efter ROT</div>
+      <div class="v">≈ 91 000<small> kr</small></div>
+    </div>
+  </div>
+
+  <!-- ================= SYSTEMSCHEMA ================= -->
+  <section id="schema">
+    <div class="sec-head"><span class="num">01</span><h2>Systemschema</h2><span class="rule"></span></div>
+    <div class="schematic-frame">
+      <div class="schematic-scroll">
+        <svg class="schema" viewBox="0 0 1400 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Principskiss över hybridvärmesystemet: produktion via värmepump och panna, lagring och styrning via buffert- och varmvattentank med två växelventiler, distribution till golvvärme och tappvatten.">
+          <defs>
+            <marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--red)"/>
+            </marker>
+            <marker id="arrB" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--blue)"/>
+            </marker>
+            <marker id="arrC" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+              <path d="M0,0 L10,5 L0,10 z" fill="var(--copper)"/>
+            </marker>
+          </defs>
+
+          <!-- zone bands -->
+          <rect x="30" y="40" width="330" height="780" fill="rgba(224,86,58,.035)" stroke="none"/>
+          <rect x="380" y="40" width="600" height="780" fill="rgba(79,163,209,.035)" stroke="none"/>
+          <rect x="1000" y="40" width="370" height="780" fill="rgba(255,255,255,.02)" stroke="none"/>
+          <text x="45" y="66" class="zone-label">Produktion</text>
+          <text x="395" y="66" class="zone-label">Lagring &amp; styrning</text>
+          <text x="1015" y="66" class="zone-label">Distribution</text>
+          <line x1="380" y1="40" x2="380" y2="820" stroke="var(--grid-strong)" stroke-width="1"/>
+          <line x1="1000" y1="40" x2="1000" y2="820" stroke="var(--grid-strong)" stroke-width="1"/>
+
+          <!-- VP box -->
+          <rect class="box prod" x="55" y="110" width="270" height="150" rx="3"/>
+          <text x="75" y="140" class="box-title">Värmepump — Lunna LT-1230</text>
+          <text x="75" y="160" class="box-sub">12 kW luft/vatten, monoblock, R290</text>
+          <text x="75" y="176" class="box-sub">SCOP 4,66 (35°C) · dokumenterad drift till −25°C</text>
+          <text x="75" y="192" class="box-sub">Egen inbyggd cirkulationspump</text>
+          <!-- fan icon -->
+          <g transform="translate(275,130)" class="icon-stroke">
+            <circle cx="0" cy="0" r="16"/>
+            <path d="M0,0 C4,-10 12,-10 12,0 C12,8 4,10 0,0 C-6,-8 -10,-4 0,0 C6,8 10,4 0,0 C-4,10 -12,10 -12,0 C-12,-8 -4,-10 0,0"/>
+          </g>
+
+          <!-- Panna box -->
+          <rect class="box prod" x="55" y="420" width="270" height="170" rx="3"/>
+          <text x="75" y="450" class="box-title">Panna — Effecta Komplett III</text>
+          <text x="75" y="470" class="box-sub">Befintlig · 183 L vattenvolym · 9 kW elpatron</text>
+          <text x="75" y="486" class="box-sub">Egen genomströmningsslinga (legionellafri)</text>
+          <text x="75" y="502" class="box-sub">Roll: backup vid extremkyla + spets för tappvatten</text>
+          <text x="75" y="524" class="note-label">Bibehålls, dockas mot nya systemet</text>
+          <!-- flame icon -->
+          <g transform="translate(275,450)" class="icon-stroke">
+            <path d="M0,-16 C6,-8 8,-2 4,4 C8,2 10,-4 10,-4 C12,4 8,14 0,16 C-8,14 -12,4 -10,-4 C-10,-4 -8,2 -4,4 C-8,-2 -6,-8 0,-16 Z"/>
+          </g>
+
+          <!-- Backventil + magnetitfilter on VP line -->
+          <rect class="valve" x="360" y="150" width="20" height="20" transform="rotate(45 370 160)"/>
+          <text x="345" y="128" class="valve-label">BACKV.</text>
+          <text x="330" y="196" class="pipe-label" text-anchor="middle">max 80°C in</text>
+
+          <rect class="box" x="395" y="240" width="70" height="34" rx="2"/>
+          <text x="430" y="261" class="box-sub" text-anchor="middle" font-size="9">Magnetitfilter</text>
+
+          <!-- VVX1 -->
+          <rect class="valve" x="470" y="140" width="70" height="50" rx="4"/>
+          <text x="505" y="160" class="valve-label" text-anchor="middle">VVX 1</text>
+          <text x="505" y="174" class="valve-label" text-anchor="middle" font-size="8">VÄRME</text>
+          <text x="505" y="205" class="pipe-label" text-anchor="middle">auto · temp-styrd</text>
+
+          <!-- givare to VVX1 -->
+          <path class="flow-sensor" d="M660,120 C620,110 560,120 540,150"/>
+          <circle cx="662" cy="118" r="4" fill="none" stroke="var(--muted-dim)" stroke-width="1.4"/>
+          <text x="668" y="112" class="pipe-label" font-size="8.5">Givare BVU</text>
+
+          <!-- BVU -->
+          <rect class="box store" x="620" y="95" width="200" height="170" rx="3"/>
+          <text x="640" y="122" class="box-title">Buffert — BVU 300</text>
+          <text x="640" y="142" class="box-sub">300 L · SS304 · A/A+</text>
+          <text x="640" y="158" class="box-sub">Ren volymtank, ingen slinga</text>
+          <text x="640" y="174" class="box-sub">Lagrar värme till golvvärme,</text>
+          <text x="640" y="188" class="box-sub">möjliggör spotprisladdning</text>
+          <!-- tank icon -->
+          <g transform="translate(785,145)" class="icon-stroke">
+            <rect x="-14" y="-30" width="28" height="60" rx="6"/>
+            <line x1="-14" y1="-10" x2="14" y2="-10"/>
+          </g>
+
+          <!-- BVP -->
+          <rect class="box store" x="620" y="400" width="200" height="180" rx="3"/>
+          <text x="640" y="427" class="box-title">Varmvatten — BVP 300</text>
+          <text x="640" y="447" class="box-sub">300 L · Duplex 2205 · A</text>
+          <text x="640" y="463" class="box-sub">Slinga SS316, Ø28mm, 33 m</text>
+          <text x="640" y="479" class="box-sub">Genomströmning — legionellafri</text>
+          <text x="640" y="495" class="box-sub">Elpatron-spets vid hög belastning</text>
+          <g transform="translate(785,455)" class="icon-stroke">
+            <rect x="-14" y="-30" width="28" height="60" rx="6"/>
+            <path d="M-9,-20 q9,6 0,12 q-9,6 0,12" />
+          </g>
+
+          <!-- laddning BVP branch from BVU -->
+          <path class="flow-red" d="M780,265 L780,330 L720,330 L720,400" marker-end="url(#arrR)"/>
+          <path class="flow-blue" d="M660,400 L660,330 L700,330 L700,265" marker-end="url(#arrB)"/>
+          <text x="742" y="345" class="pipe-label">Laddning BVP</text>
+
+          <!-- VVX2 -->
+          <rect class="valve" x="880" y="470" width="70" height="50" rx="4"/>
+          <text x="915" y="490" class="valve-label" text-anchor="middle">VVX 2</text>
+          <text x="915" y="504" class="valve-label" text-anchor="middle" font-size="8">TAPPVV.</text>
+          <text x="915" y="535" class="pipe-label" text-anchor="middle">auto · termostatstyrd</text>
+
+          <!-- termostat -->
+          <rect class="box" x="880" y="590" width="90" height="34" rx="2"/>
+          <text x="925" y="611" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
+          <path class="flow-sig" d="M915,590 L915,520"/>
+
+          <!-- panna to VVX2 (own slinga, copper) -->
+          <path class="flow-copper" d="M325,540 C 560,620 760,610 880,495" marker-end="url(#arrC)"/>
+          <text x="560" y="640" class="note-label">Pannans egen slinga (alternativ tappvattenväg)</text>
+
+          <!-- panna to VVX1 (copper) -->
+          <path class="flow-copper" d="M325,470 C 400,430 430,300 470,175" marker-end="url(#arrC)"/>
+
+          <!-- VP to backventil to VVX1 (red) -->
+          <path class="flow-red" d="M325,150 L360,150" marker-end="url(#arrR)"/>
+          <path class="flow-red" d="M380,158 L470,158" marker-end="url(#arrR)"/>
+          <!-- return VP (blue) via magnetitfilter -->
+          <path class="flow-blue" d="M465,257 L430,257" marker-end="url(#arrB)"/>
+          <path class="flow-blue" d="M395,257 L325,220" marker-end="url(#arrB)"/>
+
+          <!-- VVX1 to BVU -->
+          <path class="flow-red" d="M540,158 C 580,150 600,140 640,140" marker-end="url(#arrR)"/>
+          <!-- BVU retur to VVX area (blue) back toward VP -->
+          <path class="flow-blue" d="M640,220 C 560,240 500,250 465,247" marker-end="url(#arrB)"/>
+
+          <!-- BVU to golvvärmeshunt -->
+          <path class="flow-red" d="M820,130 C 900,120 960,120 1030,140" marker-end="url(#arrR)"/>
+          <path class="flow-blue" d="M1030,190 C 960,190 900,200 820,190" marker-end="url(#arrB)"/>
+
+          <!-- golvvärmeshunt box -->
+          <rect class="box dist" x="1030" y="95" width="320" height="140" rx="3"/>
+          <text x="1050" y="122" class="box-title">Golvvärmeshunt</text>
+          <text x="1050" y="142" class="box-sub">Befintlig · blandar till 30–35°C</text>
+          <text x="1050" y="158" class="box-sub">Egen cirkulationspump</text>
+          <text x="1050" y="174" class="box-sub">Utegivare, oförändrad logik</text>
+          <path class="flow-red" d="M1350,140 L1385,140" marker-end="url(#arrR)"/>
+          <text x="1050" y="210" class="pipe-label">→ Golvvärmekrets, 135 m²</text>
+
+          <!-- BVP to tappvatten out -->
+          <path class="flow-red" d="M820,440 C 900,430 970,430 1030,440" marker-end="url(#arrR)"/>
+          <rect class="box dist" x="1030" y="400" width="320" height="90" rx="3"/>
+          <text x="1050" y="428" class="box-title">Tappvarmvatten</text>
+          <text x="1050" y="448" class="box-sub">Till kranar, dusch, disk</text>
+          <text x="1050" y="466" class="box-sub">Källa väljs av VVX2 — BVP eller pannans slinga</text>
+
+          <!-- kallvatten in to VVX2 -->
+          <rect class="box dist" x="1030" y="640" width="200" height="70" rx="3"/>
+          <text x="1050" y="666" class="box-title" font-size="12">Kallvatten in</text>
+          <text x="1050" y="684" class="box-sub">Kommunalt / egen brunn</text>
+          <path class="flow-blue" d="M1030,670 C 1000,650 960,600 950,520" marker-end="url(#arrB)"/>
+
+          <!-- legend inside canvas bottom -->
+        </svg>
+      </div>
+      <div class="legend">
+        <span class="li"><span class="swatch" style="border-color:var(--red)"></span>Framledning / varmt</span>
+        <span class="li"><span class="swatch" style="border-color:var(--blue)"></span>Retur / kallt</span>
+        <span class="li"><span class="swatch dash" style="border-color:var(--copper)"></span>Pannans backup-väg</span>
+        <span class="li"><span class="swatch dot" style="border-color:var(--green)"></span>Styrsignal</span>
+        <span class="li"><span class="swatch dot" style="border-color:var(--muted-dim)"></span>Sensor / givare</span>
+      </div>
+    </div>
+    <p style="color:var(--muted-dim); font-size:.78rem; margin-top:10px">Principflöde — visar inte exakt fysisk rördragning eller pumpplacering i pannrummet.</p>
+  </section>
+
+  <!-- ================= KOMPONENTLISTA ================= -->
+  <section id="komponenter">
+    <div class="sec-head"><span class="num">02</span><h2>Komponentlista</h2><span class="rule"></span></div>
+    <div class="paper">
+      <table class="ctable">
+        <thead>
+          <tr><th>#</th><th>Komponent</th><th>Modell / spec</th><th>Roll i systemet</th><th class="num">Pris</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="mono">1</td>
+            <td><b>Värmepump</b></td>
+            <td class="spec">Lunna LT-1230 · 12 kW luft/vatten, monoblock, 3-fas · SCOP 4,66 (35°C) · R290 · till −25°C</td>
+            <td class="role">Huvudsaklig värmekälla, egen cirkulationspump</td>
+            <td class="num">46 900 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">2</td>
+            <td><b>Bufferttank</b></td>
+            <td class="spec">Effecta BVU 300 · 300 L, SS304, A/A+, ingen slinga</td>
+            <td class="role">Lagrar värme till golvvärme, möjliggör spotprisstyrning</td>
+            <td class="num">9 995 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">3</td>
+            <td><b>Varmvattentank</b></td>
+            <td class="spec">Effecta BVP 300 · 300 L, Duplex 2205, SS316-slinga Ø28mm/33m, A</td>
+            <td class="role">Tappvarmvatten, legionellafri genomströmning</td>
+            <td class="num">12 995 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">4</td>
+            <td><b>Växelventil 1</b></td>
+            <td class="spec">Automatisk, temperaturstyrd</td>
+            <td class="role">Väljer VP eller panna som värmekälla mot BVU/golvvärme</td>
+            <td class="num">890 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">5</td>
+            <td><b>Växelventil 2</b></td>
+            <td class="spec">Automatisk, termostatstyrd</td>
+            <td class="role">Väljer BVP eller pannans egen slinga för tappvatten</td>
+            <td class="num">890 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">6</td>
+            <td><b>Termostat</b></td>
+            <td class="spec">Styr växelventil 2</td>
+            <td class="role">Automatisk styrning av tappvattenväg</td>
+            <td class="num">990 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">7</td>
+            <td><b>Backventil</b></td>
+            <td class="spec">Placerad på VP:s inloppssida</td>
+            <td class="role">Skydd — förhindrar &gt;80°C in mot VP:s växlare vid pannedrift</td>
+            <td class="num">≈ 400 kr</td>
+          </tr>
+          <tr>
+            <td class="mono">8</td>
+            <td><b>Magnetitfilter</b></td>
+            <td class="spec">Ingår med LT-1230</td>
+            <td class="role">Fångar partiklar vid inkoppling mot befintligt system</td>
+            <td class="num"><span class="pill included">Ingår</span></td>
+          </tr>
+          <tr>
+            <td class="mono">9</td>
+            <td><b>Golvvärmeshunt</b></td>
+            <td class="spec">Befintlig, återanvänds oförändrad, egen cirkulationspump</td>
+            <td class="role">Blandar ner framledning till 30–35°C till golvvärmekretsen</td>
+            <td class="num"><span class="pill">Befintlig</span></td>
+          </tr>
+          <tr class="sum-row">
+            <td></td><td colspan="3">Summa material</td><td class="num">73 060 kr</td>
+          </tr>
+          <tr>
+            <td></td><td colspan="3" class="role">Installation, uppskattad — <b style="color:var(--red)">ej offererad</b></td><td class="num">≈ 28 000 kr</td>
+          </tr>
+          <tr class="sum-row">
+            <td></td><td colspan="3">Summa före ROT</td><td class="num">≈ 101 000 kr</td>
+          </tr>
+          <tr>
+            <td></td><td colspan="3" class="role">ROT-avdrag (≈9%)</td><td class="num">− 10 000 kr</td>
+          </tr>
+          <tr class="sum-row">
+            <td></td><td colspan="3">Netto efter ROT</td><td class="num" style="color:#3a6b3a">≈ 91 000 kr</td>
+          </tr>
+        </tbody>
+      </table>
+      <p style="margin-top:16px; font-size:.78rem; color:var(--paper-muted)">Garanti VP: 2 år bas, förlängningsbar årsvis upp till 12 år (1 790 kr/år, totalt 17 900 kr för fullt 12 år) — ej inräknad ovan.</p>
+    </div>
+  </section>
+
+  <!-- ================= DRIFTLÄGEN ================= -->
+  <section id="driftlagen">
+    <div class="sec-head"><span class="num">03</span><h2>Driftlägen</h2><span class="rule"></span></div>
+    <div class="modes">
+      <div class="mode-card">
+        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="1.6"><circle cx="12" cy="12" r="5"/><path d="M12 1v3M12 20v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M1 12h3M20 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1" stroke-linecap="round"/></svg>
+        <div class="mwhen">April – oktober</div>
+        <div class="mtitle">Sommar</div>
+        <ul>
+          <li>VP bär hela värmebehovet ensam</li>
+          <li>Hög COP tack vare mild väderlek</li>
+          <li>Panna helt kall</li>
+          <li>Elpatron i BVP endast vid ovanligt hög samtidig tappvattenbelastning</li>
+        </ul>
+      </div>
+      <div class="mode-card">
+        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--blue)" stroke-width="1.6"><path d="M12 2v20M4 7l16 10M20 7L4 17" stroke-linecap="round"/></svg>
+        <div class="mwhen">Normalt vinterläge</div>
+        <div class="mtitle">Normal vinter</div>
+        <ul>
+          <li>VP bär golvvärmen via BVU på låg kurva (35–40°C) — maximerar COP</li>
+          <li>Panna boostar BVP periodvis till 70–80°C vid hög samtidig tappvattenbelastning</li>
+        </ul>
+      </div>
+      <div class="mode-card warn">
+        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--copper)" stroke-width="1.6"><path d="M12 2 L2 21 H22 Z" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke-linecap="round"/></svg>
+        <div class="mwhen">Under ≈ −15 °C, sällan</div>
+        <div class="mtitle">Extremkyla</div>
+        <ul>
+          <li>Panna tar över som huvudsaklig värmekälla för golvvärmen också</li>
+          <li>VP:s effekt/COP sjunker vid extremkyla — pellets mer kostnadseffektivt just då</li>
+        </ul>
+        <div class="notice">Kräver pellets i förråd i förväg — den enda punkten som kräver aktiv manuell framförhållning.</div>
+      </div>
+      <div class="mode-card safe">
+        <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.6"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <div class="mwhen">Vid pannhaveri / driftstopp</div>
+        <div class="mtitle">Om pannan slutar fungera</div>
+        <ul>
+          <li>LT-1230 klarar dokumenterat hela husets behov ensam ner till −25°C</li>
+          <li>Konsekvens: högre elkostnad de kallaste dagarna — inte ett kallt hus</li>
+        </ul>
+        <div class="notice">Inget kallt hus. Befintlig panna är redan ≈7 år — systemet är inte beroende av att den fungerar i all framtid.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ================= AUTOMATIK VS MANUELLT ================= -->
+  <section id="automatik">
+    <div class="sec-head"><span class="num">04</span><h2>Automatik vs. manuellt</h2><span class="rule"></span></div>
+    <table class="atable">
+      <thead>
+        <tr><th style="width:34%">Funktion</th><th style="width:16%">Läge</th><th>Hur</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Växling VP ↔ panna (värme)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 1, temperaturstyrd</td></tr>
+        <tr><td>Växling BVP ↔ panna (tappvatten)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 2 + termostat</td></tr>
+        <tr><td>Golvvärmens temperatur</td><td><span class="atag auto">Automatisk</span></td><td class="how">Befintlig shunt, utegivare</td></tr>
+        <tr><td>VP:s egen värmekurva</td><td><span class="atag auto">Automatisk</span></td><td class="how">Inbyggd i LT-1230, engångsinställd</td></tr>
+        <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230</td></tr>
+        <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Fysisk påfyllning vid behov</td></tr>
+        <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde, kräver bränsle i förråd</td></tr>
+        <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis kontroll</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ================= UNDERLAG & ÖPPNA FRÅGOR ================= -->
+  <section id="underlag">
+    <div class="sec-head"><span class="num">05</span><h2>Underlag &amp; öppna frågor</h2><span class="rule"></span></div>
+    <div class="qa-grid">
+      <div class="qa-col done">
+        <h4>Redan bekräftat</h4>
+        <ul>
+          <li>Alla priser i komponentlistan är verifierade mot leverantörernas egna uppgifter (Lunna Teknik, Effecta) — inte uppskattningar</li>
+          <li>Lunna Teknik har <b>skriftligen</b> bekräftat att den beskrivna växelventils-arkitekturen är deras rekommenderade lösning för den här typen av hybridinstallation</li>
+          <li>SCOP 4,66 är hämtat direkt ur Lunnas produktmanual (tillverkarens egen uppgift 4,95 är ej oberoende bekräftad — 4,66 används som konservativt värde)</li>
+          <li>−25°C-kapaciteten är dokumenterad i Lunnas tekniska specifikation</li>
+          <li>Besparingskalkylen (≈9 400 kr/år) är räknad mot verklig, uppmätt förbrukningsdata (pellets 2 496 kg/år, elpatron ≈2 850 kWh/år) — inte en generell uppskattning</li>
+        </ul>
+      </div>
+      <div class="qa-col open">
+        <h4>Fortfarande öppet</h4>
+        <ul>
+          <li><b>Installationskostnad</b> — endast uppskattad (≈28 000 kr), ej offererad</li>
+          <li><b>Samtidig drift BVU/BVP</b> — ej bekräftat att LT-1230 kan hålla en separat, lägre kurva mot BVU samtidigt som BVP kräver högre temperatur</li>
+          <li><b>Exakt rördragning</b> — fysisk placering av cirkulationspumpar i pannrummet är inte fastställd; diagrammet ovan visar principflöde, inte exakt rörledningsdragning</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mono">
+    <span>VVS-01 · Hybridvärmesystem Onsala · Rev. 01</span>
+    <span>Principskiss, ej skalenlig</span>
+  </footer>
+
+</div>
+</body>
+</html>
