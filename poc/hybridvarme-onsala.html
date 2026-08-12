@@ -245,7 +245,7 @@
     <div class="sec-head"><span class="num">01</span><h2>Systemschema</h2><span class="rule"></span></div>
     <div class="schematic-frame">
       <div class="schematic-scroll">
-        <svg class="schema" viewBox="0 0 1400 860" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Principskiss över hybridvärmesystemet: produktion via värmepump och panna, lagring och styrning via buffert- och varmvattentank med två växelventiler, distribution till golvvärme och tappvatten.">
+        <svg class="schema" viewBox="0 0 1400 940" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Principskiss över hybridvärmesystemet: produktion via värmepump och panna, lagring och styrning via buffert- och varmvattentank med två växelventiler som var för sig växlar hela flödes- och returkretsen, distribution till golvvärme och tappvatten.">
           <defs>
             <marker id="arrR" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
               <path d="M0,0 L10,5 L0,10 z" fill="var(--red)"/>
@@ -259,14 +259,14 @@
           </defs>
 
           <!-- zone bands -->
-          <rect x="30" y="40" width="330" height="780" fill="rgba(224,86,58,.035)" stroke="none"/>
-          <rect x="380" y="40" width="600" height="780" fill="rgba(79,163,209,.035)" stroke="none"/>
-          <rect x="1000" y="40" width="370" height="780" fill="rgba(255,255,255,.02)" stroke="none"/>
+          <rect x="30" y="40" width="330" height="870" fill="rgba(224,86,58,.035)" stroke="none"/>
+          <rect x="380" y="40" width="600" height="870" fill="rgba(79,163,209,.035)" stroke="none"/>
+          <rect x="1000" y="40" width="370" height="870" fill="rgba(255,255,255,.02)" stroke="none"/>
           <text x="45" y="66" class="zone-label">Produktion</text>
           <text x="395" y="66" class="zone-label">Lagring &amp; styrning</text>
           <text x="1015" y="66" class="zone-label">Distribution</text>
-          <line x1="380" y1="40" x2="380" y2="820" stroke="var(--grid-strong)" stroke-width="1"/>
-          <line x1="1000" y1="40" x2="1000" y2="820" stroke="var(--grid-strong)" stroke-width="1"/>
+          <line x1="380" y1="40" x2="380" y2="910" stroke="var(--grid-strong)" stroke-width="1"/>
+          <line x1="1000" y1="40" x2="1000" y2="910" stroke="var(--grid-strong)" stroke-width="1"/>
 
           <!-- VP box -->
           <rect class="box prod" x="55" y="110" width="270" height="150" rx="3"/>
@@ -281,14 +281,16 @@
           </g>
 
           <!-- Panna box -->
-          <rect class="box prod" x="55" y="420" width="270" height="170" rx="3"/>
-          <text x="75" y="450" class="box-title">Panna — Effecta Komplett III</text>
-          <text x="75" y="470" class="box-sub">Befintlig · 183 L vattenvolym · 9 kW elpatron</text>
-          <text x="75" y="486" class="box-sub">Egen genomströmningsslinga (legionellafri)</text>
-          <text x="75" y="502" class="box-sub">Roll: backup vid extremkyla + spets för tappvatten</text>
-          <text x="75" y="524" class="note-label">Bibehålls, dockas mot nya systemet</text>
+          <rect class="box prod" x="55" y="410" width="270" height="230" rx="3"/>
+          <text x="75" y="438" class="box-title">Panna — Effecta Komplett III</text>
+          <text x="75" y="458" class="box-sub">Befintlig · 183 L vattenvolym · 9 kW elpatron</text>
+          <text x="75" y="474" class="box-sub">Inbyggd shuntstyrning, egen slinga (legionellafri)</text>
+          <text x="75" y="490" class="box-sub">Roll: backup vid extremkyla + spets för tappvatten</text>
+          <text x="75" y="512" class="note-label">Bibehålls, dockas mot nya systemet</text>
+          <text x="75" y="600" class="box-sub" font-size="9.5">Två separata kretsar ut till höger:</text>
+          <text x="75" y="614" class="box-sub" font-size="9.5">värmekrets (upptill) och egen tappvattenslinga (nedtill)</text>
           <!-- flame icon -->
-          <g transform="translate(275,450)" class="icon-stroke">
+          <g transform="translate(265,445)" class="icon-stroke">
             <path d="M0,-16 C6,-8 8,-2 4,4 C8,2 10,-4 10,-4 C12,4 8,14 0,16 C-8,14 -12,4 -10,-4 C-10,-4 -8,2 -4,4 C-8,-2 -6,-8 0,-16 Z"/>
           </g>
 
@@ -296,18 +298,21 @@
           <rect class="valve" x="360" y="150" width="20" height="20" transform="rotate(45 370 160)"/>
           <text x="345" y="128" class="valve-label">BACKV.</text>
           <text x="330" y="196" class="pipe-label" text-anchor="middle">max 80°C in</text>
+          <text x="330" y="207" class="pipe-label" text-anchor="middle" font-size="8">(VP:s utlopp, blockerar</text>
+          <text x="330" y="217" class="pipe-label" text-anchor="middle" font-size="8">bakåtflöde vid pannedrift)</text>
 
-          <rect class="box" x="395" y="240" width="70" height="34" rx="2"/>
-          <text x="430" y="261" class="box-sub" text-anchor="middle" font-size="9">Magnetitfilter</text>
+          <rect class="box" x="395" y="245" width="80" height="32" rx="2"/>
+          <text x="435" y="265" class="box-sub" text-anchor="middle" font-size="9">Magnetitfilter</text>
 
           <!-- VVX1 -->
-          <rect class="valve" x="470" y="140" width="70" height="50" rx="4"/>
-          <text x="505" y="160" class="valve-label" text-anchor="middle">VVX 1</text>
-          <text x="505" y="174" class="valve-label" text-anchor="middle" font-size="8">VÄRME</text>
-          <text x="505" y="205" class="pipe-label" text-anchor="middle">auto · temp-styrd</text>
+          <rect class="valve" x="470" y="130" width="90" height="60" rx="4"/>
+          <text x="515" y="153" class="valve-label" text-anchor="middle">VVX 1</text>
+          <text x="515" y="167" class="valve-label" text-anchor="middle" font-size="8">VÄRME</text>
+          <text x="515" y="203" class="pipe-label" text-anchor="middle">auto · temp-styrd</text>
+          <text x="515" y="214" class="pipe-label" text-anchor="middle" font-size="8">växlar fram &amp; retur ihop</text>
 
           <!-- givare to VVX1 -->
-          <path class="flow-sensor" d="M660,120 C620,110 560,120 540,150"/>
+          <path class="flow-sensor" d="M660,120 C620,110 560,120 545,140"/>
           <circle cx="662" cy="118" r="4" fill="none" stroke="var(--muted-dim)" stroke-width="1.4"/>
           <text x="668" y="112" class="pipe-label" font-size="8.5">Givare BVU</text>
 
@@ -324,52 +329,75 @@
             <line x1="-14" y1="-10" x2="14" y2="-10"/>
           </g>
 
+          <!-- parallel BVP heating branch, split from VVX1 output -->
+          <path class="flow-red" d="M560,150 C 600,170 605,300 605,340 C 605,400 620,420 620,470" marker-end="url(#arrR)"/>
+          <path class="flow-blue" d="M620,560 C 620,600 585,600 585,340 C 585,280 570,220 560,180" marker-end="url(#arrB)"/>
+          <rect x="580" y="330" width="34" height="20" rx="2" fill="var(--bg)" stroke="var(--muted-dim)" stroke-width="1.2"/>
+          <text x="597" y="344" class="pipe-label" text-anchor="middle" font-size="8">pump</text>
+          <text x="622" y="335" class="pipe-label" font-size="8.5">Egen krets till BVP,</text>
+          <text x="622" y="347" class="pipe-label" font-size="8.5">parallell med BVU —</text>
+          <text x="622" y="359" class="pipe-label" font-size="8.5" fill="var(--amber)">se öppen fråga 05</text>
+
           <!-- BVP -->
-          <rect class="box store" x="620" y="400" width="200" height="180" rx="3"/>
-          <text x="640" y="427" class="box-title">Varmvatten — BVP 300</text>
-          <text x="640" y="447" class="box-sub">300 L · Duplex 2205 · A</text>
-          <text x="640" y="463" class="box-sub">Slinga SS316, Ø28mm, 33 m</text>
-          <text x="640" y="479" class="box-sub">Genomströmning — legionellafri</text>
-          <text x="640" y="495" class="box-sub">Elpatron-spets vid hög belastning</text>
-          <g transform="translate(785,455)" class="icon-stroke">
+          <rect class="box store" x="620" y="470" width="200" height="200" rx="3"/>
+          <text x="640" y="497" class="box-title">Varmvatten — BVP 300</text>
+          <text x="640" y="517" class="box-sub">300 L · Duplex 2205 · A</text>
+          <text x="640" y="533" class="box-sub">Slinga SS316, Ø28mm, 33 m</text>
+          <text x="640" y="549" class="box-sub">Genomströmning — legionellafri</text>
+          <text x="640" y="565" class="box-sub">Elpatron-spets vid hög belastning</text>
+          <text x="640" y="586" class="box-sub" font-size="9">Vänster: värmekrets (mantel) · Höger: DHW-slinga</text>
+          <g transform="translate(785,530)" class="icon-stroke">
             <rect x="-14" y="-30" width="28" height="60" rx="6"/>
             <path d="M-9,-20 q9,6 0,12 q-9,6 0,12" />
           </g>
 
-          <!-- laddning BVP branch from BVU -->
-          <path class="flow-red" d="M780,265 L780,330 L720,330 L720,400" marker-end="url(#arrR)"/>
-          <path class="flow-blue" d="M660,400 L660,330 L700,330 L700,265" marker-end="url(#arrB)"/>
-          <text x="742" y="345" class="pipe-label">Laddning BVP</text>
-
           <!-- VVX2 -->
-          <rect class="valve" x="880" y="470" width="70" height="50" rx="4"/>
-          <text x="915" y="490" class="valve-label" text-anchor="middle">VVX 2</text>
-          <text x="915" y="504" class="valve-label" text-anchor="middle" font-size="8">TAPPVV.</text>
-          <text x="915" y="535" class="pipe-label" text-anchor="middle">auto · termostatstyrd</text>
+          <rect class="valve" x="900" y="500" width="90" height="60" rx="4"/>
+          <text x="945" y="524" class="valve-label" text-anchor="middle">VVX 2</text>
+          <text x="945" y="538" class="valve-label" text-anchor="middle" font-size="8">TAPPVV.</text>
+          <text x="945" y="574" class="pipe-label" text-anchor="middle">auto · termostatstyrd</text>
+          <text x="945" y="585" class="pipe-label" text-anchor="middle" font-size="8">kallvattenväljare</text>
 
           <!-- termostat -->
-          <rect class="box" x="880" y="590" width="90" height="34" rx="2"/>
-          <text x="925" y="611" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
-          <path class="flow-sig" d="M915,590 L915,520"/>
+          <rect class="box" x="900" y="620" width="90" height="34" rx="2"/>
+          <text x="945" y="641" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
+          <path class="flow-sig" d="M945,620 L945,562"/>
 
-          <!-- panna to VVX2 (own slinga, copper) -->
-          <path class="flow-copper" d="M325,540 C 560,620 760,610 880,495" marker-end="url(#arrC)"/>
-          <text x="560" y="640" class="note-label">Pannans egen slinga (alternativ tappvattenväg)</text>
+          <!-- kallvatten in to VVX2 -->
+          <rect class="box dist" x="1030" y="670" width="200" height="70" rx="3"/>
+          <text x="1050" y="696" class="box-title" font-size="12">Kallvatten in</text>
+          <text x="1050" y="714" class="box-sub">Kommunalt / egen brunn</text>
+          <path class="flow-blue" d="M1030,700 C 1010,670 970,600 965,560" marker-end="url(#arrB)"/>
 
-          <!-- panna to VVX1 (copper) -->
-          <path class="flow-copper" d="M325,470 C 400,430 430,300 470,175" marker-end="url(#arrC)"/>
+          <!-- VVX2 output A: to BVP DHW cold-in -->
+          <path class="flow-blue" d="M900,520 L820,510" marker-end="url(#arrB)"/>
+          <text x="855" y="503" class="pipe-label" font-size="8">kallt</text>
+
+          <!-- VVX2 output B: to panna's own slinga (long path, copper) -->
+          <path class="flow-copper" d="M900,545 C 700,610 450,650 325,600" marker-end="url(#arrC)"/>
+          <text x="560" y="655" class="note-label">Pannans egen slinga — alternativ tappvattenväg (kallt in, varmt ut)</text>
+
+          <!-- BVP DHW hot-out to Tappvarmvatten -->
+          <path class="flow-red" d="M820,545 C 900,555 950,500 1030,470" marker-end="url(#arrR)"/>
+
+          <!-- panna DHW hot-out to Tappvarmvatten -->
+          <path class="flow-copper" d="M325,570 C 500,540 800,510 1030,500" marker-end="url(#arrC)"/>
+
+          <!-- panna heating circuit to/from VVX1 (copper, both directions) -->
+          <path class="flow-copper" d="M325,450 C 400,410 430,280 475,178" marker-end="url(#arrC)"/>
+          <path class="flow-copper" d="M485,182 C 445,270 405,400 325,480" marker-end="url(#arrC)"/>
 
           <!-- VP to backventil to VVX1 (red) -->
           <path class="flow-red" d="M325,150 L360,150" marker-end="url(#arrR)"/>
           <path class="flow-red" d="M380,158 L470,158" marker-end="url(#arrR)"/>
           <!-- return VP (blue) via magnetitfilter -->
-          <path class="flow-blue" d="M465,257 L430,257" marker-end="url(#arrB)"/>
-          <path class="flow-blue" d="M395,257 L325,220" marker-end="url(#arrB)"/>
+          <path class="flow-blue" d="M470,172 L475,261 L475,261" marker-end="url(#arrB)"/>
+          <path class="flow-blue" d="M395,261 L325,220" marker-end="url(#arrB)"/>
 
           <!-- VVX1 to BVU -->
-          <path class="flow-red" d="M540,158 C 580,150 600,140 640,140" marker-end="url(#arrR)"/>
-          <!-- BVU retur to VVX area (blue) back toward VP -->
-          <path class="flow-blue" d="M640,220 C 560,240 500,250 465,247" marker-end="url(#arrB)"/>
+          <path class="flow-red" d="M560,145 C 590,138 605,130 640,132" marker-end="url(#arrR)"/>
+          <!-- BVU retur to VVX1 (blue) -->
+          <path class="flow-blue" d="M640,220 C 590,210 565,200 560,180" marker-end="url(#arrB)"/>
 
           <!-- BVU to golvvärmeshunt -->
           <path class="flow-red" d="M820,130 C 900,120 960,120 1030,140" marker-end="url(#arrR)"/>
@@ -382,22 +410,16 @@
           <text x="1050" y="158" class="box-sub">Egen cirkulationspump</text>
           <text x="1050" y="174" class="box-sub">Utegivare, oförändrad logik</text>
           <path class="flow-red" d="M1350,140 L1385,140" marker-end="url(#arrR)"/>
-          <text x="1050" y="210" class="pipe-label">→ Golvvärmekrets, 135 m²</text>
+          <path class="flow-blue" d="M1385,190 L1350,190" marker-end="url(#arrB)"/>
+          <text x="1050" y="210" class="pipe-label">↔ Golvvärmekrets, 135 m²</text>
 
-          <!-- BVP to tappvatten out -->
-          <path class="flow-red" d="M820,440 C 900,430 970,430 1030,440" marker-end="url(#arrR)"/>
-          <rect class="box dist" x="1030" y="400" width="320" height="90" rx="3"/>
+          <!-- Tappvarmvatten box -->
+          <rect class="box dist" x="1030" y="400" width="320" height="100" rx="3"/>
           <text x="1050" y="428" class="box-title">Tappvarmvatten</text>
           <text x="1050" y="448" class="box-sub">Till kranar, dusch, disk</text>
-          <text x="1050" y="466" class="box-sub">Källa väljs av VVX2 — BVP eller pannans slinga</text>
+          <text x="1050" y="464" class="box-sub">Källa väljs av VVX2 — BVP eller pannans slinga</text>
+          <text x="1050" y="480" class="box-sub">(endast en väg har flöde åt gången)</text>
 
-          <!-- kallvatten in to VVX2 -->
-          <rect class="box dist" x="1030" y="640" width="200" height="70" rx="3"/>
-          <text x="1050" y="666" class="box-title" font-size="12">Kallvatten in</text>
-          <text x="1050" y="684" class="box-sub">Kommunalt / egen brunn</text>
-          <path class="flow-blue" d="M1030,670 C 1000,650 960,600 950,520" marker-end="url(#arrB)"/>
-
-          <!-- legend inside canvas bottom -->
         </svg>
       </div>
       <div class="legend">
@@ -465,8 +487,8 @@
           <tr>
             <td class="mono">7</td>
             <td><b>Backventil</b></td>
-            <td class="spec">Placerad på VP:s inloppssida</td>
-            <td class="role">Skydd — förhindrar &gt;80°C in mot VP:s växlare vid pannedrift</td>
+            <td class="spec">Placerad på VP:s utloppssida (framledningen mot VVX1)</td>
+            <td class="role">Skydd — blockerar att pannans hetvatten (70–80°C) flödar bakåt in i VP:n vid pannedrift</td>
             <td class="num">≈ 400 kr</td>
           </tr>
           <tr>
