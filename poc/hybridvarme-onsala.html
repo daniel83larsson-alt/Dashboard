@@ -310,6 +310,16 @@
             <path d="M0,0 C4,-10 12,-10 12,0 C12,8 4,10 0,0 C-6,-8 -10,-4 0,0 C6,8 10,4 0,0 C-4,10 -12,10 -12,0 C-12,-8 -4,-10 0,0"/>
           </g>
 
+          <!-- Solceller box -->
+          <rect class="box" x="55" y="278" width="270" height="112" rx="3" stroke="var(--amber)"/>
+          <text x="75" y="303" class="box-title">Solceller (befintlig)</text>
+          <text x="75" y="323" class="box-sub">11 kWp · ingen batterilagring</text>
+          <text x="75" y="339" class="box-sub">Hushållsel först, överskott ut på nätet</text>
+          <text x="75" y="360" class="note-label" fill="var(--amber)">Homey styr laddning vid överskott — se avsnitt 02</text>
+          <g transform="translate(295,300) scale(0.8)" class="icon-stroke" stroke="var(--amber)">
+            <circle cx="0" cy="0" r="8"/>
+            <path d="M0,-16v4M0,12v4M-16,0h4M12,0h4M-11,-11l3,3M8,8l3,3M-11,11l3,-3M8,-8l3,-3" stroke-linecap="round"/>
+          </g>
           <!-- Panna box -->
           <rect class="box prod" x="55" y="410" width="270" height="230" rx="3"/>
           <text x="75" y="438" class="box-title">Panna — Effecta Komplett III</text>
@@ -547,6 +557,13 @@
             <td class="role">Blandar ner framledning till 30–35°C till golvvärmekretsen</td>
             <td class="num"><span class="pill">Befintlig</span></td>
           </tr>
+          <tr>
+            <td class="mono">10</td>
+            <td><b>Solceller</b></td>
+            <td class="spec">Befintlig · 11 kWp · ingen batterilagring · redan kopplad till Homey</td>
+            <td class="role">Gratis eldrift — hushållsel först, överskott mot VP/buffertladdning, se sid. nedan</td>
+            <td class="num"><span class="pill">Befintlig</span></td>
+          </tr>
           <tr class="sum-row">
             <td></td><td colspan="3">Summa material</td><td class="num">73 060 kr</td>
           </tr>
@@ -590,6 +607,23 @@
       </div>
       <p style="margin-top:14px; font-size:.78rem; color:var(--paper-muted)">Mekanismen: pannan (pellets) är inte direkt kopplad till elpriset, så vid en ny energikris likt 2022 blir värmepumpens eldrift dyrare relativt pellets, vilket äter av besparingen — men aldrig gör systemet till en förlust, eftersom pannan då automatiskt tar över en större del (se Driftläge "Extremkyla"). Vid fortsatt lågt elpris blir besparingen istället större än den bekräftade siffran. <b>Även "Normalt"-kolumnen är en uppskattning av vilket elprisläge den bekräftade siffran gäller för</b> — det exakta pris­antagandet bakom 9 400 kr/år är inte specificerat i underlaget.</p>
     </div>
+
+    <div class="paper" style="margin-top:20px">
+      <h3>Solel — gratis eldrift av värmepumpen</h3>
+      <p class="lede">11 kWp solceller finns redan på huset, ingen batterilagring, redan kopplad till Homey (samma hubb som styr elprisoptimeringen mot LT-1230). Prioritetsordning: hushållsel täcks först, ett eventuellt överskott ska styras mot att ladda VP/buffertarna (BVU/BVP) istället för att gå ut på nätet — samma "spotprisladdning"-princip som redan finns för billiga eltimmar (komponent 2), fast triggad av solöverskott istället för lågt spotpris.</p>
+      <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:1px; background:var(--paper-edge); border:1px solid var(--paper-edge); border-radius:2px; overflow:hidden; margin-top:6px">
+        <div style="background:var(--paper); padding:16px 18px">
+          <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--paper-muted); font-weight:700">Uppskattad årsproduktion</div>
+          <div style="font-size:.74rem; color:var(--paper-muted); margin-top:2px">Götaland, ≈850–1 100 kWh/kWp/år vid god placering</div>
+          <div style="font-size:1.3rem; font-weight:800; margin-top:8px">≈ 9 900–11 500<span style="font-size:.6em; font-weight:600"> kWh/år</span></div>
+        </div>
+        <div style="background:var(--paper); padding:16px 18px">
+          <div style="font-size:.68rem; text-transform:uppercase; letter-spacing:.08em; color:var(--paper-muted); font-weight:700">Säsongsprofil</div>
+          <div style="font-size:.85rem; color:var(--paper-ink); margin-top:8px; line-height:1.5">Toppar april–september — matchar tappvarmvatten-behovet året runt bra, men matchar sämre mot golvvärmebehovet som är som störst på vintern när solen producerar minst</div>
+        </div>
+      </div>
+      <p style="margin-top:14px; font-size:.78rem; color:var(--paper-muted)"><b>Öppet:</b> panelernas väderstreck/orientering och eventuell skuggning är inte känt i detta underlag, vilket avgör var i intervallet ovan anläggningen faktiskt hamnar. Den exakta styrlogiken i Homey (hur stort överskott som ska trigga VP-laddning) är inte fastställd. Hur mycket detta i praktiken lägger till besparingssiffrorna här ovan är inte uträknat — det kräver att veta hur mycket el värmepumpen faktisk drar över året, vilket inte är en del av det underlag som ligger till grund för det här dokumentet (se avsnitt 05).</p>
+    </div>
   </section>
 
   <!-- ================= DRIFTLÄGEN ================= -->
@@ -605,6 +639,7 @@
           <li>Hög COP tack vare mild väderlek</li>
           <li>Panna helt kall</li>
           <li>Elpatron i BVP endast vid ovanligt hög samtidig tappvattenbelastning</li>
+          <li>Solcellerna producerar som mest — kan täcka mycket av VP:ns elbehov denna del av året, se avsnitt 02</li>
         </ul>
       </div>
       <div class="mode-card">
@@ -657,6 +692,7 @@
         <tr><td>Golvvärmens temperatur</td><td><span class="atag auto">Automatisk</span></td><td class="how">Befintlig shunt, utegivare</td></tr>
         <tr><td>VP:s egen värmekurva</td><td><span class="atag auto">Automatisk</span></td><td class="how">Inbyggd i LT-1230, engångsinställd</td></tr>
         <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230 — valfri tilläggsfunktion, inte en förutsättning för att systemet ska fungera normalt. Vem som konfigurerar den (installatör vid överlämning eller husägaren själv efteråt) är inte bestämt än</td></tr>
+        <tr><td>Solel → ladda VP/buffert vid överskott</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey, samma Modbus-koppling som elprisoptimering ovan — solcellerna är redan kopplade till Homey, men den exakta styrlogiken (hur mycket överskott som ska trigga laddning kontra exporteras) är inte fastställd än</td></tr>
         <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä, endast vid hög samtidig tappvattenbelastning. Hur ofta det blir är inte uppskattat än — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
         <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Kontrollera nivån inför vintersäsongen och igen vid längre köldperioder — det enda som kräver framförhållning innan behovet uppstår</td></tr>
         <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde (≈ −15°C), kräver bränsle i förråd</td></tr>
@@ -678,6 +714,7 @@
           <li>SCOP 4,66 är hämtat direkt ur Lunnas produktmanual (tillverkarens egen uppgift 4,95 är ej oberoende bekräftad — 4,66 används som konservativt värde)</li>
           <li>−25°C-kapaciteten är dokumenterad i Lunnas tekniska specifikation</li>
           <li>Besparingskalkylen (≈9 400 kr/år) är räknad mot verklig, uppmätt förbrukningsdata (pellets 2 496 kg/år, elpatron ≈2 850 kWh/år) — inte en generell uppskattning</li>
+          <li>Solcellsanläggningen (11 kWp, ingen batterilagring) finns redan på huset och är redan kopplad till Homey — inte något som ska köpas in eller installeras</li>
         </ul>
       </div>
       <div class="qa-col open">
@@ -689,6 +726,7 @@
           <li><b>Lastbalansering i pannrummet</b> — VP (12 kW, 3-fas), BVP:s elpatron-spets och pannans egen elpatron (9 kW) kan potentiellt vara aktiva samtidigt; ingen lastvakt mot husets huvudsäkring är inritad eller offererad ännu</li>
           <li><b>Brytpunkten vid extremkyla (≈ −15°C)</b> — att panna är billigare i drift än VP:n under just den tröskeln är ännu inte räknat mot ett verkligt elpris och pelletspris; siffran är en bedömning, inte en bekräftad kalkyl som besparingssiffran (9 400 kr/år) är</li>
           <li><b>Elprisscenarierna i avsnitt 02</b> ("Besparing vid olika elprislägen") är en egen, öppet redovisad känslighetsuppskattning — inte en ny bekräftad beräkning. Vilket elprisantagande den ursprungliga 9 400 kr/år-siffran faktiskt bygger på är inte känt, så "Normalt"-scenariot är en gissning på vilket läge den redan bekräftade siffran gäller för</li>
+          <li><b>Solcellernas faktiska bidrag till besparingen</b> — årsproduktionen (≈9 900–11 500 kWh, se avsnitt 02) är en generell uppskattning för Götaland, inte anläggningens verkliga uppmätta produktion. Väderstreck/orientering, skuggning och Homeys exakta styrlogik för när överskott ska ladda VP:n istället för att exporteras är inte kända — därför är solelens bidrag inte inräknat i besparingssiffrorna ovan</li>
         </ul>
       </div>
     </div>
