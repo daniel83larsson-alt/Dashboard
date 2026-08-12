@@ -553,13 +553,14 @@
       </div>
       <div class="mode-card warn">
         <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--copper)" stroke-width="1.6"><path d="M12 2 L2 21 H22 Z" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke-linecap="round"/></svg>
-        <div class="mwhen">Under ≈ −15 °C, sällan</div>
+        <div class="mwhen">Under ≈ −15 °C ute (ungefärlig tröskel), sällan</div>
         <div class="mtitle">Extremkyla</div>
         <ul>
           <li>Panna tar över som huvudsaklig värmekälla för golvvärmen också</li>
-          <li>VP:s effekt/COP sjunker vid extremkyla — pellets mer kostnadseffektivt just då</li>
+          <li>VP:s COP sjunker vid extremkyla (kapaciteten räcker fortsatt — dokumenterat till −25°C, se driftläge 4) — pellets bedöms mer kostnadseffektivt vid dessa sällsynta temperaturer</li>
         </ul>
         <div class="notice">Kräver pellets i förråd i förväg — den enda punkten som kräver aktiv manuell framförhållning.</div>
+        <div class="notice" style="color:var(--copper); border-top:none; padding-top:0; margin-top:6px">Brytpunkten (≈−15°C) och att pellets faktiskt är billigare där är ännu inte räknat mot ett elpris/pelletspris — se öppen fråga 05.</div>
       </div>
       <div class="mode-card safe">
         <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--green)" stroke-width="1.6"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/><path d="M9 12l2 2 4-4" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -589,7 +590,7 @@
         <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230</td></tr>
         <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
         <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Fysisk påfyllning vid behov</td></tr>
-        <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde, kräver bränsle i förråd</td></tr>
+        <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde (≈ −15°C), kräver bränsle i förråd</td></tr>
         <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis kontroll</td></tr>
       </tbody>
     </table>
@@ -616,6 +617,7 @@
           <li><b>Samtidig drift BVU/BVP</b> — ej bekräftat att LT-1230 kan hålla en separat, lägre kurva mot BVU samtidigt som BVP kräver högre temperatur</li>
           <li><b>Exakt rördragning</b> — fysisk placering av cirkulationspumpar i pannrummet är inte fastställd; diagrammet ovan visar principflöde, inte exakt rörledningsdragning</li>
           <li><b>Lastbalansering i pannrummet</b> — VP (12 kW, 3-fas), BVP:s elpatron-spets och pannans egen elpatron (9 kW) kan potentiellt vara aktiva samtidigt; ingen lastvakt mot husets huvudsäkring är inritad eller offererad ännu</li>
+          <li><b>Brytpunkten vid extremkyla (≈ −15°C)</b> — att panna är billigare i drift än VP:n under just den tröskeln är ännu inte räknat mot ett verkligt elpris och pelletspris; siffran är en bedömning, inte en bekräftad kalkyl som besparingssiffran (9 400 kr/år) är</li>
         </ul>
       </div>
     </div>
