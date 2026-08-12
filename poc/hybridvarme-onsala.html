@@ -200,11 +200,13 @@
     font-size:.74rem; color:var(--muted-dim); font-family:ui-monospace,monospace;
   }
 
+  .scroll-hint{display:none; font-size:.72rem; color:var(--amber); margin-bottom:8px; font-weight:600}
   @media (max-width:760px){
     .titleblock{grid-template-columns:1fr}
     .tb-meta{border-left:none; border-top:1px solid var(--grid-strong); padding-left:0; padding-top:14px; text-align:left}
     .summary{grid-template-columns:1fr}
     .qa-grid{grid-template-columns:1fr}
+    .scroll-hint{display:block}
   }
 </style>
 </head>
@@ -475,7 +477,9 @@
   <section id="komponenter">
     <div class="sec-head"><span class="num">02</span><h2>Komponentlista</h2><span class="rule"></span></div>
     <div class="paper">
-      <table class="ctable">
+      <p class="scroll-hint">→ Svep sidled för att se priset</p>
+      <div style="overflow-x:auto">
+      <table class="ctable" style="min-width:640px">
         <thead>
           <tr><th>#</th><th>Komponent</th><th>Modell / spec</th><th>Roll i systemet</th><th class="num">Pris</th></tr>
         </thead>
@@ -560,6 +564,7 @@
           </tr>
         </tbody>
       </table>
+      </div>
       <p style="margin-top:16px; font-size:.78rem; color:var(--paper-muted)">Garanti VP: 2 år bas, förlängningsbar årsvis upp till 12 år (1 790 kr/år, totalt 17 900 kr för fullt 12 år) — ej inräknad ovan.</p>
     </div>
   </section>
@@ -618,7 +623,8 @@
   <!-- ================= AUTOMATIK VS MANUELLT ================= -->
   <section id="automatik">
     <div class="sec-head"><span class="num">04</span><h2>Automatik vs. manuellt</h2><span class="rule"></span></div>
-    <table class="atable">
+    <div style="overflow-x:auto">
+    <table class="atable" style="min-width:640px">
       <thead>
         <tr><th style="width:34%">Funktion</th><th style="width:16%">Läge</th><th>Hur</th></tr>
       </thead>
@@ -634,6 +640,7 @@
         <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis rutinkontroll — inte framförhållning, bara regelbunden tillsyn. Exakt vad som ingår specificeras av installatören vid överlämning, inte fastställt i detta dokument</td></tr>
       </tbody>
     </table>
+    </div>
   </section>
 
   <!-- ================= UNDERLAG & ÖPPNA FRÅGOR ================= -->
