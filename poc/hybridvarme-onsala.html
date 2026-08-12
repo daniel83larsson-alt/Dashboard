@@ -216,7 +216,7 @@
       <p class="eyebrow">Installationsschema · Hybridvärmesystem</p>
       <h1>Luft/vatten-värmepump som huvudkälla, befintlig pelletspanna som backup</h1>
       <p class="obj">Villa, byggår 1957 · Onsala, Kungsbacka · 205 m² (135 m² golvvärme + 70 m² källare) · Lokalt uppmätt vinterminimum −11 till −17 °C</p>
-      <p class="obj" style="margin-top:.3rem">En vanlig kall vecka hanteras av värmepumpen ensam (Normal vinter). Bara de sällsynta dagarna under ≈−15°C — inom husets uppmätta spann — växlar systemet till pannan (Extremkyla), se avsnitt 03.</p>
+      <p class="obj" style="margin-top:.3rem">En vanlig kall vecka hanteras av värmepumpen ensam för golvvärmen (Normal vinter) — pannan tänds bara till kortare, periodiska boostar av varmvattnet då. Bara de sällsynta dagarna under ≈−15°C — inom husets uppmätta spann — tar pannan över golvvärmen också (Extremkyla), se avsnitt 03.</p>
     </div>
     <div class="tb-meta mono">
       <div class="row"><span>Ritning</span><b>VVS-01</b></div>
@@ -260,6 +260,11 @@
       <div><b>Lastvakt</b> — en säkerhetsfunktion som stänger av lägre prioriterad el (t.ex. en elpatron) om för mycket drar ström samtidigt, så husets huvudsäkring inte löser ut.</div>
       <div><b>Shunt</b> — blandar ner det varma vattnet till rätt temperatur innan det går ut i golvvärmerören.</div>
       <div><b>Backventil</b> — släpper bara igenom flöde åt ett håll, för att skydda värmepumpen mot för varmt returvatten.</div>
+      <div><b>Ställdon</b> — en liten motor som fysiskt vrider en ventil till rätt läge, styrd av en elektrisk signal.</div>
+      <div><b>Dykficka / känselkropp</b> — ett litet rör där en temperaturgivare sitter nedsänkt i vattnet, utan att själva givaren behöver vara våt.</div>
+      <div><b>Spotprisladdning / spotprisstyrning</b> — tanken laddas med värme när elpriset för timmen är lågt, t.ex. natt eller blåsigt väder, istället för alltid.</div>
+      <div><b>Värmekurva</b> — inställningen för hur varmt vattnet till golvvärmen ska vara beroende på hur kallt det är ute.</div>
+      <div><b>3-fas</b> — en kraftigare elanslutning än den vanliga i ett vardagsrum. Kan kräva att en elektriker kontrollerar husets elcentral.</div>
     </div>
   </div>
 
@@ -580,8 +585,9 @@
         <div class="mtitle">Normal vinter</div>
         <ul>
           <li>VP bär golvvärmen via BVU på låg kurva (35–40°C) — maximerar COP</li>
-          <li>Panna boostar BVP periodvis till 70–80°C vid hög samtidig tappvattenbelastning</li>
+          <li>Panna eldar pellets och boostar BVP periodvis till 70–80°C vid hög samtidig tappvattenbelastning (t.ex. dusch + disk samtidigt)</li>
         </ul>
+        <div class="notice" style="color:var(--copper); border-top:none; padding-top:0">Hur ofta det blir är inte uppskattat än — pelletsnivån är därför värd att kontrollera med jämna mellanrum under vintern, inte bara inför Extremkyla.</div>
       </div>
       <div class="mode-card warn">
         <svg class="mi" viewBox="0 0 24 24" fill="none" stroke="var(--copper)" stroke-width="1.6"><path d="M12 2 L2 21 H22 Z" stroke-linejoin="round"/><path d="M12 9v5M12 17h.01" stroke-linecap="round"/></svg>
@@ -600,7 +606,8 @@
         <div class="mtitle">Om pannan slutar fungera</div>
         <ul>
           <li>LT-1230 klarar dokumenterat hela husets behov ensam ner till −25°C</li>
-          <li>Konsekvens: högre elkostnad de kallaste dagarna — inte ett kallt hus</li>
+          <li>Tappvarmvattnet fortsätter också fungera — BVP värms via sin egen krets från VP:n (avsnitt 01), oberoende av pannan</li>
+          <li>Konsekvens: högre elkostnad de kallaste dagarna — inte ett kallt hus, och inte kallt duschvatten</li>
           <li>Vad du gör: bo som vanligt, kontakta installatör/servicetekniker för reparation när det passar — inget akut läge</li>
         </ul>
         <div class="notice">Inget kallt hus. Befintlig panna är redan ≈7 år — systemet är inte beroende av att den fungerar i all framtid.</div>
@@ -620,11 +627,11 @@
         <tr><td>Växling BVP ↔ panna (tappvatten)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 2 (elektriskt ställdon) + termostat — enda ventilen som kräver egen elpunkt i pannrummet</td></tr>
         <tr><td>Golvvärmens temperatur</td><td><span class="atag auto">Automatisk</span></td><td class="how">Befintlig shunt, utegivare</td></tr>
         <tr><td>VP:s egen värmekurva</td><td><span class="atag auto">Automatisk</span></td><td class="how">Inbyggd i LT-1230, engångsinställd</td></tr>
-        <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230</td></tr>
+        <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230 — valfri tilläggsfunktion, inte en förutsättning för att systemet ska fungera normalt. Vem som konfigurerar den (installatör vid överlämning eller husägaren själv efteråt) är inte bestämt än</td></tr>
         <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä, endast vid hög samtidig tappvattenbelastning. Hur ofta det blir är inte uppskattat än — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
         <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Kontrollera nivån inför vintersäsongen och igen vid längre köldperioder — det enda som kräver framförhållning innan behovet uppstår</td></tr>
         <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde (≈ −15°C), kräver bränsle i förråd</td></tr>
-        <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis rutinkontroll — inte framförhållning, bara regelbunden tillsyn</td></tr>
+        <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis rutinkontroll — inte framförhållning, bara regelbunden tillsyn. Exakt vad som ingår specificeras av installatören vid överlämning, inte fastställt i detta dokument</td></tr>
       </tbody>
     </table>
   </section>
