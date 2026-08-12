@@ -271,7 +271,7 @@
           <!-- VP box -->
           <rect class="box prod" x="55" y="110" width="270" height="150" rx="3"/>
           <text x="75" y="140" class="box-title">Värmepump — Lunna LT-1230</text>
-          <text x="75" y="160" class="box-sub">12 kW luft/vatten, monoblock, R290</text>
+          <text x="75" y="160" class="box-sub">12 kW luft/vatten, monoblock, R290 · 3-fas</text>
           <text x="75" y="176" class="box-sub">SCOP 4,66 (35°C) · dokumenterad drift till −25°C</text>
           <text x="75" y="192" class="box-sub">Egen inbyggd cirkulationspump</text>
           <!-- fan icon -->
@@ -308,8 +308,8 @@
           <rect class="valve" x="470" y="130" width="90" height="60" rx="4"/>
           <text x="515" y="153" class="valve-label" text-anchor="middle">VVX 1</text>
           <text x="515" y="167" class="valve-label" text-anchor="middle" font-size="8">VÄRME</text>
-          <text x="515" y="203" class="pipe-label" text-anchor="middle">auto · temp-styrd</text>
-          <text x="515" y="214" class="pipe-label" text-anchor="middle" font-size="8">växlar fram &amp; retur ihop</text>
+          <text x="515" y="203" class="pipe-label" text-anchor="middle">självverkande termostatventil</text>
+          <text x="515" y="214" class="pipe-label" text-anchor="middle" font-size="8">växlar fram &amp; retur ihop · ingen el</text>
 
           <!-- givare to VVX1 -->
           <path class="flow-sensor" d="M660,120 C620,110 560,120 545,140"/>
@@ -355,13 +355,14 @@
           <rect class="valve" x="900" y="500" width="90" height="60" rx="4"/>
           <text x="945" y="524" class="valve-label" text-anchor="middle">VVX 2</text>
           <text x="945" y="538" class="valve-label" text-anchor="middle" font-size="8">TAPPVV.</text>
-          <text x="945" y="574" class="pipe-label" text-anchor="middle">auto · termostatstyrd</text>
+          <text x="945" y="574" class="pipe-label" text-anchor="middle">elektriskt ställdon</text>
           <text x="945" y="585" class="pipe-label" text-anchor="middle" font-size="8">kallvattenväljare</text>
 
           <!-- termostat -->
-          <rect class="box" x="900" y="620" width="90" height="34" rx="2"/>
-          <text x="945" y="641" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
-          <path class="flow-sig" d="M945,620 L945,562"/>
+          <rect class="box" x="900" y="620" width="120" height="34" rx="2"/>
+          <text x="960" y="636" class="box-sub" text-anchor="middle" font-size="9">Termostat</text>
+          <text x="960" y="648" class="box-sub" text-anchor="middle" font-size="7.5">dykficka på BVP:s DHW-utlopp</text>
+          <path class="flow-sig" d="M960,620 L945,562"/>
 
           <!-- kallvatten in to VVX2 -->
           <rect class="box dist" x="1030" y="670" width="200" height="70" rx="3"/>
@@ -466,22 +467,22 @@
           <tr>
             <td class="mono">4</td>
             <td><b>Växelventil 1</b></td>
-            <td class="spec">Automatisk, temperaturstyrd</td>
-            <td class="role">Väljer VP eller panna som värmekälla mot BVU/golvvärme</td>
+            <td class="spec">Automatisk, självverkande termostatventil — ingen separat el/styrkabel</td>
+            <td class="role">Väljer VP eller panna som värmekälla mot BVU/golvvärme, växlar fram- och returledning ihop</td>
             <td class="num">890 kr</td>
           </tr>
           <tr>
             <td class="mono">5</td>
             <td><b>Växelventil 2</b></td>
-            <td class="spec">Automatisk, termostatstyrd</td>
+            <td class="spec">Automatisk, elektriskt ställdon (24V/230V, ej fastställt) styrt av termostat #6</td>
             <td class="role">Väljer BVP eller pannans egen slinga för tappvatten</td>
             <td class="num">890 kr</td>
           </tr>
           <tr>
             <td class="mono">6</td>
             <td><b>Termostat</b></td>
-            <td class="spec">Styr växelventil 2</td>
-            <td class="role">Automatisk styrning av tappvattenväg</td>
+            <td class="spec">Styr växelventil 2 · känselkropp i dykficka på BVP:s DHW-utlopp</td>
+            <td class="role">Automatisk styrning av tappvattenväg — endast denna krets kräver elpunkt</td>
             <td class="num">990 kr</td>
           </tr>
           <tr>
@@ -581,11 +582,12 @@
         <tr><th style="width:34%">Funktion</th><th style="width:16%">Läge</th><th>Hur</th></tr>
       </thead>
       <tbody>
-        <tr><td>Växling VP ↔ panna (värme)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 1, temperaturstyrd</td></tr>
-        <tr><td>Växling BVP ↔ panna (tappvatten)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 2 + termostat</td></tr>
+        <tr><td>Växling VP ↔ panna (värme)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 1 — självverkande termostatventil, ingen elpunkt</td></tr>
+        <tr><td>Växling BVP ↔ panna (tappvatten)</td><td><span class="atag auto">Automatisk</span></td><td class="how">Växelventil 2 (elektriskt ställdon) + termostat — enda ventilen som kräver egen elpunkt i pannrummet</td></tr>
         <tr><td>Golvvärmens temperatur</td><td><span class="atag auto">Automatisk</span></td><td class="how">Befintlig shunt, utegivare</td></tr>
         <tr><td>VP:s egen värmekurva</td><td><span class="atag auto">Automatisk</span></td><td class="how">Inbyggd i LT-1230, engångsinställd</td></tr>
         <tr><td>Elprisoptimering</td><td><span class="atag half">Kräver konfig</span></td><td class="how">Homey + Modbus mot LT-1230</td></tr>
+        <tr><td>Elpatron-spets i BVP</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">BVP:s egen inbyggda termostat/relä — ingen lastvakt mot husets huvudsäkring inritad, se öppen fråga</td></tr>
         <tr><td>Pelletspåfyllning i förråd</td><td><span class="atag manual">Manuellt</span></td><td class="how">Fysisk påfyllning vid behov</td></tr>
         <tr><td>Panna som spets vid extremkyla</td><td><span class="atag half">Halvautomatiskt</span></td><td class="how">Startar vid tröskelvärde, kräver bränsle i förråd</td></tr>
         <tr><td>Skruvdragning / underhåll</td><td><span class="atag manual">Manuellt</span></td><td class="how">Säsongsvis kontroll</td></tr>
@@ -613,6 +615,7 @@
           <li><b>Installationskostnad</b> — endast uppskattad (≈28 000 kr), ej offererad</li>
           <li><b>Samtidig drift BVU/BVP</b> — ej bekräftat att LT-1230 kan hålla en separat, lägre kurva mot BVU samtidigt som BVP kräver högre temperatur</li>
           <li><b>Exakt rördragning</b> — fysisk placering av cirkulationspumpar i pannrummet är inte fastställd; diagrammet ovan visar principflöde, inte exakt rörledningsdragning</li>
+          <li><b>Lastbalansering i pannrummet</b> — VP (12 kW, 3-fas), BVP:s elpatron-spets och pannans egen elpatron (9 kW) kan potentiellt vara aktiva samtidigt; ingen lastvakt mot husets huvudsäkring är inritad eller offererad ännu</li>
         </ul>
       </div>
     </div>
