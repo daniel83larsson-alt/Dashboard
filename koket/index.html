@@ -264,9 +264,12 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .dish-no{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;padding:.2rem .5rem;border:1px solid rgba(242,239,230,.4)}
 .dish h3{font-family:'Archivo Black',Impact,sans-serif;font-size:1.18rem;letter-spacing:-.01em;text-transform:uppercase;line-height:1.1}
 .mins{font-family:'Space Mono',monospace;font-size:.78rem;color:rgba(242,239,230,.75);margin-left:auto}
-.jar-badge{display:inline-flex;gap:.2rem;align-items:flex-end}
-.jar-badge span{display:block;width:9px;height:12px;border-radius:2px 2px 1px 1px;background:currentColor;opacity:.55;position:relative}
-.jar-badge span::before{content:"";position:absolute;top:-2px;left:1px;right:1px;height:2px;background:currentColor;border-radius:1px;opacity:.9}
+.jar-badge{display:inline-flex;gap:.25rem;align-items:flex-end}
+.jar-badge span{display:block;width:10px;height:13px;border-radius:2px 2px 1px 1px;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+.jar-badge span:nth-child(1){background:var(--marigold)}
+.jar-badge span:nth-child(2){background:var(--jade)}
+.jar-badge span:nth-child(3){background:var(--paprika)}
+.jar-badge span::before{content:"";position:absolute;top:-2px;left:1px;right:1px;height:2.5px;background:var(--paper);opacity:.85;border-radius:1px}
 .step{font-size:1rem;line-height:1.6}
 .step b{font-weight:700}
 .swap{margin-top:.75rem;padding-top:.7rem;border-top:1px dashed rgba(242,239,230,.3);font-size:.95rem}
