@@ -171,7 +171,7 @@ footer p{font-size:.8rem;color:var(--muted);max-width:60ch}
   <section class="showcase">
     <p class="sec-eyebrow">01 — Receptkort</p>
     <h2 class="sec-title">Samma korthantering, ny "tre-burkar"-badge</h2>
-    <p class="sec-note">Idén "tre nycklar öppnar ett kök" är stark i texten men syns idag bara i rubriken. Förslag: en liten illustrerad burk-rad på varje kort visar just DE tre smakerna för den rätten — samma grafiska språk som hjälten ovan, återanvänt istället för uppfunnet på nytt.</p>
+    <p class="sec-note">Idén "tre nycklar öppnar ett kök" är stark i texten men syns idag bara i rubriken. Förslag: en liten illustrerad burk-rad på varje kort visar tre av landets <b>redan definierade</b> nycklar (`.keys` i koden, 4–5 per land) — <b>alltid riktiga smaksättare (kryddor, syror, såser), aldrig råvarukategorier</b> som "pasta, kött, tomat". Har du de tre hemma landar du i rätt kök även om resten av ingredienserna blir fritt fram. Ren återanvändning av data som redan finns — noll ny redigering, funkar direkt för alla 46 rätter.</p>
 
     <div class="card-grid">
       <div class="dish-card">
@@ -182,16 +182,16 @@ footer p{font-size:.8rem;color:var(--muted);max-width:60ch}
               <div class="dc-country">Spanien</div>
               <h3>Lunchpaella</h3>
             </div>
-            <div class="jar-badge" title="Saffran · Vitlök · Rökt paprika">
+            <div class="jar-badge" title="Rökt paprika · Saffran · Vitlök — Spaniens 3 av 4 landsnycklar, återanvända rakt av">
+              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paprika)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
               <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--marigold)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
               <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paper)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
-              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paprika)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
             </div>
           </div>
           <p>Saffransgul ris-gryta med kyckling och grönsaker, klar på 30 minuter i en vanlig stekpanna.</p>
           <div class="dc-foot">
             <span class="dc-mins">30 min</span>
-            <span class="dc-flavors"><span class="dot" style="background:var(--marigold)"></span>Saffran · Vitlök · Rökt paprika</span>
+            <span class="dc-flavors"><span class="dot" style="background:var(--paprika)"></span>Rökt paprika · Saffran · Vitlök</span>
           </div>
         </div>
       </div>
@@ -204,16 +204,16 @@ footer p{font-size:.8rem;color:var(--muted);max-width:60ch}
               <div class="dc-country">Japan</div>
               <h3>Miso-lax</h3>
             </div>
-            <div class="jar-badge" title="Miso · Mirin · Sesamolja">
+            <div class="jar-badge" title="Miso · Kombu · Soja — Japans 3 av 4 landsnycklar, återanvända rakt av">
               <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="#7a5a2a"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
-              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paper)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
+              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="#33352e"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
               <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="#5b4a2f"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
             </div>
           </div>
-          <p>Ugnsbakad lax marinerad i miso och mirin — sötsalt, blank yta, 20 minuter i ugnen.</p>
+          <p>Ugnsbakad lax marinerad i miso — sötsalt, blank yta, 20 minuter i ugnen.</p>
           <div class="dc-foot">
             <span class="dc-mins">20 min</span>
-            <span class="dc-flavors"><span class="dot" style="background:#7a5a2a"></span>Miso · Mirin · Sesamolja</span>
+            <span class="dc-flavors"><span class="dot" style="background:#7a5a2a"></span>Miso · Kombu · Soja</span>
           </div>
         </div>
       </div>
@@ -226,16 +226,16 @@ footer p{font-size:.8rem;color:var(--muted);max-width:60ch}
               <div class="dc-country">Thailand</div>
               <h3>Grön curry</h3>
             </div>
-            <div class="jar-badge" title="Currypasta · Kokosmjölk · Fisksås">
-              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--jade)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
-              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paper)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
+            <div class="jar-badge" title="Fisksås · Lime · Chili — Thailands 3 av 4 landsnycklar, återanvända rakt av">
               <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="#8a6a2f"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
+              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--jade)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
+              <svg viewBox="0 0 20 24"><rect x="2" y="8" width="16" height="14" rx="3" fill="var(--paprika)"/><rect x="6" y="3" width="8" height="6" rx="2" fill="#3A342C"/></svg>
             </div>
           </div>
           <p>Het och krämig curry med kyckling, klar på 25 minuter — currypastan gör jobbet.</p>
           <div class="dc-foot">
             <span class="dc-mins">25 min</span>
-            <span class="dc-flavors"><span class="dot" style="background:var(--jade)"></span>Currypasta · Kokosmjölk · Fisksås</span>
+            <span class="dc-flavors"><span class="dot" style="background:#8a6a2f"></span>Fisksås · Lime · Chili</span>
           </div>
         </div>
       </div>
@@ -304,7 +304,7 @@ footer p{font-size:.8rem;color:var(--muted);max-width:60ch}
   </section>
 
   <footer>
-    <p>Det här är en fristående POC (poc/koket-visuell-poc.html) — inget på den riktiga sajten är ändrat. Om riktningen känns rätt: nästa steg är att Maya bygger in samma badge/ikon-komponenter i det riktiga `koket/index.html`, återanvänder de befintliga färgtokens och fonterna (inga nya beroenden), och Chris/Sam avgör om ikonerna ska genereras för alla 46 rätter automatiskt eller väljas för hand per rätt.</p>
+    <p>Det här är en fristående POC (poc/koket-visuell-poc.html) — inget på den riktiga sajten är ändrat. <b>Daniels beslut:</b> burk-badgen ska återanvända landets befintliga nycklar (`.keys`) rakt av, inte handplockas per rätt — noll ny redigering, funkar direkt för alla 46 rätter. Nästa steg om riktningen godkänns: Maya bygger in badge/ikon-komponenterna i det riktiga `koket/index.html`, mekaniskt genererade ur samma DOM-läsning som redan driver Hemma-fliken (ingen ny datafil).</p>
   </footer>
 
 </div>
