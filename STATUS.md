@@ -168,7 +168,13 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
   - ✅ **"Bra olivolja" → "Olivolja"** slaget ihop (Italien), verifierat att inget dish-innehåll använde det separata namnet.
   - **Blandnings-mönstret (garam masala/ras el hanout/berbere) — undersökt ärligt, inga fler äkta kandidater hittade.** Kollade igenom alla 18 återstående länders nyckelset efter en riktig, namngiven blandning som faktiskt skulle täcka samma smaker. Za'atar (Mellanöstern) täcker inte spiskummin/tahini. Femkrydderspulver (Kina) matchar inte sichuanpeppar/chiliolja/vinäger-kombinationen. Herbes de Provence (Frankrike) täcker bara örtdelen, inte smör/senap/vin. **Ingen tvingad — samma regel som för burk-badgen: hellre inget än en falsk matchning.** Gochujang (Korea) är dock redan praktiskt taget en egen blandning (fermenterad chilipasta bär det mesta av den koreanska identiteten själv).
 
-  **Kvar, inte byggt än:** Dijonsenap/Senap-sammanslagningen (möjlig men inte lika självklar som olivoljan — kräver ett litet beslut om det är okej att tappa "Dijon" som distinkt), de tre nya substitut-tipsen (palmsocker→farinsocker, svart risvinäger→risvinäger+soja, scotch bonnet→habanero), och den rangordnade inköpslistan/svårighetsgraderna syns fortfarande ingenstans i UI:t — bara beräknade i den här filen.
+  **3) "Enkel/äkta"-idé från Daniel — byggd.** Svårighetsgrad är inte en egenskap hos rätten utan ett val användaren gör. Ny knapp ("100% äkta" / "Gör det enkelt") på de 24 rätter som redan har minst en substitut-tipsad ingrediens, växlar visuellt fokus mellan originalingrediensen och det redan skrivna substitutet — mekaniskt, ingen ny text skriven. Verifierat interaktivt: båda lägen fungerar, `aria-pressed` uppdateras korrekt, inga JS-fel.
+
+  **4) Mobilmenyn — hittad och fixad på vägen.** Flikraden (7 flikar) klipptes av på mobil (mätt 561px innehåll i 390px synligt fält) utan någon hint att Glass/Hemma fanns till höger. Fixad med en fade-gradient på höger kant.
+
+  **Allt byggt denna omgång (Daniel valde "kör allt" på prioriteringsfrågan), pushat till `claude/koket-nycklar`:** mobilmeny-fix, burk-badge (46 rätter), olivolja-dubblett ihopslagen, enkel/äkta-knapp (24 rätter). Alla fyra verifierade med headless-webbläsartest (inga JS-fel, tabbyten fungerar, rätt antal element renderade) innan commit.
+
+  **Kvar, inte byggt än:** Dijonsenap/Senap-sammanslagningen (möjlig men inte lika självklar som olivoljan — kräver ett litet beslut om det är okej att tappa "Dijon" som distinkt), de tre nya substitut-tipsen (palmsocker→farinsocker, svart risvinäger→risvinäger+soja, scotch bonnet→habanero) som skulle ge fler rätter en enkel/äkta-knapp, den rangordnade inköpslistan/svårighetsgraderna syns fortfarande ingenstans i UI:t (bara beräknade i den här filen), och Kebab/Bröd/Glass har fortfarande ingen egen lösning för "nycklar"-konceptet.
 
 ## Mat & Se (ny app)
 
