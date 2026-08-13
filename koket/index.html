@@ -180,9 +180,11 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .picker button[aria-pressed="true"]{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
 
 /* ── tabbar: Kök / Basvaror / Kryddor / Bröd ── */
-.tabbar{border-bottom:1px solid var(--edge);background:var(--card)}
+.tabbar{border-bottom:1px solid var(--edge);background:var(--card);position:relative}
 .tabbar-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem);display:flex;gap:.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .tabbar-inner::-webkit-scrollbar{display:none}
+.tabbar::after{content:"";position:absolute;top:0;right:0;bottom:0;width:2.5rem;background:linear-gradient(to right, transparent, var(--card));pointer-events:none}
+@media (min-width:900px){.tabbar::after{display:none}}
 .tab-btn{flex:0 0 auto;white-space:nowrap;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:'Archivo Black',Impact,sans-serif;font-size:.92rem;text-transform:uppercase;letter-spacing:-.005em;padding:.9rem 1.1rem .75rem;cursor:pointer}
 .tab-btn:hover{color:var(--paper)}
 .tab-btn[aria-pressed="true"]{color:var(--paper);border-bottom-color:var(--marigold)}
