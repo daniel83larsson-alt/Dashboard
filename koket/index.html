@@ -399,8 +399,16 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .in .dish .ing-list li,.wa .dish .ing-list li{border-bottom-color:rgba(28,26,23,.2)}
 .dish .ing-list li.has-sub{display:block}
 .dish .ing-list li.has-sub .ing-row{display:flex;justify-content:space-between}
-.ing-sub{display:block;margin-top:.3rem;font-size:.76rem;font-style:italic;opacity:.75}
+.ing-sub{display:block;margin-top:.3rem;font-size:.76rem;font-style:italic;opacity:.75;transition:opacity .15s,font-weight .15s,color .15s}
 .ing-sub b{font-style:normal;font-weight:700}
+.mode-toggle{display:inline-flex;border:1px solid rgba(242,239,230,.35);border-radius:3px;overflow:hidden;margin-bottom:.6rem}
+.in .mode-toggle,.wa .mode-toggle{border-color:rgba(28,26,23,.35)}
+.mode-toggle button{background:transparent;border:none;color:inherit;font-family:'Space Mono',monospace;font-size:.68rem;letter-spacing:.03em;padding:.4rem .7rem;cursor:pointer;opacity:.65}
+.mode-toggle button[aria-pressed="true"]{background:var(--jade);color:var(--shelf);opacity:1;font-weight:700}
+.mode-hint{font-size:.72rem;opacity:.7;margin:0 0 .6rem;max-width:42ch}
+.dish-body.simple-mode .has-sub .ing-row{opacity:.4;text-decoration:line-through;text-decoration-color:rgba(242,239,230,.5)}
+.in .dish-body.simple-mode .has-sub .ing-row,.wa .dish-body.simple-mode .has-sub .ing-row{text-decoration-color:rgba(28,26,23,.5)}
+.dish-body.simple-mode .ing-sub{opacity:1;font-style:normal;font-weight:600;color:var(--jade)}
 .dish-actions{display:flex;gap:.5rem;margin-top:.9rem;flex-wrap:wrap}
 .dish-actions .add-btn{font-size:.72rem}
 .dish-actions .add-btn.added{background:var(--jade);color:var(--shelf);border-color:var(--jade)}
@@ -3224,6 +3232,47 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     keys.forEach(function(){ badge.appendChild(document.createElement('span')); });
     head.appendChild(badge);
   });
+
+  // ── Enkel/äkta-knapp: växlar mellan förenklad (redan skrivna substitut) och 100% äkta ingredienslista ──
+  // Mekaniskt — visas bara på rätter som redan har minst en .has-sub-ingrediens, ingen ny text skrivs.
+  dishEls.forEach(function(el){
+    var hasSub = el.querySelector('.ing-list li.has-sub');
+    if (!hasSub) return;
+    var body = el.querySelector('.dish-body');
+    var ingList = el.querySelector('.ing-list');
+    if (!body || !ingList || !ingList.parentNode) return;
+
+    var hint = document.createElement('p');
+    hint.className = 'mode-hint';
+    hint.textContent = 'Äkta smak kräver de riktiga kryddorna. Enkelt-läget byter fokus till det du sannolikt redan har hemma.';
+
+    var wrap = document.createElement('div');
+    wrap.className = 'mode-toggle';
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', 'Visa receptet som');
+    var btnAuth = document.createElement('button');
+    btnAuth.type = 'button';
+    btnAuth.textContent = '100% äkta';
+    btnAuth.setAttribute('aria-pressed', 'true');
+    var btnSimple = document.createElement('button');
+    btnSimple.type = 'button';
+    btnSimple.textContent = 'Gör det enkelt';
+    btnSimple.setAttribute('aria-pressed', 'false');
+    wrap.appendChild(btnAuth);
+    wrap.appendChild(btnSimple);
+
+    ingList.parentNode.insertBefore(hint, ingList);
+    ingList.parentNode.insertBefore(wrap, hint);
+
+    function setMode(simple){
+      body.classList.toggle('simple-mode', simple);
+      btnAuth.setAttribute('aria-pressed', String(!simple));
+      btnSimple.setAttribute('aria-pressed', String(simple));
+    }
+    btnAuth.addEventListener('click', function(){ setMode(false); });
+    btnSimple.addEventListener('click', function(){ setMode(true); });
+  });
+
   var dishes = dishEls.map(function(el){
     var ingEls = el.querySelectorAll('.ing-list li');
     var ingredients = Array.prototype.map.call(ingEls, function(li){
