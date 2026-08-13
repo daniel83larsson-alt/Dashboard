@@ -264,6 +264,9 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .dish-no{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;padding:.2rem .5rem;border:1px solid rgba(242,239,230,.4)}
 .dish h3{font-family:'Archivo Black',Impact,sans-serif;font-size:1.18rem;letter-spacing:-.01em;text-transform:uppercase;line-height:1.1}
 .mins{font-family:'Space Mono',monospace;font-size:.78rem;color:rgba(242,239,230,.75);margin-left:auto}
+.jar-badge{display:inline-flex;gap:.2rem;align-items:flex-end}
+.jar-badge span{display:block;width:9px;height:12px;border-radius:2px 2px 1px 1px;background:currentColor;opacity:.55;position:relative}
+.jar-badge span::before{content:"";position:absolute;top:-2px;left:1px;right:1px;height:2px;background:currentColor;border-radius:1px;opacity:.9}
 .step{font-size:1rem;line-height:1.6}
 .step b{font-weight:700}
 .swap{margin-top:.75rem;padding-top:.7rem;border-top:1px dashed rgba(242,239,230,.3);font-size:.95rem}
@@ -3204,6 +3207,23 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 
   // ── Läs varje rätt direkt från sidan (enda källan — ingen separat datafil att glida isär från) ──
   var dishEls = Array.prototype.slice.call(document.querySelectorAll('.dish[id]'));
+
+  // ── Burk-badge: 3 av landets befintliga nycklar (.keys), mekaniskt — ingen ny redigering per rätt ──
+  dishEls.forEach(function(el){
+    var band = el.closest('.band');
+    if (!band) return;
+    var keyEls = band.querySelectorAll('.keys li');
+    if (!keyEls.length) return;
+    var keys = Array.prototype.slice.call(keyEls, 0, 3).map(function(li){ return li.textContent.trim(); });
+    var head = el.querySelector('.dish-head');
+    if (!head) return;
+    var badge = document.createElement('span');
+    badge.className = 'jar-badge';
+    badge.setAttribute('title', keys.join(' · '));
+    badge.setAttribute('aria-label', 'Nyckelsmaker: ' + keys.join(', '));
+    keys.forEach(function(){ badge.appendChild(document.createElement('span')); });
+    head.appendChild(badge);
+  });
   var dishes = dishEls.map(function(el){
     var ingEls = el.querySelectorAll('.ing-list li');
     var ingredients = Array.prototype.map.call(ingEls, function(li){
