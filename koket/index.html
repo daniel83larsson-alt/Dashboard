@@ -264,12 +264,13 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .dish-no{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.1em;padding:.2rem .5rem;border:1px solid rgba(242,239,230,.4)}
 .dish h3{font-family:'Archivo Black',Impact,sans-serif;font-size:1.18rem;letter-spacing:-.01em;text-transform:uppercase;line-height:1.1}
 .mins{font-family:'Space Mono',monospace;font-size:.78rem;color:rgba(242,239,230,.75);margin-left:auto}
-.jar-badge{display:inline-flex;gap:.25rem;align-items:flex-end}
-.jar-badge span{display:block;width:10px;height:13px;border-radius:2px 2px 1px 1px;position:relative;box-shadow:0 0 0 1px rgba(0,0,0,.25)}
-.jar-badge span:nth-child(1){background:var(--marigold)}
-.jar-badge span:nth-child(2){background:var(--jade)}
-.jar-badge span:nth-child(3){background:var(--paprika)}
-.jar-badge span::before{content:"";position:absolute;top:-2px;left:1px;right:1px;height:2.5px;background:var(--paper);opacity:.85;border-radius:1px}
+.dish-keys{display:flex;flex-wrap:wrap;gap:.35rem;margin:.6rem 0 0}
+.dish-keys span{font-family:'Space Mono',monospace;font-size:.66rem;letter-spacing:.02em;padding:.28rem .55rem .28rem .45rem;border-radius:3px;background:rgba(242,239,230,.08);border:1px solid rgba(242,239,230,.25);display:inline-flex;align-items:center;gap:.4rem;color:inherit}
+.in .dish-keys span,.wa .dish-keys span{background:rgba(28,26,23,.06);border-color:rgba(28,26,23,.22)}
+.dish-keys span::before{content:"";width:7px;height:7px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dish-keys span:nth-child(3n+1)::before{background:var(--marigold)}
+.dish-keys span:nth-child(3n+2)::before{background:var(--jade)}
+.dish-keys span:nth-child(3n+3)::before{background:var(--paprika)}
 .step{font-size:1rem;line-height:1.6}
 .step b{font-weight:700}
 .swap{margin-top:.75rem;padding-top:.7rem;border-top:1px dashed rgba(242,239,230,.3);font-size:.95rem}
@@ -3219,21 +3220,28 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   // ── Läs varje rätt direkt från sidan (enda källan — ingen separat datafil att glida isär från) ──
   var dishEls = Array.prototype.slice.call(document.querySelectorAll('.dish[id]'));
 
-  // ── Burk-badge: 3 av landets befintliga nycklar (.keys), mekaniskt — ingen ny redigering per rätt ──
+  // ── Nycklar-rad: ALLA av landets befintliga nycklar (.keys), mekaniskt — ingen ny redigering per rätt ──
+  // Visar det verkliga antalet (3, 4 eller 5) istället för att tvinga fram exakt tre. Text, inte bara
+  // hover-tooltip, så det syns på mobil också.
   dishEls.forEach(function(el){
     var band = el.closest('.band');
     if (!band) return;
     var keyEls = band.querySelectorAll('.keys li');
     if (!keyEls.length) return;
-    var keys = Array.prototype.slice.call(keyEls, 0, 3).map(function(li){ return li.textContent.trim(); });
+    var keys = Array.prototype.map.call(keyEls, function(li){ return li.textContent.trim(); });
     var head = el.querySelector('.dish-head');
+    var shot = el.querySelector('.dish-shot');
     if (!head) return;
-    var badge = document.createElement('span');
-    badge.className = 'jar-badge';
-    badge.setAttribute('title', keys.join(' · '));
-    badge.setAttribute('aria-label', 'Nyckelsmaker: ' + keys.join(', '));
-    keys.forEach(function(){ badge.appendChild(document.createElement('span')); });
-    head.appendChild(badge);
+    var row = document.createElement('div');
+    row.className = 'dish-keys';
+    row.setAttribute('aria-label', 'Landets nycklar: ' + keys.join(', '));
+    keys.forEach(function(k){
+      var chip = document.createElement('span');
+      chip.textContent = k;
+      row.appendChild(chip);
+    });
+    if (shot && shot.parentNode) shot.parentNode.insertBefore(row, shot);
+    else head.insertAdjacentElement('afterend', row);
   });
 
   // ── Enkel/äkta-knapp: växlar mellan förenklad (redan skrivna substitut) och 100% äkta ingredienslista ──
