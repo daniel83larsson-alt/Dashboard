@@ -162,7 +162,13 @@ Egen app/repo (grenen `claude/small-business-accounting-site-xzb7ph`), delar Sup
 
   **3) Svårighetsgrader (också räknat, inte gissat):** klassificerat alla 46 Kök-rätter efter antal icke-vanliga ingredienser (allt utanför en baslinje av ~30 vanliga svenska hushållsvaror). Resultat: **20 lätta** (0-2 icke-vanliga), **16 mellan** (3-4), **10 avancerade** (5+). Redan en naturlig, jämn fördelning — inget behöver tvingas fram för att få tre nivåer att kännas meningsfulla.
 
-  **Näst:** invänta Daniels beslut om vilken del som ska byggas först (se AskUserQuestion-svar i chatten — konsolideringsanalysen kördes, resten väntar).
+  **Byggt (Daniel valde "allt" i prioriteringsfrågan):**
+  - ✅ **Mobilmenyn** — flikraden (7 flikar) klipptes av på mobil utan hint (Glass/Hemma osynliga, mätt: 561px innehåll i 390px synligt fält). Fixad med en fade-gradient på höger kant, verifierad live i skärmdump.
+  - ✅ **Burk-badge på receptkorten** — byggd mekaniskt (`el.closest('.band')` → `.keys`, samma mönster som resten av sidans självläsande DOM-parsning), 46 badges på exakt de 46 Kök-rätterna, verifierad på både mörk (Spanien) och ljus (Indien) bandfärg, ingen ny redigering krävdes.
+  - ✅ **"Bra olivolja" → "Olivolja"** slaget ihop (Italien), verifierat att inget dish-innehåll använde det separata namnet.
+  - **Blandnings-mönstret (garam masala/ras el hanout/berbere) — undersökt ärligt, inga fler äkta kandidater hittade.** Kollade igenom alla 18 återstående länders nyckelset efter en riktig, namngiven blandning som faktiskt skulle täcka samma smaker. Za'atar (Mellanöstern) täcker inte spiskummin/tahini. Femkrydderspulver (Kina) matchar inte sichuanpeppar/chiliolja/vinäger-kombinationen. Herbes de Provence (Frankrike) täcker bara örtdelen, inte smör/senap/vin. **Ingen tvingad — samma regel som för burk-badgen: hellre inget än en falsk matchning.** Gochujang (Korea) är dock redan praktiskt taget en egen blandning (fermenterad chilipasta bär det mesta av den koreanska identiteten själv).
+
+  **Kvar, inte byggt än:** Dijonsenap/Senap-sammanslagningen (möjlig men inte lika självklar som olivoljan — kräver ett litet beslut om det är okej att tappa "Dijon" som distinkt), de tre nya substitut-tipsen (palmsocker→farinsocker, svart risvinäger→risvinäger+soja, scotch bonnet→habanero), och den rangordnade inköpslistan/svårighetsgraderna syns fortfarande ingenstans i UI:t — bara beräknade i den här filen.
 
 ## Mat & Se (ny app)
 
