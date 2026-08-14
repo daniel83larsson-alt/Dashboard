@@ -12,6 +12,7 @@ import { startOfWeek } from '@/lib/dates'
 import { dedupeForStats } from '@/lib/duplicates'
 import { sportLabel, sportIcon, usesDistance } from '@/lib/sport'
 import { computeAllSportPRs, longestSession, type Activity as RecordActivity } from '@/lib/records'
+import { currentHabitStreak, habitCompletionStats, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
 
 const VO2MAX_LOOKBACK_DAYS = 90
 
@@ -98,6 +99,8 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     { data: zoneRangeActivities },
     { data: chartActivities },
     { data: recordActivities },
+    { data: habits },
+    { data: habitLogs },
   ] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
@@ -114,6 +117,8 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     // sig till 200 senaste för trendkurvorna — därför en egen, smalare fråga.
     supabase.from('activities').select('id, strava_id, sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id).order('start_date', { ascending: false }),
+    supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
+    supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
 
@@ -328,6 +333,15 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     </div>
   )
 
+  const habitStats = ((habits ?? []) as Habit[]).map(h => {
+    const hLogs = ((habitLogs ?? []) as HabitLog[]).filter(l => l.habit_id === h.id)
+    return {
+      habit: h,
+      streak: currentHabitStreak(h, hLogs),
+      ...habitCompletionStats(h, hLogs),
+    }
+  })
+
   const insikterPanel = (
     <div className="space-y-8">
       <p className="text-muted text-sm">Hela tränarteamet analyserar din träning</p>
@@ -336,6 +350,28 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
         <div>
           <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Pulszoner</h2>
           <ZoneTabs periods={zonePeriods} />
+        </div>
+      )}
+
+      {habitStats.length > 0 && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Vanor</h2>
+          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+            {habitStats.map(({ habit, streak, done, total }) => (
+              <div key={habit.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm text-fg truncate">{habit.title}</div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    {intervalLabel(habit.interval_days)} · sedan {new Date(habit.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="font-mono text-fg text-sm">{done} av {total}</div>
+                  {streak > 0 && <div className="text-[11px] text-habit mt-0.5">{streak} i rad</div>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

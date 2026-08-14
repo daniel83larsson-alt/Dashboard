@@ -1124,3 +1124,39 @@ as $$
 $$;
 revoke all on function public.friend_activity_feed() from public;
 grant execute on function public.friend_activity_feed() to authenticated;
+
+-- Vanor (habits) — Daniel: "kreatin varje dag, protein varje dag, enkel
+-- stretch... kryssar man i att man gjort det så slipper man frågan." En
+-- vana upprepar sig var `interval_days` dag (1 = varje dag, 7 = varje
+-- vecka, valfritt annat tal = eget intervall). "Perioden" en avbockning
+-- hör till räknas ut i app-koden (lib/habits.ts), inte här — done_date är
+-- bara det kalenderdatum man faktiskt kryssade i, en logg-rad per dag man
+-- gjorde det, oavsett vanans intervall.
+create table public.habits (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  interval_days integer not null default 1 check (interval_days >= 1),
+  active boolean default true,
+  created_at timestamptz default now()
+);
+alter table public.habits enable row level security;
+create policy "Users see own habits" on public.habits
+  for all using (auth.uid() = user_id);
+create index habits_user on public.habits(user_id);
+
+-- user_id denormaliserad hit av samma skäl som plan_sessions ovan — enkel
+-- auth.uid() = user_id-policy istället för en subquery mot habits.
+create table public.habit_logs (
+  id uuid default gen_random_uuid() primary key,
+  habit_id uuid references public.habits(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  done_date date not null,
+  created_at timestamptz default now(),
+  unique (habit_id, done_date)
+);
+alter table public.habit_logs enable row level security;
+create policy "Users see own habit logs" on public.habit_logs
+  for all using (auth.uid() = user_id);
+create index habit_logs_habit_date on public.habit_logs(habit_id, done_date);
+create index habit_logs_user on public.habit_logs(user_id);

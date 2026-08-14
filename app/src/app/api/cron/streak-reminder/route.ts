@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { sendPushToUser } from '@/lib/push'
 import { currentDailyStreak } from '@/lib/streaks'
+import { isDoneInCurrentPeriod, type Habit, type HabitLog } from '@/lib/habits'
 import { startOfWeek } from '@/lib/dates'
 import type { SupabaseClient } from '@supabase/supabase-js'
 
@@ -9,6 +10,7 @@ export const maxDuration = 60
 
 type Activity = { user_id: string; start_date: string }
 type PendingPlanSession = { user_id: string; is_rest: boolean }
+type UserHabit = Habit & { user_id: string }
 
 // Piggybacks on this same daily evening cron rather than its own entry —
 // per Daniel: "påminna innan söndag att man har ett kvar" (a reminder that
@@ -51,6 +53,52 @@ async function remindPendingPlanSessions(supabase: SupabaseClient, now: Date) {
   return countByUser.size
 }
 
+// Daniel: "gör det på samma kvällspåminnelse" — one push per user per
+// evening covering every active habit whose CURRENT period (today for
+// daily, this week for weekly, its own N-day window otherwise) has no log
+// yet. A habit that's already checked off, or whose period genuinely
+// isn't over yet, never appears — same "don't nag about what's already
+// done" rule as the plan-session reminder above.
+async function remindUnfinishedHabits(supabase: SupabaseClient, now: Date) {
+  const { data: habits } = await supabase
+    .from('habits')
+    .select('id, user_id, title, interval_days, created_at, active')
+    .eq('active', true)
+  if (!habits?.length) return 0
+
+  const { data: logs } = await supabase
+    .from('habit_logs')
+    .select('habit_id, done_date')
+
+  const logsByHabit = new Map<string, HabitLog[]>()
+  for (const l of (logs ?? []) as HabitLog[]) {
+    const list = logsByHabit.get(l.habit_id) ?? []
+    list.push(l)
+    logsByHabit.set(l.habit_id, list)
+  }
+
+  const unfinishedByUser = new Map<string, string[]>()
+  for (const h of habits as UserHabit[]) {
+    const done = isDoneInCurrentPeriod(h, logsByHabit.get(h.id) ?? [], now)
+    if (done) continue
+    const list = unfinishedByUser.get(h.user_id) ?? []
+    list.push(h.title)
+    unfinishedByUser.set(h.user_id, list)
+  }
+
+  await Promise.allSettled(
+    [...unfinishedByUser.entries()].map(([userId, titles]) =>
+      sendPushToUser(supabase, userId, {
+        title: titles.length === 1 ? 'En vana kvar idag' : `${titles.length} vanor kvar idag`,
+        body: titles.join(', '),
+        url: '/dashboard',
+      })
+    )
+  )
+
+  return unfinishedByUser.size
+}
+
 // Runs once in the evening (see vercel.json) — only pings someone who
 // actually has a streak worth protecting (2+ days) AND hasn't logged
 // anything yet today, so this never nags a user with no streak or someone
@@ -66,6 +114,7 @@ export async function GET(request: NextRequest) {
 
   const isSaturday = now.getDay() === 6
   const planRemindersSent = isSaturday ? await remindPendingPlanSessions(supabase, now) : 0
+  const habitRemindersSent = await remindUnfinishedHabits(supabase, now)
 
   const since = new Date()
   since.setDate(since.getDate() - 30) // enough history for any realistic streak
@@ -102,5 +151,5 @@ export async function GET(request: NextRequest) {
     )
   )
 
-  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length, planRemindersSent })
+  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length, planRemindersSent, habitRemindersSent })
 }

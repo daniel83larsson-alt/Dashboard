@@ -9,9 +9,10 @@ type Props = {
   trainedDates: string[] // ISO date strings
   mobilityDates?: string[] // ISO date strings — subset of trainedDates, marked with a second color
   plannedDates?: string[] // ISO date strings — planned-but-not-yet-done sessions from the weekly plan
+  habitDates?: string[] // ISO date strings — at least one vana checked off that day
 }
 
-export default function ActivityCalendar({ trainedDates, mobilityDates = [], plannedDates = [] }: Props) {
+export default function ActivityCalendar({ trainedDates, mobilityDates = [], plannedDates = [], habitDates = [] }: Props) {
   const today = new Date()
   const weekStart = startOfWeek(today)
   const mobilityThisWeek = mobilityDates.filter(d => new Date(d) >= weekStart).length
@@ -36,6 +37,9 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
   )
   const planned = new Set(
     plannedDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
+  )
+  const habitDone = new Set(
+    habitDates.map(d => new Date(d).toLocaleDateString('sv-SE'))
   )
 
   const cells: (number | null)[] = [
@@ -110,6 +114,7 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
               // activity is logged/matched, so this only ever shows for the
               // still-open gap between planned and done.
               const hasPlanned = !hasTrained && planned.has(dateStr)
+              const hasHabit = habitDone.has(dateStr)
               const isFuture = cellDate > today
 
               return (
@@ -126,6 +131,9 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
                     )}
                     {hasMobility && (
                       <span className="absolute bottom-0.5 left-0.5 w-1.5 h-1.5 rounded-full bg-lcd" />
+                    )}
+                    {hasHabit && (
+                      <span className="absolute bottom-0.5 right-0.5 w-1.5 h-1.5 rounded-full bg-habit" />
                     )}
                     {day}
                   </div>
@@ -144,6 +152,12 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
             <div className="w-2.5 h-2.5 rounded-full bg-lcd" />
             <span className="text-xs text-muted">Rörlighet</span>
           </div>
+          {habitDates.length > 0 && (
+            <div className="flex items-center gap-1.5">
+              <div className="w-2.5 h-2.5 rounded-full bg-habit" />
+              <span className="text-xs text-muted">Vana</span>
+            </div>
+          )}
           {plannedDates.length > 0 && (
             <div className="flex items-center gap-1.5">
               <div className="w-2.5 h-2.5 rounded-full border border-dashed border-accent/50" />

@@ -12,6 +12,7 @@ import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
 import { currentDailyStreak, currentWeeklyStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from '@/lib/streaks'
+import HabitsCard from '@/components/HabitsCard'
 import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
@@ -75,7 +76,7 @@ export default async function DashboardPage() {
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -106,6 +107,10 @@ export default async function DashboardPage() {
     supabase.rpc('pending_follow_requests'),
     supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_digest').maybeSingle(),
+    supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
+    // Small table (one row per completed period, ever) — no date window
+    // needed, same reasoning as goals above.
+    supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -260,6 +265,8 @@ export default async function DashboardPage() {
   const plannedDates = (weeklyPlan?.sessions ?? [])
     .filter(s => !s.is_rest && s.status === 'planned')
     .map(s => s.planned_date)
+
+  const habitDates = [...new Set((habitLogs ?? []).map(l => l.done_date))]
 
   // Latest team insights, for a short desktop-sidebar teaser — reuses
   // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
@@ -637,6 +644,11 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* ── Vanor ─────────────────────────────────────────────────────────────── */}
+      <div className="lg:col-span-3 lg:order-7">
+        <HabitsCard habits={habits ?? []} logs={habitLogs ?? []} />
+      </div>
+
       {/* ── Kalender ──────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className="lg:col-span-3 lg:order-8">
@@ -644,6 +656,7 @@ export default async function DashboardPage() {
             trainedDates={activities.map(a => a.start_date)}
             mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
             plannedDates={plannedDates}
+            habitDates={habitDates}
           />
         </div>
       )}
