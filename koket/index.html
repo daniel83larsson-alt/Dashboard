@@ -179,7 +179,7 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .picker button:hover{border-color:#7A7267}
 .picker button[aria-pressed="true"]{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
 
-/* ── tabbar: Kök / Basvaror / Kryddor / Bröd ── */
+/* ── tabbar: Kök / Basvaror & kryddor / Bröd ── */
 .tabbar{border-bottom:1px solid var(--edge);background:var(--card);position:relative}
 .tabbar-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem);display:flex;gap:.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .tabbar-inner::-webkit-scrollbar{display:none}
@@ -292,6 +292,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 .pantry h2{font-family:'Archivo Black',Impact,sans-serif;font-size:clamp(2rem,6.5vw,3.4rem);text-transform:uppercase;letter-spacing:-.015em;line-height:.95;margin-bottom:1rem}
 .pantry .lead{max-width:48ch;color:#4A443C;margin-bottom:2.5rem}
 .pantry h3{font-family:'Space Mono',monospace;font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#7A7268;margin:2.5rem 0 1rem;padding-bottom:.5rem;border-bottom:1px solid #CFC9BC}
+.pantry h3[id]{scroll-margin-top:11.5rem}
 .plist{list-style:none;display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:.1rem 2rem}
 .plist li{padding:.7rem 0;border-bottom:1px solid #DDD7CA;display:flex;flex-wrap:wrap;gap:.4rem .8rem;align-items:baseline}
 .plist-add{flex:0 0 auto;margin-left:auto;width:1.6rem;height:1.6rem;border-radius:3px;border:1px solid #B8B0A2;background:transparent;color:#5A5348;font-family:'Space Mono',monospace;font-size:1rem;line-height:1;cursor:pointer;padding:0}
@@ -463,8 +464,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 <div class="tabbar">
   <div class="tabbar-inner">
     <button class="tab-btn" data-tab="kok" aria-pressed="true">Kök</button>
-    <button class="tab-btn" data-tab="basvaror" aria-pressed="false">Basvaror</button>
-    <button class="tab-btn" data-tab="kryddor" aria-pressed="false">Kryddor</button>
+    <button class="tab-btn" data-tab="basvaror" aria-pressed="false">Basvaror &amp; kryddor</button>
     <button class="tab-btn" data-tab="brod" aria-pressed="false">Bröd</button>
     <button class="tab-btn" data-tab="kebab" aria-pressed="false">Kebab</button>
     <button class="tab-btn" data-tab="glass" aria-pressed="false">Glass</button>
@@ -2033,8 +2033,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
 <div id="tab-basvaror" class="tabpanel" hidden>
 <section class="pantry" id="basvaror">
   <div class="pantry-inner">
-    <h2>Basvaror</h2>
-    <p class="lead">Allt utom kryddorna: oljor, salt, konserver och de flaskor med färdig smak som gör tunga jobb i flera kök. Sorterat efter hur många av de tjugoett köken varje sak faktiskt används i.</p>
+    <h2>Basvaror &amp; kryddor</h2>
+    <p class="lead">Oljor, salt, konserver och de elva kryddorna som tillsammans håller ihop alla tjugoett köken — de hör ihop i verkligheten, så vi håller dem ihop här också. Sorterat efter vad varje sak faktiskt gör i grytan, inte bara efter hur många kök den råkar användas i.</p>
     <h3>Flaskor och burkar</h3>
     <ul class="plist">
         <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Ljus soja<span class="tier">Först</span></span><span class="d">Japan, Korea, Kina, Vietnam. Köp en bra — men den ersätter också vanligt salt i nästan vilken stekning eller sås som helst, inte bara asiatisk mat.</span></span><span class="u">4 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
@@ -2099,6 +2099,36 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
       <p style="margin-top:.7rem"><strong>Ägg, yoghurt, smör.</strong> Proteinet och fettet. Smör fryser bra, yoghurt inte.</p>
       <p style="margin-top:.7rem"><strong>Persilja, koriander, mynta, dill.</strong> De enda örterna som inte går att byta mot torkat. Oregano är undantaget — den blir bättre torkad.</p>
     </div>
+
+    <h3 id="kryddor">Kryddorna</h3>
+    <p class="lead">Samma elva kryddor som håller ihop de tjugoett köken — sorterade efter vad de faktiskt gör i grytan, inte efter hur många kök som råkar använda dem.</p>
+
+    <h3>Basen i grytor &amp; såser — kryddas i fett, tidigt</h3>
+    <ul class="plist">
+        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Spiskummin<span class="tier">Först</span></span><span class="d">Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru. Rosta hela frön torrt och krossa själv för mycket mer smak — funkar i nästan vilken köttfärsrätt eller rotfruktsröra som helst.</span></span><span class="u">7 kök</span><span class="h">2 år hela</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Gurkmeja</span><span class="d">Indien, Etiopien, Marocko.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Garam masala</span><span class="d">Indien. Men gör också en snabb rub till allt grillat.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Kanel, hel stång</span><span class="d">Marocko, Vietnam, Indien. Hel håller i evighet.</span></span><span class="u">3 kök</span><span class="h">3 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+    </ul>
+
+    <h3>Hetta</h3>
+    <ul class="plist">
+        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Chiliflingor<span class="tier">Först</span></span><span class="d">Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta — en nypa i het olja innan något annat läggs i pannan sprider hettan jämnt genom hela rätten, inte bara på toppen.</span></span><span class="u">6 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Torkad chili, hel</span><span class="d">Mexiko och Kina. Rosta i torr panna först.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+    </ul>
+
+    <h3>Rök &amp; färg</h3>
+    <ul class="plist">
+        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Rökt paprika<span class="tier">Först</span></span><span class="d">Spanien, Marocko, Mellanöstern. Även i alla rubs du gör — och en nypa i majonnäs eller över popcorn ger samma grillsmak-utan-grill i vardagsmat.</span></span><span class="u">4 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Saffran</span><span class="d">Spanien och Marocko. En ask räcker i åratal.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+    </ul>
+
+    <h3>Finish &amp; syra — strös på slutet, aldrig kokas med</h3>
+    <ul class="plist">
+        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Sumak</span><span class="d">Turkiet och Levanten. Syra som håller i pulverform.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Torkad oregano<span class="tier">Först</span></span><span class="d">Grekland, Italien, Mexiko. Gnid mellan handflatorna innan den går i för att väcka oljorna — funkar i nästan vilken tomatbaserad rätt eller sallad som helst, inte bara de tre köken här.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Sesamfrön</span><span class="d">Korea, Kina, Mellanöstern. Rosta torrt.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
+    </ul>
   </div>
 </section>
 
@@ -2164,42 +2194,6 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   </div>
 </section>
 </div><!-- /tab-basvaror -->
-
-<div id="tab-kryddor" class="tabpanel" hidden>
-<section class="pantry" id="kryddor">
-  <div class="pantry-inner">
-    <h2>Kryddor</h2>
-    <p class="lead">Samma elva kryddor som håller ihop de tjugoett köken — men sorterade efter vad de faktiskt gör i grytan, inte efter hur många kök som råkar använda dem.</p>
-
-    <h3>Basen i grytor &amp; såser — kryddas i fett, tidigt</h3>
-    <ul class="plist">
-        <li><span class="n">01</span><span style="flex:1;min-width:11rem"><span class="b">Spiskummin<span class="tier">Först</span></span><span class="d">Mexiko, Marocko, Indien, Etiopien, Mellanöstern, Spanien, Peru. Rosta hela frön torrt och krossa själv för mycket mer smak — funkar i nästan vilken köttfärsrätt eller rotfruktsröra som helst.</span></span><span class="u">7 kök</span><span class="h">2 år hela</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">02</span><span style="flex:1;min-width:11rem"><span class="b">Gurkmeja</span><span class="d">Indien, Etiopien, Marocko.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">03</span><span style="flex:1;min-width:11rem"><span class="b">Garam masala</span><span class="d">Indien. Men gör också en snabb rub till allt grillat.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">04</span><span style="flex:1;min-width:11rem"><span class="b">Kanel, hel stång</span><span class="d">Marocko, Vietnam, Indien. Hel håller i evighet.</span></span><span class="u">3 kök</span><span class="h">3 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-    </ul>
-
-    <h3>Hetta</h3>
-    <ul class="plist">
-        <li><span class="n">05</span><span style="flex:1;min-width:11rem"><span class="b">Chiliflingor<span class="tier">Först</span></span><span class="d">Italien, Turkiet, Kina, Korea, Mexiko. Grunden i all hetta — en nypa i het olja innan något annat läggs i pannan sprider hettan jämnt genom hela rätten, inte bara på toppen.</span></span><span class="u">6 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">06</span><span style="flex:1;min-width:11rem"><span class="b">Torkad chili, hel</span><span class="d">Mexiko och Kina. Rosta i torr panna först.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-    </ul>
-
-    <h3>Rök &amp; färg</h3>
-    <ul class="plist">
-        <li><span class="n">07</span><span style="flex:1;min-width:11rem"><span class="b">Rökt paprika<span class="tier">Först</span></span><span class="d">Spanien, Marocko, Mellanöstern. Även i alla rubs du gör — och en nypa i majonnäs eller över popcorn ger samma grillsmak-utan-grill i vardagsmat.</span></span><span class="u">4 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">08</span><span style="flex:1;min-width:11rem"><span class="b">Saffran</span><span class="d">Spanien och Marocko. En ask räcker i åratal.</span></span><span class="u">2 kök</span><span class="h">2 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-    </ul>
-
-    <h3>Finish &amp; syra — strös på slutet, aldrig kokas med</h3>
-    <ul class="plist">
-        <li><span class="n">09</span><span style="flex:1;min-width:11rem"><span class="b">Sumak</span><span class="d">Turkiet och Levanten. Syra som håller i pulverform.</span></span><span class="u">2 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">10</span><span style="flex:1;min-width:11rem"><span class="b">Torkad oregano<span class="tier">Först</span></span><span class="d">Grekland, Italien, Mexiko. Gnid mellan handflatorna innan den går i för att väcka oljorna — funkar i nästan vilken tomatbaserad rätt eller sallad som helst, inte bara de tre köken här.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-        <li><span class="n">11</span><span style="flex:1;min-width:11rem"><span class="b">Sesamfrön</span><span class="d">Korea, Kina, Mellanöstern. Rosta torrt.</span></span><span class="u">3 kök</span><span class="h">1 år</span><button class="plist-add" data-added="false" aria-label="Lägg till i inköpslista">+</button></li>
-    </ul>
-  </div>
-</section>
-</div><!-- /tab-kryddor -->
 
 <div id="tab-brod" class="tabpanel" hidden>
 <section class="breadsection" id="brod">
@@ -3205,7 +3199,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   // ── Basvaror man alltid antas ha hemma — behöver aldrig skrivas i "Hemma"-fliken ──
   var PANTRY_IDS = (function(){
     var ids = {};
-    document.querySelectorAll('#tab-basvaror .plist li, #tab-kryddor .plist li').forEach(function(li){
+    document.querySelectorAll('#tab-basvaror .plist li').forEach(function(li){
       var tier = li.querySelector('.tier');
       if (!tier) return;
       var t = tier.textContent.trim();
@@ -3560,7 +3554,7 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   });
 
   // ── Basvaror/Kryddor: gör "N kök"-badgen klickbar och visa exakt vilka rätter ──
-  document.querySelectorAll('#tab-basvaror .plist li, #tab-kryddor .plist li').forEach(function(li){
+  document.querySelectorAll('#tab-basvaror .plist li').forEach(function(li){
     var uSpan = li.querySelector('.u');
     if (!uSpan) return;
     var name = plistItemName(li);
@@ -3794,10 +3788,10 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     pin.addEventListener('keydown', function(e){ if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); activate(); } });
   });
 
-  // ── Tabbar: Kök / Basvaror / Kryddor ──
-  var TAB_IDS = ['kok', 'basvaror', 'kryddor', 'brod', 'kebab', 'glass', 'hemma'];
+  // ── Tabbar: Kök / Basvaror & kryddor ──
+  var TAB_IDS = ['kok', 'basvaror', 'brod', 'kebab', 'glass', 'hemma'];
   var KOK_ANCHORS = new Set(['kok','spanien','italien','turkiet','japan','thailand','mellanostern','baltikum','kroatien','bosnien','serbien','indien','mexiko','grekland','marocko','korea','vietnam','kina','frankrike','vastafrika','peru','etiopien']);
-  var BASVAROR_ANCHORS = new Set(['basvaror','protein']);
+  var BASVAROR_ANCHORS = new Set(['basvaror','kryddor','protein']);
   var tabBtns = document.querySelectorAll('.tab-btn');
   var tabPanels = {};
   TAB_IDS.forEach(function(id){ tabPanels[id] = document.getElementById('tab-' + id); });
