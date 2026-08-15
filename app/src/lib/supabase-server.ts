@@ -13,9 +13,20 @@ export async function createSupabaseServerClient() {
       cookies: {
         getAll() { return cookieStore.getAll() },
         setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            )
+          } catch {
+            // Called from a Server Component during render, where Next.js
+            // forbids writing cookies (the two Sentry errors this fixes:
+            // "Cookies can only be modified in a Server Action or Route
+            // Handler" + the Server Components render failure it caused).
+            // Safe to ignore — proxy.ts's middleware already refreshes the
+            // session cookie on every /dashboard and /login request, so
+            // this call (triggered by an expiring-token auto-refresh mid
+            // render) is a redundant write, not the only place it happens.
+          }
         },
       },
     }
