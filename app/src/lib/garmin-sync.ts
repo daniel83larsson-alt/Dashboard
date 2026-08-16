@@ -157,6 +157,36 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     hrvStatus: sleep?.hrvStatus ?? null,
   }
 
+  // Daniel: "snitt 5300 steg" på Veckans Recap, mycket lägre än Garmins
+  // egen siffra. Rotorsak hittad mot hans riktiga data: "today"s stegtal
+  // ovan är bara en ögonblicksbild — om dagens SISTA synk (den här dagliga
+  // cronen kör 05 UTC, tidigt) råkar ske innan man gått särskilt mycket,
+  // fryser det låga talet permanent in i historiken när datumet blir
+  // "igår", eftersom inget annat kodställe någonsin läser om ett datum som
+  // redan har en rad (bara helt SAKNADE datum backfillas nedan). Två av
+  // Daniels sju dagar hade exakt detta: 149 och 242 steg, medan Garmins
+  // egen app visade dagens fulla totaler. Fix: hämta om GÅRDAGEN på nytt
+  // varje synk också — det är den enda dag som garanterat är helt
+  // avslutad sedan den senast var "today", så det är den enda säkra
+  // platsen att korrigera en ofärdig ögonblicksbild till Garmins riktiga
+  // slutgiltiga totalsumma.
+  const yesterday = new Date()
+  yesterday.setDate(yesterday.getDate() - 1)
+  const yesterdayKey = yesterday.toISOString().slice(0, 10)
+  const yesterdayFetched = await fetchGarminDayWellness(yesterday, garminEmail, garminPassword).catch(() => null)
+  const yesterdayWellness: DayWellness | null = yesterdayFetched ? {
+    date: yesterdayKey,
+    restingHR: yesterdayFetched.sleep?.restingHR ?? yesterdayFetched.restingHR,
+    sleepHours: yesterdayFetched.sleep?.hours ?? null,
+    deepSleepHours: yesterdayFetched.sleep?.deepHours ?? null,
+    remSleepHours: yesterdayFetched.sleep?.remHours ?? null,
+    lightSleepHours: yesterdayFetched.sleep?.lightHours ?? null,
+    steps: yesterdayFetched.steps,
+    bodyBattery: yesterdayFetched.sleep?.bodyBattery ?? null,
+    hrv: yesterdayFetched.sleep?.hrv ?? null,
+    hrvStatus: yesterdayFetched.sleep?.hrvStatus ?? null,
+  } : null
+
   const { data: wellnessRow } = await supabase
     .from('coach_sessions')
     .select('messages')
@@ -204,7 +234,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     })
   }
 
-  const history = [todayWellness, ...backfilled, ...filtered]
+  const history = [todayWellness, ...(yesterdayWellness ? [yesterdayWellness] : []), ...backfilled, ...filtered]
     .sort((a, b) => b.date.localeCompare(a.date))
     .filter((d, i, arr) => arr.findIndex(x => x.date === d.date) === i)
     .slice(0, MAX_HISTORY_DAYS)
