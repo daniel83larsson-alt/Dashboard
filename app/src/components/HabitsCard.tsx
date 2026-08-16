@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
-import { stockholmDateKey } from '@/lib/dates'
 import { isDoneInCurrentPeriod, currentHabitStreak, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
 
 export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: HabitLog[] }) {
@@ -54,26 +53,15 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
   }
 
   async function toggle(habit: Habit) {
-    const done = isDoneInCurrentPeriod(habit, logsByHabit.get(habit.id) ?? [])
+    // Går via en route (istället för en direkt klient-insert som tidigare)
+    // så ett nyckryssat streak-milstolpe kan trigga en push omedelbart —
+    // se api/habits/toggle.
     setPending(habit.id)
-    const supabase = createSupabaseClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) { setPending(null); return }
-
-    const todayKey = stockholmDateKey()
-    if (done) {
-      // Ångra dagens/periodens avbockning — hitta loggraden som faktiskt
-      // landade i den aktuella perioden (kan vara ett annat datum än idag
-      // för vecko-/eget intervall) och ta bort just den.
-      const existing = (logsByHabit.get(habit.id) ?? []).find(l =>
-        isDoneInCurrentPeriod(habit, [l])
-      )
-      if (existing) {
-        await supabase.from('habit_logs').delete().eq('habit_id', habit.id).eq('done_date', existing.done_date)
-      }
-    } else {
-      await supabase.from('habit_logs').insert({ habit_id: habit.id, user_id: user.id, done_date: todayKey })
-    }
+    await fetch('/api/habits/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ habitId: habit.id }),
+    })
     router.refresh()
     setPending(null)
   }

@@ -1160,3 +1160,25 @@ create policy "Users see own habit logs" on public.habit_logs
   for all using (auth.uid() = user_id);
 create index habit_logs_habit_date on public.habit_logs(habit_id, done_date);
 create index habit_logs_user on public.habit_logs(user_id);
+
+-- Milstolpar (celebrated_milestones) — Daniel: "Grattis 5 veckor på
+-- raken!!" En rad = en specifik streak-nivå en användare faktiskt nått
+-- (t.ex. "daily_streak"/"daily"/7, eller "habit_streak"/<habit-id>/30).
+-- Existensen av raden ÄR "redan firad" — insert-om-den-inte-redan-finns
+-- (unik-constraint) gör att en milstolpe bara räknas som NY en gång, oavsett
+-- hur många gånger sidan laddas eller synken kör samma dag. Ingen separat
+-- "seen"-status behövs: att raden skapas är exakt samma ögonblick som
+-- banderollen/pushen visas.
+create table public.celebrated_milestones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  kind text not null check (kind in ('daily_streak', 'weekly_streak', 'habit_streak')),
+  streak_key text not null, -- 'daily' | 'weekly' | habit_id (som text) för habit_streak
+  milestone integer not null,
+  reached_at timestamptz default now(),
+  unique (user_id, kind, streak_key, milestone)
+);
+alter table public.celebrated_milestones enable row level security;
+create policy "Users see own celebrated milestones" on public.celebrated_milestones
+  for all using (auth.uid() = user_id);
+create index celebrated_milestones_user on public.celebrated_milestones(user_id);

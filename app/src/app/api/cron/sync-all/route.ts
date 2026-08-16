@@ -6,6 +6,7 @@ import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-s
 import { syncStravaForUser, StravaNotConnectedError } from '@/lib/strava-sync'
 import { syncPolarForUser, PolarNotConnectedError } from '@/lib/polar-sync'
 import { sendPushToUser } from '@/lib/push'
+import { checkAndPushMilestones } from '@/lib/milestones'
 import { reconcileUserPlanSessions } from '@/lib/plan-reconcile'
 import type { ActivityRow } from '@/lib/duplicates'
 
@@ -130,6 +131,16 @@ export async function GET(request: NextRequest) {
         url: '/dashboard/passlogg',
       })
     )
+  )
+
+  // Milstolpar ("Grattis 5 veckor på raken!!") — bara relevant för
+  // användare som faktiskt fick minst ett nytt pass i den här körningen,
+  // eftersom en streak bara kan ha vuxit förbi en ny nivå om något nytt
+  // synkades. checkAndPushMilestones är idempotent (celebrated_milestones
+  // unik-constraint) så det spelar ingen roll att samma användare även kan
+  // träffas av dashboard-sidans egen koll senare samma dag.
+  await Promise.allSettled(
+    [...newPassesByUser.keys()].map(userId => checkAndPushMilestones(supabase, userId))
   )
 
   return NextResponse.json({

@@ -13,6 +13,9 @@ import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
 import { currentDailyStreak, currentWeeklyStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
+import MilestoneBanner from '@/components/MilestoneBanner'
+import { currentHabitStreak } from '@/lib/habits'
+import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
@@ -268,6 +271,22 @@ export default async function DashboardPage() {
 
   const habitDates = [...new Set((habitLogs ?? []).map(l => l.done_date))]
 
+  // ── Milstolpar: "Grattis 5 veckor på raken!!" ──────────────────────────
+  // Idempotent per (user, streaktyp, nivå) via celebrated_milestones unika
+  // constraint — säkert att köra på varje sidladdning, en milstolpe visas
+  // bara den allra första gången den nås, aldrig igen efter det.
+  const milestoneCandidates: StreakCandidate[] = [
+    { kind: 'daily_streak', streakKey: 'daily', value: dailyStreak, label: 'Träningsstreak' },
+    { kind: 'weekly_streak', streakKey: 'weekly', value: weeklyStreak, label: 'Träningsstreak' },
+    ...(habits ?? []).map(h => ({
+      kind: 'habit_streak' as const,
+      streakKey: h.id,
+      value: currentHabitStreak(h, (habitLogs ?? []).filter(l => l.habit_id === h.id)),
+      label: h.title,
+    })),
+  ]
+  const newMilestones = user ? await recordNewMilestones(supabase, user.id, milestoneCandidates) : []
+
   // Latest team insights, for a short desktop-sidebar teaser — reuses
   // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -296,6 +315,8 @@ export default async function DashboardPage() {
           <SyncAllButton />
         </div>
       </div>
+
+      {newMilestones.length > 0 && <MilestoneBanner milestones={newMilestones} />}
 
       {/* ── Saknad personinfo ─────────────────────────────────────────────────── */}
       {missingPersonalInfo.length > 0 && (
