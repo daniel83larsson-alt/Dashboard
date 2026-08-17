@@ -14,11 +14,17 @@ export const metadata: Metadata = {
     siteName: 'DL Trainer',
     locale: 'sv_SE',
     type: 'website',
+    // Explicit absolute URL — Next's automatic file-convention pickup of
+    // opengraph-image.tsx ignores metadataBase and falls back to
+    // VERCEL_BRANCH_URL/VERCEL_URL whenever VERCEL_ENV=preview, which is
+    // what the production deployment was serving.
+    images: ['https://dltrainer.se/opengraph-image'],
   },
   twitter: {
     card: 'summary_large_image',
     title: 'DL Trainer — Din AI-tränare, dygnet runt',
     description: 'Samla dina pass, sömn, mat och puls på ett ställe. En AI-coach per sportgren.',
+    images: ['https://dltrainer.se/opengraph-image'],
   },
 }
 
