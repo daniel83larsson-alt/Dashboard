@@ -170,7 +170,7 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .thesis{margin-top:1.75rem;max-width:34ch;font-size:clamp(1.05rem,2.4vw,1.3rem);color:#C9C2B4}
 .thesis b{color:var(--paper);font-weight:700}
 
-.picker{position:sticky;top:var(--topbar-h);z-index:20;background:rgba(28,26,23,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--edge);padding:.85rem clamp(1.25rem,5vw,4rem)}
+.picker{position:sticky;top:calc(var(--topbar-h) + var(--tabbar-h, 50px));z-index:20;background:rgba(28,26,23,.94);backdrop-filter:blur(8px);border-bottom:1px solid var(--edge);padding:.85rem clamp(1.25rem,5vw,4rem)}
 .toolbar2{background:var(--card);border-bottom:1px solid var(--edge);padding:.85rem clamp(1.25rem,5vw,4rem)}
 .picker-inner{max-width:1100px;margin:0 auto;display:flex;align-items:center;gap:.9rem;flex-wrap:wrap}
 .picker-label{font-family:'Space Mono',monospace;font-size:.7rem;letter-spacing:.18em;text-transform:uppercase;color:var(--muted)}
@@ -180,12 +180,15 @@ header.topbar{position:sticky;top:0;z-index:30;background:rgba(28,26,23,.94);bac
 .picker button[aria-pressed="true"]{background:var(--paper);color:var(--shelf);border-color:var(--paper);font-weight:700}
 
 /* ── tabbar: Kök / Basvaror & kryddor / Bröd ── */
-.tabbar{border-bottom:1px solid var(--edge);background:var(--card);position:relative}
+.tabbar{border-bottom:1px solid var(--edge);background:var(--card);position:sticky;top:var(--topbar-h);z-index:25}
 .tabbar-inner{max-width:1100px;margin:0 auto;padding:0 clamp(1.25rem,5vw,4rem);display:flex;gap:.25rem;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none}
 .tabbar-inner::-webkit-scrollbar{display:none}
 .tabbar::after{content:"";position:absolute;top:0;right:0;bottom:0;width:2.5rem;background:linear-gradient(to right, transparent, var(--card));pointer-events:none}
 @media (min-width:900px){.tabbar::after{display:none}}
 .tab-btn{flex:0 0 auto;white-space:nowrap;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-family:'Archivo Black',Impact,sans-serif;font-size:.92rem;text-transform:uppercase;letter-spacing:-.005em;padding:.9rem 1.1rem .75rem;cursor:pointer}
+.scroll-top-btn{position:fixed;right:1.25rem;bottom:1.25rem;z-index:40;width:2.8rem;height:2.8rem;border-radius:50%;background:var(--marigold);color:var(--shelf);border:none;font-size:1.3rem;font-weight:700;cursor:pointer;box-shadow:0 4px 14px rgba(0,0,0,.35);opacity:0;pointer-events:none;transform:translateY(.5rem);transition:opacity .2s,transform .2s}
+.scroll-top-btn.visible{opacity:1;pointer-events:auto;transform:translateY(0)}
+.scroll-top-btn:hover{filter:brightness(1.08)}
 .tab-btn:hover{color:var(--paper)}
 .tab-btn[aria-pressed="true"]{color:var(--paper);border-bottom-color:var(--marigold)}
 .tabpanel[hidden]{display:none}
@@ -452,6 +455,8 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
     <div class="key-note">Sparas bara lokalt i din webbläsare (localStorage). Skickas aldrig någon annanstans än direkt till Google vid ett AI-anrop.</div>
   </div>
 </header>
+
+<button id="scrollTopBtn" class="scroll-top-btn" aria-label="Till toppen" title="Till toppen">↑</button>
 
 <main id="view-nycklar" class="view">
 
@@ -3822,6 +3827,33 @@ figure.shot figcaption{font-family:'Space Mono',monospace;font-size:.66rem;lette
   }
   window.addEventListener('hashchange', routeFromHash);
   routeFromHash();
+
+  // ── Flikraden hänger nu kvar (sticky) under scroll — mäter dess riktiga
+  // höjd så filterraden under (.picker) alltid vet exakt var den ska sluta
+  // vara fast i, oavsett skärmstorlek/radbrytning, istället för ett gissat
+  // fast värde som kan glida isär från verkligheten. ──
+  var tabbarEl = document.querySelector('.tabbar');
+  function updateTabbarHeight(){
+    if (tabbarEl) document.documentElement.style.setProperty('--tabbar-h', tabbarEl.offsetHeight + 'px');
+  }
+  updateTabbarHeight();
+  window.addEventListener('resize', updateTabbarHeight);
+
+  // ── "Till toppen"-knapp — Daniel: "blir massa scroll utan att komma
+  // tillbaka hem". Dyker upp efter en skärmhöjds scroll, försvinner igen
+  // nära toppen så den inte täcker något i onödan. ──
+  var scrollTopBtn = document.getElementById('scrollTopBtn');
+  function updateScrollTopBtn(){
+    if (!scrollTopBtn) return;
+    scrollTopBtn.classList.toggle('visible', window.scrollY > window.innerHeight * 0.6);
+  }
+  window.addEventListener('scroll', updateScrollTopBtn, { passive: true });
+  updateScrollTopBtn();
+  if (scrollTopBtn) {
+    scrollTopBtn.addEventListener('click', function(){
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
 })();
 </script>
 
