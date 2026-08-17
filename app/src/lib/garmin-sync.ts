@@ -5,6 +5,7 @@ import {
   fetchGarminRestingHR,
   fetchGarminSleepFull,
   fetchGarminSteps,
+  fetchGarminCalories,
   fetchGarminDayWellness,
   fetchGarminHrZones,
   fetchGarminVo2max,
@@ -46,6 +47,8 @@ export type DayWellness = {
   bodyBattery: number | null
   hrv: number | null
   hrvStatus: string | null
+  totalCalories: number | null
+  activeCalories: number | null
 }
 
 export class GarminNotConfiguredError extends Error {
@@ -97,7 +100,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     ? (() => { try { return JSON.parse(activityCursorRaw) } catch { return { offset: 100, done: false } } })()
     : { offset: 100, done: false }
 
-  const [garminActivities, backfillActivities, restingHR, sleep, steps, vo2max] = await Promise.all([
+  const [garminActivities, backfillActivities, restingHR, sleep, steps, calories, vo2max] = await Promise.all([
     fetchGarminActivities(100, garminEmail, garminPassword),
     isAdminAccount || activityCursor.done
       ? Promise.resolve([])
@@ -105,6 +108,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     fetchGarminRestingHR(garminEmail, garminPassword),
     fetchGarminSleepFull(garminEmail, garminPassword),
     fetchGarminSteps(garminEmail, garminPassword),
+    fetchGarminCalories(garminEmail, garminPassword),
     fetchGarminVo2max(garminEmail, garminPassword),
   ])
 
@@ -155,6 +159,8 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     bodyBattery: sleep?.bodyBattery ?? null,
     hrv: sleep?.hrv ?? null,
     hrvStatus: sleep?.hrvStatus ?? null,
+    totalCalories: calories?.totalCalories ?? null,
+    activeCalories: calories?.activeCalories ?? null,
   }
 
   // Daniel: "snitt 5300 steg" på Veckans Recap, mycket lägre än Garmins
@@ -185,6 +191,8 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     bodyBattery: yesterdayFetched.sleep?.bodyBattery ?? null,
     hrv: yesterdayFetched.sleep?.hrv ?? null,
     hrvStatus: yesterdayFetched.sleep?.hrvStatus ?? null,
+    totalCalories: yesterdayFetched.calories?.totalCalories ?? null,
+    activeCalories: yesterdayFetched.calories?.activeCalories ?? null,
   } : null
 
   const { data: wellnessRow } = await supabase
@@ -218,7 +226,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     )
     results.forEach((r, i) => {
       if (r.status !== 'fulfilled') return
-      const { restingHR: hr, sleep: s, steps: st } = r.value
+      const { restingHR: hr, sleep: s, steps: st, calories: cal } = r.value
       backfilled.push({
         date: toBackfill[i].toISOString().slice(0, 10),
         restingHR: s?.restingHR ?? hr,
@@ -230,6 +238,8 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
         bodyBattery: s?.bodyBattery ?? null,
         hrv: s?.hrv ?? null,
         hrvStatus: s?.hrvStatus ?? null,
+        totalCalories: cal?.totalCalories ?? null,
+        activeCalories: cal?.activeCalories ?? null,
       })
     })
   }

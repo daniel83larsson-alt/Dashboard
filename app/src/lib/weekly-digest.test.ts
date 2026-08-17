@@ -29,6 +29,8 @@ function wellnessDay(date: string, overrides: Partial<DayWellness> = {}): DayWel
     bodyBattery: 70,
     hrv: 45,
     hrvStatus: 'BALANCED',
+    totalCalories: null,
+    activeCalories: null,
     ...overrides,
   }
 }

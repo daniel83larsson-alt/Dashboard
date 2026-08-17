@@ -134,6 +134,8 @@ export default async function DashboardPage() {
     bodyBattery: number | null
     hrv: number | null
     hrvStatus: string | null
+    totalCalories: number | null
+    activeCalories: number | null
   }
   type WellnessStore = { history: DayWellness[]; updatedAt: string }
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -213,6 +215,13 @@ export default async function DashboardPage() {
   }, now)
   const burnedProjected = bmrResult.bmr + activityCaloriesToday
   const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
+  // Garmin's own daily total already accounts for real movement/heart rate
+  // (not a flat BMR ramp), so it replaces the schablon estimate above
+  // whenever today's synced wellness row actually has it — same "prefer
+  // real data, fall back to the estimate" pattern as the rest of this card.
+  // Other watch sources can plug into this same DayWellness field later,
+  // as long as their sync populates totalCalories.
+  const garminCaloriesToday = wellness?.date === todayKey ? (wellness.totalCalories ?? null) : null
   const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
 
   // Nudge for the fields that unlock the VO2max-skala (Hälsa) and mer exakt
@@ -399,9 +408,15 @@ export default async function DashboardPage() {
             </div>
           )}
           <div className="text-muted text-xs mt-2">
-            Förbränt (uppskattning): ~{burnedSoFar} kcal · beräknad dygnsförbränning ~{burnedProjected}
-            {bmrResult.usedDefaults.length > 0 && (
-              <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
+            {garminCaloriesToday != null ? (
+              <>Förbränt idag (Garmin): {garminCaloriesToday} kcal</>
+            ) : (
+              <>
+                Förbränt (uppskattning): ~{burnedSoFar} kcal · beräknad dygnsförbränning ~{burnedProjected}
+                {bmrResult.usedDefaults.length > 0 && (
+                  <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
+                )}
+              </>
             )}
           </div>
           {proteinToday > 0 && (
