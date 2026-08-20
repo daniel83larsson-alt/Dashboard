@@ -11,7 +11,7 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
-import { currentDailyStreak, currentWeeklyStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from '@/lib/streaks'
+import { currentDailyStreak, currentWeeklyStreak } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
 import MilestoneBanner from '@/components/MilestoneBanner'
 import { currentHabitStreak } from '@/lib/habits'
@@ -157,8 +157,6 @@ export default async function DashboardPage() {
 
   const dailyStreak = currentDailyStreak(activities)
   const weeklyStreak = currentWeeklyStreak(activities)
-  const stepGoalDaysMet = daysMetStepGoalThisWeek(wellnessStore?.history ?? [], stepGoal)
-  const stepGoalDaysElapsed = daysElapsedThisWeek()
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
@@ -213,7 +211,6 @@ export default async function DashboardPage() {
     birthYear: profile?.birth_year ?? null,
     biologicalSex: profile?.biological_sex ?? null,
   }, now)
-  const burnedProjected = bmrResult.bmr + activityCaloriesToday
   const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
   // Garmin's own daily total already accounts for real movement/heart rate
   // (not a flat BMR ramp), so it replaces the schablon estimate above
@@ -222,7 +219,21 @@ export default async function DashboardPage() {
   // Other watch sources can plug into this same DayWellness field later,
   // as long as their sync populates totalCalories.
   const garminCaloriesToday = wellness?.date === todayKey ? (wellness.totalCalories ?? null) : null
+  const burnedForNet = garminCaloriesToday ?? burnedSoFar
+  const netCalories = eatenToday - burnedForNet
   const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
+
+  // ── Steg idag mot snitt ──────────────────────────────────────────────────
+  // Rullande 30-dagarssnitt, dagens egen (ännu ofärdiga) rad exkluderad så
+  // den inte drar ner sitt eget jämförelsetal — samma "jämför mot dig
+  // själv"-princip som Veckobelastningen ovan.
+  const stepsToday = wellness?.date === todayKey ? (wellness.steps ?? null) : null
+  const recentStepDays = (wellnessStore?.history ?? [])
+    .filter(d => d.date !== todayKey && d.steps != null && d.steps > 0)
+    .slice(0, 30)
+  const avgSteps = recentStepDays.length > 0
+    ? Math.round(recentStepDays.reduce((s, d) => s + (d.steps ?? 0), 0) / recentStepDays.length)
+    : null
 
   // Nudge for the fields that unlock the VO2max-skala (Hälsa) and mer exakt
   // kalorier/förbränning (denna sidan) — samma fyra fält, valfria vid signup,
@@ -344,20 +355,18 @@ export default async function DashboardPage() {
 
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
-        <div className={`grid gap-2 ${(wellnessStore?.history?.length ?? 0) > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {dailyStreak}</div>
-            <div className="text-muted text-xs mt-1">{dailyStreak === 1 ? 'dag i rad' : 'dagar i rad'}</div>
-          </div>
+        <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div className="bg-card border border-edge rounded-2xl p-4">
             <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {weeklyStreak}</div>
             <div className="text-muted text-xs mt-1">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</div>
           </div>
-          {(wellnessStore?.history?.length ?? 0) > 0 && (
+          {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {stepGoalDaysMet}</div>
+              <div className="font-mono text-accent text-2xl font-bold leading-none">{stepsToday.toLocaleString('sv-SE')}</div>
               <div className="text-muted text-xs mt-1">
-                av {stepGoalDaysElapsed} {stepGoalDaysElapsed === 1 ? 'dag' : 'dagar'} denna vecka
+                steg idag{avgSteps != null && avgSteps > 0 && (
+                  ` · ${stepsToday >= avgSteps ? '+' : ''}${Math.round(((stepsToday - avgSteps) / avgSteps) * 100)}% mot ditt 30-dagarssnitt`
+                )}
               </div>
             </div>
           )}
@@ -388,41 +397,62 @@ export default async function DashboardPage() {
 
       {/* ── Kalorier idag ─────────────────────────────────────────────────────── */}
       {showCalorieCard ? (
-        <div className="bg-card border border-edge rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-muted uppercase tracking-wider">Kalorier idag</div>
-            <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-accent text-2xl font-bold">{eatenToday}</span>
-            <span className="text-muted text-xs">
-              ätit{profile?.daily_calorie_goal ? ` / ${profile.daily_calorie_goal} mål` : ''}
-            </span>
-          </div>
-          {profile?.daily_calorie_goal && (
-            <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
-              <div
-                className="h-full bg-accent rounded-full"
-                style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
-              />
+        <div className={`grid gap-2 ${eatenToday > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-muted uppercase tracking-wider">Förbränt idag</div>
+              {eatenToday === 0 && <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>}
             </div>
-          )}
-          <div className="text-muted text-xs mt-2">
-            {garminCaloriesToday != null ? (
-              <>Förbränt idag (Garmin): {garminCaloriesToday} kcal</>
-            ) : (
-              <>
-                Förbränt (uppskattning): ~{burnedSoFar} kcal · beräknad dygnsförbränning ~{burnedProjected}
-                {bmrResult.usedDefaults.length > 0 && (
-                  <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
-                )}
-              </>
-            )}
+            <div className="flex items-baseline justify-between">
+              <span className="font-mono text-accent text-2xl font-bold">{burnedForNet}</span>
+              <span className="text-muted text-xs">kcal</span>
+            </div>
+            <div className="text-muted text-xs mt-2">
+              {garminCaloriesToday != null ? (
+                'Garmin'
+              ) : (
+                <>
+                  uppskattning
+                  {bmrResult.usedDefaults.length > 0 && (
+                    <> · <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
+                  )}
+                </>
+              )}
+            </div>
           </div>
-          {proteinToday > 0 && (
-            <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
-              <span className="text-muted text-xs">Protein (uppskattat)</span>
-              <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+          {eatenToday > 0 && (
+            <div className="bg-card border border-edge rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-muted uppercase tracking-wider">Netto</div>
+                <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className={`font-mono text-2xl font-bold ${netCalories > 0 ? 'text-amber-500' : 'text-accent'}`}>
+                  {netCalories > 0 ? '+' : ''}{netCalories}
+                </span>
+                <span className="text-muted text-xs">kcal</span>
+              </div>
+              <div className="text-muted text-xs mt-2">
+                {eatenToday} ätit − {burnedForNet} förbränt
+                {netCalories > 0 && ' · ätit mer än förbränt'}
+              </div>
+              {profile?.daily_calorie_goal && (
+                <>
+                  <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full bg-accent rounded-full"
+                      style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
+                </>
+              )}
+              {proteinToday > 0 && (
+                <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
+                  <span className="text-muted text-xs">Protein (uppskattat)</span>
+                  <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+                </div>
+              )}
             </div>
           )}
         </div>
