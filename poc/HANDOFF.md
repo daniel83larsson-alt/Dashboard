@@ -55,7 +55,9 @@ Deklarativt JSON-schema (`from`/`to`/`transform`) — inte fritt kodad logik. S�
 
 ## Azure-tjänster som faktiskt behövs
 
-Functions (stegkörningen), Key Vault (hemligheter per kund), Application Insights (loggning), Blob Storage/App Configuration (mappningarnas körtidskälla + claim-check för async-steget), API Management (framdörr för UAT/Prod), Azure Load Testing, GitHub Actions med OIDC (driftsättning, ingen lagrad hemlighet). Medvetet bortvalt: Logic Apps (samma låg-kod-fälla som gamla iCore-developern), Service Bus/Event Grid (inte nödvändigt vid nuvarande volym).
+Functions (stegkörningen), Key Vault (hemligheter per kund), Application Insights (loggning), Blob Storage/App Configuration (mappningarnas körtidskälla + claim-check för async-steget), API Management (framdörr för UAT/Prod), Azure Load Testing, GitHub Actions med OIDC (driftsättning, ingen lagrad hemlighet). Medvetet bortvalt: Logic Apps (samma låg-kod-fälla som gamla iCore-developern), Service Bus/Event Grid (inte nödvändigt vid nuvarande volym), **Azure Integration Account** (EDI-uppackning stannar i iCore, som redan har den — samma "rör inte det som fungerar"-princip som FTP-hämtningen och förädlingen).
+
+**Återkommande mönster värt att komma ihåg:** innan något nytt flyttas till Azure — fråga först om iCore redan gör det bra. Tre bekräftade exempel: FTP-hämtning, förädling, EDI-uppackning.
 
 ## Konkret pilotexempel som redan är genomtänkt
 

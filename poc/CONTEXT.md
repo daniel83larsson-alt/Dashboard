@@ -25,6 +25,8 @@ den har sin egen `husmanskost-varlden-CONTEXT.md`.
 - **Mappningsportalen** — den visuella list+detalj-vyn över alla mappningar: sökbar, filtrerbar (kund/status/typ), med **Fältvy** (redigerbar tabell) och **Kod/DSL-vy** (JSON-spec, LLM-redigerbar). Mockup: `mapping-portal-mock.html`.
 - **Astro (WMS)** — det konkreta exempelcaset (kund Baltic Freight, ett lager-/WMS-system) som används genomgående för att hålla arkitekturen konkret istället för abstrakt.
 - **Azure Integration Services** — Microsofts namngivna tjänstepaket (Functions, API Management, Logic Apps, Service Bus, Event Grid, Integration Account m.fl.). Verktygslådan för själva stegkörningen — iCore behåller orkestrering, loggning och dispatch oavsett vilka av dem som används. Se `icore-azure-blueprint.html` för vilka som faktiskt valts respektive medvetet valts bort.
+- **EDI-uppackning stannar i iCore** — iCore har redan EDI-hantering (kuvert, kontrollnummer, partner-varianter). Samma princip som FTP-hämtningen och förädlingen: rör inte det som redan fungerar. Azure Integration Account behövs därför sannolikt inte alls — iCore packar upp, Azure tar bara emot det redan uppackade, strukturerade resultatet i samma generiska mappnings-API som allt annat (JSON/XML/EDI konvergerar till samma DSL-motor efter uppackningen).
+- **Återkommande mönster: rör inte det som redan fungerar i iCore.** Tre bekräftade exempel hittills — FTP-hämtning, förädling, EDI-uppackning. Innan nästa steg antas flytta till Azure: fråga om iCore redan gör det bra.
 
 ## Format- och notationsskillnad värd att komma ihåg
 
