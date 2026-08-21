@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>Utred: Visual DSL för vår mappningsmotor</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--teal:#00c9a7;--purple:#7c5cbf;--orange:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --shadow:0 4px 24px rgba(0,0,0,.08);--shadow-lg:0 10px 40px rgba(0,0,0,.14);
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+.mono{font-family:'SF Mono',Consolas,monospace}
+.wrap{max-width:960px;margin:0 auto;padding:0 24px}
+
+.hero{background:var(--navy);color:#fff;padding:60px 0 50px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(30,111,255,.15);color:#7ea8ff;border:1px solid rgba(30,111,255,.35);padding:6px 13px;border-radius:99px;margin-bottom:20px}
+h1.h-title{font-size:clamp(26px,3.8vw,36px);font-weight:800;line-height:1.22;letter-spacing:-.01em;max-width:24ch;text-wrap:balance}
+h1.h-title span{color:var(--teal)}
+.h-sub{font-size:15px;color:#b6c2d9;margin-top:15px;max-width:62ch;line-height:1.6}
+.hero-badge{display:inline-flex;align-items:center;gap:8px;margin-top:24px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:10px 16px;font-size:12.5px;color:#dbe4f5}
+.hero-badge b{color:var(--teal)}
+
+section{padding:46px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:9px}
+h2.s-title{font-size:clamp(19px,2.5vw,24px);font-weight:800;letter-spacing:-.01em;max-width:34ch;text-wrap:balance}
+.s-desc{font-size:14px;color:var(--gray600);margin-top:11px;max-width:70ch;line-height:1.65}
+
+/* concept diagram */
+.diagram{margin-top:22px;background:var(--navy);border-radius:16px;padding:26px 24px;overflow-x:auto}
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:600px}
+.flow-box{background:var(--navy3);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:13px 15px;flex:1;text-align:center}
+.flow-box .fb-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:5px}
+.flow-box .fb-n{font-size:12px;font-weight:700;color:#fff;line-height:1.4}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:15px;padding:0 8px;flex-shrink:0}
+
+/* coexistence table */
+.coex{margin-top:24px;background:var(--white);border:1px solid var(--gray200);border-radius:var(--radius,12px);overflow:hidden;box-shadow:var(--shadow)}
+.coex-row{display:grid;grid-template-columns:1fr 1fr}
+.coex-row+.coex-row{border-top:1px solid var(--gray200)}
+.coex-row.head{background:var(--navy);color:#fff}
+.coex-cell{padding:13px 18px;font-size:12.5px;color:var(--gray600);line-height:1.55;border-left:1px solid var(--gray200)}
+.coex-cell:first-child{border-left:none}
+.coex-row.head .coex-cell{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#fff;border-left-color:rgba(255,255,255,.12)}
+.coex-row.head .coex-cell:nth-child(2){color:#8ee9d4}
+
+/* portal reuse callout */
+.callout{margin-top:24px;background:rgba(0,201,167,.06);border:1px solid rgba(0,201,167,.25);border-radius:12px;padding:20px 22px;display:flex;gap:14px;align-items:flex-start}
+.callout .ci{font-size:22px;flex-shrink:0}
+.callout h4{font-size:13.5px;font-weight:800;margin-bottom:5px}
+.callout p{font-size:13px;color:var(--gray600);line-height:1.6}
+
+/* validated grid */
+.value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+.value-card{padding:18px;border-radius:12px;background:var(--gray50);border:1px solid var(--gray200)}
+.value-card h3{font-size:13px;font-weight:700;margin-bottom:5px}
+.value-card p{font-size:11.5px;color:var(--gray600);line-height:1.5}
+
+/* investigate asks */
+.ask-list{margin-top:26px;display:flex;flex-direction:column;gap:14px}
+.ask-card{display:grid;grid-template-columns:40px 1fr;gap:16px;background:var(--white);border:1px solid var(--gray200);border-radius:12px;padding:18px 20px;box-shadow:var(--shadow)}
+.ask-num{width:40px;height:40px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px}
+.ask-card h3{font-size:14.5px;font-weight:800;margin-bottom:5px}
+.ask-card p{font-size:12.5px;color:var(--gray600);line-height:1.6}
+
+.scope-box{margin-top:24px;background:var(--navy);color:#fff;border-radius:14px;padding:24px 26px}
+.scope-box h4{font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:8px}
+.scope-box p{font-size:13.5px;color:#dbe4f5;line-height:1.65}
+.scope-box p b{color:#fff}
+
+.cta{background:var(--navy);color:#fff;padding:50px 0;text-align:center}
+.cta h2{font-size:20px;font-weight:800;margin-bottom:9px}
+.cta p{color:#b6c2d9;font-size:13.5px;max-width:58ch;margin:0 auto}
+
+@media (max-width:700px){
+  .value-grid{grid-template-columns:1fr}
+  .coex-row{grid-template-columns:1fr}
+  .coex-cell{border-left:none;border-top:1px solid var(--gray200)}
+  .coex-cell:first-child{border-top:none}
+  .ask-card{grid-template-columns:32px 1fr}
+  .ask-num{width:32px;height:32px;font-size:13px}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Utredningsförfrågan · Inte ett byggbeslut</div>
+    <h1 class="h-title">En Visual DSL <span>ovanpå</span> vår mappningsmotor — värt att utreda?</h1>
+    <p class="h-sub">Ett textbaserat, git-versionerat sätt att bygga mappningar, med ett visuellt gränssnitt ovanpå. Inte en ersättning av vårt nuvarande verktyg — en snabbare väg för en del av jobbet, sida vid sida med det vi redan har.</p>
+    <div class="hero-badge">Det här är en <b>fråga</b>, inte ett direktiv — tre konkreta saker vi vill att R&D tittar på innan något beslutas.</div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Konceptet</div>
+    <h2 class="s-title">Mappningslogik som text, ett gränssnitt ovanpå</h2>
+    <p class="s-desc">Mappningar sparas som ett litet, textbaserat schema (JSON) — versionerat i git, testbart, läsbart för både människor och AI-verktyg. Ett grafiskt lager (byggt på ett etablerat bibliotek, t.ex. React Flow) sitter ovanpå för den som vill jobba visuellt. Connectors rörs inte — de fungerar redan och ligger helt utanför det här.</p>
+    <div class="diagram">
+      <div class="flow-row">
+        <div class="flow-box"><div class="fb-t">Visuellt lager</div><div class="fb-n">Drag-and-drop-gränssnitt</div></div>
+        <div class="flow-arrow">↕</div>
+        <div class="flow-box"><div class="fb-t">Textformat</div><div class="fb-n">DSL som ren, versionerad JSON</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">Exekveringsmotor</div><div class="fb-n">Kör mappningen, frikopplad från gränssnittet</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Ersätter inte, kompletterar</div>
+    <h2 class="s-title">Vårt nuvarande verktyg fortsätter fungera</h2>
+    <div class="coex">
+      <div class="coex-row head">
+        <div class="coex-cell">Nuvarande verktyg</div>
+        <div class="coex-cell">Visual DSL (utredning)</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Kör vidare precis som idag — inget tvång att migrera</div>
+        <div class="coex-cell">En snabbare väg för de mappningar där det passar</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Bevisad, känd, inga överraskningar</div>
+        <div class="coex-cell">Textbaserat → går att versionera, testa och AI-assistera</div>
+      </div>
+      <div class="coex-row">
+        <div class="coex-cell">Befintliga kunders mappningar orörda</div>
+        <div class="coex-cell">Väljs in per ny mappning, inte ett storbang-byte</div>
+      </div>
+    </div>
+
+    <div class="callout">
+      <div class="ci">💡</div>
+      <div>
+        <h4>Behöver troligen inte en ny portal</h4>
+        <p>Vi har redan en portal som körs i Azure idag. Det visuella DSL-lagret skulle kunna byggas in <b>där</b> istället för att bli en ny, fristående yta — mindre nytt att driftsätta, mindre nytt för användare att lära sig, och en fråga R&D snabbt kan svara på: passar det in i den portalens nuvarande arkitektur eller inte?</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Redan genomtänkt</div>
+    <h2 class="s-title">Det här är inte helt obeprövad mark</h2>
+    <p class="s-desc">Grundprinciperna är redan validerade i ett angränsat internt spår vi jobbat igenom:</p>
+    <div class="value-grid">
+      <div class="value-card"><h3>DSL i git</h3><p>Mappningar som versionerad text, inte gömda i en databas eller ett proprietärt format.</p></div>
+      <div class="value-card"><h3>Frikopplad exekvering</h3><p>Motorn kör mappningar oberoende av om gränssnittet ens är öppet — snabbt och resurssnålt hos kund.</p></div>
+      <div class="value-card"><h3>Etablerade bibliotek</h3><p>Det visuella lagret byggs inte från grunden — färdiga, beprövade flödesbibliotek gör den delen billig.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Vad vi ber R&D titta på</div>
+    <h2 class="s-title">Tre frågor, inte ett åtagande</h2>
+    <div class="ask-list">
+      <div class="ask-card">
+        <div class="ask-num">1</div>
+        <div><h3>Migreringsväg</h3><p>Går befintliga kunders mappningar att konvertera automatiskt till den nya DSL:en, eller kräver det ett manuellt ombygge per kund? Avgör både kostnad och hur mycket friktion befintliga kunder känner av.</p></div>
+      </div>
+      <div class="ask-card">
+        <div class="ask-num">2</div>
+        <div><h3>Målgrupp</h3><p>Är det i första hand ett verktyg för vårt eget team (snabbare leverans till kund), eller ska kunder själva kunna bygga mappningar (självbetjäning)? Olika säkerhets- och UX-krav beroende på svaret.</p></div>
+      </div>
+      <div class="ask-card">
+        <div class="ask-num">3</div>
+        <div><h3>Var det ska bo</h3><p>Passar det visuella lagret in i vår befintliga Azure-portal, eller kräver det en egen yta? Avgör hur mycket nytt som faktiskt behöver byggas och driftsättas.</p></div>
+      </div>
+    </div>
+
+    <div class="scope-box">
+      <h4>Konkret ask</h4>
+      <p>Inte ett fullt åtagande att bygga — en <b>liten, avgränsad teknisk utredning</b> (spike) för att ge svar på de tre frågorna ovan. Beslut om att bygga vidare tas efter det, med de svaren som underlag.</p>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>Tre frågor. En liten utredning. Inget stort beslut än.</h2>
+    <p>Målet just nu är att veta om det här är värt att bygga vidare på — inte att bestämma det redan idag.</p>
+  </div>
+</div>
+
+</body>
+</html>
