@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0"/>
+<title>En egen DSL-mappningsstudio</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#0d1b2a;--navy2:#162032;--navy3:#1e2d42;
+  --blue:#1e6fff;--teal:#00c9a7;--purple:#7c5cbf;--orange:#f59e0b;--red:#ef4444;--green:#22c55e;
+  --white:#ffffff;--gray50:#f8fafc;--gray100:#f1f5f9;--gray200:#e2e8f0;
+  --gray400:#94a3b8;--gray600:#475569;--gray800:#1e293b;
+  --shadow:0 4px 24px rgba(0,0,0,.08);--shadow-lg:0 10px 40px rgba(0,0,0,.14);
+}
+html,body{background:var(--gray50);color:var(--navy);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+body{line-height:1.55}
+.mono{font-family:'SF Mono',Consolas,monospace}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+
+.hero{background:var(--navy);color:#fff;padding:64px 0 52px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.hero .wrap{position:relative}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;background:rgba(0,201,167,.13);color:#5be6cd;border:1px solid rgba(0,201,167,.35);padding:6px 13px;border-radius:99px;margin-bottom:22px}
+h1.h-title{font-size:clamp(27px,4vw,38px);font-weight:800;line-height:1.2;letter-spacing:-.01em;max-width:22ch;text-wrap:balance}
+h1.h-title span{color:var(--teal)}
+.h-sub{font-size:15.5px;color:#b6c2d9;margin-top:16px;max-width:62ch;line-height:1.6}
+.hero-stats{display:flex;gap:32px;margin-top:32px;flex-wrap:wrap}
+.hs-num{font-size:21px;font-weight:800;color:var(--teal)}
+.hs-lbl{font-size:11.5px;color:#93a3bf;margin-top:2px;max-width:22ch}
+
+section{padding:48px 0}
+section.alt{background:var(--white)}
+.s-eyebrow{font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--blue);margin-bottom:9px}
+h2.s-title{font-size:clamp(20px,2.6vw,25px);font-weight:800;letter-spacing:-.01em;max-width:32ch;text-wrap:balance}
+.s-desc{font-size:14px;color:var(--gray600);margin-top:11px;max-width:68ch;line-height:1.65}
+
+/* value grid */
+.value-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:26px}
+.value-card{padding:19px;border-radius:12px;background:var(--gray50);border:1px solid var(--gray200)}
+.value-card .vc-icon{width:30px;height:30px;border-radius:8px;background:rgba(0,201,167,.12);color:var(--teal);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;margin-bottom:10px}
+.value-card h3{font-size:13.5px;font-weight:700;margin-bottom:5px}
+.value-card p{font-size:12px;color:var(--gray600);line-height:1.55}
+
+/* workflow */
+.flow-row{display:flex;align-items:stretch;gap:0;min-width:640px;margin-top:22px}
+.flow-box{background:var(--navy3);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:13px 15px;flex:1;text-align:center}
+.flow-box .fb-t{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--teal);margin-bottom:5px}
+.flow-box .fb-n{font-size:12px;font-weight:700;color:#fff;line-height:1.4}
+.flow-arrow{display:flex;align-items:center;justify-content:center;color:#5b6f8f;font-size:15px;padding:0 7px;flex-shrink:0}
+.diagram{background:var(--navy);border-radius:16px;padding:26px 24px;overflow-x:auto}
+
+/* performance stats */
+.perf-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:24px}
+.perf-card{background:var(--white);border:1px solid var(--gray200);border-radius:12px;padding:20px;text-align:center;box-shadow:var(--shadow)}
+.perf-card .pf-num{font-size:26px;font-weight:800;color:var(--navy)}
+.perf-card .pf-lbl{font-size:11.5px;color:var(--gray600);margin-top:6px;line-height:1.5}
+
+/* honesty / downsides */
+.risk-list{margin-top:24px;display:flex;flex-direction:column;gap:10px}
+.risk-row{display:grid;grid-template-columns:1fr 1fr;gap:0;background:var(--white);border:1px solid var(--gray200);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+.risk-cell{padding:15px 18px;font-size:12.5px;line-height:1.55}
+.risk-cell.problem{color:var(--gray800);border-right:1px solid var(--gray200)}
+.risk-cell.problem b{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--red);margin-bottom:5px}
+.risk-cell.fix{color:var(--gray600)}
+.risk-cell.fix b{display:block;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.4px;color:var(--green);margin-bottom:5px}
+
+/* same-cloud callout */
+.callout{margin-top:22px;background:rgba(30,111,255,.06);border:1px solid rgba(30,111,255,.2);border-radius:12px;padding:18px 20px;display:flex;gap:14px;align-items:flex-start}
+.callout .ci{font-size:20px;flex-shrink:0}
+.callout p{font-size:13px;color:var(--gray600);line-height:1.6}
+.callout p b{color:var(--navy)}
+
+.cta{background:var(--navy);color:#fff;padding:52px 0;text-align:center}
+.cta h2{font-size:21px;font-weight:800;margin-bottom:9px}
+.cta p{color:#b6c2d9;font-size:13.5px;max-width:56ch;margin:0 auto}
+
+@media (max-width:700px){
+  .value-grid,.perf-grid{grid-template-columns:1fr}
+  .risk-row{grid-template-columns:1fr}
+  .risk-cell.problem{border-right:none;border-bottom:1px solid var(--gray200)}
+}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Internt förslag · DSL-mappningsstudio för iCore</div>
+    <h1 class="h-title">Mappningar på minuter, <span>inte dagar</span></h1>
+    <p class="h-sub">Ett enklare, visuellt verktyg som snabbt översätter en fil till en annan — jackar in i hur vi jobbar idag, hostat i samma Azure-miljö som iCore redan kör i.</p>
+    <div class="hero-stats">
+      <div><div class="hs-num">1 API</div><div class="hs-lbl">samma generiska anrop för alla mappningar</div></div>
+      <div><div class="hs-num">ms</div><div class="hs-lbl">själva översättningen — inte sekunder</div></div>
+      <div><div class="hs-num">Samma moln</div><div class="hs-lbl">iCore och studion i Azure, ingen omväg mellan moln</div></div>
+    </div>
+  </div>
+</div>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Varför</div>
+    <h2 class="s-title">Vad vi faktiskt vinner</h2>
+    <div class="value-grid">
+      <div class="value-card"><div class="vc-icon">S</div><h3>Snabbare att bygga</h3><p>En mappning är ett litet JSON-schema, inte handskriven kod från grunden — går att skriva eller ändra på minuter.</p></div>
+      <div class="value-card"><div class="vc-icon">V</div><h3>Visuellt tydligt</h3><p>Käll- och målfält, och exakt vilken regel som gäller mellan dem, synligt direkt — ingen gissning, ingen dold logik.</p></div>
+      <div class="value-card"><div class="vc-icon">A</div><h3>Ett enkelt API</h3><p>Samma anropsform för alla mappningar. Jackar in i det arbetssätt vi redan har, inget nytt att lära om för varje ny integration.</p></div>
+      <div class="value-card"><div class="vc-icon">M</div><h3>Samma moln som iCore</h3><p>iCore ligger redan i Azure — studion och motorn kan bo där också. Ingen trafik som korsar molnleverantörer, enklare nätverk och identitet.</p></div>
+      <div class="value-card"><div class="vc-icon">V2</div><h3>Versionerat på riktigt</h3><p>Varje ändring går genom git — vem, vad, när. Något gamla verktyget aldrig kunnat visa.</p></div>
+      <div class="value-card"><div class="vc-icon">T</div><h3>Testat innan aktiverat</h3><p>En ny mappning bevisas mot exempeldata innan den rör en enda riktig order.</p></div>
+    </div>
+
+    <div class="callout">
+      <div class="ci">☁️</div>
+      <p><b>Eftersom iCore redan ligger i Azure</b> slipper studion och mappningsmotorn korsa en molngräns för att prata med iCore — samma nätverk, samma identitetshantering går att återanvända. Det är en genväg vi får gratis, inte något vi behöver bygga extra för.</p>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Hur enkelt det är</div>
+    <h2 class="s-title">Från idé till aktiv mappning</h2>
+    <p class="s-desc">Fem steg, samma oavsett om en person eller en LLM gör jobbet.</p>
+    <div class="diagram">
+      <div class="flow-row">
+        <div class="flow-box"><div class="fb-t">1 · Studio</div><div class="fb-n">Mappa fält visuellt</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">2 · Git</div><div class="fb-n">Sparas som en commit</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">3 · Test</div><div class="fb-n">Mot exempeldata</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">4 · Godkänn</div><div class="fb-n">En människa klickar aktiv</div></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><div class="fb-t">5 · Live</div><div class="fb-n">iCore anropar direkt</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="s-eyebrow">Prestanda</div>
+    <h2 class="s-title">Lätt att köra, inte bara lätt att bygga</h2>
+    <p class="s-desc">Mappningsmotorn tolkar ett litet regel-schema — fält in, fält ut. Ingen tung logik, ingen stor beräkning. Det håller den snabb och billig, inte bara enkel att ändra.</p>
+    <div class="perf-grid">
+      <div class="perf-card"><div class="pf-num">Millisekunder</div><div class="pf-lbl">per mappning — jämförbart med enkel JSON-transformering, inte en tung process</div></div>
+      <div class="perf-card"><div class="pf-num">Auto-skalning</div><div class="pf-lbl">Azure Functions skalar per anrop — ingen kapacitetsplanering krävs vid vår volym</div></div>
+      <div class="perf-card"><div class="pf-num">Nära gratis</div><div class="pf-lbl">Generöst gratis-tak för antal anrop/månad vid B2B-ordervolymer, inte högfrekvent trafik</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="alt">
+  <div class="wrap">
+    <div class="s-eyebrow">Ärligt räknat</div>
+    <h2 class="s-title">Nackdelarna, och hur vi håller dem i schack</h2>
+    <p class="s-desc">Ingen idé är gratis. Här är den seriösa listan — inte bara en fördelslista utan en motpart.</p>
+    <div class="risk-list">
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Vi blir ett litet produktteam för verktyget, inte bara integrationsutvecklare.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>Håll scopet till ett enda jobb — mappa fält. Inget mer.</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Färdiga verktyg för visuell mappning finns redan på marknaden.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>Vår motivering är specifik: LLM-kompatibilitet och git-versionering, inte "inget liknande finns".</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Störst risk: att DSL:en sväller till ett eget litet programmeringsspråk.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>All riktig logik (beräkningar, regler) hör hemma i förädlingssteget, aldrig i mappnings-DSL:en. Ingen undantag.</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Bara vi känner till vårt eget verktyg — ingen extern dokumentation eller community.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>Ett levande instruktions- och begreppsdokument i repot, hållet uppdaterat löpande — inte skrivet en gång och glömt.</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Byggtiden ligger före vinsten — det går långsammare innan det går snabbare.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>Bevisa med en enda pilot-integration innan resten av portföljen flyttas över.</div>
+      </div>
+      <div class="risk-row">
+        <div class="risk-cell problem"><b>Problem</b>Ny infrastruktur = ny yta att säkra och övervaka.</div>
+        <div class="risk-cell fix"><b>Hur vi håller det i schack</b>Egen nyckel per kund, minsta möjliga rättighet, samma gransknings-gate som allt annat innan produktion.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="cta">
+  <div class="wrap">
+    <h2>En pilot. Ett verktyg. Ärligt räknat.</h2>
+    <p>Inte ett löfte om att allt blir enkelt — ett verktyg byggt smalt nog att faktiskt hålla det löftet där det räknas: en mappning i taget.</p>
+  </div>
+</div>
+
+</body>
+</html>
