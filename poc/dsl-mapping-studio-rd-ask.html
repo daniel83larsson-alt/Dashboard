@@ -97,7 +97,7 @@ h2.s-title{font-size:clamp(19px,2.5vw,24px);font-weight:800;letter-spacing:-.01e
     <div class="eyebrow">Utredningsförfrågan · Inte ett byggbeslut</div>
     <h1 class="h-title">En Visual DSL <span>ovanpå</span> vår mappningsmotor — värt att utreda?</h1>
     <p class="h-sub">Ett textbaserat, git-versionerat sätt att bygga mappningar, med ett visuellt gränssnitt ovanpå. Inte en ersättning av vårt nuvarande verktyg — en snabbare väg för en del av jobbet, sida vid sida med det vi redan har.</p>
-    <div class="hero-badge">Det här är en <b>fråga</b>, inte ett direktiv — tre konkreta saker vi vill att R&D tittar på innan något beslutas.</div>
+    <div class="hero-badge">Det här är en <b>fråga</b>, inte ett direktiv — två konkreta saker vi vill att R&D tittar på innan något beslutas.</div>
   </div>
 </div>
 
@@ -142,10 +142,18 @@ h2.s-title{font-size:clamp(19px,2.5vw,24px);font-weight:800;letter-spacing:-.01e
     </div>
 
     <div class="callout">
+      <div class="ci">✅</div>
+      <div>
+        <h4>Inget migreringsbehov</h4>
+        <p>Befintliga mappningar rörs inte — de kör vidare precis där de är idag, i det verktyg som redan finns. Det nya blir en helt separat, additiv tjänst: ett API som tar emot en fil, mappar den, och svarar tillbaka med den översatta filen. Väljs in per ny mappning, aldrig ett tvunget byte för det som redan fungerar.</p>
+      </div>
+    </div>
+
+    <div class="callout" style="margin-top:14px">
       <div class="ci">💡</div>
       <div>
-        <h4>Behöver troligen inte en ny portal</h4>
-        <p>Vi har redan en portal som körs i Azure idag. Det visuella DSL-lagret skulle kunna byggas in <b>där</b> istället för att bli en ny, fristående yta — mindre nytt att driftsätta, mindre nytt för användare att lära sig, och en fråga R&D snabbt kan svara på: passar det in i den portalens nuvarande arkitektur eller inte?</p>
+        <h4>En egen tjänst, men troligen inte en ny portal</h4>
+        <p><b>API:et och exekveringsmotorn blir sin egen, fristående tjänst</b> — frikopplad, enkel att driftsätta och skala oberoende av allt annat. Det <b>visuella lagret</b> är en separat fråga: vi har redan en portal som körs i Azure idag, och det skulle kunna byggas in <b>där</b> istället för att bli en ny yta att lära sig — mindre nytt att driftsätta för samma nytta. Egen tjänst på backend-sidan behöver inte betyda en ny front-end.</p>
       </div>
     </div>
   </div>
@@ -155,7 +163,7 @@ h2.s-title{font-size:clamp(19px,2.5vw,24px);font-weight:800;letter-spacing:-.01e
   <div class="wrap">
     <div class="s-eyebrow">Redan genomtänkt</div>
     <h2 class="s-title">Det här är inte helt obeprövad mark</h2>
-    <p class="s-desc">Grundprinciperna är redan validerade i ett angränsat internt spår vi jobbat igenom:</p>
+    <p class="s-desc">Grundprinciperna är redan validerade i ett angränsat internt spår vi jobbat igenom — kontraktet (fil in, mappad fil ut, samma format för alla mappningar) finns redan kodat och testat, inte bara skissat:</p>
     <div class="value-grid">
       <div class="value-card"><h3>DSL i git</h3><p>Mappningar som versionerad text, inte gömda i en databas eller ett proprietärt format.</p></div>
       <div class="value-card"><h3>Frikopplad exekvering</h3><p>Motorn kör mappningar oberoende av om gränssnittet ens är öppet — snabbt och resurssnålt hos kund.</p></div>
@@ -167,32 +175,29 @@ h2.s-title{font-size:clamp(19px,2.5vw,24px);font-weight:800;letter-spacing:-.01e
 <section class="alt">
   <div class="wrap">
     <div class="s-eyebrow">Vad vi ber R&D titta på</div>
-    <h2 class="s-title">Tre frågor, inte ett åtagande</h2>
+    <h2 class="s-title">Två frågor kvar, inte ett åtagande</h2>
+    <p class="s-desc">Migreringsfrågan är redan avklarad ovan — inget migreringsbehov, det är en additiv tjänst. Kvar att utreda:</p>
     <div class="ask-list">
       <div class="ask-card">
         <div class="ask-num">1</div>
-        <div><h3>Migreringsväg</h3><p>Går befintliga kunders mappningar att konvertera automatiskt till den nya DSL:en, eller kräver det ett manuellt ombygge per kund? Avgör både kostnad och hur mycket friktion befintliga kunder känner av.</p></div>
-      </div>
-      <div class="ask-card">
-        <div class="ask-num">2</div>
         <div><h3>Målgrupp</h3><p>Är det i första hand ett verktyg för vårt eget team (snabbare leverans till kund), eller ska kunder själva kunna bygga mappningar (självbetjäning)? Olika säkerhets- och UX-krav beroende på svaret.</p></div>
       </div>
       <div class="ask-card">
-        <div class="ask-num">3</div>
-        <div><h3>Var det ska bo</h3><p>Passar det visuella lagret in i vår befintliga Azure-portal, eller kräver det en egen yta? Avgör hur mycket nytt som faktiskt behöver byggas och driftsättas.</p></div>
+        <div class="ask-num">2</div>
+        <div><h3>Var det visuella lagret ska bo</h3><p>Passar det in i vår befintliga Azure-portal, eller kräver det en egen yta? API:et och motorn blir en egen tjänst oavsett — frågan gäller bara var gränssnittet syns. Avgör hur mycket nytt som faktiskt behöver driftsättas.</p></div>
       </div>
     </div>
 
     <div class="scope-box">
       <h4>Konkret ask</h4>
-      <p>Inte ett fullt åtagande att bygga — en <b>liten, avgränsad teknisk utredning</b> (spike) för att ge svar på de tre frågorna ovan. Beslut om att bygga vidare tas efter det, med de svaren som underlag.</p>
+      <p>Inte ett fullt åtagande att bygga — en <b>liten, avgränsad teknisk utredning</b> (spike) för att ge svar på de två frågorna ovan. Beslut om att bygga vidare tas efter det, med de svaren som underlag.</p>
     </div>
   </div>
 </section>
 
 <div class="cta">
   <div class="wrap">
-    <h2>Tre frågor. En liten utredning. Inget stort beslut än.</h2>
+    <h2>Två frågor. En liten utredning. Inget stort beslut än.</h2>
     <p>Målet just nu är att veta om det här är värt att bygga vidare på — inte att bestämma det redan idag.</p>
   </div>
 </div>
