@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Styrelserummet — POC för BRF-styrelser</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8F%A2%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#f3f1ec; --card:#ffffff; --card-2:#ece8de; --edge:#e0dbcf;
+    --fg:#22201b; --muted:#726c60;
+    --accent:#2c3e6b; --accent-strong:#1f2c4d; --on-accent:#f4f6fb;
+    --gold:#b8863a; --gold-bg:#fbf1de;
+    --good:#2f7d5c; --good-bg:#e7f3ec;
+    --bad:#b2453a; --bad-bg:#fbeae8;
+    --shadow:0 1px 2px rgba(30,25,15,.06), 0 8px 24px -12px rgba(30,25,15,.18);
+    --serif:"Fraunces", Georgia, serif;
+    --sans:"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#141519; --card:#1c1e24; --card-2:#22252c; --edge:#31343d;
+      --fg:#eceef2; --muted:#9298a3;
+      --accent:#7a8fd4; --accent-strong:#93a5df; --on-accent:#10131c;
+      --gold:#e0ac57; --gold-bg:#332a17;
+      --good:#5cbf94; --good-bg:#173226;
+      --bad:#e08277; --bad-bg:#3a1e1c;
+      --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--fg);font-family:var(--sans);}
+  body{-webkit-font-smoothing:antialiased;}
+  h1,h2,h3,.brand{font-family:var(--serif);}
+  a{color:inherit}
+  button{font-family:inherit}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 1.5rem;}
+
+  /* ── Demo banner ─────────────────────────────────────────────── */
+  .demo-banner{background:var(--accent-strong);color:var(--on-accent);font-size:.8rem;text-align:center;padding:.5rem 1rem;}
+  .demo-banner b{font-weight:600}
+
+  /* ── Topbar ──────────────────────────────────────────────────── */
+  .topbar{background:var(--card);border-bottom:1px solid var(--edge);position:sticky;top:0;z-index:30;}
+  .topbar-inner{display:flex;align-items:center;justify-content:space-between;padding:.9rem 0;gap:1rem;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:.6rem;font-size:1.3rem;font-weight:600;color:var(--fg);}
+  .brand .mark{width:2.1rem;height:2.1rem;border-radius:.6rem;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
+  .brand .sub{font-family:var(--sans);font-size:.72rem;color:var(--muted);font-weight:500;display:block;margin-top:.1rem;}
+  .topbar-right{display:flex;align-items:center;gap:.75rem;}
+  .assoc-pill{font-size:.78rem;color:var(--muted);background:var(--card-2);border:1px solid var(--edge);padding:.35rem .7rem;border-radius:999px;}
+  .role-switch{position:relative;}
+  .role-btn{display:flex;align-items:center;gap:.55rem;background:var(--card-2);border:1px solid var(--edge);border-radius:999px;padding:.35rem .5rem .35rem .35rem;cursor:pointer;font-size:.82rem;color:var(--fg);}
+  .role-avatar{width:1.9rem;height:1.9rem;border-radius:50%;background:var(--accent);color:var(--on-accent);display:flex;align-items:center;justify-content:center;font-weight:600;font-size:.78rem;flex-shrink:0;}
+  .role-menu{display:none;position:absolute;right:0;top:calc(100% + .4rem);background:var(--card);border:1px solid var(--edge);border-radius:.8rem;box-shadow:var(--shadow);min-width:230px;overflow:hidden;z-index:40;}
+  .role-menu.open{display:block;}
+  .role-opt{display:flex;flex-direction:column;gap:.1rem;padding:.7rem .9rem;cursor:pointer;border-bottom:1px solid var(--edge);}
+  .role-opt:last-child{border-bottom:none;}
+  .role-opt:hover{background:var(--card-2);}
+  .role-opt.active{background:var(--gold-bg);}
+  .role-opt strong{font-size:.85rem;}
+  .role-opt span{font-size:.72rem;color:var(--muted);}
+
+  /* ── Nav tabs ────────────────────────────────────────────────── */
+  .tabbar{background:var(--card);border-bottom:1px solid var(--edge);position:sticky;top:0;z-index:25;}
+  .tabbar-inner{display:flex;gap:.25rem;overflow-x:auto;}
+  .tab-btn{border:none;background:none;padding:.85rem 1rem;font-size:.88rem;font-weight:500;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;display:flex;align-items:center;gap:.45rem;}
+  .tab-btn:hover{color:var(--fg);}
+  .tab-btn.active{color:var(--accent);border-bottom-color:var(--accent);}
+  .tab-badge{background:var(--gold);color:#241a06;font-size:.68rem;font-weight:700;border-radius:999px;padding:.05rem .42rem;}
+
+  main{padding:2rem 0 4rem;}
+  .page-title{font-size:1.5rem;font-weight:600;margin:0 0 .3rem;}
+  .page-desc{color:var(--muted);font-size:.92rem;margin:0 0 1.6rem;max-width:640px;}
+
+  /* ── Cards / grid ────────────────────────────────────────────── */
+  .grid{display:grid;gap:1rem;}
+  .kpi-grid{grid-template-columns:repeat(auto-fit,minmax(200px,1fr));margin-bottom:1.5rem;}
+  .card{background:var(--card);border:1px solid var(--edge);border-radius:1rem;padding:1.25rem;box-shadow:var(--shadow);}
+  .kpi-card .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);margin-bottom:.5rem;}
+  .kpi-card .value{font-size:1.7rem;font-weight:700;font-family:var(--serif);}
+  .kpi-card .hint{font-size:.78rem;color:var(--muted);margin-top:.3rem;}
+  .kpi-card.attention{border-color:var(--gold);}
+  .kpi-card.attention .value{color:var(--gold);}
+
+  .section-head{display:flex;align-items:center;justify-content:space-between;margin:2rem 0 .9rem;flex-wrap:wrap;gap:.6rem;}
+  .section-head h2{font-size:1.05rem;font-weight:600;margin:0;}
+  .btn{border:none;border-radius:.6rem;padding:.55rem 1rem;font-size:.85rem;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:.4rem;}
+  .btn-primary{background:var(--accent);color:var(--on-accent);}
+  .btn-primary:hover{background:var(--accent-strong);}
+  .btn-secondary{background:var(--card-2);color:var(--fg);border:1px solid var(--edge);}
+  .btn-secondary:hover{background:var(--edge);}
+  .btn-good{background:var(--good);color:#fff;}
+  .btn-bad{background:var(--bad);color:#fff;}
+  .btn-sm{padding:.4rem .75rem;font-size:.78rem;}
+  .btn:disabled{opacity:.45;cursor:not-allowed;}
+  .btn-block{width:100%;justify-content:center;}
+
+  .list-card{padding:0;overflow:hidden;}
+  .row{display:flex;align-items:center;gap:1rem;padding:.9rem 1.25rem;border-bottom:1px solid var(--edge);cursor:pointer;}
+  .row:last-child{border-bottom:none;}
+  .row:hover{background:var(--card-2);}
+  .row-main{flex:1;min-width:0;}
+  .row-title{font-weight:600;font-size:.92rem;}
+  .row-sub{font-size:.78rem;color:var(--muted);margin-top:.15rem;}
+  .row-amount{font-family:var(--serif);font-weight:600;font-size:1.02rem;white-space:nowrap;}
+
+  .badge{font-size:.7rem;font-weight:600;border-radius:999px;padding:.25rem .6rem;white-space:nowrap;}
+  .badge-utkast{background:var(--card-2);color:var(--muted);border:1px solid var(--edge);}
+  .badge-vantar{background:var(--gold-bg);color:var(--gold);}
+  .badge-attesterad{background:var(--good-bg);color:var(--good);}
+  .badge-betald{background:var(--good-bg);color:var(--good);}
+  .badge-avvisad{background:var(--bad-bg);color:var(--bad);}
+
+  .filter-row{display:flex;gap:.4rem;margin-bottom:1rem;flex-wrap:wrap;}
+  .filter-chip{border:1px solid var(--edge);background:var(--card);border-radius:999px;padding:.4rem .85rem;font-size:.8rem;cursor:pointer;color:var(--muted);}
+  .filter-chip.active{background:var(--accent);border-color:var(--accent);color:var(--on-accent);}
+
+  .empty{padding:2.5rem 1.25rem;text-align:center;color:var(--muted);font-size:.88rem;}
+
+  .role-hint{background:var(--gold-bg);border:1px solid color-mix(in srgb, var(--gold) 45%, transparent);color:var(--gold);border-radius:.75rem;padding:.75rem 1rem;font-size:.82rem;margin-bottom:1.2rem;display:flex;align-items:center;gap:.6rem;}
+
+  /* ── Modal ───────────────────────────────────────────────────── */
+  .overlay{position:fixed;inset:0;background:rgba(20,17,10,.45);display:none;align-items:flex-start;justify-content:center;padding:4vh 1rem;overflow-y:auto;z-index:50;}
+  .overlay.open{display:flex;}
+  .modal{background:var(--card);border-radius:1.1rem;max-width:560px;width:100%;box-shadow:var(--shadow);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:1px solid var(--edge);}
+  .modal-head h3{margin:0;font-size:1.1rem;}
+  .modal-close{border:none;background:none;font-size:1.2rem;cursor:pointer;color:var(--muted);line-height:1;padding:.2rem;}
+  .modal-body{padding:1.3rem 1.4rem;}
+  .modal-foot{padding:1rem 1.4rem 1.3rem;display:flex;gap:.6rem;justify-content:flex-end;flex-wrap:wrap;}
+
+  .field{margin-bottom:1rem;}
+  .field label{display:block;font-size:.78rem;color:var(--muted);margin-bottom:.35rem;font-weight:500;}
+  .field input,.field select,.field textarea{width:100%;background:var(--bg);border:1px solid var(--edge);border-radius:.55rem;padding:.55rem .7rem;font-size:.88rem;color:var(--fg);font-family:inherit;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+
+  .detail-row{display:flex;justify-content:space-between;padding:.55rem 0;border-bottom:1px solid var(--edge);font-size:.86rem;}
+  .detail-row:last-child{border-bottom:none;}
+  .detail-row .k{color:var(--muted);}
+  .detail-row .v{font-weight:600;text-align:right;}
+
+  .timeline{margin-top:1rem;padding-top:1rem;border-top:1px solid var(--edge);}
+  .timeline-item{display:flex;gap:.7rem;font-size:.8rem;padding:.35rem 0;}
+  .timeline-dot{width:.5rem;height:.5rem;border-radius:50%;background:var(--accent);margin-top:.35rem;flex-shrink:0;}
+  .timeline-item .t-when{color:var(--muted);white-space:nowrap;}
+
+  /* ── Members / documents ────────────────────────────────────── */
+  .table{width:100%;border-collapse:collapse;font-size:.86rem;}
+  .table th{text-align:left;font-size:.7rem;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);padding:0 1rem .6rem;font-weight:600;}
+  .table td{padding:.75rem 1rem;border-top:1px solid var(--edge);}
+  .table tr:hover td{background:var(--card-2);}
+  .doc-grid{grid-template-columns:repeat(auto-fill,minmax(230px,1fr));}
+  .doc-card{display:flex;gap:.8rem;align-items:flex-start;}
+  .doc-icon{width:2.4rem;height:2.4rem;border-radius:.6rem;background:var(--card-2);display:flex;align-items:center;justify-content:center;font-size:1.15rem;flex-shrink:0;}
+  .doc-name{font-weight:600;font-size:.88rem;}
+  .doc-meta{font-size:.74rem;color:var(--muted);margin-top:.15rem;}
+
+  .roadmap-note{margin-top:2.5rem;padding:1.1rem 1.3rem;border:1px dashed var(--edge);border-radius:1rem;font-size:.82rem;color:var(--muted);}
+  .roadmap-note b{color:var(--fg);}
+
+  @media (max-width:640px){
+    .field-row{grid-template-columns:1fr;}
+    .brand{font-size:1.1rem;}
+  }
+</style>
+</head>
+<body>
+
+<div class="demo-banner">🧪 <b>Klickbar prototyp</b> — ingen data sparas, allt återställs om du laddar om sidan. Byggd för att testa idén, inte skarp produkt.</div>
+
+<header class="topbar">
+  <div class="wrap topbar-inner">
+    <div class="brand"><span class="mark">🏢</span><div><span>Styrelserummet</span><span class="sub">Ekonomi & attestering för BRF-styrelser</span></div></div>
+    <div class="topbar-right">
+      <span class="assoc-pill">BRF Fyrklövern</span>
+      <div class="role-switch">
+        <button class="role-btn" id="roleBtn">
+          <span class="role-avatar" id="roleAvatar">AS</span>
+          <span id="roleLabel">Anna Sjöberg · Kassör</span>
+          <span>▾</span>
+        </button>
+        <div class="role-menu" id="roleMenu">
+          <div class="role-opt" data-role="kassor"><strong>Anna Sjöberg</strong><span>Kassör — registrerar & betalar fakturor</span></div>
+          <div class="role-opt" data-role="ordforande"><strong>Mikael Lindqvist</strong><span>Ordförande — attesterar fakturor</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<nav class="tabbar">
+  <div class="wrap tabbar-inner" id="tabbar"></div>
+</nav>
+
+<main class="wrap" id="app"></main>
+
+<div class="overlay" id="overlay">
+  <div class="modal" id="modalContent"></div>
+</div>
+
+<script>
+(function(){
+
+  // ── Mock data (allt hittepå, ingen riktig förening eller person) ──
+  var boardNames = { kassor: 'Anna Sjöberg', ordforande: 'Mikael Lindqvist' };
+  var boardTitles = { kassor: 'Kassör', ordforande: 'Ordförande' };
+  var boardInitials = { kassor: 'AS', ordforande: 'ML' };
+
+  var invoices = [
+    { id:1, leverantor:'Vattenfall', beskrivning:'El — gemensamma utrymmen', fakturanr:'INV-88213', belopp:8320, forfaller:'2026-09-05', konto:'5020 El', status:'vantar_attest',
+      historik:[
+        {datum:'2026-08-18', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-18', text:'Skickad för attest'},
+      ]},
+    { id:2, leverantor:'HSB Fastighetsservice', beskrivning:'Trapphusstädning augusti', fakturanr:'HSB-4471', belopp:12450, forfaller:'2026-08-30', konto:'5010 Fastighetsskötsel', status:'attesterad',
+      historik:[
+        {datum:'2026-08-10', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-10', text:'Skickad för attest'},
+        {datum:'2026-08-12', text:'Attesterad av Mikael Lindqvist (Ordförande)'},
+      ]},
+    { id:3, leverantor:'Anticimex', beskrivning:'Skadedjursavtal — kvartal 3', fakturanr:'ANT-20933', belopp:3200, forfaller:'2026-09-15', konto:'5010 Fastighetsskötsel', status:'utkast',
+      historik:[
+        {datum:'2026-08-19', text:'Registrerad av Anna Sjöberg (Kassör) — ej skickad ännu'},
+      ]},
+    { id:4, leverantor:'Riksbyggen Förvaltning', beskrivning:'Ekonomisk förvaltning augusti', fakturanr:'RB-77102', belopp:6150, forfaller:'2026-08-28', konto:'6420 Förvaltningsarvode', status:'betald',
+      historik:[
+        {datum:'2026-08-01', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-01', text:'Skickad för attest'},
+        {datum:'2026-08-03', text:'Attesterad av Mikael Lindqvist (Ordförande)'},
+        {datum:'2026-08-05', text:'Markerad som betald av Anna Sjöberg (Kassör)'},
+      ]},
+    { id:5, leverantor:'Nordic Hiss AB', beskrivning:'Hissbesiktning + mindre reparation', fakturanr:'NH-3390', belopp:18900, forfaller:'2026-09-01', konto:'5011 Reparationer', status:'vantar_attest',
+      historik:[
+        {datum:'2026-08-17', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-17', text:'Skickad för attest'},
+      ]},
+    { id:6, leverantor:'Grönyteservice Väst', beskrivning:'Trädgårdsskötsel — extra beskärning', fakturanr:'GYS-611', belopp:4400, forfaller:'2026-08-25', konto:'5010 Fastighetsskötsel', status:'avvisad',
+      historik:[
+        {datum:'2026-08-09', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-09', text:'Skickad för attest'},
+        {datum:'2026-08-11', text:'Avvisad av Mikael Lindqvist (Ordförande) — "Var inte beställd av styrelsen, kolla med leverantören innan ny attest."'},
+      ]},
+    { id:7, leverantor:'If Försäkring', beskrivning:'Fastighetsförsäkring — kvartalsbetalning', fakturanr:'IF-556291', belopp:22750, forfaller:'2026-09-10', konto:'6310 Försäkring', status:'attesterad',
+      historik:[
+        {datum:'2026-08-14', text:'Registrerad av Anna Sjöberg (Kassör)'},
+        {datum:'2026-08-14', text:'Skickad för attest'},
+        {datum:'2026-08-15', text:'Attesterad av Mikael Lindqvist (Ordförande)'},
+      ]},
+  ];
+  var nextInvoiceId = 8;
+
+  var members = [
+    {lgh:'1101', namn:'Karin Berg', andelstal:'1,8%', avgift:4820, status:'betald'},
+    {lgh:'1102', namn:'Oskar Ahlin', andelstal:'1,4%', avgift:3910, status:'betald'},
+    {lgh:'1103', namn:'Familjen Nasr', andelstal:'2,1%', avgift:5640, status:'obetald'},
+    {lgh:'1201', namn:'Lena Wikström', andelstal:'1,9%', avgift:5020, status:'betald'},
+    {lgh:'1202', namn:'Johan Ek', andelstal:'1,5%', avgift:4100, status:'forsenad'},
+    {lgh:'1203', namn:'Familjen Öberg', andelstal:'2,3%', avgift:6110, status:'betald'},
+    {lgh:'1301', namn:'Sofia Malmgren', andelstal:'1,8%', avgift:4820, status:'obetald'},
+    {lgh:'1302', namn:'Erik Fors', andelstal:'1,4%', avgift:3910, status:'betald'},
+  ];
+
+  var documents = [
+    {namn:'Stämmoprotokoll — Årsstämma 2026', kategori:'Protokoll', datum:'2026-05-14', icon:'📋'},
+    {namn:'Styrelseprotokoll — Juni', kategori:'Protokoll', datum:'2026-06-20', icon:'📋'},
+    {namn:'Fastighetsförsäkring 2026', kategori:'Avtal', datum:'2026-01-10', icon:'📄'},
+    {namn:'Underhållsplan 2025–2035', kategori:'Plan', datum:'2025-11-02', icon:'🛠️'},
+    {namn:'Stadgar BRF Fyrklövern', kategori:'Styrande dokument', datum:'2019-04-01', icon:'📜'},
+    {namn:'Energideklaration', kategori:'Besiktning', datum:'2024-09-18', icon:'⚡'},
+  ];
+
+  // ── State ───────────────────────────────────────────────────────
+  var state = { role:'kassor', tab:'oversikt', invoiceFilter:'alla', modal:null };
+
+  var STATUS_LABEL = { utkast:'Utkast', vantar_attest:'Väntar attest', attesterad:'Attesterad', betald:'Betald', avvisad:'Avvisad' };
+  var STATUS_CLASS = { utkast:'badge-utkast', vantar_attest:'badge-vantar', attesterad:'badge-attesterad', betald:'badge-betald', avvisad:'badge-avvisad' };
+
+  function fmt(n){ return n.toLocaleString('sv-SE') + ' kr'; }
+  function todayStr(){ return new Date().toISOString().slice(0,10); }
+
+  function pendingCount(){ return invoices.filter(function(i){ return i.status === 'vantar_attest'; }).length; }
+  function pendingSum(){ return invoices.filter(function(i){ return i.status === 'vantar_attest'; }).reduce(function(s,i){ return s+i.belopp; }, 0); }
+  function attesteradSum(){ return invoices.filter(function(i){ return i.status === 'attesterad'; }).reduce(function(s,i){ return s+i.belopp; }, 0); }
+
+  // ── Nav ─────────────────────────────────────────────────────────
+  var TABS = [
+    {id:'oversikt', label:'Översikt', icon:'📊'},
+    {id:'fakturor', label:'Fakturor', icon:'🧾', badgeFn:pendingCount},
+    {id:'medlemmar', label:'Medlemmar & avgifter', icon:'🏠'},
+    {id:'dokument', label:'Dokument', icon:'🗂️'},
+  ];
+
+  function renderTabbar(){
+    var el = document.getElementById('tabbar');
+    el.innerHTML = TABS.map(function(t){
+      var badge = t.badgeFn ? t.badgeFn() : 0;
+      return '<button class="tab-btn '+(state.tab===t.id?'active':'')+'" data-tab="'+t.id+'">'+
+        t.icon+' '+t.label+
+        (badge > 0 ? ' <span class="tab-badge">'+badge+'</span>' : '') +
+        '</button>';
+    }).join('');
+    Array.prototype.forEach.call(el.querySelectorAll('.tab-btn'), function(b){
+      b.addEventListener('click', function(){ state.tab = b.dataset.tab; render(); });
+    });
+  }
+
+  // ── Role switching ─────────────────────────────────────────────
+  function renderRole(){
+    document.getElementById('roleAvatar').textContent = boardInitials[state.role];
+    document.getElementById('roleLabel').textContent = boardNames[state.role] + ' · ' + boardTitles[state.role];
+    Array.prototype.forEach.call(document.querySelectorAll('.role-opt'), function(o){
+      o.classList.toggle('active', o.dataset.role === state.role);
+    });
+  }
+  document.getElementById('roleBtn').addEventListener('click', function(e){
+    e.stopPropagation();
+    document.getElementById('roleMenu').classList.toggle('open');
+  });
+  document.addEventListener('click', function(){ document.getElementById('roleMenu').classList.remove('open'); });
+  Array.prototype.forEach.call(document.querySelectorAll('.role-opt'), function(o){
+    o.addEventListener('click', function(){
+      state.role = o.dataset.role;
+      renderRole();
+      render();
+    });
+  });
+
+  // ── Page renderers ──────────────────────────────────────────────
+  function pageOversikt(){
+    var likviditet = 412300;
+    var kv = [
+      {label:'Likviditet', value: fmt(likviditet), hint:'Föreningens kassa & bank', attn:false},
+      {label:'Väntar på attest', value: pendingCount()+' st', hint: fmt(pendingSum())+' totalt', attn: pendingCount()>0 && state.role==='ordforande'},
+      {label:'Attesterat, ej betalt', value: fmt(attesteradSum()), hint:'Redo att betalas', attn:false},
+      {label:'Medlemsavgifter denna period', value: members.filter(function(m){return m.status==='betald';}).length+' / '+members.length, hint:'lägenheter har betalat', attn: members.some(function(m){return m.status==='forsenad';})},
+    ];
+    var html = '<h1 class="page-title">Översikt</h1><p class="page-desc">Hej '+boardNames[state.role].split(' ')[0]+' — så här ser läget ut i BRF Fyrklövern just nu.</p>';
+    html += '<div class="grid kpi-grid">' + kv.map(function(k){
+      return '<div class="card kpi-card '+(k.attn?'attention':'')+'"><div class="label">'+k.label+'</div><div class="value">'+k.value+'</div><div class="hint">'+k.hint+'</div></div>';
+    }).join('') + '</div>';
+
+    if(state.role==='ordforande' && pendingCount()>0){
+      html += '<div class="role-hint">⏳ Du har <b>'+pendingCount()+' faktura'+(pendingCount()>1?'or':'')+'</b> som väntar på din attest. <a href="#" data-goto="fakturor" style="color:var(--gold);font-weight:600;text-decoration:underline;margin-left:.2rem;">Gå till Fakturor →</a></div>';
+    }
+
+    html += '<div class="section-head"><h2>Senaste händelser</h2></div>';
+    var events = [];
+    invoices.forEach(function(inv){
+      inv.historik.forEach(function(h){ events.push({datum:h.datum, text:h.text, leverantor:inv.leverantor}); });
+    });
+    events.sort(function(a,b){ return b.datum.localeCompare(a.datum); });
+    html += '<div class="card list-card">' + events.slice(0,6).map(function(e){
+      return '<div class="row" style="cursor:default;"><div class="row-main"><div class="row-title">'+e.leverantor+'</div><div class="row-sub">'+e.text+'</div></div><div class="row-sub">'+e.datum+'</div></div>';
+    }).join('') + '</div>';
+
+    html += '<div class="section-head"><h2>Kommande</h2></div>';
+    html += '<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(220px,1fr));">'
+      + '<div class="card"><div class="label" style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;">📅 Nästa styrelsemöte</div><div style="font-weight:600;">17 september 2026</div></div>'
+      + '<div class="card"><div class="label" style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;">🧾 Förfaller inom 14 dagar</div><div style="font-weight:600;">'+invoices.filter(function(i){return i.status!=='betald' && i.status!=='avvisad';}).length+' fakturor</div></div>'
+      + '<div class="card"><div class="label" style="font-size:.72rem;color:var(--muted);margin-bottom:.4rem;">🏠 Obetalda avgifter</div><div style="font-weight:600;">'+members.filter(function(m){return m.status!=='betald';}).length+' lägenheter</div></div>'
+      + '</div>';
+
+    return html;
+  }
+
+  function invoiceRow(inv){
+    return '<div class="row" data-invoice="'+inv.id+'">'
+      + '<div class="row-main"><div class="row-title">'+inv.leverantor+'</div><div class="row-sub">'+inv.beskrivning+' · förfaller '+inv.forfaller+'</div></div>'
+      + '<span class="badge '+STATUS_CLASS[inv.status]+'">'+STATUS_LABEL[inv.status]+'</span>'
+      + '<div class="row-amount">'+fmt(inv.belopp)+'</div>'
+      + '</div>';
+  }
+
+  function pageFakturor(){
+    var html = '<div class="section-head" style="margin-top:0;"><div><h1 class="page-title" style="margin-bottom:.2rem;">Fakturor</h1><p class="page-desc" style="margin-bottom:0;">Registrera, attestera och håll koll på föreningens leverantörsfakturor.</p></div>';
+    html += '<button class="btn btn-primary" id="newInvoiceBtn" '+(state.role!=='kassor'?'disabled title="Bara Kassör registrerar nya fakturor"':'')+'>+ Registrera faktura</button></div>';
+
+    if(state.role==='kassor'){
+      html += '<div class="role-hint">💡 Du är inloggad som <b>Kassör</b>: du kan registrera nya fakturor och markera attesterade fakturor som betalda. Attestering görs av Ordförande.</div>';
+    } else {
+      html += '<div class="role-hint">💡 Du är inloggad som <b>Ordförande</b>: du attesterar eller avvisar fakturor som Kassören skickat in. Två personer måste alltid vara inblandade innan pengar går ut.</div>';
+    }
+
+    var filters = [
+      {id:'alla', label:'Alla'},
+      {id:'vantar_attest', label:'Väntar attest'},
+      {id:'attesterad', label:'Attesterade'},
+      {id:'betald', label:'Betalda'},
+      {id:'avvisad', label:'Avvisade'},
+    ];
+    html += '<div class="filter-row">' + filters.map(function(f){
+      return '<div class="filter-chip '+(state.invoiceFilter===f.id?'active':'')+'" data-filter="'+f.id+'">'+f.label+'</div>';
+    }).join('') + '</div>';
+
+    var shown = invoices.filter(function(i){ return state.invoiceFilter==='alla' || i.status===state.invoiceFilter; })
+      .sort(function(a,b){ return a.forfaller.localeCompare(b.forfaller); });
+
+    html += '<div class="card list-card">' + (shown.length
+      ? shown.map(invoiceRow).join('')
+      : '<div class="empty">Inga fakturor i det här läget.</div>') + '</div>';
+
+    return html;
+  }
+
+  function pageMedlemmar(){
+    var betalda = members.filter(function(m){return m.status==='betald';}).length;
+    var html = '<h1 class="page-title">Medlemmar & avgifter</h1><p class="page-desc">Lägenheter, andelstal och status för månadens avgift. '+betalda+' av '+members.length+' har betalat.</p>';
+    html += '<div class="card list-card" style="overflow-x:auto;"><table class="table"><thead><tr><th>Lägenhet</th><th>Medlem</th><th>Andelstal</th><th>Månadsavgift</th><th>Status</th></tr></thead><tbody>';
+    html += members.map(function(m,i){
+      var badgeClass = m.status==='betald' ? 'badge-betald' : (m.status==='forsenad' ? 'badge-avvisad' : 'badge-vantar');
+      var label = m.status==='betald' ? 'Betald' : (m.status==='forsenad' ? 'Försenad' : 'Obetald');
+      return '<tr><td>'+m.lgh+'</td><td>'+m.namn+'</td><td>'+m.andelstal+'</td><td>'+fmt(m.avgift)+'</td><td><span class="badge '+badgeClass+'" style="cursor:pointer;" data-member="'+i+'">'+label+'</span></td></tr>';
+    }).join('') + '</tbody></table></div>';
+    html += '<div class="roadmap-note"><b>I en fullständig version:</b> automatiska påminnelser vid sen avgift, koppling till autogiro, och historik per lägenhet vid ägarbyte.</div>';
+    return html;
+  }
+
+  function pageDokument(){
+    var html = '<div class="section-head" style="margin-top:0;"><div><h1 class="page-title" style="margin-bottom:.2rem;">Dokument</h1><p class="page-desc" style="margin-bottom:0;">Protokoll, avtal och andra viktiga handlingar, samlade på ett ställe.</p></div>'
+      + '<button class="btn btn-secondary" id="uploadDocBtn">+ Ladda upp</button></div>';
+    html += '<div class="grid doc-grid">' + documents.map(function(d){
+      return '<div class="card doc-card"><div class="doc-icon">'+d.icon+'</div><div><div class="doc-name">'+d.namn+'</div><div class="doc-meta">'+d.kategori+' · '+d.datum+'</div></div></div>';
+    }).join('') + '</div>';
+    html += '<div class="roadmap-note"><b>I en fullständig version:</b> versionshistorik, sökbar text i skannade dokument, och behörighet per dokumentkategori (t.ex. bara styrelsen ser avtal).</div>';
+    return html;
+  }
+
+  function render(){
+    renderTabbar();
+    renderRole();
+    var app = document.getElementById('app');
+    if(state.tab==='oversikt') app.innerHTML = pageOversikt();
+    else if(state.tab==='fakturor') app.innerHTML = pageFakturor();
+    else if(state.tab==='medlemmar') app.innerHTML = pageMedlemmar();
+    else if(state.tab==='dokument') app.innerHTML = pageDokument();
+    wireInteractions();
+  }
+
+  function wireInteractions(){
+    Array.prototype.forEach.call(document.querySelectorAll('[data-goto]'), function(a){
+      a.addEventListener('click', function(e){ e.preventDefault(); state.tab = a.dataset.goto; render(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-filter]'), function(c){
+      c.addEventListener('click', function(){ state.invoiceFilter = c.dataset.filter; render(); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-invoice]'), function(r){
+      r.addEventListener('click', function(){ openInvoiceModal(parseInt(r.dataset.invoice,10)); });
+    });
+    Array.prototype.forEach.call(document.querySelectorAll('[data-member]'), function(b){
+      b.addEventListener('click', function(e){
+        e.stopPropagation();
+        var m = members[parseInt(b.dataset.member,10)];
+        m.status = m.status==='betald' ? 'obetald' : 'betald';
+        render();
+      });
+    });
+    var newBtn = document.getElementById('newInvoiceBtn');
+    if(newBtn) newBtn.addEventListener('click', function(){ if(!newBtn.disabled) openNewInvoiceModal(); });
+    var uploadBtn = document.getElementById('uploadDocBtn');
+    if(uploadBtn) uploadBtn.addEventListener('click', function(){ alert('I en fullständig version: filväljare + lagring. I den här prototypen är dokumentlistan bara ett exempel.'); });
+  }
+
+  // ── Modals ──────────────────────────────────────────────────────
+  function closeModal(){
+    document.getElementById('overlay').classList.remove('open');
+    document.getElementById('modalContent').innerHTML = '';
+  }
+  document.getElementById('overlay').addEventListener('click', function(e){
+    if(e.target.id === 'overlay') closeModal();
+  });
+
+  function openInvoiceModal(id){
+    var inv = invoices.filter(function(i){ return i.id===id; })[0];
+    if(!inv) return;
+    var actions = '';
+    if(state.role==='ordforande' && inv.status==='vantar_attest'){
+      actions = '<button class="btn btn-bad" id="rejectBtn">Avvisa</button><button class="btn btn-good" id="approveBtn">Attestera</button>';
+    } else if(state.role==='kassor' && inv.status==='utkast'){
+      actions = '<button class="btn btn-primary" id="submitBtn">Skicka för attest</button>';
+    } else if(state.role==='kassor' && inv.status==='attesterad'){
+      actions = '<button class="btn btn-good" id="payBtn">Markera som betald</button>';
+    }
+
+    var html = '<div class="modal-head"><h3>'+inv.leverantor+'</h3><button class="modal-close" id="modalCloseBtn">✕</button></div>';
+    html += '<div class="modal-body">';
+    html += '<span class="badge '+STATUS_CLASS[inv.status]+'">'+STATUS_LABEL[inv.status]+'</span>';
+    html += '<div style="margin-top:1rem;">';
+    html += '<div class="detail-row"><span class="k">Beskrivning</span><span class="v">'+inv.beskrivning+'</span></div>';
+    html += '<div class="detail-row"><span class="k">Fakturanummer</span><span class="v">'+inv.fakturanr+'</span></div>';
+    html += '<div class="detail-row"><span class="k">Belopp</span><span class="v">'+fmt(inv.belopp)+'</span></div>';
+    html += '<div class="detail-row"><span class="k">Förfallodatum</span><span class="v">'+inv.forfaller+'</span></div>';
+    html += '<div class="detail-row"><span class="k">Konto</span><span class="v">'+inv.konto+'</span></div>';
+    html += '</div>';
+    html += '<div class="timeline">' + inv.historik.slice().reverse().map(function(h){
+      return '<div class="timeline-item"><span class="timeline-dot"></span><div><div>'+h.text+'</div><div class="t-when">'+h.datum+'</div></div></div>';
+    }).join('') + '</div>';
+
+    if(state.role==='ordforande' && inv.status==='vantar_attest'){
+      html += '<div class="field" style="margin-top:1.2rem;"><label>Kommentar (krävs om du avvisar)</label><textarea id="rejectComment" rows="2" placeholder="T.ex. saknar underlag, fel belopp..."></textarea></div>';
+    }
+    html += '</div>';
+    html += '<div class="modal-foot">'+actions+'</div>';
+
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+
+    var approveBtn = document.getElementById('approveBtn');
+    if(approveBtn) approveBtn.addEventListener('click', function(){
+      inv.status = 'attesterad';
+      inv.historik.push({datum: todayStr(), text:'Attesterad av '+boardNames.ordforande+' (Ordförande)'});
+      closeModal(); render();
+    });
+    var rejectBtn = document.getElementById('rejectBtn');
+    if(rejectBtn) rejectBtn.addEventListener('click', function(){
+      var comment = document.getElementById('rejectComment').value.trim();
+      if(!comment){ alert('Skriv en kort kommentar om varför fakturan avvisas.'); return; }
+      inv.status = 'avvisad';
+      inv.historik.push({datum: todayStr(), text:'Avvisad av '+boardNames.ordforande+' (Ordförande) — "'+comment+'"'});
+      closeModal(); render();
+    });
+    var submitBtn = document.getElementById('submitBtn');
+    if(submitBtn) submitBtn.addEventListener('click', function(){
+      inv.status = 'vantar_attest';
+      inv.historik.push({datum: todayStr(), text:'Skickad för attest'});
+      closeModal(); render();
+    });
+    var payBtn = document.getElementById('payBtn');
+    if(payBtn) payBtn.addEventListener('click', function(){
+      inv.status = 'betald';
+      inv.historik.push({datum: todayStr(), text:'Markerad som betald av '+boardNames.kassor+' (Kassör)'});
+      closeModal(); render();
+    });
+  }
+
+  function openNewInvoiceModal(){
+    var html = '<div class="modal-head"><h3>Registrera faktura</h3><button class="modal-close" id="modalCloseBtn">✕</button></div>';
+    html += '<div class="modal-body">';
+    html += '<div class="field"><label>Leverantör</label><input id="fLeverantor" placeholder="T.ex. Vattenfall"></div>';
+    html += '<div class="field"><label>Beskrivning</label><input id="fBeskrivning" placeholder="Vad avser fakturan?"></div>';
+    html += '<div class="field-row">';
+    html += '<div class="field"><label>Belopp (kr)</label><input id="fBelopp" type="number" placeholder="0"></div>';
+    html += '<div class="field"><label>Förfallodatum</label><input id="fForfaller" type="date"></div>';
+    html += '</div>';
+    html += '<div class="field"><label>Bokföringskonto</label><select id="fKonto">'
+      + '<option>5010 Fastighetsskötsel</option><option>5011 Reparationer</option><option>5020 El</option><option>6310 Försäkring</option><option>6420 Förvaltningsarvode</option><option>6110 Kontorsmateriel</option>'
+      + '</select></div>';
+    html += '<div class="field"><label>Fakturanummer</label><input id="fFakturanr" placeholder="Valfritt"></div>';
+    html += '</div>';
+    html += '<div class="modal-foot"><button class="btn btn-secondary" id="draftBtn">Spara som utkast</button><button class="btn btn-primary" id="sendBtn">Skicka för attest</button></div>';
+
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('overlay').classList.add('open');
+    document.getElementById('modalCloseBtn').addEventListener('click', closeModal);
+
+    function collect(){
+      var leverantor = document.getElementById('fLeverantor').value.trim();
+      var belopp = parseFloat(document.getElementById('fBelopp').value);
+      if(!leverantor || !belopp){ alert('Fyll i minst leverantör och belopp.'); return null; }
+      return {
+        id: nextInvoiceId++,
+        leverantor: leverantor,
+        beskrivning: document.getElementById('fBeskrivning').value.trim() || '—',
+        fakturanr: document.getElementById('fFakturanr').value.trim() || ('INV-'+Math.floor(Math.random()*90000+10000)),
+        belopp: belopp,
+        forfaller: document.getElementById('fForfaller').value || todayStr(),
+        konto: document.getElementById('fKonto').value,
+        historik: [{datum: todayStr(), text:'Registrerad av '+boardNames.kassor+' (Kassör)'}],
+      };
+    }
+    document.getElementById('draftBtn').addEventListener('click', function(){
+      var row = collect(); if(!row) return;
+      row.status = 'utkast';
+      invoices.push(row);
+      state.tab = 'fakturor'; state.invoiceFilter = 'alla';
+      closeModal(); render();
+    });
+    document.getElementById('sendBtn').addEventListener('click', function(){
+      var row = collect(); if(!row) return;
+      row.status = 'vantar_attest';
+      row.historik.push({datum: todayStr(), text:'Skickad för attest'});
+      invoices.push(row);
+      state.tab = 'fakturor'; state.invoiceFilter = 'alla';
+      closeModal(); render();
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
