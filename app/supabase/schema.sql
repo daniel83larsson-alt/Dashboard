@@ -1182,3 +1182,11 @@ alter table public.celebrated_milestones enable row level security;
 create policy "Users see own celebrated milestones" on public.celebrated_milestones
   for all using (auth.uid() = user_id);
 create index celebrated_milestones_user on public.celebrated_milestones(user_id);
+
+-- YAZIO-koppling: samma connected_accounts-skydd (mot att koppla någon
+-- annans redan anslutna konto) som Garmin/Concept2/Strava/Polar redan har,
+-- bara utökat med ytterligare en giltig provider. Kör vid uppdatering av en
+-- befintlig databas:
+alter table public.connected_accounts drop constraint if exists connected_accounts_provider_check;
+alter table public.connected_accounts add constraint connected_accounts_provider_check
+  check (provider in ('garmin', 'concept2', 'strava', 'polar', 'yazio'));

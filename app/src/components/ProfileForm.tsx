@@ -47,10 +47,12 @@ export default function ProfileForm({
   hasGarmin,
   hasStrava,
   hasPolar,
+  hasYazio,
   concept2Synced,
   garminSynced,
   stravaSynced,
   polarSynced,
+  yazioSynced,
   savedContext,
 }: {
   profile: Profile | null
@@ -59,10 +61,12 @@ export default function ProfileForm({
   hasGarmin: boolean
   hasStrava: boolean
   hasPolar: boolean
+  hasYazio: boolean
   concept2Synced: boolean
   garminSynced: boolean
   stravaSynced: boolean
   polarSynced: boolean
+  yazioSynced: boolean
   savedContext: string
 }) {
   const [name, setName] = useState(profile?.name ?? '')
@@ -94,6 +98,12 @@ export default function ProfileForm({
   const [garminPassword, setGarminPassword] = useState('')
   const [garminSaving, setGarminSaving] = useState(false)
   const [garminConnected, setGarminConnected] = useState(hasGarmin)
+  const [yazioSyncing, setYazioSyncing] = useState(false)
+  const [yazioMsg, setYazioMsg] = useState('')
+  const [yazioEmail, setYazioEmail] = useState('')
+  const [yazioPassword, setYazioPassword] = useState('')
+  const [yazioSaving, setYazioSaving] = useState(false)
+  const [yazioConnected, setYazioConnected] = useState(hasYazio)
   const [sendingTest, setSendingTest] = useState(false)
   const [testMsg, setTestMsg] = useState('')
   const router = useRouter()
@@ -241,6 +251,50 @@ export default function ProfileForm({
       setGarminMsg('Nätverksfel')
     }
     setGarminSyncing(false)
+  }
+
+  async function saveYazio(e: React.FormEvent) {
+    e.preventDefault()
+    setYazioSaving(true)
+    setYazioMsg('')
+    try {
+      const res = await fetch('/api/yazio/save-credentials', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: yazioEmail.trim(), password: yazioPassword }),
+      })
+      const data = await res.json()
+      if (data.ok) {
+        setYazioConnected(true)
+        setYazioPassword('')
+        setYazioMsg('Ansluten!')
+      } else {
+        setYazioMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setYazioMsg('Nätverksfel')
+    }
+    setYazioSaving(false)
+  }
+
+  // Första versionen: hämtar och sparar rådata för granskning, mappar
+  // den ännu inte till matloggen — se lib/yazio-sync.ts.
+  async function syncYazio() {
+    setYazioSyncing(true)
+    setYazioMsg('')
+    try {
+      const res = await fetch('/api/food/sync-yazio', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) {
+        setYazioMsg(data.hasSummary ? 'Synkade — data hämtad, granskas innan den visas i matloggen' : 'Ansluten, men ingen data hittades för idag')
+        router.refresh()
+      } else {
+        setYazioMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setYazioMsg('Nätverksfel')
+    }
+    setYazioSyncing(false)
   }
 
   async function sendTestDigest() {
@@ -628,6 +682,68 @@ export default function ProfileForm({
               className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
             >
               {garminSaving ? 'Ansluter...' : 'Anslut Garmin'}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* YAZIO */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div className="text-xs text-muted uppercase tracking-wider">YAZIO</div>
+        {yazioConnected ? (
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <div className="text-sm text-fg flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full inline-block ${yazioSynced ? 'bg-accent' : 'bg-amber-400'}`} />
+                {yazioSynced ? 'Ansluten' : 'Ansluten — väntar på första synk'}
+              </div>
+              {yazioMsg && <div className="text-xs text-lcd mt-1">{yazioMsg}</div>}
+            </div>
+            <button
+              type="button"
+              onClick={syncYazio}
+              disabled={yazioSyncing}
+              className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+            >
+              {yazioSyncing ? 'Synkar...' : 'Synka nu'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-muted text-xs">
+              Ange dina YAZIO-uppgifter för att synka din matdagbok.
+            </p>
+            <div className="bg-bg rounded-xl p-3 text-xs text-muted leading-relaxed">
+              <span className="text-fg font-medium">Vilka uppgifter behövs?</span> samma e-post och lösenord som du använder i YAZIO-appen. Lösenordet krypteras innan det sparas. <span className="text-fg font-medium">Tidig version:</span> kopplingen hämtar din data så vi kan se hur den ser ut, men visar den inte i matloggen ännu.
+            </div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">E-post</label>
+              <input
+                type="email"
+                value={yazioEmail}
+                onChange={e => setYazioEmail(e.target.value)}
+                placeholder="din@email.com"
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Lösenord</label>
+              <input
+                type="password"
+                value={yazioPassword}
+                onChange={e => setYazioPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            {yazioMsg && <div className="text-xs text-lcd">{yazioMsg}</div>}
+            <button
+              type="button"
+              onClick={saveYazio}
+              disabled={yazioSaving || !yazioEmail.trim() || !yazioPassword}
+              className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity"
+            >
+              {yazioSaving ? 'Ansluter...' : 'Anslut YAZIO'}
             </button>
           </div>
         )}
