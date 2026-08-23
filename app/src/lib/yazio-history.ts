@@ -93,6 +93,36 @@ export function summaryToYazioDay(date: string, summary: YazioDailySummary | nul
   }
 }
 
+// A history row written by an OLDER version of summaryToYazioDay (before
+// meals/water/fasting/weight-trend were added) is missing those fields
+// entirely — not null, absent — since it's read straight back out of
+// already-stored JSON, not re-validated. Object.entries(undefined) throws,
+// so every consumer of stored history must run rows through this first.
+// Real incident: a user's very first sync predated this extension, and
+// their Mat page hard-crashed until this normalization existed (see
+// STATUS.md). Only used as read-side backward-compat — the DB row itself
+// is never rewritten by this, only fixed by that user's next real sync.
+export function normalizeYazioDay(d: Partial<YazioDay> & { date: string }): YazioDay {
+  return {
+    date: d.date,
+    kcalEaten: d.kcalEaten ?? null,
+    kcalGoal: d.kcalGoal ?? null,
+    proteinG: d.proteinG ?? null,
+    proteinGoalG: d.proteinGoalG ?? null,
+    carbG: d.carbG ?? null,
+    fatG: d.fatG ?? null,
+    steps: d.steps ?? null,
+    weightKg: d.weightKg ?? null,
+    startWeightKg: d.startWeightKg ?? null,
+    weightGoal: d.weightGoal ?? null,
+    waterMl: d.waterMl ?? null,
+    waterGoalMl: d.waterGoalMl ?? null,
+    activityKcal: d.activityKcal ?? null,
+    fastingTemplate: d.fastingTemplate ?? null,
+    meals: d.meals ?? { breakfast: null, lunch: null, dinner: null, snack: null },
+  }
+}
+
 export function daysMetGoal(history: YazioDay[]): number {
   return history.filter(d => d.kcalEaten != null && d.kcalGoal != null && d.kcalEaten <= d.kcalGoal).length
 }

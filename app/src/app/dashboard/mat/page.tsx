@@ -1,7 +1,7 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FoodLogClient, { type QuickPick, type FoodEntry } from '@/components/FoodLogClient'
 import { stockholmDateKey } from '@/lib/dates'
-import type { YazioDay } from '@/lib/yazio-history'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 
 export default async function MatPage() {
   const supabase = await createSupabaseServerClient()
@@ -23,8 +23,15 @@ export default async function MatPage() {
     .slice(0, 12)
 
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  // normalizeYazioDay backfills fields a row written before meals/water/
+  // fasting/weight-trend existed won't have — without it, a user whose
+  // last sync predates that change hard-crashes this page (real incident,
+  // see STATUS.md) instead of just showing less until their next sync.
   const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
-    try { return JSON.parse(yazioHistoryRaw) } catch { return [] }
+    try {
+      const parsed = JSON.parse(yazioHistoryRaw)
+      return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+    } catch { return [] }
   })() : []
 
   return (
