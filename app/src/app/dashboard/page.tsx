@@ -204,7 +204,7 @@ export default async function DashboardPage() {
     .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
     .reduce((s, a) => s + (a.calories ?? 0), 0)
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const yazioHistory: { date: string; kcalEaten: number | null; proteinG: number | null }[] = yazioHistoryRaw ? (() => {
+  const yazioHistory: { date: string; kcalEaten: number | null; proteinG: number | null; activityKcal: number | null }[] = yazioHistoryRaw ? (() => {
     try { return JSON.parse(yazioHistoryRaw) } catch { return [] }
   })() : []
   const yazioToday = yazioHistory[0]?.date === todayKey ? yazioHistory[0] : null
@@ -427,6 +427,9 @@ export default async function DashboardPage() {
                     <> · <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
                   )}
                 </>
+              )}
+              {yazioToday?.activityKcal != null && (
+                <> · YAZIO aktivitet: {yazioToday.activityKcal} kcal</>
               )}
             </div>
           </div>

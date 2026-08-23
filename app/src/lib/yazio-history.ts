@@ -3,6 +3,14 @@
 // to store and easy to chart. Energy is always normalized to kcal here,
 // since YAZIO lets each account report in kcal OR kJ (summary.units.unit_energy)
 // — verified against a real connected account (see STATUS.md).
+export type YazioMeal = {
+  kcal: number | null
+  kcalGoal: number | null
+  carbG: number | null
+  fatG: number | null
+  proteinG: number | null
+}
+
 export type YazioDay = {
   date: string
   kcalEaten: number | null
@@ -13,31 +21,52 @@ export type YazioDay = {
   fatG: number | null
   steps: number | null
   weightKg: number | null
+  startWeightKg: number | null
+  weightGoal: string | null // YAZIO's raw goal direction, e.g. 'lose' | 'gain' | 'maintain'
+  waterMl: number | null
+  waterGoalMl: number | null
+  activityKcal: number | null // YAZIO's own activity-calorie estimate — a second, independent number from Garmin's
+  fastingTemplate: string | null // e.g. '16_8_early_fasting_v2', null when no active fast
+  meals: { breakfast: YazioMeal | null; lunch: YazioMeal | null; dinner: YazioMeal | null; snack: YazioMeal | null }
 }
 
 const KJ_PER_KCAL = 4.184
 
 // Matches the real shape confirmed against a live account: getDailySummary's
 // return type, narrowed to just the fields this app actually reads.
+type Nutrients = { 'energy.energy'?: number; 'nutrient.carb'?: number; 'nutrient.fat'?: number; 'nutrient.protein'?: number }
 type YazioDailySummary = {
   steps?: number
-  goals?: { 'energy.energy'?: number; 'nutrient.protein'?: number; 'nutrient.carb'?: number; 'nutrient.fat'?: number }
+  activity_energy?: number
+  water_intake?: number
+  active_fasting_countdown_template_key?: string | null
+  goals?: Nutrients & { water?: number }
   units?: { unit_energy?: string }
-  meals?: Record<string, { nutrients?: { 'energy.energy'?: number; 'nutrient.carb'?: number; 'nutrient.fat'?: number; 'nutrient.protein'?: number } }>
-  user?: { current_weight?: number }
+  meals?: Record<string, { nutrients?: Nutrients; energy_goal?: number }>
+  user?: { start_weight?: number; current_weight?: number; goal?: string }
 }
 
-function toKcal(value: number | undefined, unit: string | undefined): number | null {
+function toKcal(value: number | undefined | null, unit: string | undefined): number | null {
   if (value == null) return null
   return unit === 'kJ' ? Math.round(value / KJ_PER_KCAL) : Math.round(value)
+}
+
+function toMeal(m: { nutrients?: Nutrients; energy_goal?: number } | undefined, unit: string | undefined): YazioMeal | null {
+  if (!m) return null
+  return {
+    kcal: toKcal(m.nutrients?.['energy.energy'], unit),
+    kcalGoal: toKcal(m.energy_goal, unit),
+    carbG: m.nutrients?.['nutrient.carb'] != null ? Math.round(m.nutrients['nutrient.carb']) : null,
+    fatG: m.nutrients?.['nutrient.fat'] != null ? Math.round(m.nutrients['nutrient.fat']) : null,
+    proteinG: m.nutrients?.['nutrient.protein'] != null ? Math.round(m.nutrients['nutrient.protein']) : null,
+  }
 }
 
 export function summaryToYazioDay(date: string, summary: YazioDailySummary | null): YazioDay | null {
   if (!summary) return null
   const unit = summary.units?.unit_energy
   const meals = Object.values(summary.meals ?? {})
-  const sum = (key: 'energy.energy' | 'nutrient.carb' | 'nutrient.fat' | 'nutrient.protein') =>
-    meals.reduce((s, m) => s + (m.nutrients?.[key] ?? 0), 0)
+  const sum = (key: keyof Nutrients) => meals.reduce((s, m) => s + (m.nutrients?.[key] ?? 0), 0)
 
   return {
     date,
@@ -49,9 +78,43 @@ export function summaryToYazioDay(date: string, summary: YazioDailySummary | nul
     fatG: Math.round(sum('nutrient.fat')),
     steps: summary.steps ?? null,
     weightKg: summary.user?.current_weight ?? null,
+    startWeightKg: summary.user?.start_weight ?? null,
+    weightGoal: summary.user?.goal ?? null,
+    waterMl: summary.water_intake ?? null,
+    waterGoalMl: summary.goals?.water ?? null,
+    activityKcal: summary.activity_energy != null ? Math.round(summary.activity_energy) : null,
+    fastingTemplate: summary.active_fasting_countdown_template_key ?? null,
+    meals: {
+      breakfast: toMeal(summary.meals?.breakfast, unit),
+      lunch: toMeal(summary.meals?.lunch, unit),
+      dinner: toMeal(summary.meals?.dinner, unit),
+      snack: toMeal(summary.meals?.snack, unit),
+    },
   }
 }
 
 export function daysMetGoal(history: YazioDay[]): number {
   return history.filter(d => d.kcalEaten != null && d.kcalGoal != null && d.kcalEaten <= d.kcalGoal).length
+}
+
+const MEAL_LABELS: Record<'breakfast' | 'lunch' | 'dinner' | 'snack', string> = {
+  breakfast: 'Frukost', lunch: 'Lunch', dinner: 'Middag', snack: 'Mellanmål',
+}
+export function mealLabel(key: 'breakfast' | 'lunch' | 'dinner' | 'snack'): string {
+  return MEAL_LABELS[key]
+}
+
+// '16_8_early_fasting_v2' → '16:8'. Falls back to a generic label for any
+// template-key shape YAZIO adds later rather than showing the raw
+// underscored key or hiding it entirely.
+export function fastingLabel(key: string | null): string | null {
+  if (!key) return null
+  const m = key.match(/^(\d+)_(\d+)/)
+  return m ? `${m[1]}:${m[2]}-fasta` : 'Fasta aktiv'
+}
+
+const WEIGHT_GOAL_LABELS: Record<string, string> = { lose: 'Gå ner i vikt', gain: 'Gå upp i vikt', maintain: 'Behålla vikt' }
+export function weightGoalLabel(goal: string | null): string | null {
+  if (!goal) return null
+  return WEIGHT_GOAL_LABELS[goal] ?? goal
 }

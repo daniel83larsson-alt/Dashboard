@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import type { FoodCandidate } from '@/app/api/food/search/route'
 import type { YazioDay } from '@/lib/yazio-history'
-import { daysMetGoal } from '@/lib/yazio-history'
+import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel } from '@/lib/yazio-history'
 
 export type FoodEntry = {
   id: string
@@ -328,6 +328,55 @@ export default function FoodLogClient({
               <div className="text-muted text-[10px] mt-0.5">Fett</div>
             </div>
           </div>
+
+          {(yazioToday.fastingTemplate || yazioToday.waterGoalMl != null) && (
+            <div className="flex items-center gap-3 flex-wrap">
+              {yazioToday.fastingTemplate && (
+                <span className="text-xs bg-bg border border-edge rounded-full px-3 py-1 text-fg">🕐 {fastingLabel(yazioToday.fastingTemplate)}</span>
+              )}
+              {yazioToday.waterGoalMl != null && (
+                <span className="text-xs bg-bg border border-edge rounded-full px-3 py-1 text-fg">
+                  💧 {((yazioToday.waterMl ?? 0) / 1000).toFixed(1)} / {(yazioToday.waterGoalMl / 1000).toFixed(1)} L
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Måltider */}
+          {Object.entries(yazioToday.meals).some(([, m]) => m && m.kcal != null && m.kcal > 0) && (
+            <div className="pt-3 border-t border-edge flex flex-col gap-1.5">
+              {(['breakfast', 'lunch', 'dinner', 'snack'] as const).map(key => {
+                const m = yazioToday.meals[key]
+                if (!m || m.kcal == null) return null
+                return (
+                  <div key={key} className="flex items-center justify-between text-xs">
+                    <span className="text-muted">{mealLabel(key)}</span>
+                    <span className="font-mono text-fg">{m.kcal} kcal{m.kcalGoal != null ? <span className="text-muted"> / {m.kcalGoal}</span> : ''}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+
+          {/* Viktresa */}
+          {yazioToday.weightKg != null && (
+            <div className="pt-3 border-t border-edge flex items-center justify-between">
+              <div>
+                <div className="text-xs text-muted">Vikt{weightGoalLabel(yazioToday.weightGoal) ? ` · mål: ${weightGoalLabel(yazioToday.weightGoal)}` : ''}</div>
+                <div className="font-mono text-fg text-sm mt-0.5">
+                  {yazioToday.startWeightKg != null && yazioToday.startWeightKg !== yazioToday.weightKg && (
+                    <span className="text-muted">{yazioToday.startWeightKg} kg → </span>
+                  )}
+                  <span className="font-bold">{yazioToday.weightKg} kg</span>
+                </div>
+              </div>
+              {yazioToday.startWeightKg != null && yazioToday.startWeightKg !== yazioToday.weightKg && (
+                <span className={`text-xs font-mono ${yazioToday.weightKg < yazioToday.startWeightKg ? 'text-accent' : 'text-amber-500'}`}>
+                  {yazioToday.weightKg < yazioToday.startWeightKg ? '' : '+'}{(yazioToday.weightKg - yazioToday.startWeightKg).toFixed(1)} kg
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Veckans progress */}
           {yazioWeek.length > 1 && (
