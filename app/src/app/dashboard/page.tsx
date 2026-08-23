@@ -3,6 +3,7 @@ import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanSummaryCard from '@/components/WeeklyPlanSummaryCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from '@/lib/dates'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { estimateBMR } from '@/lib/bmr'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
@@ -204,8 +205,11 @@ export default async function DashboardPage() {
     .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
     .reduce((s, a) => s + (a.calories ?? 0), 0)
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const yazioHistory: { date: string; kcalEaten: number | null; proteinG: number | null; activityKcal: number | null }[] = yazioHistoryRaw ? (() => {
-    try { return JSON.parse(yazioHistoryRaw) } catch { return [] }
+  const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
+    try {
+      const parsed = JSON.parse(yazioHistoryRaw)
+      return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+    } catch { return [] }
   })() : []
   const yazioToday = yazioHistory[0]?.date === todayKey ? yazioHistory[0] : null
   const foodLogToday = (recentFoodLog ?? []).filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)

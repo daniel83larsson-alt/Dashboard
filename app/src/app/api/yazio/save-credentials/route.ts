@@ -47,7 +47,12 @@ export async function POST(request: NextRequest) {
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : ''
     console.error('YAZIO credential save error:', err)
-    if (msg.includes('401') || msg.includes('Incomplete or missing credentials')) {
+    // YAZIO's login is a standard OAuth `/oauth/token` grant_type=password
+    // call — invalid_grant (wrong email/password) is far more likely to
+    // come back as 400 Bad Request than 401 from that kind of endpoint, so
+    // checking only for '401' would let genuine bad-credentials cases fall
+    // through to the generic 500 branch below instead of this friendly one.
+    if (msg.includes('400') || msg.includes('401') || msg.includes('Incomplete or missing credentials')) {
       return NextResponse.json({ error: 'Fel e-post eller lösenord' }, { status: 401 })
     }
     // Anything else (network errors, YAZIO changing their unofficial API,

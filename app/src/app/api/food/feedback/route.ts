@@ -5,7 +5,7 @@ import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { callGemini, callAnthropic } from '@/lib/llm'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
-import type { YazioDay } from '@/lib/yazio-history'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 
 const SYSTEM_PROMPT = `Du är en kortfattad, konkret kostcoach. Du får en persons matmål, dagens siffror och en sammanfattning av de senaste dagarna (alla från personens egen YAZIO-app). Ge kort, personlig feedback på svenska — max 4-5 meningar.
 
@@ -31,7 +31,10 @@ export async function POST() {
 
     const historyRaw = (historyRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
     const history: YazioDay[] = historyRaw ? (() => {
-      try { return JSON.parse(historyRaw) } catch { return [] }
+      try {
+        const parsed = JSON.parse(historyRaw)
+        return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+      } catch { return [] }
     })() : []
     if (history.length === 0) {
       return NextResponse.json({ error: 'Ingen YAZIO-data att ge feedback på ännu — synka först.' }, { status: 400 })

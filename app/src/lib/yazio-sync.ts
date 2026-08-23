@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { fetchYazioDailySummary, fetchYazioConsumedItems } from './yazio'
 import { decrypt } from './encrypt'
 import { summaryToYazioDay, type YazioDay } from './yazio-history'
+import { stockholmDateKey } from './dates'
 
 export class YazioNotConfiguredError extends Error {
   constructor() { super('YAZIO not configured') }
@@ -29,7 +30,7 @@ export async function syncYazioForUser(supabase: SupabaseClient, userId: string)
   if (!email || !password) throw new YazioNotConfiguredError()
 
   const today = new Date()
-  const todayKey = today.toISOString().slice(0, 10)
+  const todayKey = stockholmDateKey(today)
   const [summary, consumedItems] = await Promise.all([
     fetchYazioDailySummary(email, password, today),
     fetchYazioConsumedItems(email, password, today),
