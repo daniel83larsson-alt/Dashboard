@@ -138,9 +138,16 @@ describe('every known Garmin-fetching call site is wrapped in withGarminLock', (
 })
 
 describe('every route that calls Gemini directly is rate-limited (or is a cron route with its own throttling)', () => {
-  // Verified against the real tree via
-  // `grep -rl generativelanguage.googleapis.com src/app/api --include=route.ts`.
-  // All five current call sites are interactive (user-triggered) routes,
+  // Two ways a route ends up calling Gemini: an inline raw fetch to
+  // generativelanguage.googleapis.com (food/estimate, insights/*, plan/
+  // generate — each has its own request shape, e.g. image input or
+  // structured-output mode, so they aren't good candidates to share a
+  // helper), or a call to lib/llm.ts's shared callGemini() (coach, food/
+  // feedback — both send a plain system-prompt + history + message and
+  // have nothing shape-specific to duplicate). Detected as the union of
+  // both patterns — verified against the real tree via
+  // `grep -rl 'generativelanguage.googleapis.com\|callGemini(' src/app/api --include=route.ts`.
+  // All six current call sites are interactive (user-triggered) routes,
   // none of them cron routes — the weekly-digest cron generates via
   // lib/weekly-digest-generate.ts, which is throttled separately in the
   // cron route itself rather than via the interactive limiter (see that
@@ -149,13 +156,14 @@ describe('every route that calls Gemini directly is rate-limited (or is a cron r
     'app/api/coach/route.ts',
     'app/api/plan/generate/route.ts',
     'app/api/food/estimate/route.ts',
+    'app/api/food/feedback/route.ts',
     'app/api/insights/health/route.ts',
     'app/api/insights/generate/route.ts',
   ]
 
   it('the hardcoded call-site list still matches what actually calls Gemini in route.ts files (no drift)', () => {
     const actual = allRouteFiles
-      .filter(f => read(f).includes('generativelanguage.googleapis.com'))
+      .filter(f => { const c = read(f); return c.includes('generativelanguage.googleapis.com') || /callGemini\s*\(/.test(c) })
       .map(relToSrc)
       .sort()
     expect(actual).toEqual([...GEMINI_CALL_SITES].sort())

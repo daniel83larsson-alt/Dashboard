@@ -1,8 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import type { FoodCandidate } from '@/app/api/food/search/route'
+import type { YazioDay } from '@/lib/yazio-history'
+import { daysMetGoal } from '@/lib/yazio-history'
 
 export type FoodEntry = {
   id: string
@@ -46,11 +49,52 @@ export default function FoodLogClient({
   dailyCalorieGoal,
   todayEntries,
   quickPicks,
+  yazioHistory,
 }: {
   dailyCalorieGoal: number | null
   todayEntries: FoodEntry[]
   quickPicks: QuickPick[]
+  yazioHistory: YazioDay[]
 }) {
+  const router = useRouter()
+  const hasYazio = yazioHistory.length > 0
+  const yazioToday = hasYazio ? yazioHistory[0] : null
+  const yazioWeek = yazioHistory.slice(0, 7)
+  const [manualOpen, setManualOpen] = useState(!hasYazio)
+  const [yazioSyncing, setYazioSyncing] = useState(false)
+  const [yazioSyncMsg, setYazioSyncMsg] = useState('')
+  const [feedback, setFeedback] = useState('')
+  const [feedbackLoading, setFeedbackLoading] = useState(false)
+  const [feedbackError, setFeedbackError] = useState('')
+
+  async function syncYazioNow() {
+    setYazioSyncing(true)
+    setYazioSyncMsg('')
+    try {
+      const res = await fetch('/api/food/sync-yazio', { method: 'POST' })
+      const data = await res.json()
+      if (data.ok) { router.refresh() } else { setYazioSyncMsg(data.error ?? 'Något gick fel') }
+    } catch {
+      setYazioSyncMsg('Nätverksfel')
+    }
+    setYazioSyncing(false)
+  }
+
+  async function getFeedback() {
+    setFeedbackLoading(true)
+    setFeedbackError('')
+    setFeedback('')
+    try {
+      const res = await fetch('/api/food/feedback', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setFeedback(data.feedback)
+      else setFeedbackError(data.error ?? 'Något gick fel')
+    } catch {
+      setFeedbackError('Nätverksfel')
+    }
+    setFeedbackLoading(false)
+  }
+
   const [entries, setEntries] = useState(todayEntries)
   const todayTotal = entries.reduce((s, e) => s + e.calories, 0)
   const todayProtein = entries.reduce((s, e) => s + (e.protein_g ?? 0), 0)
@@ -239,9 +283,110 @@ export default function FoodLogClient({
     <div className="p-4 md:p-8 max-w-2xl w-full mx-auto flex flex-col gap-4">
       <div>
         <h1 className="text-2xl font-semibold">Mat</h1>
-        <p className="text-muted text-sm mt-1">Logga vad du äter — sök, fota eller välj från snabbval.</p>
+        <p className="text-muted text-sm mt-1">
+          {hasYazio ? 'Synkas från YAZIO — logga manuellt bara om du vill lägga till något.' : 'Logga vad du äter — sök, fota eller välj från snabbval.'}
+        </p>
       </div>
 
+      {/* YAZIO-sammanfattning */}
+      {hasYazio && yazioToday && (
+        <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted uppercase tracking-wider">Idag (YAZIO)</span>
+            <button
+              type="button"
+              onClick={syncYazioNow}
+              disabled={yazioSyncing}
+              className="text-xs bg-bg border border-edge px-3 py-1.5 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
+            >
+              {yazioSyncing ? 'Synkar...' : 'Synka nu'}
+            </button>
+          </div>
+          {yazioSyncMsg && <div className="text-xs text-lcd">{yazioSyncMsg}</div>}
+          <div className="flex items-baseline justify-between">
+            <span className="font-mono text-accent text-2xl font-bold">
+              {yazioToday.kcalEaten ?? 0}
+              {yazioToday.kcalGoal != null && <span className="text-muted text-sm font-normal"> / {yazioToday.kcalGoal} kcal</span>}
+            </span>
+          </div>
+          {yazioToday.kcalGoal != null && (
+            <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden -mt-1.5">
+              <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(100, Math.round(((yazioToday.kcalEaten ?? 0) / yazioToday.kcalGoal) * 100))}%` }} />
+            </div>
+          )}
+          <div className="grid grid-cols-3 gap-2 text-center">
+            <div className="bg-bg rounded-lg py-2">
+              <div className="font-mono text-fg text-sm font-bold">{yazioToday.proteinG ?? 0}g</div>
+              <div className="text-muted text-[10px] mt-0.5">Protein</div>
+            </div>
+            <div className="bg-bg rounded-lg py-2">
+              <div className="font-mono text-fg text-sm font-bold">{yazioToday.carbG ?? 0}g</div>
+              <div className="text-muted text-[10px] mt-0.5">Kolhydrater</div>
+            </div>
+            <div className="bg-bg rounded-lg py-2">
+              <div className="font-mono text-fg text-sm font-bold">{yazioToday.fatG ?? 0}g</div>
+              <div className="text-muted text-[10px] mt-0.5">Fett</div>
+            </div>
+          </div>
+
+          {/* Veckans progress */}
+          {yazioWeek.length > 1 && (
+            <div className="pt-3 border-t border-edge">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-muted">Senaste {yazioWeek.length} dagarna</span>
+                <span className="text-xs text-muted">{daysMetGoal(yazioWeek)} av {yazioWeek.length} dagar inom målet</span>
+              </div>
+              <div className="flex items-end gap-1.5 h-16">
+                {yazioWeek.slice().reverse().map(d => {
+                  const pct = d.kcalGoal && d.kcalEaten != null ? Math.min(150, Math.round((d.kcalEaten / d.kcalGoal) * 100)) : 0
+                  const over = d.kcalGoal != null && d.kcalEaten != null && d.kcalEaten > d.kcalGoal
+                  return (
+                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
+                      <div
+                        className={`w-full rounded-t ${over ? 'bg-amber-500' : 'bg-accent'}`}
+                        style={{ height: `${Math.max(4, Math.min(100, pct))}%` }}
+                        title={`${d.date}: ${d.kcalEaten ?? '–'} / ${d.kcalGoal ?? '–'} kcal`}
+                      />
+                      <span className="text-muted text-[9px]">{new Date(d.date).toLocaleDateString('sv-SE', { weekday: 'narrow' })}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* AI-feedback */}
+          <div className="pt-3 border-t border-edge">
+            {feedback ? (
+              <p className="text-sm text-fg leading-relaxed">{feedback}</p>
+            ) : (
+              <button
+                type="button"
+                onClick={getFeedback}
+                disabled={feedbackLoading}
+                className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
+              >
+                {feedbackLoading ? 'Tänker...' : '✨ Få feedback på dagens mat & veckans progress'}
+              </button>
+            )}
+            {feedbackError && <p className="text-red-400 text-xs mt-2">{feedbackError}</p>}
+          </div>
+        </div>
+      )}
+
+      {/* Manuell loggning — alltid synlig utan YAZIO, dold bakom en knapp med */}
+      {hasYazio && (
+        <button
+          type="button"
+          onClick={() => setManualOpen(v => !v)}
+          className="text-xs text-muted hover:text-fg transition-colors self-start flex items-center gap-1.5"
+        >
+          {manualOpen ? '▾' : '▸'} Logga manuellt {manualOpen ? '' : '(t.ex. något YAZIO missade)'}
+        </button>
+      )}
+
+      {(!hasYazio || manualOpen) && (
+      <>
       {/* Idag */}
       <div className="bg-card border border-edge rounded-2xl p-4">
         <div className="flex items-baseline justify-between mb-2">
@@ -437,6 +582,8 @@ export default function FoodLogClient({
           <p className="text-muted text-xs mt-1.5">Bilden skickas till Google Gemini för att tolkas — samma AI som resten av appens uppskattningar.</p>
         </div>
       </div>
+      </>
+      )}
     </div>
   )
 }

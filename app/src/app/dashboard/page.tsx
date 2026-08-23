@@ -79,7 +79,7 @@ export default async function DashboardPage() {
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -114,6 +114,7 @@ export default async function DashboardPage() {
     // Small table (one row per completed period, ever) — no date window
     // needed, same reasoning as goals above.
     supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -202,9 +203,18 @@ export default async function DashboardPage() {
   const activityCaloriesToday = activities
     .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
     .reduce((s, a) => s + (a.calories ?? 0), 0)
+  const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const yazioHistory: { date: string; kcalEaten: number | null; proteinG: number | null }[] = yazioHistoryRaw ? (() => {
+    try { return JSON.parse(yazioHistoryRaw) } catch { return [] }
+  })() : []
+  const yazioToday = yazioHistory[0]?.date === todayKey ? yazioHistory[0] : null
   const foodLogToday = (recentFoodLog ?? []).filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)
-  const eatenToday = foodLogToday.reduce((s, f) => s + (f.calories ?? 0), 0)
-  const proteinToday = foodLogToday.reduce((s, f) => s + (f.protein_g ?? 0), 0)
+  // YAZIO, when connected and synced today, replaces the manual food_log sum
+  // — same "prefer the real synced source over a manual/estimated one"
+  // pattern as garminCaloriesToday below. Manual logging still writes to
+  // food_log for everyone else (or as a supplement on the Mat page).
+  const eatenToday = yazioToday?.kcalEaten ?? foodLogToday.reduce((s, f) => s + (f.calories ?? 0), 0)
+  const proteinToday = yazioToday?.proteinG ?? foodLogToday.reduce((s, f) => s + (f.protein_g ?? 0), 0)
   const bmrResult = estimateBMR({
     weightKg: profile?.weight_kg ?? null,
     heightCm: profile?.height_cm ?? null,

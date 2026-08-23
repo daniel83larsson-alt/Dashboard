@@ -5,6 +5,7 @@ import { withGarminLock } from '@/lib/garmin'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
 import { syncStravaForUser, StravaNotConnectedError } from '@/lib/strava-sync'
 import { syncPolarForUser, PolarNotConnectedError } from '@/lib/polar-sync'
+import { syncYazioForUser, YazioNotConfiguredError } from '@/lib/yazio-sync'
 import { sendPushToUser } from '@/lib/push'
 import { checkAndPushMilestones } from '@/lib/milestones'
 import { reconcileUserPlanSessions } from '@/lib/plan-reconcile'
@@ -32,11 +33,12 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdminClient()
 
-  const [{ data: garminRows }, { data: c2Rows }, { data: stravaRows }, { data: polarRows }, { data: authUsers }] = await Promise.all([
+  const [{ data: garminRows }, { data: c2Rows }, { data: stravaRows }, { data: polarRows }, { data: yazioRows }, { data: authUsers }] = await Promise.all([
     supabase.from('coach_sessions').select('user_id').eq('coach_id', 'garmin_credentials'),
     supabase.from('concept2_tokens').select('user_id'),
     supabase.from('strava_tokens').select('user_id'),
     supabase.from('polar_tokens').select('user_id'),
+    supabase.from('coach_sessions').select('user_id').eq('coach_id', 'yazio_credentials'),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
 
@@ -87,6 +89,16 @@ export async function GET(request: NextRequest) {
     if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
     const isConfigError = r.reason instanceof PolarNotConnectedError
     return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
+  })
+
+  const yazioSettled = await Promise.allSettled(
+    (yazioRows ?? []).map(row => syncYazioForUser(supabase, row.user_id))
+  )
+  const yazio = yazioSettled.map((r, i) => {
+    const userId = (yazioRows ?? [])[i].user_id
+    if (r.status === 'fulfilled') return { userId, ok: true, hasSummary: r.value.hasSummary }
+    const isConfigError = r.reason instanceof YazioNotConfiguredError
+    return { userId, ok: false, error: isConfigError ? 'not_configured' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
   })
 
   // Match today's (and any still-open past weeks') plan_sessions against
@@ -149,6 +161,7 @@ export async function GET(request: NextRequest) {
     concept2: { total: concept2.length, ok: concept2.filter(r => r.ok).length, results: concept2 },
     strava: { total: strava.length, ok: strava.filter(r => r.ok).length, results: strava },
     polar: { total: polar.length, ok: polar.filter(r => r.ok).length, results: polar },
+    yazio: { total: yazio.length, ok: yazio.filter(r => r.ok).length, results: yazio },
     notified: newPassesByUser.size,
     planReconcile: { usersChecked: planUserIds.length, ...reconciled },
   })
