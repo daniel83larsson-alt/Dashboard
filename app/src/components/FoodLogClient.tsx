@@ -2,10 +2,24 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import {
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+} from 'recharts'
 import { createSupabaseClient } from '@/lib/supabase'
 import type { FoodCandidate } from '@/app/api/food/search/route'
 import type { YazioDay } from '@/lib/yazio-history'
-import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel } from '@/lib/yazio-history'
+import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel, currentWeekDateKeys } from '@/lib/yazio-history'
+
+// Same palette/tooltip convention as the other chart components in the app
+// (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
+// each of those already defines its own copy.
+const ACCENT = '#ccd400'
+const MUTED = '#6b7280'
+const EDGE = '#1e2428'
+const chartTooltip = {
+  contentStyle: { backgroundColor: '#161b1f', border: `1px solid ${EDGE}`, borderRadius: 12, color: '#e2e8ec', fontSize: 12 },
+  cursor: { fill: 'rgba(255,255,255,0.03)' },
+}
 
 export type FoodEntry = {
   id: string
@@ -50,16 +64,31 @@ export default function FoodLogClient({
   todayEntries,
   quickPicks,
   yazioHistory,
+  todayKey,
 }: {
   dailyCalorieGoal: number | null
   todayEntries: FoodEntry[]
   quickPicks: QuickPick[]
   yazioHistory: YazioDay[]
+  todayKey: string
 }) {
   const router = useRouter()
   const hasYazio = yazioHistory.length > 0
   const yazioToday = hasYazio ? yazioHistory[0] : null
-  const yazioWeek = yazioHistory.slice(0, 7)
+
+  const yazioByDate = new Map(yazioHistory.map(d => [d.date, d]))
+  const weekKeys = currentWeekDateKeys(todayKey)
+  const weekDaysWithData = weekKeys
+    .map(k => yazioByDate.get(k))
+    .filter((d): d is YazioDay => !!d && d.kcalEaten != null)
+
+  const trendDays = yazioHistory.filter(d => d.kcalEaten != null).slice(0, 30).slice().reverse()
+  const trendData = trendDays.map(d => ({
+    date: new Date(`${d.date}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }),
+    Kcal: d.kcalEaten,
+  }))
+  const trendGoals = trendDays.map(d => d.kcalGoal).filter((g): g is number => g != null)
+  const trendAvgGoal = trendGoals.length ? Math.round(trendGoals.reduce((s, g) => s + g, 0) / trendGoals.length) : null
   const [manualOpen, setManualOpen] = useState(!hasYazio)
   const [yazioSyncing, setYazioSyncing] = useState(false)
   const [yazioSyncMsg, setYazioSyncMsg] = useState('')
@@ -365,9 +394,9 @@ export default function FoodLogClient({
                 <div className="text-xs text-muted">Vikt{weightGoalLabel(yazioToday.weightGoal) ? ` · mål: ${weightGoalLabel(yazioToday.weightGoal)}` : ''}</div>
                 <div className="font-mono text-fg text-sm mt-0.5">
                   {yazioToday.startWeightKg != null && yazioToday.startWeightKg !== yazioToday.weightKg && (
-                    <span className="text-muted">{yazioToday.startWeightKg} kg → </span>
+                    <span className="text-muted">{yazioToday.startWeightKg.toFixed(1)} kg → </span>
                   )}
-                  <span className="font-bold">{yazioToday.weightKg} kg</span>
+                  <span className="font-bold">{yazioToday.weightKg.toFixed(1)} kg</span>
                 </div>
               </div>
               {yazioToday.startWeightKg != null && yazioToday.startWeightKg !== yazioToday.weightKg && (
@@ -378,29 +407,59 @@ export default function FoodLogClient({
             </div>
           )}
 
-          {/* Veckans progress */}
-          {yazioWeek.length > 1 && (
+          {/* Veckans loggade dagar */}
+          {hasYazio && (
             <div className="pt-3 border-t border-edge">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted">Senaste {yazioWeek.length} dagarna</span>
-                <span className="text-xs text-muted">{daysMetGoal(yazioWeek)} av {yazioWeek.length} dagar inom målet</span>
+                <span className="text-xs text-muted">Veckans loggade dagar</span>
+                {weekDaysWithData.length > 0 && (
+                  <span className="text-xs text-muted">{daysMetGoal(weekDaysWithData)} av {weekDaysWithData.length} inom målet</span>
+                )}
               </div>
-              <div className="flex items-end gap-1.5 h-16">
-                {yazioWeek.slice().reverse().map(d => {
-                  const pct = d.kcalGoal && d.kcalEaten != null ? Math.min(150, Math.round((d.kcalEaten / d.kcalGoal) * 100)) : 0
-                  const over = d.kcalGoal != null && d.kcalEaten != null && d.kcalEaten > d.kcalGoal
+              <div className="flex flex-col">
+                {weekKeys.map(key => {
+                  const day = yazioByDate.get(key)
+                  const isFuture = key > todayKey
+                  const isToday = key === todayKey
+                  const label = new Date(`${key}T00:00:00`).toLocaleDateString('sv-SE', { weekday: 'short' })
+                  const diff = day?.kcalEaten != null && day.kcalGoal != null ? day.kcalEaten - day.kcalGoal : null
                   return (
-                    <div key={d.date} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
-                      <div
-                        className={`w-full rounded-t ${over ? 'bg-amber-500' : 'bg-accent'}`}
-                        style={{ height: `${Math.max(4, Math.min(100, pct))}%` }}
-                        title={`${d.date}: ${d.kcalEaten ?? '–'} / ${d.kcalGoal ?? '–'} kcal`}
-                      />
-                      <span className="text-muted text-[9px]">{new Date(d.date).toLocaleDateString('sv-SE', { weekday: 'narrow' })}</span>
+                    <div key={key} className={`flex items-center justify-between text-xs py-1.5 ${isFuture ? 'opacity-40' : ''}`}>
+                      <span className={`capitalize ${isToday ? 'text-fg font-medium' : 'text-muted'}`}>{label}</span>
+                      {day?.kcalEaten != null ? (
+                        <div className="flex items-center gap-2 font-mono">
+                          <span className="text-fg">{day.kcalEaten} kcal</span>
+                          {diff != null && (
+                            <span className={diff > 0 ? 'text-amber-500' : 'text-accent'}>
+                              {diff > 0 ? '+' : ''}{diff}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-muted">{isFuture ? '–' : 'Ingen data'}</span>
+                      )}
                     </div>
                   )
                 })}
               </div>
+            </div>
+          )}
+
+          {/* Utveckling, senaste 30 dagarna */}
+          {trendData.length > 3 && (
+            <div className="pt-3 border-t border-edge">
+              <div className="text-xs text-muted uppercase tracking-wider mb-2">Utveckling, senaste 30 dagarna</div>
+              <ResponsiveContainer width="100%" height={120}>
+                <LineChart data={trendData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <CartesianGrid vertical={false} stroke={EDGE} />
+                  <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+                  <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                  <Tooltip {...chartTooltip} formatter={(v) => [`${v} kcal`, 'Ätet']} />
+                  {trendAvgGoal != null && <ReferenceLine y={trendAvgGoal} stroke={MUTED} strokeDasharray="3 3" />}
+                  <Line type="monotone" dataKey="Kcal" stroke={ACCENT} strokeWidth={2} dot={false} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+              {trendAvgGoal != null && <div className="text-[10px] text-muted mt-1">Streckad linje = snittmål ({trendAvgGoal} kcal)</div>}
             </div>
           )}
 

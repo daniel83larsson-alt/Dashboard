@@ -36,6 +36,8 @@ describe('renderWeeklyDigestHtml', () => {
       },
       adherence: { plannedCount: 3, doneCount: 3, label: 'Du körde alla 3 planerade pass.' },
       lookAhead: { kind: 'plan', sessions: [{ sport: 'Run', label: 'Löpning', title: 'Lugn löptur', plannedDate: '2026-07-20', isRest: false }] },
+      bestSession: { activityId: 'a1', sport: 'Run', label: 'Löpning', startDate: '2026-07-16T06:00:00Z', distanceKm: 10, minutes: 55, load: 42 },
+      newRecords: [{ activityId: 'a1', sport: 'Run', label: 'Löpning', startDate: '2026-07-16T06:00:00Z', records: ['Snabbaste 10 km'] }],
     },
     insights: { sessions: 'Bra vecka med jämna pass.', wellness: 'Sömnen såg stabil ut.', motivation: 'Kör på mot målet!' },
     viewedAt: null,

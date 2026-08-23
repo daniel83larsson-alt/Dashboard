@@ -51,6 +51,14 @@ function toKcal(value: number | undefined | null, unit: string | undefined): num
   return unit === 'kJ' ? Math.round(value / KJ_PER_KCAL) : Math.round(value)
 }
 
+// YAZIO's own weight figures come back as raw floats (e.g. 89.80000000000011,
+// a real value seen from a live account) — round to 1 decimal, the finest
+// precision a bathroom scale actually reports.
+function toWeight(value: number | undefined | null): number | null {
+  if (value == null) return null
+  return Math.round(value * 10) / 10
+}
+
 function toMeal(m: { nutrients?: Nutrients; energy_goal?: number } | undefined, unit: string | undefined): YazioMeal | null {
   if (!m) return null
   return {
@@ -77,8 +85,8 @@ export function summaryToYazioDay(date: string, summary: YazioDailySummary | nul
     carbG: Math.round(sum('nutrient.carb')),
     fatG: Math.round(sum('nutrient.fat')),
     steps: summary.steps ?? null,
-    weightKg: summary.user?.current_weight ?? null,
-    startWeightKg: summary.user?.start_weight ?? null,
+    weightKg: toWeight(summary.user?.current_weight),
+    startWeightKg: toWeight(summary.user?.start_weight),
     weightGoal: summary.user?.goal ?? null,
     waterMl: summary.water_intake ?? null,
     waterGoalMl: summary.goals?.water ?? null,
@@ -121,6 +129,25 @@ export function normalizeYazioDay(d: Partial<YazioDay> & { date: string }): Yazi
     fastingTemplate: d.fastingTemplate ?? null,
     meals: d.meals ?? { breakfast: null, lunch: null, dinner: null, snack: null },
   }
+}
+
+// The 7 "YYYY-MM-DD" date keys (Monday–Sunday) of the calendar week
+// containing `todayKey` — built from plain y/m/d components (not an ISO
+// string with a Z-suffix) so calendar arithmetic never drifts a day from a
+// timezone offset, same technique `startOfWeek` (dates.ts) uses for Date
+// objects.
+export function currentWeekDateKeys(todayKey: string): string[] {
+  const [y, m, d] = todayKey.split('-').map(Number)
+  const today = new Date(y, m - 1, d)
+  const dow = today.getDay() // 0=sön..6=lör
+  const mondayOffset = dow === 0 ? -6 : 1 - dow
+  const monday = new Date(today)
+  monday.setDate(monday.getDate() + mondayOffset)
+  return Array.from({ length: 7 }, (_, i) => {
+    const dt = new Date(monday)
+    dt.setDate(dt.getDate() + i)
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`
+  })
 }
 
 export function daysMetGoal(history: YazioDay[]): number {

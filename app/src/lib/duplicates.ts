@@ -17,6 +17,7 @@ export type ActivityRow = {
   sport_type: string
   name?: string
   average_heartrate?: number | null
+  max_heartrate?: number | null
   description?: string | null
   created_at?: string
   hr_zones?: unknown

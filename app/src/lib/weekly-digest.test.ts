@@ -228,4 +228,59 @@ describe('computeWeeklyDigest', () => {
     })
     expect(result.thisWeek.sessions.count).toBe(1)
   })
+
+  it('picks the highest-load session of the week as bestSession, not just the longest', () => {
+    const activities = [
+      // Same duration as the hard one, but no HR data — falls back to the
+      // flat NO_HR_INTENSITY (0.5) load, which this session's real %HRR beats.
+      activity({ id: 'easy', start_date: '2026-07-14T08:00:00Z', moving_time: 1200, average_heartrate: null }),
+      activity({ id: 'hard', start_date: '2026-07-15T08:00:00Z', moving_time: 1200, average_heartrate: 180 }),
+    ]
+    const result = computeWeeklyDigest({
+      weekStart: WEEK_START,
+      activities,
+      wellnessHistory: [],
+      planSessionsThisWeek: [],
+      planSessionsNextWeek: [],
+      restingHR: 50,
+      maxHR: 190,
+    })
+    expect(result.bestSession?.activityId).toBe('hard')
+  })
+
+  it('flags a new record only when it actually beats prior history, and compares against activities before it in time', () => {
+    const activities = [
+      // Older PR-eligible baseline, well before this week.
+      activity({ id: 'baseline', start_date: '2026-06-01T08:00:00Z', distance: 5000, moving_time: 1500, sport_type: 'Run' }),
+      // This week's run beats the baseline 5k time — should be flagged.
+      activity({ id: 'this-week-pr', start_date: '2026-07-14T08:00:00Z', distance: 5000, moving_time: 1300, sport_type: 'Run' }),
+      // A second, even faster run later the same week — should NOT make the
+      // first one's PR-check see it, since it hadn't happened yet.
+      activity({ id: 'this-week-faster', start_date: '2026-07-16T08:00:00Z', distance: 5000, moving_time: 1100, sport_type: 'Run' }),
+    ]
+    const result = computeWeeklyDigest({
+      weekStart: WEEK_START,
+      activities,
+      wellnessHistory: [],
+      planSessionsThisWeek: [],
+      planSessionsNextWeek: [],
+    })
+    const ids = result.newRecords.map(r => r.activityId)
+    expect(ids).toContain('this-week-pr')
+    expect(ids).toContain('this-week-faster')
+    const prEntry = result.newRecords.find(r => r.activityId === 'this-week-pr')
+    expect(prEntry?.records).toContain('Snabbaste 5 km')
+  })
+
+  it('reports no bestSession and no newRecords when nothing was logged this week', () => {
+    const result = computeWeeklyDigest({
+      weekStart: WEEK_START,
+      activities: [],
+      wellnessHistory: [],
+      planSessionsThisWeek: [],
+      planSessionsNextWeek: [],
+    })
+    expect(result.bestSession).toBeNull()
+    expect(result.newRecords).toEqual([])
+  })
 })

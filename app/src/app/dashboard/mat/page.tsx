@@ -40,6 +40,7 @@ export default async function MatPage() {
       todayEntries={todayEntries}
       quickPicks={quickPicks}
       yazioHistory={yazioHistory}
+      todayKey={todayKey}
     />
   )
 }
