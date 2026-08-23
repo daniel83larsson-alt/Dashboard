@@ -20,9 +20,10 @@ export default async function AdminPage() {
     )
   }
 
-  const [{ data: profiles }, { data: syncStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }, { data: newsletterRecipients }] = await Promise.all([
+  const [{ data: profiles }, { data: syncStatus }, { data: yazioStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }, { data: newsletterRecipients }] = await Promise.all([
     supabase.rpc('admin_list_profiles'),
     supabase.rpc('admin_all_sync_status'),
+    supabase.rpc('admin_yazio_status'),
     supabase.rpc('admin_activity_stats'),
     supabase.rpc('admin_api_call_stats'),
     supabase.rpc('admin_recent_events'),
@@ -30,11 +31,13 @@ export default async function AdminPage() {
   ])
 
   type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean; concept2_synced: boolean; garmin_synced: boolean }
+  type YazioRow = { user_id: string; has_yazio: boolean; yazio_synced: boolean }
   type ActivityStatsRow = { user_id: string; activity_count: number; days_synced: number; last_synced: string }
   type ProfileRow = { id: string; email: string; name: string | null; created_at: string; locked: boolean | null; flagged_attempts: number | null }
   type CallStatsRow = { user_id: string; calls_today: number; calls_7d: number }
   type EventRow = { event_type: 'signup' | 'activity'; user_id: string; email: string; name: string | null; label: string; occurred_at: string }
   const syncByUser = new Map<string, SyncRow>((syncStatus ?? []).map((s: SyncRow) => [s.user_id, s]))
+  const yazioByUser = new Map<string, YazioRow>((yazioStatus ?? []).map((y: YazioRow) => [y.user_id, y]))
   const statsByUser = new Map<string, ActivityStatsRow>((activityStats ?? []).map((s: ActivityStatsRow) => [s.user_id, s]))
   const callsByUser = new Map<string, CallStatsRow>((callStats ?? []).map((c: CallStatsRow) => [c.user_id, c]))
   const profileRows = (profiles ?? []) as ProfileRow[]
@@ -78,6 +81,8 @@ export default async function AdminPage() {
             hasGarmin={!!syncByUser.get(p.id)?.has_garmin}
             concept2Synced={!!syncByUser.get(p.id)?.concept2_synced}
             garminSynced={!!syncByUser.get(p.id)?.garmin_synced}
+            hasYazio={!!yazioByUser.get(p.id)?.has_yazio}
+            yazioSynced={!!yazioByUser.get(p.id)?.yazio_synced}
             activityCount={statsByUser.get(p.id)?.activity_count ?? 0}
             daysSynced={statsByUser.get(p.id)?.days_synced ?? 0}
             lastSynced={statsByUser.get(p.id)?.last_synced ?? null}

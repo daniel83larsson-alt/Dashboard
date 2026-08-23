@@ -1190,3 +1190,32 @@ create index celebrated_milestones_user on public.celebrated_milestones(user_id)
 alter table public.connected_accounts drop constraint if exists connected_accounts_provider_check;
 alter table public.connected_accounts add constraint connected_accounts_provider_check
   check (provider in ('garmin', 'concept2', 'strava', 'polar', 'yazio'));
+
+-- Admin: YAZIO-anslutning + synkstatus per användare, samma mönster som
+-- admin_all_sync_status() för Concept2/Garmin — en egen funktion istället
+-- för att bredda den befintliga, så dess returtyp/anropsställe inte
+-- behöver röras. has_yazio = uppgifter sparade, yazio_synced = minst en
+-- dags historik faktiskt hämtad (yazio_history), samma "sparat ≠
+-- fungerar"-distinktion som redan gäller för de andra källorna.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_yazio_status()
+returns table(user_id uuid, has_yazio boolean, yazio_synced boolean)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    p.id,
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'yazio_credentials'),
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'yazio_history')
+  from public.profiles p;
+end;
+$$;
+revoke all on function public.admin_yazio_status() from public;
+grant execute on function public.admin_yazio_status() to authenticated;
