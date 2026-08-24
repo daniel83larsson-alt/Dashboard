@@ -63,6 +63,35 @@ jobs:
               call
               echo
             done
+          elif [ "${{ steps.route.outputs.path }}" = "sync-all" ]; then
+            # Garmin's login endpoint trips Cloudflare's rate limit when too
+            # many logins fire back-to-back — verified live: only 2 of 6
+            # Garmin users actually synced two nights running, the other 4 all
+            # failing with the same 429 (see STATUS.md). A single sync-all
+            # call can't just wait longer between logins itself, since it has
+            # to finish inside Vercel's 60s cap — so instead this splits
+            # Garmin into small batches across several calls, with a real
+            # pause between them here (no function-duration limit on a
+            # GitHub Actions runner). garminOnly=1 on repeat batches skips
+            # Concept2/Strava/Polar/YAZIO/plan-reconcile, which only need to
+            # run once a night — only the first call does the full sync.
+            # Batch size 2 x 6 batches = headroom for up to 12 Garmin users
+            # without needing to hand-tune this soon (same reasoning as
+            # weekly-digest's batch count above).
+            batchSize=2
+            batches=6
+            offset=0
+            for i in $(seq 1 $batches); do
+              echo "sync-all Garmin batch $i (offset $offset)"
+              extra=""
+              if [ $i -gt 1 ]; then extra="&garminOnly=1"; fi
+              curl --fail-with-body -sS \
+                -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+                "https://dltrainer.se/api/cron/sync-all?garminOffset=$offset&garminLimit=$batchSize$extra"
+              echo
+              offset=$((offset + batchSize))
+              if [ $i -lt $batches ]; then sleep 25; fi
+            done
           else
             call
           fi

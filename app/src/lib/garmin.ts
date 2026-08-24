@@ -25,10 +25,26 @@ const displayNameCache = new Map<string, string>()
 // Garmin-connected users grows — acceptable short-term, but the real fix is
 // patching the library itself (tracked in STATUS.md), which should let this
 // lock be removed again.
+// Extra: Garmin's login endpoint (sso.garmin.com) sits behind Cloudflare
+// rate limiting that trips after just a couple of logins fired back-to-back
+// — verified live against real cron runs (only 2 of 6 Garmin users synced,
+// two nights running, all four others failing with the same 429; see
+// STATUS.md). Serializing alone (above) wasn't enough since the queue was
+// still draining as fast as each login resolved — this adds a real gap
+// between them. The bigger part of the fix is batching the cron itself
+// across multiple invocations (see api/cron/sync-all/route.ts +
+// dl-trainer-cron.yml), since Vercel's 60s function cap doesn't leave room
+// for many logins spaced seconds apart; this delay is a cheap second layer
+// for whenever more than one Garmin user lands in the same batch.
+const GARMIN_LOCK_DELAY_MS = 4000
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
 let garminLockTail: Promise<void> = Promise.resolve()
 export function withGarminLock<T>(fn: () => Promise<T>): Promise<T> {
   const runAfter = garminLockTail.then(fn, fn)
-  garminLockTail = runAfter.then(() => undefined, () => undefined)
+  garminLockTail = runAfter.then(() => undefined, () => undefined).then(() => delay(GARMIN_LOCK_DELAY_MS))
   return runAfter
 }
 
