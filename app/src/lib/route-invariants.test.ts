@@ -50,6 +50,9 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     'app/api/weekly-digest/unsubscribe/route.ts',
     'app/api/webhooks/new-signup/route.ts',
     'app/api/newsletter/unsubscribe/route.ts',
+    // The forgot-password flow itself — by definition reachable by someone
+    // who can't log in. Uses the service-role client internally instead.
+    'app/api/auth/forgot-password/route.ts',
   ]
 
   for (const file of allRouteFiles) {

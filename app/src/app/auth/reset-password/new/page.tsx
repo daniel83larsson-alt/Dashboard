@@ -4,6 +4,17 @@ import { useState, useEffect } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 
 export default function NewPasswordPage() {
+  // token_hash is the new, preferred path (see STATUS.md for the real
+  // incident this fixes): the recovery email links straight to THIS page
+  // with a raw token_hash, verified here via verifyOtp — no PKCE
+  // code_verifier needed, and crucially no hop through Supabase's own
+  // hosted /verify endpoint, which is a plain single-use GET that a mail
+  // scanner (Gmail's own link-prescanning, Outlook Safe Links, etc.) can —
+  // and, confirmed live via the auth logs, DID — burn before the real user
+  // ever clicked. `code` stays supported for links already in someone's
+  // inbox from before this template change (mailer_otp_exp is 1h, so this
+  // fallback is only relevant for a short window after deploy).
+  const [tokenHash, setTokenHash] = useState<string | null>(null)
   const [code, setCode] = useState<string | null>(null)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
@@ -14,8 +25,10 @@ export default function NewPasswordPage() {
   useEffect(() => {
     // Plain window.location read instead of useSearchParams — same reason
     // as login/page.tsx, avoids a Suspense boundary for a one-off param.
+    const params = new URLSearchParams(window.location.search)
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCode(new URLSearchParams(window.location.search).get('code'))
+    setTokenHash(params.get('token_hash'))
+    setCode(params.get('code'))
   }, [])
 
   async function handleSubmit(e: React.FormEvent) {
@@ -24,7 +37,7 @@ export default function NewPasswordPage() {
       setError('Lösenorden matchar inte')
       return
     }
-    if (!code) {
+    if (!tokenHash && !code) {
       setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
       return
     }
@@ -32,11 +45,14 @@ export default function NewPasswordPage() {
     setError('')
 
     const supabase = createSupabaseClient()
-    // The code is only ever redeemed here, on a real form submit — not on
-    // page load — so an email/SMS link-scanner's passive GET can never
-    // burn it before the person actually sets their password.
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
-    if (exchangeError) {
+    // Only ever redeemed here, on a real form submit — not on page load —
+    // so a passive GET (link-scanner, prefetch, or Supabase's own /verify
+    // hop for the old `code`-based links) can never burn it before the
+    // person actually sets their password.
+    const { error: verifyError } = tokenHash
+      ? await supabase.auth.verifyOtp({ token_hash: tokenHash, type: 'recovery' })
+      : await supabase.auth.exchangeCodeForSession(code!)
+    if (verifyError) {
       setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
       setLoading(false)
       return

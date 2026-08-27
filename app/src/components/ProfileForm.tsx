@@ -106,6 +106,12 @@ export default function ProfileForm({
   const [yazioConnected, setYazioConnected] = useState(hasYazio)
   const [sendingTest, setSendingTest] = useState(false)
   const [testMsg, setTestMsg] = useState('')
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState('')
+  const [pwSaved, setPwSaved] = useState(false)
   const router = useRouter()
 
   async function save(e: React.FormEvent) {
@@ -316,14 +322,90 @@ export default function ProfileForm({
     router.push('/login')
   }
 
+  // Works directly against the already-logged-in session (updateUser),
+  // no email link involved at all — a real alternative to the mejl-baserade
+  // återställningen, not just a UI wrapper around it. Same minLength as the
+  // reset-password/new page for a consistent rule everywhere a password is
+  // set.
+  async function changePassword() {
+    setPwError('')
+    setPwSaved(false)
+    if (newPassword.length < 6) {
+      setPwError('Lösenordet måste vara minst 6 tecken')
+      return
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('Lösenorden matchar inte')
+      return
+    }
+    setPwSaving(true)
+    const supabase = createSupabaseClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    setPwSaving(false)
+    if (error) {
+      setPwError('Kunde inte byta lösenord. Försök igen eller logga ut och in på nytt.')
+      return
+    }
+    setPwSaved(true)
+    setNewPassword('')
+    setConfirmPassword('')
+  }
+
   const hasApiKey = !!profile?.llm_api_key_encrypted
 
   return (
     <form onSubmit={save} className="flex flex-col gap-4">
       {/* Account */}
-      <div className="bg-card border border-edge rounded-2xl p-4">
-        <div className="text-xs text-muted uppercase tracking-wider mb-2">Konto</div>
-        <div className="text-fg text-sm">{userEmail}</div>
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-2">Konto</div>
+          <div className="text-fg text-sm">{userEmail}</div>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => { setChangingPassword(v => !v); setPwError(''); setPwSaved(false) }}
+          className="text-xs text-muted hover:text-fg transition-colors self-start flex items-center gap-1.5"
+        >
+          {changingPassword ? '▾' : '▸'} Byt lösenord
+        </button>
+
+        {changingPassword && (
+          <div className="flex flex-col gap-3 pt-1 border-t border-edge">
+            <div className="pt-2">
+              <label className="text-muted text-xs block mb-1.5">Nytt lösenord</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={e => setNewPassword(e.target.value)}
+                placeholder="••••••••"
+                minLength={6}
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Bekräfta nytt lösenord</label>
+              <input
+                type="password"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                placeholder="••••••••"
+                minLength={6}
+                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+              />
+            </div>
+            {pwError && <p className="text-red-400 text-xs">{pwError}</p>}
+            {pwSaved && <p className="text-accent text-xs">✓ Lösenordet är uppdaterat.</p>}
+            <button
+              type="button"
+              onClick={changePassword}
+              disabled={pwSaving || !newPassword || !confirmPassword}
+              className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity self-start"
+            >
+              {pwSaving ? 'Byter...' : 'Byt lösenord'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Profile */}

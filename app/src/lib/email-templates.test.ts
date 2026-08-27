@@ -1,5 +1,5 @@
-// Locks in the iOS Mail dark-header-inversion fix (e193419): all three
-// email templates once shipped without a color-scheme meta tag, so iOS
+// Locks in the iOS Mail dark-header-inversion fix (e193419): the original
+// three email templates once shipped without a color-scheme meta tag, so iOS
 // Mail's automatic dark-mode inverted the dark header band into something
 // unreadable. Asserts presence of the fix's markers via toContain (not
 // toMatchSnapshot — a full-HTML snapshot churns on every copy tweak and
@@ -8,6 +8,7 @@ import { describe, it, expect } from 'vitest'
 import { renderWeeklyDigestHtml } from './weekly-digest-email'
 import { renderNewsletterHtml } from './newsletter'
 import { renderFeatureShowcaseHtml } from './feature-showcase-email'
+import { renderResetPasswordHtml } from './reset-password-email'
 import type { WeeklyDigestRecord } from './weekly-digest-generate'
 import type { PersonalStats } from './newsletter'
 
@@ -67,5 +68,17 @@ describe('renderFeatureShowcaseHtml', () => {
   it('still renders dark-mode-safe with the wrongVersionNote branch on', () => {
     const html = renderFeatureShowcaseHtml({ name: 'Fredrik', wrongVersionNote: true, unsubscribeUrl: 'https://dltrainer.se/api/newsletter/unsubscribe?uid=1' })
     expectDarkModeSafe(html)
+  })
+})
+
+describe('renderResetPasswordHtml', () => {
+  it('renders a valid, dark-mode-safe HTML document', () => {
+    const html = renderResetPasswordHtml({ resetUrl: 'https://dltrainer.se/auth/reset-password/new?token_hash=abc123&type=recovery' })
+    expectDarkModeSafe(html)
+  })
+
+  it('includes the real reset link, not a placeholder', () => {
+    const html = renderResetPasswordHtml({ resetUrl: 'https://dltrainer.se/auth/reset-password/new?token_hash=abc123&type=recovery' })
+    expect(html).toContain('https://dltrainer.se/auth/reset-password/new?token_hash=abc123&type=recovery')
   })
 })
