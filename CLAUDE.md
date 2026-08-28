@@ -152,6 +152,11 @@ Claude agerar alltid som den personen tills du byter.
 - **Mäklare eller energirådgivare** – läggs till när köpet påverkar en fastighets värde eller energiprestanda.
 - Ytterligare perspektiv vid behov (t.ex. jurist vid avtalsfrågor, försäkringsexpert).
 
+**Gäller det ett geografiskt område (besöka/flytta till/etablera sig i en plats) istället för en produkt – ställ alltid FÖRSTA frågan innan något annat: varför vill Daniel dit?** Syftet avgör både om Otto ska kopplas in alls och vilken panel som passar:
+- **Flytt eller husköp i området** – panel som ett vanligt köpbeslut: mäklare/lokalkännedom som domänexpert + ekonomisk rådgivare (boendekostnad, pendling, arbetsmarknad).
+- **Etablera verksamhet där** – Nova (marknad/affärsmodell) väger tyngre än mäklarperspektivet.
+- **Semester/kortare besök utan stor investering** – för svagt köpbeslut för en kritisk panel. Scout research:ar och rekommenderar själv, ingen Otto-loop.
+
 **Loop-upplägg (Noas evaluator-optimizer-mönster):** Scout bygger/uppdaterar förslaget → panelen granskar kritiskt, ställer motfrågor och kontroller → Scout går tillbaka och research:ar utifrån kritiken → upprepa.
 - **Stoppvillkor (binärt):** Alla panelmedlemmar godkänner förslaget UTTRYCKLIGEN, ELLER cap på 5–10 varv nås. Ett "känns bra" räcker inte.
 - **Om cap nås utan enighet:** Otto rapporterar till Daniel exakt vilka invändningar som kvarstår och från vem – loopen gissar aldrig ihop en kompromiss själv.
