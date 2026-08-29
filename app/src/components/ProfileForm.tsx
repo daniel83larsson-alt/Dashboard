@@ -5,6 +5,7 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
+import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -27,6 +28,13 @@ type Profile = {
   daily_calorie_goal?: number | null
   weekly_digest_opt_out?: boolean | null
   coach_tone?: string | null
+  kost_tracking_enabled?: boolean | null
+  kost_tracked_metrics?: string[] | null
+  kost_tracked_meals?: string[] | null
+  kost_reminders_enabled?: boolean | null
+  protein_goal_g?: number | null
+  carb_goal_g?: number | null
+  fat_goal_g?: number | null
 }
 
 
@@ -82,6 +90,13 @@ export default function ProfileForm({
   const [birthYear, setBirthYear] = useState(profile?.birth_year?.toString() ?? '')
   const [biologicalSex, setBiologicalSex] = useState(profile?.biological_sex ?? '')
   const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal?.toString() ?? '')
+  const [kostTrackingEnabled, setKostTrackingEnabled] = useState(profile?.kost_tracking_enabled ?? false)
+  const [kostTrackedMetrics, setKostTrackedMetrics] = useState<KostMetric[]>((profile?.kost_tracked_metrics as KostMetric[] | null) ?? ['kcal'])
+  const [kostTrackedMeals, setKostTrackedMeals] = useState<KostMeal[]>((profile?.kost_tracked_meals as KostMeal[] | null) ?? ['breakfast', 'lunch', 'dinner'])
+  const [kostRemindersEnabled, setKostRemindersEnabled] = useState(profile?.kost_reminders_enabled ?? true)
+  const [proteinGoalG, setProteinGoalG] = useState(profile?.protein_goal_g?.toString() ?? '')
+  const [carbGoalG, setCarbGoalG] = useState(profile?.carb_goal_g?.toString() ?? '')
+  const [fatGoalG, setFatGoalG] = useState(profile?.fat_goal_g?.toString() ?? '')
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
@@ -114,6 +129,13 @@ export default function ProfileForm({
   const [pwSaved, setPwSaved] = useState(false)
   const router = useRouter()
 
+  function toggleKostMetric(m: KostMetric) {
+    setKostTrackedMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
+  }
+  function toggleKostMeal(m: KostMeal) {
+    setKostTrackedMeals(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
+  }
+
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -124,6 +146,9 @@ export default function ProfileForm({
     const parsedHeight = parseFloat(heightCm)
     const parsedBirthYear = parseInt(birthYear, 10)
     const parsedCalorieGoal = parseInt(calorieGoal, 10)
+    const parsedProteinGoal = parseFloat(proteinGoalG)
+    const parsedCarbGoal = parseFloat(carbGoalG)
+    const parsedFatGoal = parseFloat(fatGoalG)
     await supabase.from('profiles').update({
       name,
       llm_provider: provider,
@@ -138,6 +163,13 @@ export default function ProfileForm({
       daily_calorie_goal: calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null,
       weekly_digest_opt_out: !weeklyDigestEnabled,
       coach_tone: coachTone,
+      kost_tracking_enabled: kostTrackingEnabled,
+      kost_tracked_metrics: kostTrackedMetrics.length ? kostTrackedMetrics : ['kcal'],
+      kost_tracked_meals: kostTrackedMeals,
+      kost_reminders_enabled: kostRemindersEnabled,
+      protein_goal_g: proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null,
+      carb_goal_g: carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null,
+      fat_goal_g: fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -523,6 +555,95 @@ export default function ProfileForm({
           />
           <p className="text-muted text-xs mt-1.5">Styr kalorirutan på Översikt. Lämna tomt för att bara se ätit/bränt utan ett mål att jämföra mot.</p>
         </div>
+      </div>
+
+      {/* Kost-mål */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Kost-mål</div>
+          <p className="text-muted text-xs">Frivillig spårning på Kost-sidan — kalender, dagliga mål och påminnelser om du glömmer logga en måltid. Av som standard.</p>
+        </div>
+        <label className="flex items-center justify-between">
+          <span className="text-sm text-fg">Spåra mål på Kost-sidan</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={kostTrackingEnabled}
+            onClick={() => setKostTrackingEnabled(v => !v)}
+            className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${kostTrackingEnabled ? 'bg-accent' : 'bg-edge'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-bg transition-transform ${kostTrackingEnabled ? 'translate-x-5' : ''}`} />
+          </button>
+        </label>
+
+        {kostTrackingEnabled && (
+          <>
+            <div>
+              <label className="text-muted text-xs block mb-2">Vad vill du hålla koll på?</label>
+              <div className="flex flex-wrap gap-2">
+                {KOST_METRICS.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => toggleKostMetric(m)}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${kostTrackedMetrics.includes(m) ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
+                  >
+                    {kostMetricLabel(m)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {kostTrackedMetrics.includes('protein') && (
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Proteinmål (g/dag)</label>
+                <input type="number" min={0} step={5} inputMode="numeric" value={proteinGoalG} onChange={e => setProteinGoalG(e.target.value)} placeholder="t.ex. 150" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+              </div>
+            )}
+            {kostTrackedMetrics.includes('carb') && (
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Kolhydratmål (g/dag)</label>
+                <input type="number" min={0} step={5} inputMode="numeric" value={carbGoalG} onChange={e => setCarbGoalG(e.target.value)} placeholder="t.ex. 250" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+              </div>
+            )}
+            {kostTrackedMetrics.includes('fat') && (
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Fettmål (g/dag)</label>
+                <input type="number" min={0} step={5} inputMode="numeric" value={fatGoalG} onChange={e => setFatGoalG(e.target.value)} placeholder="t.ex. 70" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+              </div>
+            )}
+            {kostTrackedMetrics.includes('kcal') && !calorieGoal.trim() && (
+              <p className="text-amber-400 text-xs -mt-2">Ange ett dagligt kalorimål ovan under &quot;Kropp &amp; kalorier&quot; för att kalorier ska räknas med i kalendern.</p>
+            )}
+
+            <div>
+              <label className="text-muted text-xs block mb-2">Vilka måltider vill du logga?</label>
+              <div className="flex flex-wrap gap-2">
+                {KOST_MEALS.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => toggleKostMeal(m)}
+                    className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${kostTrackedMeals.includes(m) ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
+                  >
+                    {kostMealLabel(m)}
+                  </button>
+                ))}
+              </div>
+              <p className="text-muted text-xs mt-1.5">Kvällsmat och mellanmål går att logga flera gånger per dag — resten räknas som klara efter första loggningen.</p>
+            </div>
+
+            <label className="flex items-center gap-2.5 text-sm text-fg">
+              <input
+                type="checkbox"
+                checked={kostRemindersEnabled}
+                onChange={e => setKostRemindersEnabled(e.target.checked)}
+                className="w-4 h-4 accent-accent"
+              />
+              Påminn mig om jag glömmer logga en måltid
+            </label>
+          </>
+        )}
       </div>
 
       {/* Veckans Recap */}

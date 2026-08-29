@@ -7,7 +7,7 @@ export const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard', label: 'Översikt', icon: 'home' },
   { href: '/dashboard/veckoplan', label: 'Veckoplan', icon: 'calendar' },
   { href: '/dashboard/passlogg', label: 'Aktiviteter', icon: 'log' },
-  { href: '/dashboard/mat', label: 'Mat', icon: 'food' },
+  { href: '/dashboard/mat', label: 'Kost', icon: 'food' },
   { href: '/dashboard/rutter', label: 'Rutter', icon: 'route' },
   { href: '/dashboard/halsa', label: 'Hälsa & Insikter', icon: 'heart' },
   { href: '/dashboard/coach', label: 'Coach', icon: 'chat' },
