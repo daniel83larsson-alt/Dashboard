@@ -14,13 +14,15 @@ export default async function ProfilPage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: c2token }, { data: stravaToken }, { data: polarToken }, { data: ctxRow }, { data: garminCredsRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: stravaActivity }, { data: polarActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
+  const [{ data: profile }, { data: c2token }, { data: stravaToken }, { data: polarToken }, { data: ctxRow }, { data: garminCredsRow }, { data: yazioCredsRow }, { data: yazioDebugRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: stravaActivity }, { data: polarActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('concept2_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('strava_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('polar_tokens').select('user_id').eq('user_id', user.id).single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_credentials').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_credentials').single(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_raw_debug').single(),
     supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active').order('created_at', { ascending: false }),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
     // "Connected" only means credentials are saved — these confirm at least
@@ -38,6 +40,9 @@ export default async function ProfilPage({
   const savedContext = (ctxRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
   const garminCredsRaw = (garminCredsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const hasGarmin = !!garminCredsRaw
+  const yazioCredsRaw = (yazioCredsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const hasYazio = !!yazioCredsRaw
+  const yazioSynced = !!(yazioDebugRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const concept2Synced = !!concept2Activity
   const garminSynced = !!garminActivity
   const stravaSynced = !!stravaActivity
@@ -105,10 +110,12 @@ export default async function ProfilPage({
         hasGarmin={hasGarmin}
         hasStrava={!!stravaToken}
         hasPolar={!!polarToken}
+        hasYazio={hasYazio}
         concept2Synced={concept2Synced}
         garminSynced={garminSynced}
         stravaSynced={stravaSynced}
         polarSynced={polarSynced}
+        yazioSynced={yazioSynced}
         savedContext={savedContext}
       />
     </div>

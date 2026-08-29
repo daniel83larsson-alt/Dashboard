@@ -11,8 +11,8 @@ function fmtDateRange(startISO: string, endISO: string) {
   return `${start}–${end}`
 }
 
-function statBox(value: string, label: string) {
-  return `<td style="padding:12px;background:#f4f4f2;border-radius:12px;text-align:center;" width="33%">
+function statBox(value: string, label: string, width = '33%') {
+  return `<td style="padding:12px;background:#f4f4f2;border-radius:12px;text-align:center;" width="${width}">
     <div style="color:#0e1113;font-size:18px;font-weight:700;font-family:monospace;">${value}</div>
     <div style="color:#777;font-size:11px;margin-top:2px;">${label}</div>
   </td>`
@@ -34,11 +34,25 @@ export function renderWeeklyDigestHtml({
   record: WeeklyDigestRecord
   unsubscribeUrl: string
 }): string {
-  const { thisWeek, adherence, lookAhead } = record.data
+  const { thisWeek, adherence, lookAhead, bestSession, newRecords } = record.data
 
   const adherenceHtml = adherence
     ? `<div style="margin:0 0 16px;padding:12px 16px;background:#f4f4f2;border-radius:12px;">
         <p style="margin:0;color:#1a1a1a;font-size:14px;">${adherence.label}</p>
+      </div>`
+    : ''
+
+  const bestSessionHtml = bestSession
+    ? `<div style="margin:0 0 16px;padding:12px 16px;background:#f4f4f2;border-radius:12px;">
+        <p style="margin:0 0 2px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Veckans bästa pass</p>
+        <p style="margin:0;color:#1a1a1a;font-size:14px;">${bestSession.label}${bestSession.distanceKm > 0 ? `, ${bestSession.distanceKm} km` : ''}, ${bestSession.minutes} min</p>
+      </div>`
+    : ''
+
+  const newRecordsHtml = newRecords.length
+    ? `<div style="margin:0 0 16px;">
+        <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">🏅 Nya rekord denna vecka</p>
+        ${newRecords.map(r => `<p style="margin:0 0 2px;color:#1a1a1a;font-size:14px;">${r.label}: ${r.records.join(', ')}</p>`).join('')}
       </div>`
     : ''
 
@@ -74,14 +88,22 @@ export function renderWeeklyDigestHtml({
         <tr><td style="padding:28px 32px;">
           <p style="margin:0 0 4px;color:#1a1a1a;font-size:15px;">Hej ${name}!</p>
           <p style="margin:0 0 20px;color:#999;font-size:12px;">${fmtDateRange(record.weekStartISO, record.weekEndISO)}</p>
-          <table width="100%" cellpadding="0" cellspacing="8" style="margin:0 0 18px;">
+          <table width="100%" cellpadding="0" cellspacing="8" style="margin:0 0 8px;">
             <tr>
               ${statBox(String(thisWeek.sessions.count), 'pass')}
               ${statBox(`${thisWeek.sessions.totalKm} km`, 'distans')}
               ${statBox(thisWeek.wellness.avgSteps ? Math.round(thisWeek.wellness.avgSteps).toLocaleString('sv-SE') : '–', 'steg/dag')}
             </tr>
           </table>
+          <table width="100%" cellpadding="0" cellspacing="8" style="margin:0 0 18px;">
+            <tr>
+              ${statBox(thisWeek.wellness.avgSleepHours != null ? `${thisWeek.wellness.avgSleepHours.toFixed(1)}h` : '–', 'sömn/natt', '50%')}
+              ${statBox(thisWeek.wellness.avgRestingHR != null ? String(Math.round(thisWeek.wellness.avgRestingHR)) : '–', 'vilopuls', '50%')}
+            </tr>
+          </table>
           ${adherenceHtml}
+          ${bestSessionHtml}
+          ${newRecordsHtml}
           ${insightsHtml}
           ${motivationHtml}
           ${lookAheadHtml}

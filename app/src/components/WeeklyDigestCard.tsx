@@ -54,7 +54,7 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
     )
   }
 
-  const { thisWeek, prevWeek, adherence, lookAhead } = record.data
+  const { thisWeek, prevWeek, adherence, lookAhead, bestSession, newRecords } = record.data
 
   return (
     <div className="bg-card border border-edge rounded-2xl p-5 space-y-4">
@@ -104,6 +104,32 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
       {adherence && (
         <div className="bg-bg rounded-xl p-3">
           <div className="text-sm text-fg">{adherence.label}</div>
+        </div>
+      )}
+
+      {bestSession && (
+        <div className="bg-bg rounded-xl p-3 flex items-center justify-between">
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Veckans bästa pass</div>
+            <div className="text-sm text-fg">{bestSession.label} · {bestSession.distanceKm > 0 ? `${bestSession.distanceKm} km · ` : ''}{bestSession.minutes} min</div>
+          </div>
+          <div className="text-right">
+            <div className="font-mono text-accent text-lg font-bold">{bestSession.load}</div>
+            <div className="text-muted text-[10px]">belastning</div>
+          </div>
+        </div>
+      )}
+
+      {newRecords.length > 0 && (
+        <div className="bg-bg rounded-xl p-3">
+          <div className="text-xs text-muted uppercase tracking-wider mb-1.5">🏅 Nya rekord denna vecka</div>
+          <div className="flex flex-col gap-1">
+            {newRecords.map(r => (
+              <div key={r.activityId} className="text-sm text-fg">
+                {r.label}: <span className="text-accent">{r.records.join(', ')}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

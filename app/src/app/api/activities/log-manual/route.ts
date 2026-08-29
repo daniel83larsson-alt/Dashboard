@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { SPORT_LABELS } from '@/lib/sport'
 import { estimateCalories, DEFAULT_WEIGHT_KG } from '@/lib/calories'
+import { checkAndPushMilestones } from '@/lib/milestones'
 
 export async function POST(request: NextRequest) {
   const supabase = await createSupabaseServerClient()
@@ -55,6 +56,8 @@ export async function POST(request: NextRequest) {
     console.error('Manual log error:', error)
     return NextResponse.json({ error: 'Kunde inte spara passet' }, { status: 500 })
   }
+
+  await checkAndPushMilestones(supabase, user.id)
 
   return NextResponse.json({ ok: true, calories })
 }

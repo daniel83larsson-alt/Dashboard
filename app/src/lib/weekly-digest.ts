@@ -7,6 +7,8 @@
 import { dedupeForStats, type ActivityRow } from './duplicates'
 import { sportLabel } from './sport'
 import { startOfWeek } from './dates'
+import { activityLoad } from './load'
+import { newRecordsForLatest } from './records'
 import type { DayWellness } from './garmin-sync'
 
 // The Monday of "the week to recap" as of `now`. On any day Mon–Sat that's
@@ -55,6 +57,24 @@ export type WeeklyDigestLookAhead =
   | { kind: 'plan'; sessions: { sport: string | null; label: string; title: string; plannedDate: string; isRest: boolean }[] }
   | { kind: 'none' }
 
+export type WeeklyDigestBestSession = {
+  activityId: string
+  sport: string
+  label: string
+  startDate: string
+  distanceKm: number
+  minutes: number
+  load: number
+} | null
+
+export type WeeklyDigestNewRecord = {
+  activityId: string
+  sport: string
+  label: string
+  startDate: string
+  records: string[] // e.g. "Snabbaste 5 km", "Längsta passet någonsin" — see records.ts
+}
+
 export type WeeklyDigestData = {
   weekStartISO: string
   weekEndISO: string
@@ -62,6 +82,8 @@ export type WeeklyDigestData = {
   prevWeek: { sessions: WeeklyDigestSessionStats; wellness: WeeklyDigestWellnessStats }
   adherence: WeeklyDigestAdherence
   lookAhead: WeeklyDigestLookAhead
+  bestSession: WeeklyDigestBestSession
+  newRecords: WeeklyDigestNewRecord[]
 }
 
 function isoDateKey(d: Date): string {
@@ -146,18 +168,69 @@ export function matchAdherence(planned: PlanSessionRow[], activities: ActivityRo
   return { plannedCount: pairs.length, doneCount: done, label: `${done} av ${pairs.length} planerade pass gjorda` }
 }
 
+// Highest-load session of the week — same load formula the front page's
+// weekly load card already uses (lib/load.ts), so "veckans bästa pass"
+// means the same thing everywhere in the app rather than introducing a
+// second, competing definition of "best".
+function bestSessionOfWeek(
+  weekActs: ActivityRow[],
+  restingHR: number | null,
+  maxHR: number | null,
+): WeeklyDigestBestSession {
+  if (!weekActs.length) return null
+  const scored = weekActs.map(a => ({ a, load: activityLoad(a, restingHR, maxHR) }))
+  const best = scored.reduce((b, c) => (c.load > b.load ? c : b))
+  return {
+    activityId: best.a.id,
+    sport: best.a.sport_type,
+    label: sportLabel(best.a.sport_type),
+    startDate: best.a.start_date,
+    distanceKm: Math.round((best.a.distance / 1000) * 10) / 10,
+    minutes: Math.round(best.a.moving_time / 60),
+    load: Math.round(best.load),
+  }
+}
+
+// Reuses the same "did this pass beat every prior one" check the Översikt
+// page already runs for just the single latest activity (records.ts),
+// applied to every pass logged this week instead of only the newest one —
+// "prior" here means every deduped activity strictly before THAT pass's own
+// start_date, not just activities outside the current week, so a Tuesday
+// PR isn't compared against a bigger Thursday pass that hadn't happened yet.
+function newRecordsThisWeek(weekActs: ActivityRow[], allActsDeduped: ActivityRow[]): WeeklyDigestNewRecord[] {
+  const sorted = [...weekActs].sort((a, b) => a.start_date.localeCompare(b.start_date))
+  const out: WeeklyDigestNewRecord[] = []
+  for (const act of sorted) {
+    const prior = allActsDeduped.filter(a => a.start_date < act.start_date)
+    const hits = newRecordsForLatest(act, prior)
+    if (hits.length) {
+      out.push({ activityId: act.id, sport: act.sport_type, label: sportLabel(act.sport_type), startDate: act.start_date, records: hits })
+    }
+  }
+  return out
+}
+
 export function computeWeeklyDigest({
   weekStart,
   activities,
   wellnessHistory,
   planSessionsThisWeek,
   planSessionsNextWeek,
+  restingHR = null,
+  maxHR = null,
 }: {
   weekStart: Date // Monday 00:00 of the week being recapped (the week that just ended)
-  activities: ActivityRow[] // raw, not yet deduped — this function dedupes internally
+  // Ideally the user's FULL activity history, not just a 2-week window —
+  // bestSession/newRecords need everything before this week to know what
+  // counts as a "best" or a broken record. A caller that only has a
+  // narrower window still works, it just can't detect records set against
+  // older history. Raw, not yet deduped — this function dedupes internally.
+  activities: ActivityRow[]
   wellnessHistory: DayWellness[]
   planSessionsThisWeek: PlanSessionRow[]
   planSessionsNextWeek: PlanSessionRow[]
+  restingHR?: number | null // most recent known resting HR, for the load calc — same source dashboard/page.tsx uses
+  maxHR?: number | null // highest max_heartrate seen across the user's own activities
 }): WeeklyDigestData {
   // weekEndExclusive is next Monday 00:00 — activities are timestamps with a
   // time-of-day, so the upper bound must be exclusive (a Sunday-evening
@@ -210,5 +283,7 @@ export function computeWeeklyDigest({
     },
     adherence: matchAdherence(planSessionsThisWeek, thisWeekActs),
     lookAhead,
+    bestSession: bestSessionOfWeek(thisWeekActs, restingHR, maxHR),
+    newRecords: newRecordsThisWeek(thisWeekActs, dedupeForStats(activities)),
   }
 }

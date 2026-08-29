@@ -35,7 +35,10 @@ const OVERPASS_FILTERS: Record<ActivityKind, string[]> = {
 const MAX_RADIUS_M = 30000
 const MAX_ROUTES = 40
 
-export const maxDuration = 30
+// Vercel Hobby plan's real hard cap is 60s (same ceiling already used by
+// the cron routes) — this was previously capped at an arbitrary 30, which
+// is what actually caused most of the "överbelastad" reports (see below).
+export const maxDuration = 58
 
 // overpass-api.de load-balances across several backend mirrors; individual
 // mirrors intermittently return a bare Apache 406 under load (verified live:
@@ -43,21 +46,31 @@ export const maxDuration = 30
 // A couple of retries clears this most of the time; maps.mail.ru's public
 // Overpass mirror is kept as a fallback and verified to return real data
 // (not just an empty/stale result) for the same query.
+//
+// Real root cause of the frequent "överbelastad" error, found by comparing
+// numbers rather than assuming Overpass itself was actually overloaded: our
+// own client-side fetch timeout was 8s, while the query below asks Overpass
+// for up to 25s to compute ("[timeout:25]") — a completely normal duration
+// for a broad hiking/foot relations query over a 10-30km radius, especially
+// near cities with dense trail networks. We were aborting our own request
+// and reporting "overloaded" before Overpass had even finished a query that
+// was working fine. Fixed by giving each attempt enough time to actually
+// match the server-side timeout it declares, using the real 60s function
+// ceiling above instead of the old made-up 30s one.
 const OVERPASS_ENDPOINTS = [
-  { url: 'https://overpass-api.de/api/interpreter', attempts: 2 },
-  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1 },
+  { url: 'https://overpass-api.de/api/interpreter', attempts: 2, timeoutMs: 22000 },
+  { url: 'https://maps.mail.ru/osm/tools/overpass/api/interpreter', attempts: 1, timeoutMs: 10000 },
 ]
-const FETCH_TIMEOUT_MS = 8000
 
 async function fetchOverpass(query: string): Promise<{ elements: OverpassElement[] } | null> {
-  for (const { url, attempts } of OVERPASS_ENDPOINTS) {
+  for (const { url, attempts, timeoutMs } of OVERPASS_ENDPOINTS) {
     for (let attempt = 0; attempt < attempts; attempt++) {
       try {
         const res = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: query,
-          signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+          signal: AbortSignal.timeout(timeoutMs),
         })
         if (res.ok) return await res.json() as { elements: OverpassElement[] }
       } catch {
@@ -100,7 +113,7 @@ export async function GET(request: NextRequest) {
   // geometry needed there), then recurse down ("(._;>;)") to also emit
   // every member way/node — those get "out geom" so ways carry a ready
   // lat/lon array. Relations and ways are matched back up by id afterward.
-  const query = `[out:json][timeout:25];
+  const query = `[out:json][timeout:20];
 (
   ${filters.map(f => `${f}(around:${radiusM},${lat},${lng});`).join('\n  ')}
 );

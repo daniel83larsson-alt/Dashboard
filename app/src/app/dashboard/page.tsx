@@ -3,6 +3,7 @@ import FeedbackDrawer from '@/components/FeedbackDrawer'
 import WeeklyPlanSummaryCard from '@/components/WeeklyPlanSummaryCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from '@/lib/dates'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { estimateBMR } from '@/lib/bmr'
 import AutoSync from '@/components/AutoSync'
 import SyncAllButton from '@/components/SyncAllButton'
@@ -11,7 +12,11 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
-import { currentDailyStreak, currentWeeklyStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from '@/lib/streaks'
+import { currentDailyStreak, currentWeeklyStreak } from '@/lib/streaks'
+import HabitsCard from '@/components/HabitsCard'
+import MilestoneBanner from '@/components/MilestoneBanner'
+import { currentHabitStreak } from '@/lib/habits'
+import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
@@ -75,7 +80,7 @@ export default async function DashboardPage() {
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -106,6 +111,11 @@ export default async function DashboardPage() {
     supabase.rpc('pending_follow_requests'),
     supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_digest').maybeSingle(),
+    supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
+    // Small table (one row per completed period, ever) — no date window
+    // needed, same reasoning as goals above.
+    supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -126,6 +136,8 @@ export default async function DashboardPage() {
     bodyBattery: number | null
     hrv: number | null
     hrvStatus: string | null
+    totalCalories: number | null
+    activeCalories: number | null
   }
   type WellnessStore = { history: DayWellness[]; updatedAt: string }
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -147,8 +159,6 @@ export default async function DashboardPage() {
 
   const dailyStreak = currentDailyStreak(activities)
   const weeklyStreak = currentWeeklyStreak(activities)
-  const stepGoalDaysMet = daysMetStepGoalThisWeek(wellnessStore?.history ?? [], stepGoal)
-  const stepGoalDaysElapsed = daysElapsedThisWeek()
 
   // ── Date boundaries ────────────────────────────────────────────────────────
   const now = new Date()
@@ -194,18 +204,60 @@ export default async function DashboardPage() {
   const activityCaloriesToday = activities
     .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
     .reduce((s, a) => s + (a.calories ?? 0), 0)
+  const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
+    try {
+      const parsed = JSON.parse(yazioHistoryRaw)
+      return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+    } catch { return [] }
+  })() : []
+  const yazioToday = yazioHistory[0]?.date === todayKey ? yazioHistory[0] : null
   const foodLogToday = (recentFoodLog ?? []).filter(f => stockholmDateKey(new Date(f.logged_at)) === todayKey)
-  const eatenToday = foodLogToday.reduce((s, f) => s + (f.calories ?? 0), 0)
-  const proteinToday = foodLogToday.reduce((s, f) => s + (f.protein_g ?? 0), 0)
+  // YAZIO, when connected and synced today, replaces the manual food_log sum
+  // — same "prefer the real synced source over a manual/estimated one"
+  // pattern as garminCaloriesToday below. Manual logging still writes to
+  // food_log for everyone else (or as a supplement on the Mat page).
+  const eatenToday = yazioToday?.kcalEaten ?? foodLogToday.reduce((s, f) => s + (f.calories ?? 0), 0)
+  const proteinToday = yazioToday?.proteinG ?? foodLogToday.reduce((s, f) => s + (f.protein_g ?? 0), 0)
   const bmrResult = estimateBMR({
     weightKg: profile?.weight_kg ?? null,
     heightCm: profile?.height_cm ?? null,
     birthYear: profile?.birth_year ?? null,
     biologicalSex: profile?.biological_sex ?? null,
   }, now)
-  const burnedProjected = bmrResult.bmr + activityCaloriesToday
   const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
+  // Garmin's own daily total already accounts for real movement/heart rate
+  // (not a flat BMR ramp), so it replaces the schablon estimate above
+  // whenever today's synced wellness row actually has it — same "prefer
+  // real data, fall back to the estimate" pattern as the rest of this card.
+  // Other watch sources can plug into this same DayWellness field later,
+  // as long as their sync populates totalCalories.
+  const garminCaloriesToday = wellness?.date === todayKey ? (wellness.totalCalories ?? null) : null
+  const burnedForNet = garminCaloriesToday ?? burnedSoFar
+  const netCalories = eatenToday - burnedForNet
   const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
+
+  // ── Steg idag mot snitt ──────────────────────────────────────────────────
+  // Rullande 30-dagarssnitt, dagens egen (ännu ofärdiga) rad exkluderad så
+  // den inte drar ner sitt eget jämförelsetal — samma "jämför mot dig
+  // själv"-princip som Veckobelastningen ovan.
+  const stepsToday = wellness?.date === todayKey ? (wellness.steps ?? null) : null
+  const recentStepDays = (wellnessStore?.history ?? [])
+    .filter(d => d.date !== todayKey && d.steps != null && d.steps > 0)
+    .slice(0, 30)
+  const avgSteps = recentStepDays.length > 0
+    ? Math.round(recentStepDays.reduce((s, d) => s + (d.steps ?? 0), 0) / recentStepDays.length)
+    : null
+
+  // Nudge for the fields that unlock the VO2max-skala (Hälsa) and mer exakt
+  // kalorier/förbränning (denna sidan) — samma fyra fält, valfria vid signup,
+  // så många konton saknar dem helt. Försvinner av sig själv när allt är ifyllt.
+  const missingPersonalInfo = [
+    !profile?.birth_year && 'Ålder',
+    !profile?.biological_sex && 'Kön',
+    !profile?.weight_kg && 'Vikt',
+    !profile?.height_cm && 'Längd',
+  ].filter((v): v is string => !!v)
 
   const firstName = (profile?.name ?? user.email ?? 'Tränare').split(' ')[0]
   const hour = now.getHours()
@@ -251,6 +303,24 @@ export default async function DashboardPage() {
     .filter(s => !s.is_rest && s.status === 'planned')
     .map(s => s.planned_date)
 
+  const habitDates = [...new Set((habitLogs ?? []).map(l => l.done_date))]
+
+  // ── Milstolpar: "Grattis 5 veckor på raken!!" ──────────────────────────
+  // Idempotent per (user, streaktyp, nivå) via celebrated_milestones unika
+  // constraint — säkert att köra på varje sidladdning, en milstolpe visas
+  // bara den allra första gången den nås, aldrig igen efter det.
+  const milestoneCandidates: StreakCandidate[] = [
+    { kind: 'daily_streak', streakKey: 'daily', value: dailyStreak, label: 'Träningsstreak' },
+    { kind: 'weekly_streak', streakKey: 'weekly', value: weeklyStreak, label: 'Träningsstreak' },
+    ...(habits ?? []).map(h => ({
+      kind: 'habit_streak' as const,
+      streakKey: h.id,
+      value: currentHabitStreak(h, (habitLogs ?? []).filter(l => l.habit_id === h.id)),
+      label: h.title,
+    })),
+  ]
+  const newMilestones = user ? await recordNewMilestones(supabase, user.id, milestoneCandidates) : []
+
   // Latest team insights, for a short desktop-sidebar teaser — reuses
   // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
   const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -280,22 +350,37 @@ export default async function DashboardPage() {
         </div>
       </div>
 
+      {newMilestones.length > 0 && <MilestoneBanner milestones={newMilestones} />}
+
+      {/* ── Saknad personinfo ─────────────────────────────────────────────────── */}
+      {missingPersonalInfo.length > 0 && (
+        <a
+          href="/dashboard/profil"
+          className="flex items-center justify-between gap-3 bg-card border border-edge rounded-2xl px-4 py-3 hover:border-accent/30 transition-colors"
+        >
+          <div className="text-xs">
+            <span className="text-fg font-medium">Denna info saknas: </span>
+            <span className="text-muted">{missingPersonalInfo.join(', ')}</span>
+            <span className="text-muted"> — ger bättre VO2max-skala och kaloriberäkning</span>
+          </div>
+          <span className="text-accent text-xs flex-shrink-0">Fyll i →</span>
+        </a>
+      )}
+
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
-        <div className={`grid gap-2 ${(wellnessStore?.history?.length ?? 0) > 0 ? 'grid-cols-3' : 'grid-cols-2'}`}>
-          <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {dailyStreak}</div>
-            <div className="text-muted text-xs mt-1">{dailyStreak === 1 ? 'dag i rad' : 'dagar i rad'}</div>
-          </div>
+        <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
           <div className="bg-card border border-edge rounded-2xl p-4">
             <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {weeklyStreak}</div>
             <div className="text-muted text-xs mt-1">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</div>
           </div>
-          {(wellnessStore?.history?.length ?? 0) > 0 && (
+          {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {stepGoalDaysMet}</div>
+              <div className="font-mono text-accent text-2xl font-bold leading-none">{stepsToday.toLocaleString('sv-SE')}</div>
               <div className="text-muted text-xs mt-1">
-                av {stepGoalDaysElapsed} {stepGoalDaysElapsed === 1 ? 'dag' : 'dagar'} denna vecka
+                steg idag{avgSteps != null && avgSteps > 0 && (
+                  ` · ${stepsToday >= avgSteps ? '+' : ''}${Math.round(((stepsToday - avgSteps) / avgSteps) * 100)}% mot ditt 30-dagarssnitt`
+                )}
               </div>
             </div>
           )}
@@ -326,35 +411,65 @@ export default async function DashboardPage() {
 
       {/* ── Kalorier idag ─────────────────────────────────────────────────────── */}
       {showCalorieCard ? (
-        <div className="bg-card border border-edge rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="text-xs text-muted uppercase tracking-wider">Kalorier idag</div>
-            <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
-          </div>
-          <div className="flex items-baseline justify-between">
-            <span className="font-mono text-accent text-2xl font-bold">{eatenToday}</span>
-            <span className="text-muted text-xs">
-              ätit{profile?.daily_calorie_goal ? ` / ${profile.daily_calorie_goal} mål` : ''}
-            </span>
-          </div>
-          {profile?.daily_calorie_goal && (
-            <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
-              <div
-                className="h-full bg-accent rounded-full"
-                style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
-              />
+        <div className={`grid gap-2 ${eatenToday > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div className="bg-card border border-edge rounded-2xl p-4">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-xs text-muted uppercase tracking-wider">Förbränt idag</div>
+              {eatenToday === 0 && <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>}
             </div>
-          )}
-          <div className="text-muted text-xs mt-2">
-            Förbränt (uppskattning): ~{burnedSoFar} kcal · beräknad dygnsförbränning ~{burnedProjected}
-            {bmrResult.usedDefaults.length > 0 && (
-              <> · baserat på schablonvärden, <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
-            )}
+            <div className="flex items-baseline justify-between">
+              <span className="font-mono text-accent text-2xl font-bold">{burnedForNet}</span>
+              <span className="text-muted text-xs">kcal</span>
+            </div>
+            <div className="text-muted text-xs mt-2">
+              {garminCaloriesToday != null ? (
+                'Garmin'
+              ) : (
+                <>
+                  uppskattning
+                  {bmrResult.usedDefaults.length > 0 && (
+                    <> · <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
+                  )}
+                </>
+              )}
+              {yazioToday?.activityKcal != null && (
+                <> · YAZIO aktivitet: {yazioToday.activityKcal} kcal</>
+              )}
+            </div>
           </div>
-          {proteinToday > 0 && (
-            <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
-              <span className="text-muted text-xs">Protein (uppskattat)</span>
-              <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+          {eatenToday > 0 && (
+            <div className="bg-card border border-edge rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-muted uppercase tracking-wider">Netto</div>
+                <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className={`font-mono text-2xl font-bold ${netCalories > 0 ? 'text-amber-500' : 'text-accent'}`}>
+                  {netCalories > 0 ? '+' : ''}{netCalories}
+                </span>
+                <span className="text-muted text-xs">kcal</span>
+              </div>
+              <div className="text-muted text-xs mt-2">
+                {eatenToday} ätit − {burnedForNet} förbränt
+                {netCalories > 0 && ' · ätit mer än förbränt'}
+              </div>
+              {profile?.daily_calorie_goal && (
+                <>
+                  <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
+                    <div
+                      className="h-full bg-accent rounded-full"
+                      style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
+                    />
+                  </div>
+                  <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
+                </>
+              )}
+              {proteinToday > 0 && (
+                <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
+                  <span className="text-muted text-xs">Protein (uppskattat)</span>
+                  <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -612,6 +727,11 @@ export default async function DashboardPage() {
         </div>
       )}
 
+      {/* ── Vanor ─────────────────────────────────────────────────────────────── */}
+      <div className="lg:col-span-3 lg:order-7">
+        <HabitsCard habits={habits ?? []} logs={habitLogs ?? []} />
+      </div>
+
       {/* ── Kalender ──────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className="lg:col-span-3 lg:order-8">
@@ -619,6 +739,7 @@ export default async function DashboardPage() {
             trainedDates={activities.map(a => a.start_date)}
             mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
             plannedDates={plannedDates}
+            habitDates={habitDates}
           />
         </div>
       )}

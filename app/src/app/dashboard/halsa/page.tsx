@@ -5,13 +5,14 @@ import InsightsPanel from '@/components/InsightsPanel'
 import ZoneTabs from '@/components/ZoneTabs'
 import SportChartsTabs from '@/components/SportChartsTabsLoader'
 import TopTabs from '@/components/TopTabs'
-import { bestVo2maxEstimate } from '@/lib/vo2max'
+import { bestVo2maxEstimate, vo2maxRating } from '@/lib/vo2max'
 import { hrvStatusLabel } from '@/lib/wellness'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import { startOfWeek } from '@/lib/dates'
 import { dedupeForStats } from '@/lib/duplicates'
 import { sportLabel, sportIcon, usesDistance } from '@/lib/sport'
 import { computeAllSportPRs, longestSession, type Activity as RecordActivity } from '@/lib/records'
+import { currentHabitStreak, habitCompletionStats, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
 
 const VO2MAX_LOOKBACK_DAYS = 90
 
@@ -98,11 +99,13 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     { data: zoneRangeActivities },
     { data: chartActivities },
     { data: recordActivities },
+    { data: habits },
+    { data: habitLogs },
   ] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
-    supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date').eq('id', user.id).single(),
+    supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('activities').select('sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id).in('sport_type', ['Run', 'TrailRun']).gte('start_date', ninetyDaysAgo),
     supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -114,6 +117,8 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     // sig till 200 senaste för trendkurvorna — därför en egen, smalare fråga.
     supabase.from('activities').select('id, strava_id, sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id).order('start_date', { ascending: false }),
+    supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
+    supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
 
@@ -124,6 +129,7 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
         return est ? { value: est.vo2max, source: 'estimated' as const, date: est.date } : null
       })()
   const vo2maxDaysOld = vo2max ? Math.floor((now.getTime() - new Date(vo2max.date).getTime()) / 86400000) : null
+  const vo2maxRatingResult = vo2max ? vo2maxRating(vo2max.value, profile?.birth_year, profile?.biological_sex) : null
 
   const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
@@ -186,6 +192,26 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
               ? `Uppmätt av din klocka ${new Date(vo2max.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })}${vo2maxDaysOld && vo2maxDaysOld > 60 ? ` — ${vo2maxDaysOld} dagar sedan, kan vara inaktuellt` : ''}.`
               : `Uppskattat från ditt bästa löppass ${new Date(vo2max.date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })} (din klocka räknar inte ut VO2max själv, eller inget Garmin anslutet). Mindre exakt än ett riktigt uppmätt värde.`}
           </p>
+          {vo2maxRatingResult ? (
+            <div className="mt-3 pt-3 border-t border-edge">
+              <div className="flex gap-1">
+                {[1, 2, 3, 4, 5, 6].map(tier => (
+                  <div
+                    key={tier}
+                    className="h-1.5 flex-1 rounded-full bg-accent"
+                    style={{ opacity: tier <= vo2maxRatingResult.tier ? 0.2 + vo2maxRatingResult.tier * 0.13 : 0.08 }}
+                  />
+                ))}
+              </div>
+              <div className="text-muted text-[11px] mt-1.5">
+                <span className="text-fg font-medium">{vo2maxRatingResult.label}</span> för din ålder och ditt kön
+              </div>
+            </div>
+          ) : (
+            <p className="text-muted text-[11px] mt-2 pt-2 border-t border-edge">
+              <a href="/dashboard/profil" className="text-accent hover:underline">Fyll i ålder och kön i Profil</a> för att se var det här ligger på skalan.
+            </p>
+          )}
         </div>
       )}
 
@@ -307,6 +333,15 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     </div>
   )
 
+  const habitStats = ((habits ?? []) as Habit[]).map(h => {
+    const hLogs = ((habitLogs ?? []) as HabitLog[]).filter(l => l.habit_id === h.id)
+    return {
+      habit: h,
+      streak: currentHabitStreak(h, hLogs),
+      ...habitCompletionStats(h, hLogs),
+    }
+  })
+
   const insikterPanel = (
     <div className="space-y-8">
       <p className="text-muted text-sm">Hela tränarteamet analyserar din träning</p>
@@ -315,6 +350,28 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
         <div>
           <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Pulszoner</h2>
           <ZoneTabs periods={zonePeriods} />
+        </div>
+      )}
+
+      {habitStats.length > 0 && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Vanor</h2>
+          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
+            {habitStats.map(({ habit, streak, done, total }) => (
+              <div key={habit.id} className="px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-sm text-fg truncate">{habit.title}</div>
+                  <div className="text-[11px] text-muted mt-0.5">
+                    {intervalLabel(habit.interval_days)} · sedan {new Date(habit.created_at).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short', year: 'numeric' })}
+                  </div>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <div className="font-mono text-fg text-sm">{done} av {total}</div>
+                  {streak > 0 && <div className="text-[11px] text-habit mt-0.5">{streak} i rad</div>}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 

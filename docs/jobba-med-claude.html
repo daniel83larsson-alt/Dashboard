@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8" />
+<title>Så jobbar du effektivt med Claude</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+  :root {
+    --paper: #f4f5f2;
+    --surface: #ffffff;
+    --surface-2: #eef0eb;
+    --ink: #1b1e24;
+    --ink-muted: #5b6169;
+    --ink-faint: #868c93;
+    --line: #e1e3de;
+    --line-strong: #cdd0c9;
+    --accent: #2955c4;
+    --accent-ink: #ffffff;
+    --accent-soft: #e7ecfb;
+    --accent-line: #c3d0f5;
+    --warn: #8a5416;
+    --warn-soft: #f7ecdd;
+    --warn-line: #e8cfa8;
+    --good: #2b6e4f;
+    --good-soft: #e6f1ea;
+    --serif: ui-serif, 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Georgia, serif;
+    --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --mono: ui-monospace, 'SF Mono', 'Cascadia Code', 'JetBrains Mono', Menlo, Consolas, monospace;
+    --radius: 12px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #14161b;
+      --surface: #1b1f26;
+      --surface-2: #20242c;
+      --ink: #ecedee;
+      --ink-muted: #9ba1aa;
+      --ink-faint: #6d7480;
+      --line: #2a2f37;
+      --line-strong: #3a4049;
+      --accent: #7d9df6;
+      --accent-ink: #0f1420;
+      --accent-soft: rgba(125, 157, 246, 0.13);
+      --accent-line: rgba(125, 157, 246, 0.35);
+      --warn: #e3ac6a;
+      --warn-soft: rgba(227, 172, 106, 0.12);
+      --warn-line: rgba(227, 172, 106, 0.32);
+      --good: #7fc9a4;
+      --good-soft: rgba(127, 201, 164, 0.12);
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #14161b;
+    --surface: #1b1f26;
+    --surface-2: #20242c;
+    --ink: #ecedee;
+    --ink-muted: #9ba1aa;
+    --ink-faint: #6d7480;
+    --line: #2a2f37;
+    --line-strong: #3a4049;
+    --accent: #7d9df6;
+    --accent-ink: #0f1420;
+    --accent-soft: rgba(125, 157, 246, 0.13);
+    --accent-line: rgba(125, 157, 246, 0.35);
+    --warn: #e3ac6a;
+    --warn-soft: rgba(227, 172, 106, 0.12);
+    --warn-line: rgba(227, 172, 106, 0.32);
+    --good: #7fc9a4;
+    --good-soft: rgba(127, 201, 164, 0.12);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16.5px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 2px; }
+  a:focus-visible, button:focus-visible, summary:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px;
+  }
+
+  .skiplink {
+    position: absolute; left: -999px; top: 0; background: var(--accent); color: var(--accent-ink);
+    padding: 10px 16px; border-radius: 0 0 8px 0; z-index: 100;
+  }
+  .skiplink:focus { left: 0; }
+
+  /* ── Masthead ─────────────────────────────────────────────────────── */
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    background: var(--surface);
+  }
+  .masthead-inner {
+    max-width: 760px; margin: 0 auto; padding: 56px 24px 40px;
+  }
+  .kicker {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--accent); margin: 0 0 14px;
+  }
+  h1 {
+    font-family: var(--serif); font-weight: 500; font-size: clamp(2rem, 4.4vw, 2.75rem);
+    line-height: 1.15; margin: 0 0 16px; text-wrap: balance; letter-spacing: -0.005em;
+  }
+  .lede {
+    font-size: 1.08rem; color: var(--ink-muted); max-width: 62ch; margin: 0;
+  }
+
+  /* ── Section nav ──────────────────────────────────────────────────── */
+  nav.toc {
+    position: sticky; top: 0; z-index: 10;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .toc-inner {
+    max-width: 760px; margin: 0 auto; padding: 0 24px;
+    display: flex; gap: 4px; overflow-x: auto; scrollbar-width: none;
+  }
+  .toc-inner::-webkit-scrollbar { display: none; }
+  nav.toc a {
+    flex: 0 0 auto; color: var(--ink-muted); text-decoration: none; font-size: 13.5px;
+    padding: 13px 12px; border-bottom: 2px solid transparent; white-space: nowrap;
+  }
+  nav.toc a:hover { color: var(--ink); }
+
+  /* ── Content ──────────────────────────────────────────────────────── */
+  main { max-width: 760px; margin: 0 auto; padding: 8px 24px 96px; }
+
+  section { padding: 52px 0; border-bottom: 1px solid var(--line); }
+  section:last-of-type { border-bottom: none; }
+
+  .section-head { display: flex; gap: 18px; align-items: baseline; margin-bottom: 22px; }
+  .section-num {
+    font-family: var(--mono); font-size: 14px; color: var(--ink-faint);
+    flex: 0 0 auto; padding-top: 4px;
+  }
+  h2 {
+    font-family: var(--serif); font-weight: 500; font-size: 1.55rem; margin: 0;
+    text-wrap: balance; letter-spacing: -0.003em;
+  }
+  h3 {
+    font-family: var(--sans); font-weight: 700; font-size: 1rem; margin: 28px 0 10px;
+  }
+  p { margin: 0 0 16px; max-width: 66ch; }
+  p:last-child { margin-bottom: 0; }
+  ul, ol { margin: 0 0 16px; padding-left: 22px; max-width: 64ch; }
+  li { margin-bottom: 7px; }
+  li:last-child { margin-bottom: 0; }
+  strong { font-weight: 700; }
+  code {
+    font-family: var(--mono); font-size: 0.88em; background: var(--surface-2);
+    padding: 0.12em 0.42em; border-radius: 5px; border: 1px solid var(--line);
+  }
+
+  /* ── Callouts ─────────────────────────────────────────────────────── */
+  .box {
+    border: 1px solid var(--line-strong); border-radius: var(--radius);
+    background: var(--surface); padding: 18px 20px; margin: 18px 0;
+  }
+  .box p, .box ul, .box ol { max-width: none; }
+  .box-label {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+    margin: 0 0 10px; display: flex; align-items: center; gap: 7px;
+  }
+  .box.example { background: var(--accent-soft); border-color: var(--accent-line); }
+  .box.example .box-label { color: var(--accent); }
+  .box.tip { background: var(--warn-soft); border-color: var(--warn-line); }
+  .box.tip .box-label { color: var(--warn); }
+  .box.rule { background: var(--good-soft); border: 1px solid color-mix(in srgb, var(--good) 35%, transparent); }
+  .box.rule .box-label { color: var(--good); }
+
+  /* ── Table ────────────────────────────────────────────────────────── */
+  .tablewrap { overflow-x: auto; margin: 18px 0; }
+  table { border-collapse: collapse; width: 100%; min-width: 480px; font-size: 15px; }
+  th, td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); font-weight: 600; }
+  td:first-child, th:first-child { padding-left: 0; }
+  tr:last-child td { border-bottom: none; }
+  .tag {
+    display: inline-block; font-family: var(--mono); font-size: 11.5px; padding: 2px 8px;
+    border-radius: 999px; background: var(--surface-2); border: 1px solid var(--line-strong);
+  }
+
+  /* ── Checklist ────────────────────────────────────────────────────── */
+  .checklist { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .checklist li {
+    display: flex; gap: 12px; align-items: flex-start; margin: 0;
+    padding: 14px 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 10px;
+  }
+  .checklist .num {
+    font-family: var(--mono); font-size: 12px; color: var(--accent-ink); background: var(--accent);
+    width: 22px; height: 22px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    flex: 0 0 auto; margin-top: 1px;
+  }
+
+  footer {
+    max-width: 760px; margin: 0 auto; padding: 0 24px 64px; color: var(--ink-faint); font-size: 13.5px;
+  }
+
+  @media (max-width: 600px) {
+    .masthead-inner { padding: 40px 20px 32px; }
+    main { padding: 4px 20px 72px; }
+    section { padding: 40px 0; }
+    .section-head { gap: 12px; }
+  }
+</style>
+</head>
+<body>
+<a href="#huvudinnehall" class="skiplink">Hoppa till innehåll</a>
+
+<header class="masthead">
+  <div class="masthead-inner">
+    <p class="kicker">Praktisk guide</p>
+    <h1>Så jobbar du effektivt med Claude</h1>
+    <p class="lede">Från snabb chatt till ett riktigt team som kör i din kodbas — hur delarna hänger ihop, och vad du faktiskt behöver veta för att komma igång.</p>
+  </div>
+</header>
+
+<nav class="toc" aria-label="Innehåll">
+  <div class="toc-inner">
+    <a href="#chatt-vs-kod">Chatt vs. Code</a>
+    <a href="#projects">Projects</a>
+    <a href="#claude-code">Claude Code</a>
+    <a href="#claudemd">CLAUDE.md</a>
+    <a href="#team">Bygg ett team</a>
+    <a href="#modeller">Modeller</a>
+    <a href="#loop">Loop</a>
+    <a href="#ultrathink">Ultrathink</a>
+    <a href="#snabbstart">Snabbstart</a>
+  </div>
+</nav>
+
+<main id="huvudinnehall">
+
+  <section id="chatt-vs-kod">
+    <div class="section-head">
+      <span class="section-num">01</span>
+      <h2>Två sätt att jobba med Claude</h2>
+    </div>
+    <p>Allt börjar med samma modell, men det finns två olika ställen att köra den på — och vilket du väljer avgör hur mycket struktur du får gratis.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Läge</th><th>Bäst för</th><th>Kommer ihåg saker genom att…</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><strong>Claude.ai (chatt)</strong></td>
+            <td>Idéer, texter, research, snabba frågor, en enskild bild eller fil</td>
+            <td>…du sparar det i ett <strong>Project</strong> (se nästa avsnitt)</td>
+          </tr>
+          <tr>
+            <td><strong>Claude Code</strong></td>
+            <td>Riktig kodbas, flera filer, saker som ska köras/testas/deployas, återkommande arbete över tid</td>
+            <td>…en fil som heter <code>CLAUDE.md</code> ligger i själva projektet och läses automatiskt</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Tumregeln: om svaret är text du kopierar ut — kör chatt. Om svaret är kod, filer eller något som ska <em>hända</em> i ett system (som DL Trainer eller bokföringsappen) — kör Claude Code.</p>
+  </section>
+
+  <section id="projects">
+    <div class="section-head">
+      <span class="section-num">02</span>
+      <h2>Chatt: Projects, instruktioner och kunskapsfiler</h2>
+    </div>
+    <p>Ett <strong>Project</strong> i claude.ai är en mapp för ett återkommande ämne — säg "Bokföring" eller "Marknadsföring". Två saker gör den användbar istället för att bara vara en lista chattar:</p>
+
+    <h3>Anpassade instruktioner</h3>
+    <p>Ett textfält där du en gång skriver hur du vill att Claude ska bete sig i just det här projektet — ton, vad som är viktigt, vad som alltid ska undvikas. Skrivs en gång, gäller i varje ny chatt i projektet utan att du behöver upprepa dig.</p>
+
+    <h3>Kunskapsfiler</h3>
+    <p>Du kan ladda upp filer — PDF:er, textfiler, och <strong>.md-filer</strong> (vanlig text med lite enkel formatering, exakt samma format som <code>CLAUDE.md</code> använder) — som alltid finns tillgängliga i projektet. Bra för prislistor, tidigare beslut, stilguider, eller research du inte vill klistra in på nytt varje gång.</p>
+
+    <div class="box tip">
+      <p class="box-label">✦ Bra att veta</p>
+      <p>Kunskapsfiler har en gräns för hur mycket som får plats. Håll dem korta och konkreta — hellre tre skarpa sidor än trettio rörig research.</p>
+    </div>
+  </section>
+
+  <section id="claude-code">
+    <div class="section-head">
+      <span class="section-num">03</span>
+      <h2>Vad är Claude Code</h2>
+    </div>
+    <p>Claude Code är Claude som kör direkt i en riktig kodbas — den kan läsa filer, skriva och ändra kod, köra tester, kolla resultatet, och rätta sig själv innan den rapporterar tillbaka. Istället för att du klistrar in kodsnuttar i en chatt jobbar Claude i själva projektet, precis som en utvecklare skulle.</p>
+    <p>Det är också det som gör att arbete kan fortsätta <em>mellan</em> sessioner: kod, beslut och status sparas i själva projektet (i filer, i git), inte bara i en chatthistorik som är svår att hänga med i efter ett tag.</p>
+  </section>
+
+  <section id="claudemd">
+    <div class="section-head">
+      <span class="section-num">04</span>
+      <h2>CLAUDE.md — instruktioner som följer med kodbasen</h2>
+    </div>
+    <p>Det här är Claude Codes motsvarighet till Projects anpassade instruktioner, fast bättre: en fil som heter <code>CLAUDE.md</code> som ligger i roten av projektet. Claude läser den automatiskt i <em>varje</em> ny session — ingen kopiera-in, inget "som jag sa förra gången".</p>
+
+    <p>Vad som brukar stå där:</p>
+    <ul>
+      <li>Vem projektet är till för och vad det gör</li>
+      <li>Hur man testar/bygger/kör det</li>
+      <li>Regler som alltid ska gälla (t.ex. "fråga innan du antar", "verifiera mot skarp databas innan något kallas klart")</li>
+      <li>Eventuella roller eller arbetssätt — se nästa avsnitt</li>
+    </ul>
+
+    <div class="box example">
+      <p class="box-label">✎ Från din egen kodbas</p>
+      <p>Precis den här filen finns redan i DL Trainer-repot. Den beskriver hela "Dev Team"-upplägget nedan — det är inte ett hypotetiskt exempel, det är vad jag faktiskt läser i början av varje session med dig.</p>
+    </div>
+  </section>
+
+  <section id="team">
+    <div class="section-head">
+      <span class="section-num">05</span>
+      <h2>Bygg ett team av roller</h2>
+    </div>
+    <p>Istället för en generisk assistent kan <code>CLAUDE.md</code> definiera flera namngivna roller — ett litet virtuellt team, var och en med ett tydligt ansvarsområde. Det är precis så din egen fil är byggd: <strong>Alex</strong> (projektledning), <strong>Sam</strong> (arkitektur), <strong>Maya</strong> (POC/UI), <strong>Chris</strong> (produktion), <strong>Riley</strong> (säkerhet/QA), och så vidare.</p>
+
+    <p>Fördelen är inte låtsaslek — det är att varje roll får:</p>
+    <ul>
+      <li>Ett avgränsat ansvar, så du vet vem du pratar med och vad du kan förvänta dig</li>
+      <li>En egen kommunikationsstil (rakt på sak, eller "fråga innan du kodar", eller "rapportera som en lista")</li>
+      <li>Tydliga regler för när rollen ska fråga dig istället för att gissa</li>
+    </ul>
+
+    <div class="box example">
+      <p class="box-label">✎ Så aktiverar du en roll</p>
+      <p>Du skriver bara rollens namn i början av meddelandet: <code>Maya: bygg en snabb prototyp av...</code> eller <code>Riley: granska det här för säkerhetsproblem.</code> Claude byter perspektiv och håller sig till den rollens ansvar och ton tills du byter igen.</p>
+    </div>
+
+    <h3>Kom igång med ett eget team</h3>
+    <ol>
+      <li>Lista de 3–6 roller som faktiskt behövs för ditt projekt — hellre få och tydliga än många och luddiga.</li>
+      <li>Skriv för varje roll: ansvar, vad den <em>inte</em> gör, och hur den kommunicerar.</li>
+      <li>Lägg till en tydlig regel för när en roll måste fråga dig istället för att anta — det är den regel som räddar dig från överraskningar.</li>
+    </ol>
+  </section>
+
+  <section id="modeller">
+    <div class="section-head">
+      <span class="section-num">06</span>
+      <h2>Vilken modell ska jag välja?</h2>
+    </div>
+    <p>Claude finns i flera storlekar. Alla tänker på samma sätt, men de skiljer sig i hur mycket kraft (och tid/kostnad) de lägger på varje svar.</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Modell</th><th>Använd till</th><th>Undvik till</th></tr></thead>
+        <tbody>
+          <tr>
+            <td><span class="tag">Sonnet</span></td>
+            <td>Standardvalet. De flesta uppgifter — kod, analys, vardagsfrågor.</td>
+            <td>—</td>
+          </tr>
+          <tr>
+            <td><span class="tag">Opus</span></td>
+            <td>Svåra, riskfyllda eller oåterkalleliga beslut — komplex arkitektur, säkerhetskritiskt, eller när Sonnet redan visat sig otillräcklig.</td>
+            <td>Vardagsuppgifter — märks mest på tid/kostnad, sällan på kvalitet.</td>
+          </tr>
+          <tr>
+            <td><span class="tag">Haiku</span></td>
+            <td>Enkla, mekaniska, väldefinierade jobb utan tolkningsutrymme — köra ett givet skript, samma ändring på flera ställen, enkel sökning.</td>
+            <td>Allt som kräver bedömning eller avvägning.</td>
+          </tr>
+          <tr>
+            <td><span class="tag">Fable</span></td>
+            <td>En genuint oberoende "second opinion" — en annan modellfamilj som resonerar annorlunda, bra för en extra granskning av något viktigt.</td>
+            <td>Standardarbete — det är ett medvetet extrasteg, inte en ersättning för Sonnet.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="box tip">
+      <p class="box-label">✦ Tumregel</p>
+      <p>Kör Sonnet som standard. Gå upp till Opus bara med en tydlig anledning. Gå ner till Haiku för att spara tid och pengar på enkla, upprepade jobb. Be om Fable specifikt när du vill ha en andra, oberoende bedömning av något som redan är klart.</p>
+    </div>
+  </section>
+
+  <section id="loop">
+    <div class="section-head">
+      <span class="section-num">07</span>
+      <h2>Loop — låta Claude jobba i upprepade varv</h2>
+    </div>
+    <p>En loop kör samma uppgift om och om igen tills något villkor är uppfyllt — till exempel "kör tills alla tester är gröna" eller "granska varje sida tills allt är godkänt". Startas med <code>/loop</code> följt av instruktionen, eller ett tidsintervall om den ska köra med jämna mellanrum.</p>
+
+    <p>En loop är kraftfull men ska aldrig köras löst. Fem saker bör alltid finnas på plats innan en loop startas:</p>
+
+    <ol>
+      <li><strong>Ett verifierbart facit</strong> — inte en känsla av att det är klart, utan något koden själv kan bekräfta (t.ex. att ett test faktiskt returnerar 0).</li>
+      <li><strong>En hård gräns</strong> på antal varv, så den inte kan snurra i oändlighet.</li>
+      <li><strong>Ett tak</strong> för tid eller kostnad, inbakat i uppgiften — inte bara nämnt i förbifarten.</li>
+      <li><strong>En sandlåda</strong> — loopen jobbar mot en kopia eller en gren, aldrig direkt mot skarp drift.</li>
+      <li><strong>Ett stopp för mänsklig koll</strong> innan något oåterkalleligt — att pusha till huvudgrenen, radera data, skicka mejl till riktiga användare, eller betala för något.</li>
+    </ol>
+
+    <div class="box tip">
+      <p class="box-label">✦ Fråga att ställa dig själv</p>
+      <p>"Hur vet loopen att den är klar, utan att jag tittar?" Går det inte att svara konkret på den frågan är uppgiften inte redo att köras som en loop — då är det en vanlig, avgränsad uppgift istället.</p>
+    </div>
+  </section>
+
+  <section id="ultrathink">
+    <div class="section-head">
+      <span class="section-num">08</span>
+      <h2>"Ultrathink" och tänkbudget</h2>
+    </div>
+    <p>Vissa frågor är värda extra eftertanke innan svaret — en knivig arkitekturfråga, en bugg som inte vill visa sig, ett beslut med stora konsekvenser. Då kan du be Claude tänka mer innan den svarar, genom att skriva det rakt ut i meddelandet. Ju starkare fras, desto mer tankeutrymme:</p>
+
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>Fras</th><th>Tänkbudget</th></tr></thead>
+        <tbody>
+          <tr><td><code>think</code></td><td>Lite mer eftertanke än vanligt</td></tr>
+          <tr><td><code>think hard</code></td><td>Märkbart mer</td></tr>
+          <tr><td><code>think harder</code></td><td>Ännu mer</td></tr>
+          <tr><td><code>ultrathink</code></td><td>Maximalt — allt Claude kan lägga på frågan</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p>Priset är tid — ett <code>ultrathink</code>-svar tar längre att komma fram, eftersom Claude faktiskt resonerar mer innan den skriver något. Använd det sparsamt, för de frågor där ett snabbt förstahandssvar riskerar att missa något viktigt — inte som standard för vardagsfrågor.</p>
+  </section>
+
+  <section id="snabbstart">
+    <div class="section-head">
+      <span class="section-num">09</span>
+      <h2>Snabbstartschecklista</h2>
+    </div>
+    <p>Fem steg för att komma igång på riktigt, i ordning:</p>
+
+    <ol class="checklist">
+      <li><span class="num">1</span><span><strong>Börja i chatt</strong> för att tänka högt och sortera idén — inget commitment, inget setup.</span></li>
+      <li><span class="num">2</span><span><strong>Blir det återkommande?</strong> Skapa ett Project, skriv instruktionerna en gång, lägg in kunskapsfiler.</span></li>
+      <li><span class="num">3</span><span><strong>Blir det kod?</strong> Flytta över till Claude Code och skriv en <code>CLAUDE.md</code> i projektet — samma instruktioner, men de läses nu automatiskt varje gång.</span></li>
+      <li><span class="num">4</span><span><strong>Växer det?</strong> Bryt upp <code>CLAUDE.md</code> i tydliga roller istället för en enda röst — precis som DL Trainer-teamet redan gör.</span></li>
+      <li><span class="num">5</span><span><strong>Håll koll över tid</strong> med en statusfil (som <code>STATUS.md</code>) — vad är klart, vad pågår, vad väntar på dig. Stäm av mot den innan något kallas färdigt.</span></li>
+    </ol>
+  </section>
+
+</main>
+
+<footer>
+  <p>Skräddarsydd utifrån hur DL Trainer-projektet faktiskt är uppbyggt — inte en generisk manual.</p>
+</footer>
+
+</body>
+</html>

@@ -21,6 +21,49 @@ export function estimateVo2maxFromRun(distanceMeters: number, timeSeconds: numbe
   return vo2max > 0 ? Math.round(vo2max * 10) / 10 : null
 }
 
+// Age/sex-normed fitness categories — the same six-tier bands published by
+// the Cooper Institute and widely reused across fitness trackers (Garmin's
+// own VO2max gauge included). Each bracket's `bounds` are the four cutoffs
+// between the six tiers (ml/kg/min); a value below bounds[0] is "Låg", at
+// or above bounds[3] is "Elit". Norms diverge enough by age and sex that a
+// single unisex scale would misclassify most people, so both are required
+// inputs — callers without them should skip rating rather than guess.
+const VO2MAX_NORMS: Record<'male' | 'female', { maxAge: number; bounds: [number, number, number, number, number] }[]> = {
+  male: [
+    { maxAge: 29, bounds: [25, 34, 43, 53, 60] },
+    { maxAge: 39, bounds: [23, 31, 39, 49, 56] },
+    { maxAge: 49, bounds: [20, 27, 36, 45, 53] },
+    { maxAge: 59, bounds: [18, 25, 34, 43, 50] },
+    { maxAge: Infinity, bounds: [16, 23, 31, 41, 46] },
+  ],
+  female: [
+    { maxAge: 29, bounds: [24, 31, 38, 49, 57] },
+    { maxAge: 39, bounds: [20, 28, 34, 45, 53] },
+    { maxAge: 49, bounds: [17, 24, 31, 42, 50] },
+    { maxAge: 59, bounds: [15, 21, 28, 38, 45] },
+    { maxAge: Infinity, bounds: [13, 18, 24, 35, 42] },
+  ],
+}
+
+const VO2MAX_TIER_LABELS = ['Låg', 'Under snitt', 'Medel', 'Bra', 'Mycket bra', 'Elit']
+
+export type Vo2maxRating = { label: string; tier: number } // tier 1–6
+
+export function vo2maxRating(
+  value: number,
+  birthYear: number | null | undefined,
+  biologicalSex: 'male' | 'female' | null | undefined,
+  now = new Date(),
+): Vo2maxRating | null {
+  if (!birthYear || !biologicalSex) return null
+  const age = now.getFullYear() - birthYear
+  const table = VO2MAX_NORMS[biologicalSex]
+  const bracket = table.find(b => age <= b.maxAge) ?? table[table.length - 1]
+  const tierIndex = bracket.bounds.findIndex(bound => value < bound)
+  const tier = tierIndex === -1 ? bracket.bounds.length : tierIndex
+  return { label: VO2MAX_TIER_LABELS[tier], tier: tier + 1 }
+}
+
 const VO2MAX_ELIGIBLE_SPORTS = new Set(['Run', 'TrailRun'])
 
 export function bestVo2maxEstimate(

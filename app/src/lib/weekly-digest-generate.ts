@@ -103,6 +103,8 @@ ${planList(planSessionsThisWeek)}
 DENNA VECKAS PASS (${data.weekStartISO} till ${data.weekEndISO}, vad som faktiskt kördes):
 ${sessionList(thisWeekActivities)}
 TOTALT: ${w.sessions.count} pass, ${fmtKm(w.sessions.totalKm)}, ${w.sessions.totalMinutes} min. Förra veckan: ${p.sessions.count} pass, ${fmtKm(p.sessions.totalKm)}.
+BÄSTA PASSET (högst träningsbelastning): ${data.bestSession ? `${data.bestSession.label}, ${fmtKm(data.bestSession.distanceKm)}, ${data.bestSession.minutes} min` : 'inget pass denna vecka'}
+NYA REKORD DENNA VECKA: ${data.newRecords.length ? data.newRecords.map(r => `${r.label}: ${r.records.join(', ')}`).join('; ') : 'inga'}
 FÖLJSAMHET MOT PLANEN: ${data.adherence ? data.adherence.label : 'ingen plan var satt denna vecka'}
 STEG: snitt ${fmtAvg(w.wellness.avgSteps, '')}/dag (förra veckan ${fmtAvg(p.wellness.avgSteps, '')})
 SÖMN: snitt ${fmtAvg(w.wellness.avgSleepHours, 'h', 1)} (förra veckan ${fmtAvg(p.wellness.avgSleepHours, 'h', 1)})
@@ -112,7 +114,7 @@ ${lookAheadLine}
 
 Ge tre korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
 
-sessions: Jämför VECKANS PLAN mot passen som faktiskt kördes. Om mängden/sporterna stämmer bra mot planen, säg det kort. Om något planerat pass avvek från vad som faktiskt kördes (t.ex. ett planerat intervallpass blev en lugn distans, eller fel sport/dag) — ge KONSTRUKTIV feedback på just den skillnaden, inte bara att volymen stämde. Nämn en specifik dag/pass, inte bara totalen. Om ingen plan fanns denna vecka, kommentera bara passen som kördes. MAX 2 meningar.
+sessions: Jämför VECKANS PLAN mot passen som faktiskt kördes. Om mängden/sporterna stämmer bra mot planen, säg det kort. Om något planerat pass avvek från vad som faktiskt kördes (t.ex. ett planerat intervallpass blev en lugn distans, eller fel sport/dag) — ge KONSTRUKTIV feedback på just den skillnaden, inte bara att volymen stämde. Nämn en specifik dag/pass, inte bara totalen. Om NYA REKORD DENNA VECKA innehåller något, fira det kort och konkret (vilket rekord, vilket pass) — det är alltid värt att nämna. Om ingen plan fanns denna vecka, kommentera bara passen som kördes. MAX 2 meningar.
 
 wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (jämför med förra veckan om det säger något intressant). MAX 2 meningar.
 
@@ -158,14 +160,16 @@ export async function generateWeeklyDigestForUser(
   const weekStart = recapWeekStart(opts?.now ?? new Date())
   const nextWeekStart = new Date(weekStart)
   nextWeekStart.setDate(nextWeekStart.getDate() + 7)
-  const historyStart = new Date(weekStart)
-  historyStart.setDate(historyStart.getDate() - 7)
 
+  // Full history (not just this week + prev week) — bestSession/newRecords
+  // in computeWeeklyDigest need everything before this week to know what
+  // counts as a "best" load or a broken personal record, same as the
+  // Översikt/Rekord pages already fetch full history for the same reason.
   const [{ data: profile }, { data: goals }, { data: acts }, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan }] = await Promise.all([
     supabase.from('profiles').select('llm_api_key_encrypted, coach_tone').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
-    supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, sport_type')
-      .eq('user_id', userId).gte('start_date', historyStart.toISOString()).lt('start_date', nextWeekStart.toISOString()),
+    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate')
+      .eq('user_id', userId).lt('start_date', nextWeekStart.toISOString()),
     supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('training_plans').select('id, plan_sessions(planned_date, is_rest, sport_type, title)')
       .eq('user_id', userId).eq('week_start', weekStart.toISOString().slice(0, 10)).maybeSingle(),
@@ -178,13 +182,21 @@ export async function generateWeeklyDigestForUser(
   const wellnessHistory: DayWellness[] = wellnessStore?.history ?? []
 
   const planSessionsThisWeek = (thisPlan?.plan_sessions ?? []) as PlanSessionRow[]
+  const activities = (acts ?? []) as ActivityRow[]
+  // Same source as the front page's own weekly load card (dashboard/page.tsx):
+  // most recent known resting HR from wellness, personal max HR derived from
+  // the user's own logged activities rather than a guessed constant.
+  const restingHR = wellnessHistory[0]?.restingHR ?? null
+  const maxHR = activities.reduce((m, a) => (a.max_heartrate && a.max_heartrate > m ? a.max_heartrate : m), 0) || null
 
   const digestData = computeWeeklyDigest({
     weekStart,
-    activities: (acts ?? []) as ActivityRow[],
+    activities,
     wellnessHistory,
     planSessionsThisWeek,
     planSessionsNextWeek: (nextPlan?.plan_sessions ?? []) as PlanSessionRow[],
+    restingHR,
+    maxHR,
   })
 
   const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!

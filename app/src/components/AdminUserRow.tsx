@@ -42,6 +42,8 @@ export default function AdminUserRow({
   hasGarmin,
   concept2Synced,
   garminSynced,
+  hasYazio,
+  yazioSynced,
   activityCount,
   daysSynced,
   lastSynced,
@@ -54,6 +56,8 @@ export default function AdminUserRow({
   hasGarmin: boolean
   concept2Synced: boolean
   garminSynced: boolean
+  hasYazio: boolean
+  yazioSynced: boolean
   activityCount: number
   daysSynced: number
   lastSynced: string | null
@@ -63,6 +67,8 @@ export default function AdminUserRow({
   const [busy, setBusy] = useState(false)
   const [testing, setTesting] = useState(false)
   const [testResult, setTestResult] = useState<string | null>(null)
+  const [yazioSyncing, setYazioSyncing] = useState(false)
+  const [yazioResult, setYazioResult] = useState<string | null>(null)
   const router = useRouter()
 
   async function toggleLock() {
@@ -101,6 +107,33 @@ export default function AdminUserRow({
     setTesting(false)
   }
 
+  async function syncYazio() {
+    setYazioSyncing(true)
+    setYazioResult(null)
+    try {
+      const res = await fetch('/api/admin/sync-yazio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetUserId: profile.id }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setYazioResult(`⚠ ${data.error ?? 'Något gick fel'}`)
+      } else if (data.ok) {
+        const t = data.today
+        setYazioResult(t ? `✓ Synkat — idag: ${t.kcalEaten ?? '–'}${t.kcalGoal != null ? ` / ${t.kcalGoal}` : ''} kcal, ${t.proteinG ?? '–'}g protein` : '✓ Synkat, men ingen data hittades för idag')
+        router.refresh()
+      } else if (data.reason === 'not_configured') {
+        setYazioResult('– Ingen YAZIO-koppling sparad för den här användaren')
+      } else {
+        setYazioResult(`⚠ Synken misslyckades${data.message ? ` (${data.message})` : ''}`)
+      }
+    } catch {
+      setYazioResult('⚠ Nätverksfel')
+    }
+    setYazioSyncing(false)
+  }
+
   return (
     <div className={`bg-card border rounded-xl p-4 ${profile.locked ? 'border-red-500/40' : 'border-edge'}`}>
       <div className="flex items-start justify-between gap-3">
@@ -119,6 +152,7 @@ export default function AdminUserRow({
           <div className="flex gap-1.5 mt-2">
             {syncBadge(hasConcept2, concept2Synced, 'Concept2')}
             {syncBadge(hasGarmin, garminSynced, 'Garmin')}
+            {syncBadge(hasYazio, yazioSynced, 'YAZIO')}
           </div>
           <div className="text-muted text-[11px] mt-1.5">
             {activityCount > 0
@@ -141,6 +175,18 @@ export default function AdminUserRow({
                 {testing ? 'Testar...' : 'Testa Garmin-synk'}
               </button>
               {testResult && <div className="text-[11px] mt-1.5 text-fg">{testResult}</div>}
+            </div>
+          )}
+          {hasYazio && (
+            <div className="mt-2">
+              <button
+                onClick={syncYazio}
+                disabled={yazioSyncing}
+                className="text-[11px] px-2 py-1 rounded-md border border-edge text-muted hover:border-accent/40 hover:text-fg disabled:opacity-50"
+              >
+                {yazioSyncing ? 'Synkar...' : 'Synka YAZIO nu'}
+              </button>
+              {yazioResult && <div className="text-[11px] mt-1.5 text-fg">{yazioResult}</div>}
             </div>
           )}
         </div>

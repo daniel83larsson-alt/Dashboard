@@ -8,6 +8,7 @@
   --lcd: #a7bda9;
   --muted: #8899a0;
   --fg: #e8ecef;
+  --habit: #d98a52;
 }
 
 @theme inline {
@@ -18,6 +19,7 @@
   --color-lcd: var(--lcd);
   --color-muted: var(--muted);
   --color-fg: var(--fg);
+  --color-habit: var(--habit);
   --font-sans: var(--font-space);
   --font-mono: var(--font-jb);
 }

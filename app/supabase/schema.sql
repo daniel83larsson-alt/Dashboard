@@ -1124,3 +1124,98 @@ as $$
 $$;
 revoke all on function public.friend_activity_feed() from public;
 grant execute on function public.friend_activity_feed() to authenticated;
+
+-- Vanor (habits) — Daniel: "kreatin varje dag, protein varje dag, enkel
+-- stretch... kryssar man i att man gjort det så slipper man frågan." En
+-- vana upprepar sig var `interval_days` dag (1 = varje dag, 7 = varje
+-- vecka, valfritt annat tal = eget intervall). "Perioden" en avbockning
+-- hör till räknas ut i app-koden (lib/habits.ts), inte här — done_date är
+-- bara det kalenderdatum man faktiskt kryssade i, en logg-rad per dag man
+-- gjorde det, oavsett vanans intervall.
+create table public.habits (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  title text not null,
+  interval_days integer not null default 1 check (interval_days >= 1),
+  active boolean default true,
+  created_at timestamptz default now()
+);
+alter table public.habits enable row level security;
+create policy "Users see own habits" on public.habits
+  for all using (auth.uid() = user_id);
+create index habits_user on public.habits(user_id);
+
+-- user_id denormaliserad hit av samma skäl som plan_sessions ovan — enkel
+-- auth.uid() = user_id-policy istället för en subquery mot habits.
+create table public.habit_logs (
+  id uuid default gen_random_uuid() primary key,
+  habit_id uuid references public.habits(id) on delete cascade not null,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  done_date date not null,
+  created_at timestamptz default now(),
+  unique (habit_id, done_date)
+);
+alter table public.habit_logs enable row level security;
+create policy "Users see own habit logs" on public.habit_logs
+  for all using (auth.uid() = user_id);
+create index habit_logs_habit_date on public.habit_logs(habit_id, done_date);
+create index habit_logs_user on public.habit_logs(user_id);
+
+-- Milstolpar (celebrated_milestones) — Daniel: "Grattis 5 veckor på
+-- raken!!" En rad = en specifik streak-nivå en användare faktiskt nått
+-- (t.ex. "daily_streak"/"daily"/7, eller "habit_streak"/<habit-id>/30).
+-- Existensen av raden ÄR "redan firad" — insert-om-den-inte-redan-finns
+-- (unik-constraint) gör att en milstolpe bara räknas som NY en gång, oavsett
+-- hur många gånger sidan laddas eller synken kör samma dag. Ingen separat
+-- "seen"-status behövs: att raden skapas är exakt samma ögonblick som
+-- banderollen/pushen visas.
+create table public.celebrated_milestones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  kind text not null check (kind in ('daily_streak', 'weekly_streak', 'habit_streak')),
+  streak_key text not null, -- 'daily' | 'weekly' | habit_id (som text) för habit_streak
+  milestone integer not null,
+  reached_at timestamptz default now(),
+  unique (user_id, kind, streak_key, milestone)
+);
+alter table public.celebrated_milestones enable row level security;
+create policy "Users see own celebrated milestones" on public.celebrated_milestones
+  for all using (auth.uid() = user_id);
+create index celebrated_milestones_user on public.celebrated_milestones(user_id);
+
+-- YAZIO-koppling: samma connected_accounts-skydd (mot att koppla någon
+-- annans redan anslutna konto) som Garmin/Concept2/Strava/Polar redan har,
+-- bara utökat med ytterligare en giltig provider. Kör vid uppdatering av en
+-- befintlig databas:
+alter table public.connected_accounts drop constraint if exists connected_accounts_provider_check;
+alter table public.connected_accounts add constraint connected_accounts_provider_check
+  check (provider in ('garmin', 'concept2', 'strava', 'polar', 'yazio'));
+
+-- Admin: YAZIO-anslutning + synkstatus per användare, samma mönster som
+-- admin_all_sync_status() för Concept2/Garmin — en egen funktion istället
+-- för att bredda den befintliga, så dess returtyp/anropsställe inte
+-- behöver röras. has_yazio = uppgifter sparade, yazio_synced = minst en
+-- dags historik faktiskt hämtad (yazio_history), samma "sparat ≠
+-- fungerar"-distinktion som redan gäller för de andra källorna.
+-- Kör vid uppdatering av en befintlig databas:
+create or replace function public.admin_yazio_status()
+returns table(user_id uuid, has_yazio boolean, yazio_synced boolean)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    p.id,
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'yazio_credentials'),
+    exists(select 1 from public.coach_sessions cs where cs.user_id = p.id and cs.coach_id = 'yazio_history')
+  from public.profiles p;
+end;
+$$;
+revoke all on function public.admin_yazio_status() from public;
+grant execute on function public.admin_yazio_status() to authenticated;

@@ -15,10 +15,15 @@ export default function LoginPage() {
   useEffect(() => {
     // Plain window.location read instead of useSearchParams — this page is
     // statically rendered and useSearchParams would force a Suspense
-    // boundary just for a one-off error flag from the reset-password link.
-    if (new URLSearchParams(window.location.search).get('resetError')) {
+    // boundary just for a one-off error flag from the reset-password link
+    // (and now the landing page's "Skapa konto" link).
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('resetError')) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Länken för att återställa lösenordet var ogiltig eller har gått ut. Begär en ny.')
+    }
+    if (params.get('mode') === 'signup') {
+      setMode('signup')
     }
   }, [])
 
@@ -47,14 +52,21 @@ export default function LoginPage() {
     const supabase = createSupabaseClient()
 
     if (mode === 'forgot') {
-      // Same canonical-URL rule as the signup confirmation link above — the
-      // recovery link must always come back to the one real production
-      // site, never whichever preview/branch URL happened to render this
-      // form. Always shows the same message regardless of outcome so the
-      // form can't be used to check which emails have an account.
-      await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/reset-password`,
-      })
+      // Not supabase.auth.resetPasswordForEmail() — that sends Supabase's
+      // own built-in recovery email, whose link is a plain single-use GET
+      // to Supabase's hosted /verify endpoint. A mail prescanner (Gmail's
+      // own link-scanning, confirmed live via the auth logs) can burn that
+      // link before the real person ever clicks it. This route generates
+      // the link itself and sends it through our own email pipeline
+      // instead — see api/auth/forgot-password/route.ts for the full
+      // story. Always shows the same message regardless of outcome (route
+      // enforces this server-side too) so the form can't be used to check
+      // which emails have an account.
+      await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      }).catch(() => {})
       setMessage('Om det finns ett konto med den e-postadressen har vi skickat en länk för att återställa lösenordet.')
       setLoading(false)
       return

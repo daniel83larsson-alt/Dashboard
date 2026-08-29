@@ -9,61 +9,9 @@ import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { fmtMinSec, sportLabel } from '@/lib/sport'
 import { logApiCall } from '@/lib/log-api-call'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
+import { callGemini, callAnthropic, type LlmMessage as Message } from '@/lib/llm'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
-
-type Message = { role: string; content: string }
-
-// Shorter replies + a bounded slice of history — keeps both output tokens
-// and input tokens (context grows with every turn otherwise) down, since
-// most users share one Gemini quota. Full history still stays in the DB.
-const MAX_REPLY_TOKENS = 500
-const MAX_HISTORY_TURNS = 16
-
-async function callGemini(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
-  const contents = [
-    ...history.slice(-MAX_HISTORY_TURNS).map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }],
-    })),
-    { role: 'user', parts: [{ text: message }] },
-  ]
-  const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents,
-        systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { maxOutputTokens: MAX_REPLY_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
-      }),
-    }
-  )
-  const data = await res.json()
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text
-  if (!res.ok || !text) {
-    throw new Error(`Gemini call failed: ${data.error?.message ?? res.status}`)
-  }
-  return text
-}
-
-async function callAnthropic(apiKey: string, systemPrompt: string, history: Message[], message: string): Promise<string> {
-  const { default: Anthropic } = await import('@anthropic-ai/sdk')
-  const client = new Anthropic({ apiKey })
-  const response = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: MAX_REPLY_TOKENS,
-    system: systemPrompt,
-    messages: [
-      ...history.slice(-MAX_HISTORY_TURNS).map(m => ({ role: m.role as 'user' | 'assistant', content: m.content })),
-      { role: 'user', content: message },
-    ],
-  })
-  const text = response.content[0].type === 'text' ? response.content[0].text : ''
-  if (!text) throw new Error('Anthropic call returned no text')
-  return text
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -296,7 +244,13 @@ export async function POST(request: NextRequest) {
       },
     }
 
-    const systemPrompt = coach.systemPrompt(sport, userContext)
+    // Andra skyddslager utöver moderateMessage() ovan — om ett meddelande ändå
+    // slinker igenom (t.ex. en ny fras klassificeraren inte känner igen), ska
+    // själva coachen ändå vägra ge produktrekommendationer för alkohol/droger
+    // och styra tillbaka till träning, istället för att bara svara på frågan
+    // för att den råkar nämna ett kost-ord. Bifogas alla coacher, inte bara en.
+    const scopeGuardrail = '\n\nVIKTIGT: Du ger ALDRIG rekommendationer på specifika alkoholmärken, alkoholhaltiga drycker eller andra produkter som inte rör träning/kost för prestation. Om användaren frågar om detta, svara kort att det ligger utanför vad du hjälper till med och styr tillbaka till träning.'
+    const systemPrompt = coach.systemPrompt(sport, userContext) + scopeGuardrail
     const userProvider = profile?.llm_provider
 
     let reply: string

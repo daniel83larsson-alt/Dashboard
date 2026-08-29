@@ -5,7 +5,9 @@ import { withGarminLock } from '@/lib/garmin'
 import { syncConcept2ForUser, Concept2NotConnectedError } from '@/lib/concept2-sync'
 import { syncStravaForUser, StravaNotConnectedError } from '@/lib/strava-sync'
 import { syncPolarForUser, PolarNotConnectedError } from '@/lib/polar-sync'
+import { syncYazioForUser, YazioNotConfiguredError } from '@/lib/yazio-sync'
 import { sendPushToUser } from '@/lib/push'
+import { checkAndPushMilestones } from '@/lib/milestones'
 import { reconcileUserPlanSessions } from '@/lib/plan-reconcile'
 import type { ActivityRow } from '@/lib/duplicates'
 
@@ -31,28 +33,51 @@ export async function GET(request: NextRequest) {
 
   const supabase = createSupabaseAdminClient()
 
-  const [{ data: garminRows }, { data: c2Rows }, { data: stravaRows }, { data: polarRows }, { data: authUsers }] = await Promise.all([
+  // Garmin's own login endpoint (sso.garmin.com) sits behind Cloudflare rate
+  // limiting that trips after just a couple of logins fired in quick
+  // succession — verified live: two nights running, only 2 of 6 Garmin
+  // users actually synced, the other 4 all failed with the same 429 (see
+  // STATUS.md). withGarminLock already serializes logins one at a time, but
+  // with no gap between them that wasn't enough. The real fix is spreading
+  // logins across multiple cron invocations with a real pause in between
+  // (done in the GitHub Actions workflow, which has no function-duration
+  // cap, unlike this route's 60s Vercel budget) — garminOffset/garminLimit
+  // let the workflow ask for just a slice of the Garmin users this call.
+  // Omitting them (any other caller — manual testing, workflow_dispatch)
+  // keeps the old "process everyone" behavior. garminOnly skips every other
+  // provider so a repeat batch call for Garmin doesn't needlessly re-run
+  // Concept2/Strava/Polar/YAZIO/plan-reconcile, which only need to run once
+  // a night.
+  const { searchParams } = new URL(request.url)
+  const garminLimit = Number(searchParams.get('garminLimit') ?? '0')
+  const garminOffset = Number(searchParams.get('garminOffset') ?? '0')
+  const garminOnly = searchParams.get('garminOnly') === '1'
+
+  const [{ data: allGarminRows }, { data: c2Rows }, { data: stravaRows }, { data: polarRows }, { data: yazioRows }, { data: authUsers }] = await Promise.all([
     supabase.from('coach_sessions').select('user_id').eq('coach_id', 'garmin_credentials'),
-    supabase.from('concept2_tokens').select('user_id'),
-    supabase.from('strava_tokens').select('user_id'),
-    supabase.from('polar_tokens').select('user_id'),
+    garminOnly ? Promise.resolve({ data: [] }) : supabase.from('concept2_tokens').select('user_id'),
+    garminOnly ? Promise.resolve({ data: [] }) : supabase.from('strava_tokens').select('user_id'),
+    garminOnly ? Promise.resolve({ data: [] }) : supabase.from('polar_tokens').select('user_id'),
+    garminOnly ? Promise.resolve({ data: [] }) : supabase.from('coach_sessions').select('user_id').eq('coach_id', 'yazio_credentials'),
     supabase.auth.admin.listUsers({ perPage: 1000 }),
   ])
+
+  const garminRows = garminLimit > 0 ? (allGarminRows ?? []).slice(garminOffset, garminOffset + garminLimit) : (allGarminRows ?? [])
 
   const emailByUserId = new Map((authUsers?.users ?? []).map(u => [u.id, u.email]))
 
   // Garmin syncs are still kicked off "in parallel" here, but withGarminLock
   // (see lib/garmin.ts) forces the actual Garmin HTTP work to run one user
-  // at a time — a TEMPORARY mitigation for a cross-user token-leak race in
-  // the vendored garmin-connect library (STATUS.md "Teknisk skuld" has the
-  // full writeup). This makes the job slower as the Garmin user count
-  // grows, eating back into Vercel Hobby's 60s cap; revisit if that becomes
-  // tight (batch the cron, or remove this lock once the library is patched).
+  // at a time (plus a short pause between each — see lib/garmin.ts) — a
+  // TEMPORARY mitigation for a cross-user token-leak race in the vendored
+  // garmin-connect library (STATUS.md "Teknisk skuld" has the full
+  // writeup), and, combined with the batching above, the actual fix for the
+  // Cloudflare rate-limit issue.
   const garminSettled = await Promise.allSettled(
-    (garminRows ?? []).map(row => withGarminLock(() => syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id))))
+    garminRows.map(row => withGarminLock(() => syncGarminForUser(supabase, row.user_id, emailByUserId.get(row.user_id))))
   )
   const garmin = garminSettled.map((r, i) => {
-    const userId = (garminRows ?? [])[i].user_id
+    const userId = garminRows[i].user_id
     if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
     const isConfigError = r.reason instanceof GarminNotConfiguredError
     return { userId, ok: false, error: isConfigError ? 'not_configured' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
@@ -86,6 +111,16 @@ export async function GET(request: NextRequest) {
     if (r.status === 'fulfilled') return { userId, ok: true, synced: r.value.synced }
     const isConfigError = r.reason instanceof PolarNotConnectedError
     return { userId, ok: false, error: isConfigError ? 'not_connected' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
+  })
+
+  const yazioSettled = await Promise.allSettled(
+    (yazioRows ?? []).map(row => syncYazioForUser(supabase, row.user_id))
+  )
+  const yazio = yazioSettled.map((r, i) => {
+    const userId = (yazioRows ?? [])[i].user_id
+    if (r.status === 'fulfilled') return { userId, ok: true, hasSummary: r.value.hasSummary }
+    const isConfigError = r.reason instanceof YazioNotConfiguredError
+    return { userId, ok: false, error: isConfigError ? 'not_configured' : (r.reason instanceof Error ? r.reason.message : String(r.reason)) }
   })
 
   // Match today's (and any still-open past weeks') plan_sessions against
@@ -132,12 +167,23 @@ export async function GET(request: NextRequest) {
     )
   )
 
+  // Milstolpar ("Grattis 5 veckor på raken!!") — bara relevant för
+  // användare som faktiskt fick minst ett nytt pass i den här körningen,
+  // eftersom en streak bara kan ha vuxit förbi en ny nivå om något nytt
+  // synkades. checkAndPushMilestones är idempotent (celebrated_milestones
+  // unik-constraint) så det spelar ingen roll att samma användare även kan
+  // träffas av dashboard-sidans egen koll senare samma dag.
+  await Promise.allSettled(
+    [...newPassesByUser.keys()].map(userId => checkAndPushMilestones(supabase, userId))
+  )
+
   return NextResponse.json({
     ranAt: new Date().toISOString(),
-    garmin: { total: garmin.length, ok: garmin.filter(r => r.ok).length, results: garmin },
+    garmin: { total: garmin.length, totalAvailable: (allGarminRows ?? []).length, ok: garmin.filter(r => r.ok).length, results: garmin },
     concept2: { total: concept2.length, ok: concept2.filter(r => r.ok).length, results: concept2 },
     strava: { total: strava.length, ok: strava.filter(r => r.ok).length, results: strava },
     polar: { total: polar.length, ok: polar.filter(r => r.ok).length, results: polar },
+    yazio: { total: yazio.length, ok: yazio.filter(r => r.ok).length, results: yazio },
     notified: newPassesByUser.size,
     planReconcile: { usersChecked: planUserIds.length, ...reconciled },
   })
