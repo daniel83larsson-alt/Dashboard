@@ -11,7 +11,7 @@ import type { YazioDay } from '@/lib/yazio-history'
 import { stockholmDateKey } from '@/lib/dates'
 import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel, currentWeekDateKeys } from '@/lib/yazio-history'
 import {
-  KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, kostMealLabel,
+  KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, metricTotalForDay, kostMealLabel, kostMetricLabel,
   type KostMeal, type KostMetric, type KostFoodEntry,
 } from '@/lib/kost'
 
@@ -68,6 +68,9 @@ const PORTION_CHIPS: { label: string; multiplier: number }[] = [
 
 const MAX_LOG_PHOTOS = 4
 
+function macroSuffix(e: FoodEntry) {
+  return e.protein_g != null ? `${e.protein_g}g protein` : null
+}
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
 }
@@ -717,6 +720,26 @@ export default function FoodLogClient({
             <span className="font-mono text-fg text-sm">{Math.round(todayProtein)} g</span>
           </div>
         )}
+        {kostSettings.trackingEnabled && (() => {
+          const shownMetrics = (['protein', 'carb', 'fat'] as const).filter(m => kostSettings.trackedMetrics.includes(m))
+          if (shownMetrics.length === 0) return null
+          return (
+            <div className="grid gap-2 mt-3 pt-3 border-t border-edge text-center" style={{ gridTemplateColumns: `repeat(${shownMetrics.length}, minmax(0, 1fr))` }}>
+              {shownMetrics.map(m => {
+                const total = metricTotalForDay(todayEntries, m)
+                const goal = m === 'protein' ? kostSettings.proteinGoalG : m === 'carb' ? kostSettings.carbGoalG : kostSettings.fatGoalG
+                return (
+                  <div key={m} className="bg-bg rounded-lg py-2">
+                    <div className="font-mono text-fg text-sm font-bold">
+                      {Math.round(total)}{goal != null && <span className="text-muted font-normal"> / {goal}</span>}g
+                    </div>
+                    <div className="text-muted text-[10px] mt-0.5">{kostMetricLabel(m)}</div>
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })()}
 
         {kostSettings.trackingEnabled ? (
           <div className="mt-3 pt-3 border-t border-edge flex flex-col">
@@ -755,7 +778,7 @@ export default function FoodLogClient({
                         <div key={e.id} className="flex items-center justify-between text-xs">
                           <span className="text-muted break-words pr-2">{e.name}</span>
                           <span className="font-mono text-fg flex items-center gap-1.5 flex-shrink-0">
-                            {e.calories} kcal
+                            {e.calories} kcal{macroSuffix(e) && <span className="text-muted"> · {macroSuffix(e)}</span>}
                             <button onClick={() => startEdit(e)} className="text-muted hover:text-accent transition-colors px-1">✎</button>
                             <button onClick={() => deleteEntry(e.id)} className="text-muted hover:text-red-400 transition-colors px-1">✕</button>
                           </span>
@@ -806,7 +829,7 @@ export default function FoodLogClient({
                       <div key={e.id} className="flex items-center justify-between text-xs">
                         <span className="text-muted break-words pr-2">{e.name}</span>
                         <span className="font-mono text-fg flex items-center gap-1.5 flex-shrink-0">
-                          {e.calories} kcal
+                          {e.calories} kcal{macroSuffix(e) && <span className="text-muted"> · {macroSuffix(e)}</span>}
                           <button onClick={() => startEdit(e)} className="text-muted hover:text-accent transition-colors px-1">✎</button>
                           <button onClick={() => deleteEntry(e.id)} className="text-muted hover:text-red-400 transition-colors px-1">✕</button>
                         </span>
@@ -827,7 +850,7 @@ export default function FoodLogClient({
                     <span className="text-muted text-xs ml-2 whitespace-nowrap">{fmtTime(e.logged_at)}</span>
                   </div>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="font-mono text-muted whitespace-nowrap">{e.calories} kcal</span>
+                    <span className="font-mono text-muted whitespace-nowrap">{e.calories} kcal{macroSuffix(e) && ` · ${macroSuffix(e)}`}</span>
                     <button onClick={() => startEdit(e)} className="text-muted hover:text-accent transition-colors text-xs px-1">✎</button>
                     <button onClick={() => deleteEntry(e.id)} className="text-muted hover:text-red-400 transition-colors text-xs px-1">✕</button>
                   </div>
@@ -963,7 +986,7 @@ export default function FoodLogClient({
 
       {/* Logga mat-drawer */}
       {logOpen && (
-        <div className="fixed inset-0 bg-black/60 z-30 flex items-end justify-center" onClick={closeLogFlow}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={closeLogFlow}>
           <div className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             <div className="text-base font-bold mb-0.5">Logga mat</div>
@@ -1182,7 +1205,7 @@ export default function FoodLogClient({
 
       {/* Redigera-post-modal */}
       {editingId && (
-        <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
           <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
             <div className="text-sm font-semibold">Redigera post</div>
             {kostSettings.trackingEnabled && (
@@ -1230,7 +1253,7 @@ export default function FoodLogClient({
 
       {/* Dag-detalj-drawer (kalender/vecka) */}
       {selectedDay && (
-        <div className="fixed inset-0 bg-black/60 z-30 flex items-end justify-center" onClick={() => setSelectedDay(null)}>
+        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={() => setSelectedDay(null)}>
           <div className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             {(() => {
@@ -1269,7 +1292,7 @@ export default function FoodLogClient({
                                 <div className="text-fg break-words">{e.name}</div>
                                 <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
                               </div>
-                              <span className="font-mono text-muted text-xs">{e.calories} kcal</span>
+                              <span className="font-mono text-muted text-xs">{e.calories} kcal{macroSuffix(e) && ` · ${macroSuffix(e)}`}</span>
                             </button>
                           ))}
                         </div>
@@ -1293,7 +1316,7 @@ export default function FoodLogClient({
                               <div className="text-fg break-words">{e.name}</div>
                               <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
                             </div>
-                            <span className="font-mono text-muted text-xs">{e.calories} kcal</span>
+                            <span className="font-mono text-muted text-xs">{e.calories} kcal{macroSuffix(e) && ` · ${macroSuffix(e)}`}</span>
                           </button>
                         ))}
                       </div>
