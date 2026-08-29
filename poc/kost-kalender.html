@@ -145,6 +145,23 @@
 
   .meal-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--edge); }
   .meal-row:last-child { border-bottom: none; }
+  .meal-group:last-child .meal-row-head { border-bottom: none; }
+  .meal-row-head { cursor: pointer; }
+  .expand-arrow { display: inline-block; margin-left: 8px; color: var(--muted); font-size: 10px; transition: transform .15s; }
+  .meal-group.open .expand-arrow { transform: rotate(180deg); }
+  .count-badge {
+    background: var(--edge); color: var(--muted); font-size: 10px; font-family: 'JetBrains Mono', monospace;
+    border-radius: 999px; padding: 1px 6px; margin-left: 6px;
+  }
+  .meal-items { display: none; flex-direction: column; gap: 6px; padding: 0 0 10px 16px; }
+  .meal-group.open .meal-items { display: flex; }
+  .meal-item { display: flex; align-items: center; justify-content: space-between; font-size: 12px; color: var(--muted); }
+  .meal-item .mono { display: flex; align-items: center; color: var(--lcd); }
+  .add-item-btn {
+    align-self: flex-start; background: none; border: 1px dashed var(--edge); color: var(--muted);
+    font-family: inherit; font-size: 11.5px; padding: 6px 10px; border-radius: 8px; cursor: pointer; margin-top: 2px;
+  }
+  .add-item-btn:hover { border-color: var(--accent); color: var(--accent); }
   .meal-name { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
   .meal-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
   .dot-done { background: var(--accent); }
@@ -306,9 +323,10 @@
             <label class="chip on" data-meal="breakfast"><input type="checkbox" checked><span class="box"></span>Frukost</label>
             <label class="chip on" data-meal="lunch"><input type="checkbox" checked><span class="box"></span>Lunch</label>
             <label class="chip on" data-meal="dinner"><input type="checkbox" checked><span class="box"></span>Middag</label>
+            <label class="chip" data-meal="supper"><input type="checkbox"><span class="box"></span>Kvällsmat</label>
             <label class="chip" data-meal="snack"><input type="checkbox"><span class="box"></span>Mellanmål</label>
           </div>
-          <p class="hint" style="margin-top:10px;">Styr både när en dag räknas som &quot;klar&quot; och när du får en påminnelse om du inte loggat.</p>
+          <p class="hint" style="margin-top:10px;">Styr både när en dag räknas som &quot;klar&quot; och när du får en påminnelse om du inte loggat. Kvällsmat och mellanmål är egna kategorier du kan logga <strong>flera gånger</strong> samma dag (t.ex. två mellanmål) — då räcker det med minst en loggning i den kategorin för att den ska räknas som klar, inte exakt en.</p>
         </div>
 
         <div>
@@ -337,24 +355,60 @@
       </div>
       <div class="bar"><div style="width:80%"></div></div>
 
-      <div style="margin-top:4px;">
-        <div class="meal-row">
-          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Frukost</div>
-          <div><span class="meal-val">420 kcal</span><span class="edit-pencil" onclick="alert('Redigera frukost — ändra kcal/protein manuellt (POC)')">✎</span></div>
+      <div style="margin-top:4px;" id="mealGroups">
+        <div class="meal-group">
+          <div class="meal-row meal-row-head" onclick="toggleMealGroup(this)">
+            <div class="meal-name"><span class="meal-status-dot dot-done"></span>Frukost</div>
+            <div><span class="meal-val">420 kcal</span><span class="expand-arrow">▾</span></div>
+          </div>
+          <div class="meal-items">
+            <div class="meal-item"><span>Havregrynsgröt med blåbär</span><span class="mono">420 kcal<span class="edit-pencil" onclick="alert('Redigera post (POC)')">✎</span></span></div>
+          </div>
         </div>
-        <div class="meal-row">
-          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Lunch</div>
-          <div><span class="meal-val">690 kcal</span><span class="edit-pencil" onclick="alert('Redigera lunch (POC)')">✎</span></div>
+
+        <div class="meal-group">
+          <div class="meal-row meal-row-head" onclick="toggleMealGroup(this)">
+            <div class="meal-name"><span class="meal-status-dot dot-done"></span>Lunch</div>
+            <div><span class="meal-val">690 kcal</span><span class="expand-arrow">▾</span></div>
+          </div>
+          <div class="meal-items">
+            <div class="meal-item"><span>Kycklingsallad</span><span class="mono">690 kcal<span class="edit-pencil" onclick="alert('Redigera post (POC)')">✎</span></span></div>
+          </div>
         </div>
-        <div class="meal-row">
-          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Middag</div>
-          <div><span class="meal-val">730 kcal</span><span class="edit-pencil" onclick="alert('Redigera middag (POC)')">✎</span></div>
+
+        <div class="meal-group">
+          <div class="meal-row meal-row-head" onclick="toggleMealGroup(this)">
+            <div class="meal-name"><span class="meal-status-dot dot-done"></span>Middag</div>
+            <div><span class="meal-val">730 kcal</span><span class="expand-arrow">▾</span></div>
+          </div>
+          <div class="meal-items">
+            <div class="meal-item"><span>Lax med ris</span><span class="mono">730 kcal<span class="edit-pencil" onclick="alert('Redigera post (POC)')">✎</span></span></div>
+          </div>
         </div>
-        <div class="meal-row">
-          <div class="meal-name"><span class="meal-status-dot dot-missing"></span>Mellanmål</div>
-          <div><span class="meal-val" style="color:var(--red);">ej loggat</span></div>
+
+        <div class="meal-group open">
+          <div class="meal-row meal-row-head" onclick="toggleMealGroup(this)">
+            <div class="meal-name"><span class="meal-status-dot dot-done"></span>Mellanmål <span class="count-badge">2</span></div>
+            <div><span class="meal-val">180 kcal</span><span class="expand-arrow">▾</span></div>
+          </div>
+          <div class="meal-items">
+            <div class="meal-item"><span>Äpple</span><span class="mono">70 kcal<span class="edit-pencil" onclick="alert('Redigera post (POC)')">✎</span></span></div>
+            <div class="meal-item"><span>Proteinshake</span><span class="mono">110 kcal<span class="edit-pencil" onclick="alert('Redigera post (POC)')">✎</span></span></div>
+            <button class="add-item-btn" onclick="alert('Öppnar logga-mat-flödet, förvalt Mellanmål (POC)')">+ Logga ännu ett mellanmål</button>
+          </div>
+        </div>
+
+        <div class="meal-group">
+          <div class="meal-row meal-row-head" onclick="toggleMealGroup(this)">
+            <div class="meal-name"><span class="meal-status-dot dot-missing"></span>Kvällsmat</div>
+            <div><span class="meal-val" style="color:var(--red);">ej loggat</span></div>
+          </div>
+          <div class="meal-items">
+            <button class="add-item-btn" onclick="alert('Öppnar logga-mat-flödet, förvalt Kvällsmat (POC)')">+ Logga kvällsmat</button>
+          </div>
         </div>
       </div>
+      <p class="hint" style="margin-top:10px;">Mellanmål och kvällsmat kan loggas hur många gånger som helst en dag — allt räknas ihop under samma rubrik.</p>
     </div>
 
     <div class="view-switch">
@@ -446,6 +500,10 @@
       chip.classList.toggle('on', cb.checked);
     });
   });
+
+  function toggleMealGroup(headEl) {
+    headEl.parentElement.classList.toggle('open');
+  }
 
   function setKostView(v) {
     document.getElementById('viewWeek').style.display = v === 'week' ? '' : 'none';
