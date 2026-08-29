@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DL Trainer — Kost (POC)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0e1113;
+    --card: #161b1e;
+    --edge: #2a3035;
+    --accent: #ccd400;
+    --lcd: #a7bda9;
+    --muted: #8899a0;
+    --fg: #e8ecef;
+    --amber: #f0b429;
+    --red: #e5644a;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Space Grotesk', system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .mono { font-family: 'JetBrains Mono', monospace; }
+  .shell {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    padding: 20px 16px 100px;
+    position: relative;
+  }
+  .poc-banner {
+    background: #2a2410;
+    border: 1px solid #4a4020;
+    color: var(--amber);
+    font-size: 11px;
+    padding: 8px 12px;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+  h1 { font-size: 24px; font-weight: 700; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 13px; margin: 0 0 20px; }
+  .tabs {
+    display: flex;
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 12px;
+    padding: 4px;
+    gap: 4px;
+    margin-bottom: 18px;
+  }
+  .tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 9px 0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .tab-btn.active { background: var(--accent); color: var(--bg); font-weight: 700; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--edge);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+  }
+  .card-flat { display: flex; flex-direction: column; gap: 12px; }
+  .label-xs {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--muted);
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+
+  /* Toggle switch */
+  .switch { position: relative; width: 42px; height: 24px; flex-shrink: 0; }
+  .switch input { opacity: 0; width: 0; height: 0; }
+  .switch .track {
+    position: absolute; inset: 0; background: var(--edge); border-radius: 999px;
+    cursor: pointer; transition: background .15s;
+  }
+  .switch .track::before {
+    content: ''; position: absolute; width: 18px; height: 18px; left: 3px; top: 3px;
+    background: var(--fg); border-radius: 50%; transition: transform .15s;
+  }
+  .switch input:checked + .track { background: var(--accent); }
+  .switch input:checked + .track::before { transform: translateX(18px); background: var(--bg); }
+
+  .chip-row { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--edge); border-radius: 10px;
+    padding: 8px 12px; font-size: 12.5px; cursor: pointer;
+    background: var(--bg); color: var(--muted); transition: all .15s;
+    user-select: none;
+  }
+  .chip.on { border-color: rgba(204,212,0,.4); background: rgba(204,212,0,.08); color: var(--fg); }
+  .chip input { display: none; }
+  .chip .box {
+    width: 14px; height: 14px; border-radius: 4px; border: 1.5px solid var(--muted);
+    flex-shrink: 0; position: relative;
+  }
+  .chip.on .box { border-color: var(--accent); background: var(--accent); }
+  .chip.on .box::after {
+    content: ''; position: absolute; left: 3px; top: 0px; width: 4px; height: 8px;
+    border: solid var(--bg); border-width: 0 2px 2px 0; transform: rotate(45deg);
+  }
+
+  .goal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .goal-field { display: none; }
+  .goal-field.show { display: block; }
+  .goal-field label { display: block; font-size: 11px; color: var(--muted); margin-bottom: 5px; }
+  .goal-field input {
+    width: 100%; background: var(--bg); border: 1px solid var(--edge); border-radius: 10px;
+    padding: 9px 10px; color: var(--fg); font-family: 'JetBrains Mono', monospace; font-size: 14px;
+  }
+
+  #settingsBody { display: none; flex-direction: column; gap: 16px; }
+  #settingsBody.show { display: flex; }
+  .hint { font-size: 11.5px; color: var(--muted); line-height: 1.5; margin: 0; }
+
+  /* Kost page: today card */
+  .today-kcal { display: flex; align-items: baseline; gap: 6px; }
+  .today-kcal .num { font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 26px; color: var(--accent); }
+  .today-kcal .goal { color: var(--muted); font-size: 13px; }
+  .bar { height: 6px; background: var(--bg); border-radius: 999px; overflow: hidden; margin-top: 2px; }
+  .bar > div { height: 100%; background: var(--accent); border-radius: 999px; }
+
+  .meal-row { display: flex; align-items: center; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--edge); }
+  .meal-row:last-child { border-bottom: none; }
+  .meal-name { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
+  .meal-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .dot-done { background: var(--accent); }
+  .dot-missing { background: var(--red); }
+  .meal-val { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--muted); }
+  .edit-pencil {
+    width: 22px; height: 22px; border-radius: 7px; border: 1px solid var(--edge); background: var(--bg);
+    color: var(--muted); display: inline-flex; align-items: center; justify-content: center;
+    cursor: pointer; font-size: 11px; margin-left: 8px;
+  }
+  .edit-pencil:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* view switch inside Kost page */
+  .view-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+  .view-switch button {
+    flex: 1; padding: 8px 0; border-radius: 10px; border: 1px solid var(--edge);
+    background: var(--card); color: var(--muted); font-family: inherit; font-size: 12.5px; font-weight: 600;
+    cursor: pointer;
+  }
+  .view-switch button.active { background: rgba(204,212,0,.1); border-color: rgba(204,212,0,.4); color: var(--accent); }
+
+  .week-row { display: flex; align-items: center; justify-content: space-between; font-size: 13px; padding: 7px 0; }
+  .diff-under { color: var(--accent); }
+  .diff-over { color: var(--amber); }
+  .diff-none { color: var(--muted); }
+
+  /* Calendar */
+  .cal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .cal-header .month { font-weight: 600; font-size: 14px; }
+  .cal-nav { display: flex; gap: 6px; }
+  .cal-nav button {
+    width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--edge); background: var(--bg);
+    color: var(--muted); cursor: pointer; font-size: 13px;
+  }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; }
+  .cal-dow { text-align: center; font-size: 10px; color: var(--muted); padding-bottom: 4px; }
+  .cal-day {
+    aspect-ratio: 1; border-radius: 9px; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; font-size: 11.5px; cursor: pointer;
+    border: 1px solid transparent; position: relative; gap: 2px;
+  }
+  .cal-day .d { font-family: 'JetBrains Mono', monospace; font-weight: 600; }
+  .cal-day.empty { visibility: hidden; cursor: default; }
+  .cal-day.future { color: #3d4448; cursor: default; }
+  .cal-day.under { background: rgba(204,212,0,.12); color: var(--fg); }
+  .cal-day.under .d { color: var(--accent); }
+  .cal-day.over { background: rgba(240,180,41,.1); color: var(--fg); }
+  .cal-day.over .d { color: var(--amber); }
+  .cal-day.nodata { background: var(--card); color: var(--muted); }
+  .cal-day.flag { border-color: var(--red); }
+  .cal-day .flag-dot {
+    position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; border-radius: 50%; background: var(--red);
+  }
+  .cal-day.selected { outline: 2px solid var(--fg); outline-offset: 1px; }
+  .legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 12px; font-size: 10.5px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .legend i { width: 9px; height: 9px; border-radius: 3px; display: inline-block; }
+
+  /* Day detail drawer */
+  .drawer-backdrop {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 20;
+  }
+  .drawer-backdrop.show { display: block; }
+  .drawer {
+    position: fixed; left: 0; right: 0; bottom: 0; max-width: 480px; margin: 0 auto;
+    background: var(--card); border: 1px solid var(--edge); border-bottom: none;
+    border-radius: 20px 20px 0 0; padding: 18px 16px 24px; z-index: 21;
+    transform: translateY(100%); transition: transform .22s ease-out;
+  }
+  .drawer.show { transform: translateY(0); }
+  .drawer-handle { width: 36px; height: 4px; background: var(--edge); border-radius: 3px; margin: 0 auto 14px; }
+  .drawer-title { font-size: 15px; font-weight: 700; margin: 0 0 2px; }
+  .drawer-sub { font-size: 12px; color: var(--muted); margin: 0 0 16px; }
+  .flag-banner {
+    display: flex; gap: 8px; align-items: flex-start; background: rgba(229,100,74,.1);
+    border: 1px solid rgba(229,100,74,.35); border-radius: 12px; padding: 10px 12px;
+    font-size: 12px; color: #f0a898; margin-bottom: 14px; line-height: 1.5;
+  }
+  .btn-primary {
+    width: 100%; background: var(--accent); color: var(--bg); border: none; border-radius: 12px;
+    padding: 12px 0; font-family: inherit; font-weight: 700; font-size: 13.5px; cursor: pointer; margin-top: 4px;
+  }
+  .btn-ghost {
+    width: 100%; background: none; color: var(--muted); border: 1px solid var(--edge); border-radius: 12px;
+    padding: 11px 0; font-family: inherit; font-size: 13px; cursor: pointer; margin-top: 8px;
+  }
+
+  /* Push mockup */
+  .push-mock {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-140%);
+    width: calc(100% - 32px); max-width: 448px; background: #1c2226; border: 1px solid var(--edge);
+    border-radius: 14px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start;
+    box-shadow: 0 12px 30px rgba(0,0,0,.4); z-index: 30; transition: transform .3s ease-out;
+  }
+  .push-mock.show { transform: translateX(-50%) translateY(0); }
+  .push-icon {
+    width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: var(--bg);
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0;
+  }
+  .push-title { font-size: 12.5px; font-weight: 700; margin: 0 0 2px; }
+  .push-body { font-size: 12px; color: var(--muted); margin: 0; }
+
+  .demo-trigger {
+    font-size: 11.5px; color: var(--accent); background: none; border: 1px dashed rgba(204,212,0,.4);
+    border-radius: 8px; padding: 6px 10px; cursor: pointer; font-family: inherit; margin-top: 10px;
+  }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="poc-banner">
+    ⚠️ POC — mockdata, ingen riktig backend. Klicka runt: växla på/av-läget under Inställningar, byt mellan Vecka/Kalender på Kost-sidan, klicka en flaggad dag i kalendern.
+  </div>
+
+  <h1>DL Trainer</h1>
+  <p class="sub">Kost — designförslag</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showScreen('settings', this)">Inställningar</button>
+    <button class="tab-btn" onclick="showScreen('kost', this)">Kost-sidan</button>
+  </div>
+
+  <!-- ===================== SCREEN 1: SETTINGS ===================== -->
+  <div class="screen active" id="screen-settings">
+    <div class="card card-flat">
+      <div class="row">
+        <div>
+          <div style="font-weight:600; font-size:14px;">Spåra kost-mål</div>
+          <p class="hint" style="margin-top:3px;">Av som standard — ingen loggning eller påminnelser förrän du slår på det.</p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="trackToggle" onchange="onTrackToggle()">
+          <span class="track"></span>
+        </label>
+      </div>
+
+      <div id="settingsBody">
+        <div>
+          <div class="label-xs" style="margin-bottom:8px;">Vad vill du följa?</div>
+          <div class="chip-row" id="metricChips">
+            <label class="chip on" data-metric="kcal"><input type="checkbox" checked><span class="box"></span>Kalorier</label>
+            <label class="chip" data-metric="protein"><input type="checkbox"><span class="box"></span>Protein</label>
+            <label class="chip" data-metric="carb"><input type="checkbox"><span class="box"></span>Kolhydrater</label>
+            <label class="chip" data-metric="fat"><input type="checkbox"><span class="box"></span>Fett</label>
+          </div>
+        </div>
+
+        <div class="goal-grid" id="goalGrid">
+          <div class="goal-field show" data-goal="kcal"><label>Kalorimål / dag</label><input type="number" value="2300" class="mono"></div>
+          <div class="goal-field" data-goal="protein"><label>Protein (g) / dag</label><input type="number" value="140" class="mono"></div>
+          <div class="goal-field" data-goal="carb"><label>Kolhydrater (g) / dag</label><input type="number" value="220" class="mono"></div>
+          <div class="goal-field" data-goal="fat"><label>Fett (g) / dag</label><input type="number" value="75" class="mono"></div>
+        </div>
+
+        <div>
+          <div class="label-xs" style="margin-bottom:8px;">Vilka måltider loggar du?</div>
+          <div class="chip-row" id="mealChips">
+            <label class="chip on" data-meal="breakfast"><input type="checkbox" checked><span class="box"></span>Frukost</label>
+            <label class="chip on" data-meal="lunch"><input type="checkbox" checked><span class="box"></span>Lunch</label>
+            <label class="chip on" data-meal="dinner"><input type="checkbox" checked><span class="box"></span>Middag</label>
+            <label class="chip" data-meal="snack"><input type="checkbox"><span class="box"></span>Mellanmål</label>
+          </div>
+          <p class="hint" style="margin-top:10px;">Styr både när en dag räknas som &quot;klar&quot; och när du får en påminnelse om du inte loggat.</p>
+        </div>
+
+        <div>
+          <div class="label-xs" style="margin-bottom:8px;">Påminnelser</div>
+          <div class="row" style="background:var(--bg); border:1px solid var(--edge); border-radius:12px; padding:10px 12px;">
+            <span style="font-size:12.5px;">Push runt måltidstid om inget loggat</span>
+            <label class="switch"><input type="checkbox" checked><span class="track"></span></label>
+          </div>
+          <button class="demo-trigger" onclick="showPush()">▶ Visa exempel-notis</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== SCREEN 2: KOST PAGE ===================== -->
+  <div class="screen" id="screen-kost">
+
+    <div class="card card-flat">
+      <div class="row">
+        <span class="label-xs">IDAG</span>
+        <span class="mono" style="font-size:11px; color:var(--muted);">tors 27 aug</span>
+      </div>
+      <div class="today-kcal">
+        <span class="num">1 840</span>
+        <span class="goal">/ 2 300 kcal</span>
+      </div>
+      <div class="bar"><div style="width:80%"></div></div>
+
+      <div style="margin-top:4px;">
+        <div class="meal-row">
+          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Frukost</div>
+          <div><span class="meal-val">420 kcal</span><span class="edit-pencil" onclick="alert('Redigera frukost — ändra kcal/protein manuellt (POC)')">✎</span></div>
+        </div>
+        <div class="meal-row">
+          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Lunch</div>
+          <div><span class="meal-val">690 kcal</span><span class="edit-pencil" onclick="alert('Redigera lunch (POC)')">✎</span></div>
+        </div>
+        <div class="meal-row">
+          <div class="meal-name"><span class="meal-status-dot dot-done"></span>Middag</div>
+          <div><span class="meal-val">730 kcal</span><span class="edit-pencil" onclick="alert('Redigera middag (POC)')">✎</span></div>
+        </div>
+        <div class="meal-row">
+          <div class="meal-name"><span class="meal-status-dot dot-missing"></span>Mellanmål</div>
+          <div><span class="meal-val" style="color:var(--red);">ej loggat</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="view-switch">
+      <button class="active" id="btnViewWeek" onclick="setKostView('week')">Vecka</button>
+      <button id="btnViewCal" onclick="setKostView('cal')">Kalender</button>
+    </div>
+
+    <!-- Vecka (befintlig vy, oförändrad — kort mock här) -->
+    <div class="card card-flat" id="viewWeek">
+      <div class="row"><span class="label-xs">Veckans loggade dagar</span><span style="font-size:11px; color:var(--muted);">4 av 6 inom målet</span></div>
+      <div>
+        <div class="week-row"><span>Mån</span><span class="mono"><span style="color:var(--fg)">2186 kcal</span> <span class="diff-under">-140</span></span></div>
+        <div class="week-row"><span>Tis</span><span class="mono"><span style="color:var(--fg)">1847 kcal</span> <span class="diff-under">-479</span></span></div>
+        <div class="week-row"><span>Ons</span><span class="mono" style="color:var(--red);">Ingen data</span></div>
+        <div class="week-row"><span>Tors</span><span class="mono"><span style="color:var(--fg)">1840 kcal</span> <span class="diff-under">-460 (hittills)</span></span></div>
+        <div class="week-row" style="opacity:.4"><span>Fre</span><span class="mono diff-none">–</span></div>
+        <div class="week-row" style="opacity:.4"><span>Lör</span><span class="mono diff-none">–</span></div>
+        <div class="week-row" style="opacity:.4"><span>Sön</span><span class="mono diff-none">–</span></div>
+      </div>
+      <p class="hint">30-dagarsgrafen finns kvar precis som idag, ovanför/under den här listan.</p>
+    </div>
+
+    <!-- Kalender (NY) -->
+    <div class="card card-flat" id="viewCal" style="display:none;">
+      <div class="cal-header">
+        <span class="month">Augusti 2026</span>
+        <div class="cal-nav"><button>‹</button><button>›</button></div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="legend">
+        <span><i style="background:rgba(204,212,0,.5)"></i>Inom mål</span>
+        <span><i style="background:rgba(240,180,41,.5)"></i>Över mål</span>
+        <span><i style="background:var(--edge)"></i>Ingen/lite data</span>
+        <span><i style="background:var(--red)"></i>Flaggad</span>
+      </div>
+      <p class="hint">Flaggad = en måltid du brukar logga saknas, eller dagens totala är onormalt lågt (ser ut som du glömt något, inte att du åt väldigt lite). Klicka en flaggad dag för att komplettera.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- Push notification mock -->
+<div class="push-mock" id="pushMock">
+  <div class="push-icon">DL</div>
+  <div>
+    <p class="push-title">Glömde du logga lunchen?</p>
+    <p class="push-body">Kl 13 brukar du logga lunch — inget loggat än idag.</p>
+  </div>
+</div>
+
+<!-- Day detail drawer -->
+<div class="drawer-backdrop" id="drawerBackdrop" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-handle"></div>
+  <div id="drawerContent"></div>
+</div>
+
+<script>
+  function showScreen(name, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('screen-' + name).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+  }
+
+  function onTrackToggle() {
+    const on = document.getElementById('trackToggle').checked;
+    document.getElementById('settingsBody').classList.toggle('show', on);
+  }
+
+  document.querySelectorAll('#metricChips .chip').forEach(chip => {
+    chip.addEventListener('click', e => {
+      e.preventDefault();
+      const cb = chip.querySelector('input');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('on', cb.checked);
+      const metric = chip.dataset.metric;
+      const field = document.querySelector('.goal-field[data-goal="' + metric + '"]');
+      if (field) field.classList.toggle('show', cb.checked);
+    });
+  });
+
+  document.querySelectorAll('#mealChips .chip').forEach(chip => {
+    chip.addEventListener('click', e => {
+      e.preventDefault();
+      const cb = chip.querySelector('input');
+      cb.checked = !cb.checked;
+      chip.classList.toggle('on', cb.checked);
+    });
+  });
+
+  function setKostView(v) {
+    document.getElementById('viewWeek').style.display = v === 'week' ? '' : 'none';
+    document.getElementById('viewCal').style.display = v === 'cal' ? '' : 'none';
+    document.getElementById('btnViewWeek').classList.toggle('active', v === 'week');
+    document.getElementById('btnViewCal').classList.toggle('active', v === 'cal');
+  }
+
+  function showPush() {
+    const el = document.getElementById('pushMock');
+    el.classList.add('show');
+    setTimeout(() => el.classList.remove('show'), 3200);
+  }
+
+  // ---- Calendar mock data (Augusti 2026, 1 aug = lördag) ----
+  const DOW = ['M','T','O','T','F','L','S'];
+  const FIRST_WEEKDAY = 5; // 1 aug 2026 är en lördag → 0=mån .. 5=lör
+  const DAYS_IN_MONTH = 31;
+  const TODAY = 27;
+
+  // status: 'under' | 'over' | 'nodata' | 'future'; flag: bool; detail for drawer
+  const dayData = {};
+  for (let d = 1; d <= DAYS_IN_MONTH; d++) {
+    if (d > TODAY) { dayData[d] = { status: 'future' }; continue; }
+    if (d === 6 || d === 19) { dayData[d] = { status: 'nodata', flag: true, kcal: null, missing: 'Inget loggat alls den här dagen.' }; continue; }
+    if (d === 12) { dayData[d] = { status: 'under', flag: true, kcal: 640, goal: 2300, missing: 'Bara frukost loggad (640 kcal) — troligen glömde du logga resten, inte att du bara åt så lite.' }; continue; }
+    if (d === 23) { dayData[d] = { status: 'under', flag: true, kcal: 1120, goal: 2300, missing: 'Middagen saknas — du brukar logga den.' }; continue; }
+    const over = (d % 5 === 0);
+    const kcal = over ? 2300 + 150 + (d % 4) * 60 : 2300 - 120 - (d % 6) * 55;
+    dayData[d] = { status: over ? 'over' : 'under', flag: false, kcal, goal: 2300 };
+  }
+  dayData[TODAY] = { status: 'under', flag: false, kcal: 1840, goal: 2300 };
+
+  const grid = document.getElementById('calGrid');
+  DOW.forEach(l => { const el = document.createElement('div'); el.className = 'cal-dow'; el.textContent = l; grid.appendChild(el); });
+  for (let i = 0; i < FIRST_WEEKDAY; i++) { const el = document.createElement('div'); el.className = 'cal-day empty'; grid.appendChild(el); }
+  for (let d = 1; d <= DAYS_IN_MONTH; d++) {
+    const info = dayData[d];
+    const el = document.createElement('div');
+    el.className = 'cal-day ' + info.status + (info.flag ? ' flag' : '');
+    el.innerHTML = '<span class="d">' + d + '</span>' + (info.flag ? '<span class="flag-dot"></span>' : '');
+    if (info.status !== 'future') {
+      el.addEventListener('click', () => openDay(d, info));
+    }
+    grid.appendChild(el);
+  }
+
+  function openDay(d, info) {
+    document.querySelectorAll('.cal-day').forEach(c => c.classList.remove('selected'));
+    event.currentTarget.classList.add('selected');
+    const content = document.getElementById('drawerContent');
+    const dateLabel = d + ' augusti 2026';
+    let html = '<div class="drawer-title">' + dateLabel + '</div>';
+    if (info.status === 'nodata') {
+      html += '<p class="drawer-sub">Ingen loggning den här dagen</p>';
+      html += '<div class="flag-banner">⚠️<div>' + info.missing + ' Räknas inte med i veckans/månadens snitt förrän du fyllt i något (eller markerar dagen som &quot;stämmer, jag åt inget&quot;).</div></div>';
+      html += '<button class="btn-primary" onclick="alert(\'Öppnar logga-mat-flödet för ' + dateLabel + ' (POC)\')">Logga mat för den här dagen</button>';
+      html += '<button class="btn-ghost" onclick="alert(\'Dagen markerad som korrekt tom (POC)\')">Stämmer, jag åt inget den dagen</button>';
+    } else if (info.flag) {
+      html += '<p class="drawer-sub">' + info.kcal + ' / ' + info.goal + ' kcal loggat</p>';
+      html += '<div class="flag-banner">⚠️<div>' + info.missing + '</div></div>';
+      html += '<button class="btn-primary" onclick="alert(\'Öppnar logga-mat-flödet för ' + dateLabel + ' (POC)\')">Komplettera den här dagen</button>';
+      html += '<button class="btn-ghost" onclick="alert(\'Dagen markerad som klar ändå (POC)\')">Stämmer, räkna med dagen ändå</button>';
+    } else {
+      const diff = info.kcal - info.goal;
+      const diffLabel = (diff > 0 ? '+' : '') + diff + ' kcal mot mål';
+      html += '<p class="drawer-sub">' + info.kcal + ' / ' + info.goal + ' kcal · <span class="' + (diff > 0 ? 'diff-over' : 'diff-under') + '">' + diffLabel + '</span></p>';
+      html += '<div class="meal-row"><div class="meal-name"><span class="meal-status-dot dot-done"></span>Frukost</div><span class="meal-val mono">480 kcal</span></div>';
+      html += '<div class="meal-row"><div class="meal-name"><span class="meal-status-dot dot-done"></span>Lunch</div><span class="meal-val mono">720 kcal</span></div>';
+      html += '<div class="meal-row"><div class="meal-name"><span class="meal-status-dot dot-done"></span>Middag</div><span class="meal-val mono">' + (info.kcal - 1200) + ' kcal</span></div>';
+      html += '<button class="btn-ghost" onclick="alert(\'Redigera en post för ' + dateLabel + ' (POC)\')">Redigera en loggad post</button>';
+    }
+    document.getElementById('drawerBackdrop').classList.add('show');
+    document.getElementById('drawer').classList.add('show');
+    content.innerHTML = html;
+  }
+  function closeDrawer() {
+    document.getElementById('drawerBackdrop').classList.remove('show');
+    document.getElementById('drawer').classList.remove('show');
+  }
+</script>
+</body>
+</html>
