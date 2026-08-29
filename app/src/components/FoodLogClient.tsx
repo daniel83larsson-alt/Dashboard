@@ -169,7 +169,8 @@ export default function FoodLogClient({
   const todayProtein = todayEntries.reduce((s, e) => s + (e.protein_g ?? 0), 0)
   const goalPct = dailyCalorieGoal ? Math.min(100, Math.round((todayTotal / dailyCalorieGoal) * 100)) : null
   const todayGroups = groupEntriesByMeal(todayEntries)
-  const [openMealGroups, setOpenMealGroups] = useState<Set<KostMeal>>(new Set())
+  const unmatchedTodayEntries = todayEntries.filter(e => e.meal == null)
+  const [openMealGroups, setOpenMealGroups] = useState<Set<KostMeal | '_unmatched'>>(new Set())
 
   async function deleteEntry(id: string) {
     setEntries(prev => prev.filter(e => e.id !== id))
@@ -194,6 +195,7 @@ export default function FoodLogClient({
   const [editProtein, setEditProtein] = useState('')
   const [editCarb, setEditCarb] = useState('')
   const [editFat, setEditFat] = useState('')
+  const [editMeal, setEditMeal] = useState<KostMeal | null>(null)
   const [editSaving, setEditSaving] = useState(false)
 
   function startEdit(entry: FoodEntry) {
@@ -202,6 +204,7 @@ export default function FoodLogClient({
     setEditProtein(entry.protein_g != null ? String(entry.protein_g) : '')
     setEditCarb(entry.carb_g != null ? String(entry.carb_g) : '')
     setEditFat(entry.fat_g != null ? String(entry.fat_g) : '')
+    setEditMeal(entry.meal)
   }
   async function saveEdit() {
     if (!editingId) return
@@ -215,6 +218,7 @@ export default function FoodLogClient({
           proteinG: editProtein.trim() ? Number(editProtein) : null,
           carbG: editCarb.trim() ? Number(editCarb) : null,
           fatG: editFat.trim() ? Number(editFat) : null,
+          meal: editMeal,
         }),
       })
       const data = await res.json()
@@ -774,6 +778,44 @@ export default function FoodLogClient({
                 </div>
               )
             })}
+            {unmatchedTodayEntries.length > 0 && (
+              <div className="border-b border-edge last:border-b-0">
+                <button
+                  type="button"
+                  onClick={() => setOpenMealGroups(prev => {
+                    const n = new Set(prev)
+                    if (n.has('_unmatched')) n.delete('_unmatched'); else n.add('_unmatched')
+                    return n
+                  })}
+                  className="w-full flex items-center justify-between py-2.5 text-left"
+                >
+                  <span className="flex items-center gap-2 text-sm">
+                    <span className="w-2 h-2 rounded-full flex-shrink-0 bg-amber-400" />
+                    Otaggat
+                    <span className="text-[10px] bg-edge text-muted rounded-full px-1.5 py-0.5 font-mono">{unmatchedTodayEntries.length}</span>
+                  </span>
+                  <span className="flex items-center gap-2">
+                    <span className="font-mono text-fg text-sm">{unmatchedTodayEntries.reduce((s, e) => s + e.calories, 0)} kcal</span>
+                    <span className="text-muted text-[10px]">{openMealGroups.has('_unmatched') ? '▾' : '▸'}</span>
+                  </span>
+                </button>
+                {openMealGroups.has('_unmatched') && (
+                  <div className="pb-3 pl-4 flex flex-col gap-1.5">
+                    <p className="text-muted text-[11px] -mt-0.5 mb-0.5">Loggat innan måltidsval fanns — tryck ✎ för att tagga.</p>
+                    {unmatchedTodayEntries.map(e => (
+                      <div key={e.id} className="flex items-center justify-between text-xs">
+                        <span className="text-muted break-words pr-2">{e.name}</span>
+                        <span className="font-mono text-fg flex items-center gap-1.5 flex-shrink-0">
+                          {e.calories} kcal
+                          <button onClick={() => startEdit(e)} className="text-muted hover:text-accent transition-colors px-1">✎</button>
+                          <button onClick={() => deleteEntry(e.id)} className="text-muted hover:text-red-400 transition-colors px-1">✕</button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         ) : (
           todayEntries.length > 0 && (
@@ -1143,6 +1185,23 @@ export default function FoodLogClient({
         <div className="fixed inset-0 bg-black/60 z-30 flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
           <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
             <div className="text-sm font-semibold">Redigera post</div>
+            {kostSettings.trackingEnabled && (
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Måltid</label>
+                <div className="flex flex-wrap gap-1.5">
+                  {KOST_MEALS.map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setEditMeal(m)}
+                      className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${editMeal === m ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
+                    >
+                      {kostMealLabel(m)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="text-muted text-xs block mb-1.5">Kalorier</label>
@@ -1195,9 +1254,27 @@ export default function FoodLogClient({
                     <>
                       <p className="text-muted text-sm mb-3">{kcal} kcal loggat</p>
                       <div className="flex gap-2 items-start bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5 text-xs text-red-300 mb-4">
-                        ⚠️ <span>Saknar: {completeness.missingMeals.map(kostMealLabel).join(', ')}. Kan bero på att du glömde logga, inte att du åt mindre.</span>
+                        ⚠️ <span>Saknar: {completeness.missingMeals.map(kostMealLabel).join(', ')}. Kan bero på att du glömde logga, eller att något är loggat utan måltid nedan.</span>
                       </div>
-                      <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(completeness.missingMeals[0], d) }} className="w-full bg-accent text-bg font-semibold py-3 rounded-xl text-sm mb-2">Komplettera den här dagen</button>
+                      {dayEntries.length > 0 && (
+                        <div className="flex flex-col gap-2 mb-4">
+                          {dayEntries.map(e => (
+                            <button
+                              key={e.id}
+                              type="button"
+                              onClick={() => { setSelectedDay(null); startEdit(e) }}
+                              className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2 text-left hover:border-accent/30 border border-transparent transition-colors"
+                            >
+                              <div className="min-w-0 flex-1">
+                                <div className="text-fg break-words">{e.name}</div>
+                                <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
+                              </div>
+                              <span className="font-mono text-muted text-xs">{e.calories} kcal</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(completeness.missingMeals[0], d) }} className="w-full bg-accent text-bg font-semibold py-3 rounded-xl text-sm mb-2">Logga en till för den här dagen</button>
                       <button onClick={() => markDayComplete(selectedDay)} className="w-full text-muted text-xs border border-edge rounded-xl py-2.5">Stämmer, räkna med dagen ändå</button>
                     </>
                   )}
@@ -1205,19 +1282,20 @@ export default function FoodLogClient({
                     <>
                       <p className="text-muted text-sm mb-4 font-mono">{kcal} kcal{kostSettings.calorieGoal != null && <span> / {kostSettings.calorieGoal} kcal</span>}</p>
                       <div className="flex flex-col gap-2 mb-3">
-                        {KOST_MEALS.map(meal => {
-                          const group = dayEntries.filter(e => e.meal === meal)
-                          if (group.length === 0) return null
-                          return group.map(e => (
-                            <div key={e.id} className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2">
-                              <div className="min-w-0 flex-1">
-                                <div className="text-fg break-words">{e.name}</div>
-                                <div className="text-muted text-[10px]">{kostMealLabel(meal)}</div>
-                              </div>
-                              <span className="font-mono text-muted text-xs">{e.calories} kcal</span>
+                        {dayEntries.map(e => (
+                          <button
+                            key={e.id}
+                            type="button"
+                            onClick={() => { setSelectedDay(null); startEdit(e) }}
+                            className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2 text-left hover:border-accent/30 border border-transparent transition-colors"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="text-fg break-words">{e.name}</div>
+                              <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
                             </div>
-                          ))
-                        })}
+                            <span className="font-mono text-muted text-xs">{e.calories} kcal</span>
+                          </button>
+                        ))}
                       </div>
                       <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(null, d) }} className="w-full text-muted text-xs border border-edge rounded-xl py-2.5">Lägg till fler poster för den här dagen</button>
                     </>
