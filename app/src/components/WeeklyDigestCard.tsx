@@ -88,6 +88,35 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
       )}
       {error && <p className="text-red-400 text-xs">{error}</p>}
 
+      {record.kost && (
+        <div className="bg-bg rounded-xl p-3 space-y-2">
+          <div className="text-xs text-muted uppercase tracking-wider">🍽️ Kost denna vecka{record.kost.source === 'yazio' ? ' (YAZIO)' : ''}</div>
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <div className="text-sm font-mono text-fg">{record.kost.avgKcal != null ? Math.round(record.kost.avgKcal) : '–'}</div>
+              <div className="text-muted text-[11px]">kcal/dag{record.kost.kcalGoal != null ? ` / ${Math.round(record.kost.kcalGoal)}` : ''}</div>
+            </div>
+            <div>
+              <div className="text-sm font-mono text-fg">{record.kost.daysWithData}/7</div>
+              <div className="text-muted text-[11px]">dagar loggade</div>
+            </div>
+            <div>
+              <div className="text-sm font-mono text-fg">{record.kost.avgProteinG != null ? `${Math.round(record.kost.avgProteinG)}g` : '–'}</div>
+              <div className="text-muted text-[11px]">protein/dag</div>
+            </div>
+          </div>
+          {record.kost.weightStartKg != null && record.kost.weightEndKg != null && (
+            <div className="text-sm text-fg">Vikt: {record.kost.weightStartKg.toFixed(1)} kg → {record.kost.weightEndKg.toFixed(1)} kg</div>
+          )}
+          {record.kost.mostSkippedMeal && (
+            <div className="text-sm text-fg">Loggas sällan: {record.kost.mostSkippedMeal.toLowerCase()}</div>
+          )}
+          {record.insights?.nutrition && (
+            <p className="text-sm text-fg leading-relaxed pt-1 border-t border-edge">{record.insights.nutrition}</p>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <div className="bg-bg rounded-xl p-3">
           <div className="text-2xl font-bold text-accent font-mono">{thisWeek.sessions.count}</div>
