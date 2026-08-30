@@ -2,7 +2,9 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FoodLogClient, { type QuickPick, type FoodEntry, type KostSettings } from '@/components/FoodLogClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
-import { KOST_METRICS, KOST_MEALS, type KostMetric, type KostMeal } from '@/lib/kost'
+import { KOST_METRICS, KOST_MEALS, type KostMetric, type KostMeal, type KostFoodEntry } from '@/lib/kost'
+import { resolveDayNutrition } from '@/lib/day-nutrition-source'
+import { compute7DayAverage } from '@/lib/deficit'
 
 // 90 dagar bak i tiden räcker för vecka/månad-vyerna utan att hämta hela
 // historiken varje sidladdning.
@@ -16,7 +18,7 @@ export default async function MatPage() {
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
   const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
-    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g').eq('id', user.id).single(),
+    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -57,6 +59,31 @@ export default async function MatPage() {
 
   const dayOverrides = (dayStatusRows ?? []).map(r => r.date as string)
 
+  // Small header link to Viktmål when it's on — kept a one-liner per the
+  // plan ("inget mer"), computed from data already fetched above so this
+  // doesn't need its own extra round-trip.
+  let deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null = null
+  if (profile?.deficit_tracking_enabled && profile.deficit_budget_kcal != null) {
+    const yazioByDate = new Map(yazioHistory.map(d => [d.date, d]))
+    const manualByDate = new Map<string, KostFoodEntry[]>()
+    for (const e of entries) {
+      const key = e.logged_at.slice(0, 10)
+      if (!manualByDate.has(key)) manualByDate.set(key, [])
+      manualByDate.get(key)!.push(e)
+    }
+    const rollingDays = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(`${todayKey}T00:00:00`)
+      d.setDate(d.getDate() - (6 - i))
+      return d.toISOString().slice(0, 10)
+    })
+    const dayEntries = rollingDays.map(dateKey => {
+      const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, new Set(dayOverrides))
+      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete }
+    })
+    const weekAvg = compute7DayAverage(dayEntries, profile.deficit_budget_kcal)
+    if (weekAvg.avgDiffKcal != null) deficitSummary = { avgDiffKcal: weekAvg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal }
+  }
+
   return (
     <FoodLogClient
       dailyCalorieGoal={profile?.daily_calorie_goal ?? null}
@@ -66,6 +93,7 @@ export default async function MatPage() {
       todayKey={todayKey}
       kostSettings={kostSettings}
       dayOverrides={dayOverrides}
+      deficitSummary={deficitSummary}
     />
   )
 }
