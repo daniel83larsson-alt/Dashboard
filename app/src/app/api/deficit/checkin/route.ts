@@ -5,6 +5,43 @@ import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { selectCheckinPeriod, computeDeficitCheckin, type DeficitCheckinResult } from '@/lib/deficit'
+import { logApiCall } from '@/lib/log-api-call'
+import { checkAndConsumeRateLimit } from '@/lib/rate-limit'
+import { decryptMaybeLegacy } from '@/lib/encrypt'
+import { callGemini, callAnthropic } from '@/lib/llm'
+import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
+import { coachToneInstruction } from '@/lib/coach-tone'
+
+// AI commentary only for the two statuses with real substance to react to
+// — too_sparse/too_small_sample already get clear deterministic copy in the
+// UI, no model call needed (saves shared-quota spend for the cases where an
+// AI sentence wouldn't add anything). The model NEVER proposes a number —
+// it only narrates what computeDeficitCheckin's formula already decided.
+const NARRATIVE_SYSTEM = `Du är en ärlig, kortfattad kostcoach som kommenterar resultatet av en periodisk avstämning av ett viktmål. Du får redan uträknade siffror (aldrig råa mätvärden att tolka själv) — kommentera dem, föreslå aldrig en egen siffra eller justering. Max 3-4 meningar, konkret, aldrig floskler. Aldrig skambeläggande ton kring vikt.`
+
+async function generateCheckinNarrative(
+  supabase: SupabaseClient,
+  userId: string,
+  summary: string,
+  coachTone: string | null | undefined,
+): Promise<string | null> {
+  try {
+    const { data: profile } = await supabase.from('profiles').select('llm_api_key_encrypted, llm_provider').eq('id', userId).single()
+    const userApiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : null
+    if (!userApiKey) {
+      const rate = await checkAndConsumeRateLimit(supabase, userId)
+      if (!rate.allowed) return null
+    }
+    const system = `${NARRATIVE_SYSTEM}\n${coachToneInstruction(coachTone)}`
+    const narrative = userApiKey && profile?.llm_provider === 'anthropic'
+      ? await callAnthropic(userApiKey, system, [], summary)
+      : await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, system, [], summary)
+    return narrative
+  } catch (err) {
+    console.error('Deficit checkin narrative failed:', err)
+    return null
+  }
+}
 
 type CheckinComputation =
   | { available: false; reason: 'no_goal' | 'too_new' }
@@ -143,11 +180,22 @@ export async function POST() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
 
   const computation = await computeCheckinForUser(supabase, user.id)
   if (!computation.available) return NextResponse.json(computation, { status: 400 })
 
   const { periodStartDate, periodEndDate, periodDays, loggedDays, loggedDeficitKcal, weightStartKg, weightEndKg, waistStartCm, waistEndCm, avgTrainingKcalRaw, oldCorrection, result } = computation
+
+  let narrative: string | null = null
+  if (result.status === 'on_track' || result.status === 'adjust') {
+    logApiCall(supabase, user.id, 'deficit_checkin_narrative')
+    const { data: profileForTone } = await supabase.from('profiles').select('coach_tone').eq('id', user.id).single()
+    const summary = result.status === 'on_track'
+      ? `Period ${periodStartDate} till ${periodEndDate} (${periodDays} dagar, ${loggedDays} loggade). Loggen antydde ${result.predictedKg.toFixed(1)} kg förändring, faktisk vägning visade ${result.actualKg.toFixed(1)} kg. Systemet är rimligt kalibrerat, ingen justering föreslås.`
+      : `Period ${periodStartDate} till ${periodEndDate} (${periodDays} dagar, ${loggedDays} loggade). Loggen antydde ${result.predictedKg.toFixed(1)} kg förändring, faktisk vägning visade ${result.actualKg.toFixed(1)} kg — en avvikelse. Föreslagen justering av träningskaloriernas korrigeringsfaktor: ${oldCorrection.toFixed(2)} → ${result.suggestedCorrection.toFixed(2)} (${result.suggestedCorrection > oldCorrection ? 'höjs, verklig förbrukning verkar högre än antaget' : 'sänks, träningskalorierna verkar mer överskattade än antaget'}).`
+    narrative = await generateCheckinNarrative(supabase, user.id, summary, profileForTone?.coach_tone)
+  }
 
   const row = {
     user_id: user.id,
@@ -165,6 +213,7 @@ export async function POST() {
     suggested_correction: result.status === 'adjust' ? result.suggestedCorrection : null,
     predicted_kg: result.status === 'too_sparse' ? null : (result as { predictedKg: number }).predictedKg,
     actual_kg: result.status === 'too_sparse' ? null : (result as { actualKg: number }).actualKg,
+    narrative,
   }
 
   const { data: entry, error } = await supabase.from('deficit_checkins').insert(row).select().single()
@@ -173,5 +222,5 @@ export async function POST() {
     return NextResponse.json({ error: 'Kunde inte spara avstämningen' }, { status: 500 })
   }
 
-  return NextResponse.json({ ...computation, checkinId: entry.id })
+  return NextResponse.json({ ...computation, checkinId: entry.id, narrative })
 }

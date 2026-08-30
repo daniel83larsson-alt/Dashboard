@@ -85,6 +85,7 @@ export default function ViktmalClient({
   const [checkinLoading, setCheckinLoading] = useState(false)
   const [checkinError, setCheckinError] = useState('')
   const [checkinId, setCheckinId] = useState<string | null>(null)
+  const [checkinNarrative, setCheckinNarrative] = useState<string | null>(null)
   const [applying, setApplying] = useState(false)
   const [applied, setApplied] = useState(false)
   const [kept, setKept] = useState(false)
@@ -163,6 +164,7 @@ export default function ViktmalClient({
       if (res.ok) {
         setCheckin(data)
         setCheckinId(data.checkinId ?? null)
+        setCheckinNarrative(data.narrative ?? null)
       } else {
         setCheckinError(data.error ?? 'Kunde inte köra avstämningen')
       }
@@ -344,12 +346,16 @@ export default function ViktmalClient({
               <p className="text-fg text-sm">För litet underlag för att kalibrera — bruset är större än signalen den här perioden.</p>
             )}
             {checkin.result.status === 'on_track' && (
-              <p className="text-fg text-sm">✓ På spår — {checkin.result.actualKg.toFixed(1)} kg faktisk förändring, nära det loggen antydde ({checkin.result.predictedKg.toFixed(1)} kg). Ingen justering behövs.</p>
+              <>
+                <p className="text-fg text-sm">✓ På spår — {checkin.result.actualKg.toFixed(1)} kg faktisk förändring, nära det loggen antydde ({checkin.result.predictedKg.toFixed(1)} kg). Ingen justering behövs.</p>
+                {checkinNarrative && <p className="text-fg text-sm leading-relaxed pt-1 border-t border-edge">{checkinNarrative}</p>}
+              </>
             )}
             {checkin.result.status === 'adjust' && (
               <>
                 <p className="text-fg text-sm">Loggen antydde {checkin.result.predictedKg.toFixed(1)} kg, faktisk förändring var {checkin.result.actualKg.toFixed(1)} kg.</p>
                 <p className="text-fg text-sm font-mono">Föreslagen justering: {checkin.result.suggestedCorrection > garminCorrection ? '↑' : '↓'} {garminCorrection.toFixed(2)} → {checkin.result.suggestedCorrection.toFixed(2)}</p>
+                {checkinNarrative && <p className="text-fg text-sm leading-relaxed pt-1 border-t border-edge">{checkinNarrative}</p>}
                 {applied ? (
                   <p className="text-accent text-xs">✓ Använd — din budget är omräknad.</p>
                 ) : kept ? (
