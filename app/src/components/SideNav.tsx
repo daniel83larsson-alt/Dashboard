@@ -3,12 +3,13 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
-import { NAV_ITEMS } from '@/lib/nav'
+import { navItems } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
 
-export default function SideNav({ userName, isAdmin }: { userName: string; isAdmin?: boolean }) {
+export default function SideNav({ userName, isAdmin, deficitEnabled }: { userName: string; isAdmin?: boolean; deficitEnabled?: boolean }) {
   const pathname = usePathname()
-  const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
+  const baseItems = navItems({ deficitEnabled })
+  const items = isAdmin ? [...baseItems, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : baseItems
 
   async function signOut() {
     const supabase = createSupabaseClient()

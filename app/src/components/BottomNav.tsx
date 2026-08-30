@@ -4,17 +4,18 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
-import { NAV_ITEMS } from '@/lib/nav'
+import { navItems } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
 
 const PINNED = ['/dashboard', '/dashboard/coach']
 
-export default function BottomNav({ isAdmin }: { isAdmin?: boolean } = {}) {
+export default function BottomNav({ isAdmin, deficitEnabled }: { isAdmin?: boolean; deficitEnabled?: boolean } = {}) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const items = isAdmin ? [...NAV_ITEMS, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : NAV_ITEMS
+  const baseItems = navItems({ deficitEnabled })
+  const items = isAdmin ? [...baseItems, { href: '/dashboard/admin', label: 'Admin', icon: 'admin' }] : baseItems
 
-  const pinnedItems = NAV_ITEMS.filter(i => PINNED.includes(i.href))
+  const pinnedItems = baseItems.filter(i => PINNED.includes(i.href))
   const isOnPinned = PINNED.includes(pathname)
 
   async function signOut() {

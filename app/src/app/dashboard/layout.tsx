@@ -32,17 +32,18 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('name')
+    .select('name, deficit_tracking_enabled')
     .eq('id', user.id)
     .single()
 
   const userName = profile?.name ?? user.email?.split('@')[0] ?? 'Tränare'
   const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
   const isDemo = isDemoAccount(user.email)
+  const deficitEnabled = !!profile?.deficit_tracking_enabled
 
   return (
     <div className="min-h-screen bg-bg flex">
-      <SideNav userName={userName} isAdmin={isAdmin} />
+      <SideNav userName={userName} isAdmin={isAdmin} deficitEnabled={deficitEnabled} />
       <main className="flex-1 min-w-0 flex flex-col pb-20 md:pb-0 md:ml-56 min-h-screen">
         {isDemo && (
           <div className="bg-accent text-bg text-xs font-semibold px-4 py-2 flex items-center justify-center gap-2 flex-wrap text-center">
@@ -52,7 +53,7 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
         )}
         {children}
       </main>
-      <BottomNav isAdmin={isAdmin} />
+      <BottomNav isAdmin={isAdmin} deficitEnabled={deficitEnabled} />
     </div>
   )
 }
