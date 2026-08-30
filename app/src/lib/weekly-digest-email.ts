@@ -63,6 +63,25 @@ export function renderWeeklyDigestHtml({
 
   const motivationHtml = record.insights ? insightBlock('Inför nästa vecka', record.insights.motivation) : ''
 
+  const kost = record.kost
+  const kostHtml = kost
+    ? `<div style="margin:0 0 16px;padding:14px 16px;background:#f4f4f2;border-radius:12px;">
+        <p style="margin:0 0 8px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">🍽️ Kost denna vecka${kost.source === 'yazio' ? ' (YAZIO)' : ''}</p>
+        <table width="100%" cellpadding="0" cellspacing="6">
+          <tr>
+            ${statBox(kost.avgKcal != null ? String(Math.round(kost.avgKcal)) : '–', kost.kcalGoal != null ? `kcal/dag (mål ${Math.round(kost.kcalGoal)})` : 'kcal/dag')}
+            ${statBox(`${kost.daysWithData}/7`, 'dagar loggade')}
+            ${statBox(kost.avgProteinG != null ? `${Math.round(kost.avgProteinG)}g` : '–', 'protein/dag')}
+          </tr>
+        </table>
+        ${kost.weightStartKg != null && kost.weightEndKg != null
+          ? `<p style="margin:10px 0 0;color:#1a1a1a;font-size:13px;">Vikt: ${kost.weightStartKg.toFixed(1)} kg → ${kost.weightEndKg.toFixed(1)} kg</p>`
+          : ''}
+        ${kost.mostSkippedMeal ? `<p style="margin:6px 0 0;color:#1a1a1a;font-size:13px;">Loggas sällan: ${kost.mostSkippedMeal.toLowerCase()}</p>` : ''}
+        ${record.insights?.nutrition ? `<p style="margin:10px 0 0;color:#1a1a1a;line-height:1.5;font-size:13.5px;">${record.insights.nutrition}</p>` : ''}
+      </div>`
+    : ''
+
   const lookAheadHtml = lookAhead.kind === 'plan'
     ? `<div style="margin:0 0 16px;">
         <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Nästa veckas plan</p>
@@ -105,6 +124,7 @@ export function renderWeeklyDigestHtml({
           ${bestSessionHtml}
           ${newRecordsHtml}
           ${insightsHtml}
+          ${kostHtml}
           ${motivationHtml}
           ${lookAheadHtml}
           <p style="margin:24px 0 0;">

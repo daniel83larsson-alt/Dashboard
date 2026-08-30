@@ -1,22 +1,30 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import FoodLogClient, { type QuickPick, type FoodEntry } from '@/components/FoodLogClient'
+import FoodLogClient, { type QuickPick, type FoodEntry, type KostSettings } from '@/components/FoodLogClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
+import { KOST_METRICS, KOST_MEALS, type KostMetric, type KostMeal } from '@/lib/kost'
+
+// 90 dagar bak i tiden räcker för vecka/månad-vyerna utan att hämta hela
+// historiken varje sidladdning.
+const ENTRY_LOOKBACK_DAYS = 90
 
 export default async function MatPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
 
-  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }] = await Promise.all([
-    supabase.from('profiles').select('daily_calorie_goal').eq('id', user.id).single(),
-    supabase.from('food_log').select('*').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(100),
+  const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
+
+  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
+    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g').eq('id', user.id).single(),
+    supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
+    supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete'),
   ])
 
   const todayKey = stockholmDateKey()
-  const todayEntries = ((recentLog ?? []) as FoodEntry[]).filter(e => stockholmDateKey(new Date(e.logged_at)) === todayKey)
+  const entries = (recentLog ?? []) as FoodEntry[]
 
   const quickPicks = ((quickPicksRaw ?? []) as QuickPick[])
     .sort((a, b) => b.times_logged - a.times_logged || b.last_logged.localeCompare(a.last_logged))
@@ -34,13 +42,30 @@ export default async function MatPage() {
     } catch { return [] }
   })() : []
 
+  const trackedMetrics = ((profile?.kost_tracked_metrics as string[] | null) ?? ['kcal']).filter((m): m is KostMetric => (KOST_METRICS as string[]).includes(m))
+  const trackedMeals = ((profile?.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
+
+  const kostSettings: KostSettings = {
+    trackingEnabled: profile?.kost_tracking_enabled ?? false,
+    trackedMetrics,
+    trackedMeals,
+    calorieGoal: profile?.daily_calorie_goal ?? null,
+    proteinGoalG: profile?.protein_goal_g ?? null,
+    carbGoalG: profile?.carb_goal_g ?? null,
+    fatGoalG: profile?.fat_goal_g ?? null,
+  }
+
+  const dayOverrides = (dayStatusRows ?? []).map(r => r.date as string)
+
   return (
     <FoodLogClient
       dailyCalorieGoal={profile?.daily_calorie_goal ?? null}
-      todayEntries={todayEntries}
+      entries={entries}
       quickPicks={quickPicks}
       yazioHistory={yazioHistory}
       todayKey={todayKey}
+      kostSettings={kostSettings}
+      dayOverrides={dayOverrides}
     />
   )
 }

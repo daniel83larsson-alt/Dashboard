@@ -8,6 +8,10 @@
 // throttled separately in the cron route itself).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
+import { computeWeeklyKost, type WeeklyKostData } from './weekly-kost'
+import { normalizeYazioDay, type YazioDay } from './yazio-history'
+import { stockholmDateKey } from './dates'
+import type { KostFoodEntry, KostMeal } from './kost'
 import { decryptMaybeLegacy } from './encrypt'
 import { sportLabel } from './sport'
 import { coachToneInstruction } from './coach-tone'
@@ -26,6 +30,12 @@ export type WeeklyDigestInsights = {
   sessions: string // feedback specifically on the pass som kördes denna vecka
   wellness: string // insikt om steg + sömn-mönstret
   motivation: string // peppig, mål-kopplad rad om vad som väntar
+  // A 4th voice, kept separate from `wellness` — YAZIO-only/manual-Kost-only
+  // users (no training data at all, e.g. Rawa) would otherwise get a
+  // near-empty recap. null when the user has no kost data this week at
+  // all (computeWeeklyKost returned null) — there's nothing to comment on,
+  // not a failed AI call.
+  nutrition: string | null
 }
 
 export type WeeklyDigestRecord = {
@@ -33,6 +43,9 @@ export type WeeklyDigestRecord = {
   weekStartISO: string
   weekEndISO: string
   data: WeeklyDigestData
+  // null when the user logged no kost data (YAZIO or manual) this week —
+  // the section is skipped entirely rather than shown empty.
+  kost: WeeklyKostData | null
   // null means the AI call failed — the record still holds real computed
   // numbers, so the card/email fall back to showing those without written
   // insights rather than skipping the user entirely.
@@ -88,7 +101,31 @@ function planList(planned: PlanSessionRow[]): string {
     .join('\n')
 }
 
-function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null): string {
+// Formats the KOST block for the prompt — only called when kost is
+// non-null (the caller skips it entirely otherwise, same as the email/card
+// skip the section rather than showing dashes).
+function kostLine(kost: WeeklyKostData): string {
+  const fmtAvg = (v: number | null, unit: string) => v == null ? 'saknas' : `${Math.round(v)}${unit}`
+  const goalPart = (v: number | null, goal: number | null, unit: string) =>
+    v == null ? 'saknas' : goal != null ? `${Math.round(v)}${unit} (mål ${Math.round(goal)}${unit})` : `${Math.round(v)}${unit} (inget mål satt)`
+  const parts = [
+    `KÄLLA: ${kost.source === 'yazio' ? 'synkat från YAZIO' : 'manuellt loggat i appen'}`,
+    `LOGGADE DAGAR: ${kost.daysWithData} av 7${kost.daysFlagged > 0 ? ` (${kost.daysFlagged} dag${kost.daysFlagged === 1 ? '' : 'ar'} utan/ofullständig loggning)` : ''}`,
+    `KALORIER: snitt ${goalPart(kost.avgKcal, kost.kcalGoal, ' kcal')}${kost.daysWithinKcalGoal != null ? `, inom mål ${kost.daysWithinKcalGoal} av ${kost.daysWithData} dagar` : ''}${kost.prevWeekAvgKcal != null ? ` (förra veckan snitt ${Math.round(kost.prevWeekAvgKcal)} kcal)` : ''}`,
+  ]
+  if (kost.avgProteinG != null) parts.push(`PROTEIN: snitt ${goalPart(kost.avgProteinG, kost.proteinGoalG, 'g')}`)
+  if (kost.avgCarbG != null) parts.push(`KOLHYDRATER: snitt ${goalPart(kost.avgCarbG, kost.carbGoalG, 'g')}`)
+  if (kost.avgFatG != null) parts.push(`FETT: snitt ${goalPart(kost.avgFatG, kost.fatGoalG, 'g')}`)
+  if (kost.weightStartKg != null && kost.weightEndKg != null) {
+    const diff = kost.weightEndKg - kost.weightStartKg
+    parts.push(`VIKT: ${kost.weightStartKg.toFixed(1)} kg → ${kost.weightEndKg.toFixed(1)} kg (${diff >= 0 ? '+' : ''}${diff.toFixed(1)} kg denna vecka)`)
+  }
+  if (kost.avgWaterMl != null) parts.push(`VATTEN: snitt ${fmtAvg(kost.avgWaterMl / 1000, ' L')}${kost.waterGoalMl != null ? ` (mål ${(kost.waterGoalMl / 1000).toFixed(1)} L)` : ''}`)
+  if (kost.mostSkippedMeal) parts.push(`MÖNSTER: loggar sällan ${kost.mostSkippedMeal.toLowerCase()}`)
+  return parts.join('\n')
+}
+
+function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, kost: WeeklyKostData | null): string {
   const w = data.thisWeek
   const p = data.prevWeek
   const fmtAvg = (v: number | null, unit: string, decimals = 0) => v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
@@ -96,6 +133,11 @@ function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], 
   const lookAheadLine = data.lookAhead.kind === 'plan'
     ? `Nästa veckas plan finns redan: ${data.lookAhead.sessions.filter(s => !s.isRest).map(s => s.label).join(', ') || 'bara vila'}.`
     : 'Nästa veckas plan är inte genererad än.'
+
+  const kostBlock = kost ? `\n\nKOST DENNA VECKA:\n${kostLine(kost)}` : ''
+  const nutritionInstruction = kost
+    ? `\n\nnutrition: Ett konkret, personligt perspektiv på KOST DENNA VECKA ovan — nämn en specifik siffra (kcal, ett makromått, loggningsgrad eller mönster), aldrig en generisk kommentar. Om personen mest bara loggar mat och knappt tränar (få/inga pass denna vecka), gör det HÄR till huvudinsikten för veckan istället för en biinsikt. MAX 2 meningar.`
+    : ''
 
   return `VECKANS PLAN (vad som var tänkt):
 ${planList(planSessionsThisWeek)}
@@ -110,46 +152,53 @@ STEG: snitt ${fmtAvg(w.wellness.avgSteps, '')}/dag (förra veckan ${fmtAvg(p.wel
 SÖMN: snitt ${fmtAvg(w.wellness.avgSleepHours, 'h', 1)} (förra veckan ${fmtAvg(p.wellness.avgSleepHours, 'h', 1)})
 VILOPULS: snitt ${fmtAvg(w.wellness.avgRestingHR, ' bpm')} (förra veckan ${fmtAvg(p.wellness.avgRestingHR, ' bpm')})
 MÅL: ${goalTitle ?? 'inget aktivt mål satt'}
-${lookAheadLine}
+${lookAheadLine}${kostBlock}
 
-Ge tre korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
+Ge korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
 
 sessions: Jämför VECKANS PLAN mot passen som faktiskt kördes. Om mängden/sporterna stämmer bra mot planen, säg det kort. Om något planerat pass avvek från vad som faktiskt kördes (t.ex. ett planerat intervallpass blev en lugn distans, eller fel sport/dag) — ge KONSTRUKTIV feedback på just den skillnaden, inte bara att volymen stämde. Nämn en specifik dag/pass, inte bara totalen. Om NYA REKORD DENNA VECKA innehåller något, fira det kort och konkret (vilket rekord, vilket pass) — det är alltid värt att nämna. Om ingen plan fanns denna vecka, kommentera bara passen som kördes. MAX 2 meningar.
 
 wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (jämför med förra veckan om det säger något intressant). MAX 2 meningar.
 
-motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.`
+motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.${nutritionInstruction}`
 }
 
-async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined): Promise<WeeklyDigestInsights> {
+async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null): Promise<WeeklyDigestInsights> {
   const system = `Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
+  const properties: Record<string, { type: string }> = {
+    sessions: { type: 'STRING' },
+    wellness: { type: 'STRING' },
+    motivation: { type: 'STRING' },
+  }
+  const required = ['sessions', 'wellness', 'motivation']
+  if (kost) {
+    properties.nutrition = { type: 'STRING' }
+    required.push('nutrition')
+  }
+
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, planSessionsThisWeek, goalTitle) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, planSessionsThisWeek, goalTitle, kost) }] }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
-        maxOutputTokens: 500,
+        maxOutputTokens: 600,
         thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'OBJECT',
-          properties: {
-            sessions: { type: 'STRING' },
-            wellness: { type: 'STRING' },
-            motivation: { type: 'STRING' },
-          },
-          required: ['sessions', 'wellness', 'motivation'],
-        },
+        responseSchema: { type: 'OBJECT', properties, required },
       },
     }),
   })
   const d = await res.json()
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
-  return JSON.parse(text) as WeeklyDigestInsights
+  const parsed = JSON.parse(text) as WeeklyDigestInsights
+  // kost=null means we never asked for `nutrition` in the schema/prompt —
+  // force it to null regardless of what the model returned, rather than
+  // trust it followed an instruction it was never given.
+  return { ...parsed, nutrition: kost ? (parsed.nutrition ?? null) : null }
 }
 
 export async function generateWeeklyDigestForUser(
@@ -160,13 +209,18 @@ export async function generateWeeklyDigestForUser(
   const weekStart = recapWeekStart(opts?.now ?? new Date())
   const nextWeekStart = new Date(weekStart)
   nextWeekStart.setDate(nextWeekStart.getDate() + 7)
+  const prevWeekStart = new Date(weekStart)
+  prevWeekStart.setDate(prevWeekStart.getDate() - 7)
 
   // Full history (not just this week + prev week) — bestSession/newRecords
   // in computeWeeklyDigest need everything before this week to know what
   // counts as a "best" load or a broken personal record, same as the
   // Översikt/Rekord pages already fetch full history for the same reason.
-  const [{ data: profile }, { data: goals }, { data: acts }, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan }] = await Promise.all([
-    supabase.from('profiles').select('llm_api_key_encrypted, coach_tone').eq('id', userId).single(),
+  const [
+    { data: profile }, { data: goals }, { data: acts }, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan },
+    { data: yazioHistoryRow }, { data: manualFoodLog }, { data: dayStatusRows },
+  ] = await Promise.all([
+    supabase.from('profiles').select('llm_api_key_encrypted, coach_tone, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
     supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate')
       .eq('user_id', userId).lt('start_date', nextWeekStart.toISOString()),
@@ -175,6 +229,11 @@ export async function generateWeeklyDigestForUser(
       .eq('user_id', userId).eq('week_start', weekStart.toISOString().slice(0, 10)).maybeSingle(),
     supabase.from('training_plans').select('id, plan_sessions(planned_date, is_rest, sport_type, title)')
       .eq('user_id', userId).eq('week_start', nextWeekStart.toISOString().slice(0, 10)).maybeSingle(),
+    supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'yazio_history').single(),
+    supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
+      .eq('user_id', userId).gte('logged_at', prevWeekStart.toISOString()).lt('logged_at', nextWeekStart.toISOString()),
+    supabase.from('kost_day_status').select('date').eq('user_id', userId).eq('status', 'complete')
+      .gte('date', prevWeekStart.toISOString().slice(0, 10)).lt('date', nextWeekStart.toISOString().slice(0, 10)),
   ])
 
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -203,9 +262,34 @@ export async function generateWeeklyDigestForUser(
   const goalTitle = (goals?.[0]?.title as string | undefined) ?? null
   const thisWeekActivities = activitiesInWeek((acts ?? []) as ActivityRow[], weekStart)
 
+  // normalizeYazioDay backfills fields an older stored row might not have —
+  // same defensive parse as the Kost page's own read of this row (see
+  // STATUS.md for the crash this pattern exists to prevent).
+  const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
+    try {
+      const parsed = JSON.parse(yazioHistoryRaw)
+      return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+    } catch { return [] }
+  })() : []
+
+  const weeklyKost = computeWeeklyKost({
+    weekStart,
+    prevWeekStart,
+    todayKey: stockholmDateKey(opts?.now ?? new Date()),
+    yazioHistory,
+    manualEntries: (manualFoodLog ?? []) as KostFoodEntry[],
+    trackedMeals: (profile?.kost_tracked_meals as KostMeal[] | null) ?? [],
+    dayOverrides: new Set((dayStatusRows ?? []).map(r => r.date as string)),
+    calorieGoal: profile?.daily_calorie_goal ?? null,
+    proteinGoalG: profile?.protein_goal_g ?? null,
+    carbGoalG: profile?.carb_goal_g ?? null,
+    fatGoalG: profile?.fat_goal_g ?? null,
+  })
+
   let insights: WeeklyDigestInsights | null = null
   try {
-    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone)
+    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost)
   } catch (err) {
     console.error('Weekly digest insights failed for user', userId, err)
   }
@@ -215,6 +299,7 @@ export async function generateWeeklyDigestForUser(
     weekStartISO: digestData.weekStartISO,
     weekEndISO: digestData.weekEndISO,
     data: digestData,
+    kost: weeklyKost,
     insights,
     viewedAt: null,
   }

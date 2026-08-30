@@ -1219,3 +1219,88 @@ end;
 $$;
 revoke all on function public.admin_yazio_status() from public;
 grant execute on function public.admin_yazio_status() to authenticated;
+
+-- ============================================================
+-- Kost: valfri mål-spårning + kalender för MANUELL loggning.
+-- Bara relevant för manuell loggning — YAZIO-anslutna användare rörs inte
+-- (redan automatisk full data, se STATUS.md för resonemanget).
+-- Kör vid uppdatering av en befintlig databas:
+-- ============================================================
+
+-- Av som standard — ingen loggning eller påminnelser förrän användaren
+-- själv slår på det (Daniel: "slipper dom få tjat"). daily_calorie_goal
+-- återanvänds som kcal-målet, resten är nya kolumner.
+alter table public.profiles add column if not exists kost_tracking_enabled boolean not null default false;
+alter table public.profiles add column if not exists kost_tracked_metrics text[] not null default '{kcal}';
+alter table public.profiles add column if not exists kost_tracked_meals text[] not null default '{breakfast,lunch,dinner}';
+alter table public.profiles add column if not exists kost_reminders_enabled boolean not null default true;
+alter table public.profiles add column if not exists protein_goal_g numeric;
+alter table public.profiles add column if not exists carb_goal_g numeric;
+alter table public.profiles add column if not exists fat_goal_g numeric;
+
+-- meal: vilken måltid en post hör till (null för äldre rader, eller en
+-- loggning där ingen måltid valdes). carb_g/fat_g: samma "kan saknas om AI
+-- inte gav ett värde"-konvention som protein_g redan har.
+alter table public.food_log add column if not exists meal text check (meal in ('breakfast', 'lunch', 'dinner', 'supper', 'snack'));
+alter table public.food_log add column if not exists carb_g numeric;
+alter table public.food_log add column if not exists fat_g numeric;
+create index if not exists food_log_user_meal_idx on public.food_log (user_id, meal);
+
+-- Manuellt override för "räknas som klar" — antingen bekräftar en genuint
+-- tom dag ("jag åt inget"), eller övertrumfar en flaggning ("räkna med
+-- dagen ändå" trots att en förväntad måltid saknas). Frånvaro av en rad
+-- betyder "inte manuellt avgjort", inte "inte klar" — kost.ts räknar ut det
+-- automatiskt från loggade måltider i det fallet.
+create table if not exists public.kost_day_status (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  date date not null,
+  status text not null check (status in ('complete')),
+  updated_at timestamptz default now(),
+  primary key (user_id, date)
+);
+alter table public.kost_day_status enable row level security;
+drop policy if exists "Users see own kost day status" on public.kost_day_status;
+create policy "Users see own kost day status" on public.kost_day_status
+  for all using (auth.uid() = user_id);
+
+-- Favorit/dold-status per rätt i Snabbval — nyckel på samma lower(name)
+-- gruppering food_quick_picks() redan använder, så en rad här matchar
+-- exakt en rad i snabbval-listan.
+create table if not exists public.food_quick_pick_prefs (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  food_name_key text not null,
+  pinned boolean not null default false,
+  hidden boolean not null default false,
+  updated_at timestamptz default now(),
+  primary key (user_id, food_name_key)
+);
+alter table public.food_quick_pick_prefs enable row level security;
+drop policy if exists "Users see own quick pick prefs" on public.food_quick_pick_prefs;
+create policy "Users see own quick pick prefs" on public.food_quick_pick_prefs
+  for all using (auth.uid() = user_id);
+
+-- food_quick_picks() breddad med pinned — DISTINCT ON kräver att ORDER BY
+-- börjar med grupperingskolumnen, så pinned-sortering görs i appen
+-- (mat/page.tsx) istället för här. Postgres tillåter inte att en funktions
+-- returtyp ändras via CREATE OR REPLACE, så den gamla versionen (utan
+-- pinned) måste droppas explicit först.
+drop function if exists public.food_quick_picks();
+create or replace function public.food_quick_picks()
+returns table(name text, calories integer, source text, quantity numeric, unit text, kcal_per_100g numeric, off_id text, protein_g numeric, protein_per_100g numeric, times_logged bigint, last_logged timestamptz, pinned boolean)
+language sql
+security definer
+set search_path = public
+as $$
+  select distinct on (lower(f.name))
+    f.name, f.calories, f.source, f.quantity, f.unit, f.kcal_per_100g, f.off_id, f.protein_g, f.protein_per_100g,
+    count(*) over (partition by lower(f.name)) as times_logged,
+    max(f.logged_at) over (partition by lower(f.name)) as last_logged,
+    coalesce(p.pinned, false) as pinned
+  from public.food_log f
+  left join public.food_quick_pick_prefs p on p.user_id = f.user_id and p.food_name_key = lower(f.name)
+  where f.user_id = auth.uid()
+    and coalesce(p.hidden, false) = false
+  order by lower(f.name), f.logged_at desc
+$$;
+revoke all on function public.food_quick_picks() from public;
+grant execute on function public.food_quick_picks() to authenticated;

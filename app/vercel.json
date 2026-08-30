@@ -19,6 +19,22 @@
     {
       "path": "/api/cron/weekly-digest",
       "schedule": "0 16 * * 0"
+    },
+    {
+      "path": "/api/cron/meal-reminders?meal=breakfast",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/meal-reminders?meal=lunch",
+      "schedule": "0 11 * * *"
+    },
+    {
+      "path": "/api/cron/meal-reminders?meal=dinner",
+      "schedule": "0 16 * * *"
+    },
+    {
+      "path": "/api/cron/meal-reminders?meal=supper",
+      "schedule": "5 18 * * *"
     }
   ]
 }
