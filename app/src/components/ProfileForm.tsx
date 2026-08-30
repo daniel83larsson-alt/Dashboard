@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
 import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
+import { estimateBMR } from '@/lib/bmr'
+import { computeDeficitBudget } from '@/lib/deficit'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -35,6 +37,16 @@ type Profile = {
   protein_goal_g?: number | null
   carb_goal_g?: number | null
   fat_goal_g?: number | null
+  deficit_tracking_enabled?: boolean | null
+  deficit_start_weight_kg?: number | null
+  deficit_start_date?: string | null
+  deficit_target_weight_kg?: number | null
+  deficit_target_date?: string | null
+  deficit_neat_factor?: number | null
+  deficit_activity_fallback_kcal?: number | null
+  deficit_garmin_correction?: number | null
+  deficit_weigh_in_weekday?: number | null
+  deficit_reminders_enabled?: boolean | null
 }
 
 
@@ -62,6 +74,7 @@ export default function ProfileForm({
   polarSynced,
   yazioSynced,
   savedContext,
+  avgTrainingKcalRaw,
 }: {
   profile: Profile | null
   userEmail: string
@@ -76,6 +89,7 @@ export default function ProfileForm({
   polarSynced: boolean
   yazioSynced: boolean
   savedContext: string
+  avgTrainingKcalRaw: number | null
 }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [apiKey, setApiKey] = useState('')
@@ -97,6 +111,16 @@ export default function ProfileForm({
   const [proteinGoalG, setProteinGoalG] = useState(profile?.protein_goal_g?.toString() ?? '')
   const [carbGoalG, setCarbGoalG] = useState(profile?.carb_goal_g?.toString() ?? '')
   const [fatGoalG, setFatGoalG] = useState(profile?.fat_goal_g?.toString() ?? '')
+  const [deficitTrackingEnabled, setDeficitTrackingEnabled] = useState(profile?.deficit_tracking_enabled ?? false)
+  const [deficitStartWeightKg, setDeficitStartWeightKg] = useState(profile?.deficit_start_weight_kg?.toString() ?? profile?.weight_kg?.toString() ?? '')
+  const [deficitTargetWeightKg, setDeficitTargetWeightKg] = useState(profile?.deficit_target_weight_kg?.toString() ?? '')
+  const [deficitTargetDate, setDeficitTargetDate] = useState(profile?.deficit_target_date ?? '')
+  const [deficitNeatFactor, setDeficitNeatFactor] = useState(profile?.deficit_neat_factor ?? 1.25)
+  const [deficitActivityFallbackKcal, setDeficitActivityFallbackKcal] = useState(profile?.deficit_activity_fallback_kcal ?? 300)
+  const [deficitGarminCorrection, setDeficitGarminCorrection] = useState(profile?.deficit_garmin_correction?.toString() ?? '0.75')
+  const [deficitWeighInWeekday, setDeficitWeighInWeekday] = useState(profile?.deficit_weigh_in_weekday ?? 0)
+  const [deficitRemindersEnabled, setDeficitRemindersEnabled] = useState(profile?.deficit_reminders_enabled ?? true)
+  const [deficitAdvancedOpen, setDeficitAdvancedOpen] = useState(false)
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
@@ -149,6 +173,50 @@ export default function ProfileForm({
     const parsedProteinGoal = parseFloat(proteinGoalG)
     const parsedCarbGoal = parseFloat(carbGoalG)
     const parsedFatGoal = parseFloat(fatGoalG)
+
+    const parsedDeficitStartWeight = parseFloat(deficitStartWeightKg)
+    const parsedDeficitTargetWeight = parseFloat(deficitTargetWeightKg)
+    const parsedDeficitCorrection = parseFloat(deficitGarminCorrection)
+    // Start date freezes the first time the goal is ever saved with a
+    // target — later edits to other settings never move it, so the
+    // "starting point" of the goal stays meaningful.
+    const deficitStartDateToSave = profile?.deficit_start_date
+      ?? (deficitTrackingEnabled && deficitTargetWeightKg.trim() ? new Date().toISOString().slice(0, 10) : null)
+
+    // Budget snapshot recomputed and frozen here — save() is exactly the
+    // "settings changed" trigger lib/deficit.ts's budget-freeze design
+    // calls for. Uses the CURRENT weight for BMR (not the frozen start
+    // weight) since resting metabolism tracks the body as it actually is.
+    let deficitBudgetFields: { deficit_tdee_kcal: number | null; deficit_budget_kcal: number | null; deficit_budget_computed_at: string | null } = {
+      deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null,
+    }
+    if (deficitTrackingEnabled && deficitStartWeightKg.trim() && deficitTargetWeightKg.trim() && deficitTargetDate) {
+      const bmr = estimateBMR({
+        weightKg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
+        heightCm: heightCm.trim() && !Number.isNaN(parsedHeight) ? parsedHeight : null,
+        birthYear: birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null,
+        biologicalSex: (biologicalSex || null) as 'male' | 'female' | null,
+      }).bmr
+      const budget = computeDeficitBudget({
+        bmr,
+        goal: {
+          startWeightKg: !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : parsedWeight,
+          targetWeightKg: parsedDeficitTargetWeight,
+          targetDateISO: deficitTargetDate,
+          neatFactor: deficitNeatFactor,
+          garminCorrection: !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75,
+        },
+        avgTrainingKcalRaw,
+        activityFallbackKcal: deficitActivityFallbackKcal,
+        now: new Date(),
+      })
+      deficitBudgetFields = {
+        deficit_tdee_kcal: budget.tdeeKcal,
+        deficit_budget_kcal: budget.budgetKcal,
+        deficit_budget_computed_at: new Date().toISOString(),
+      }
+    }
+
     await supabase.from('profiles').update({
       name,
       llm_provider: provider,
@@ -170,6 +238,17 @@ export default function ProfileForm({
       protein_goal_g: proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null,
       carb_goal_g: carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null,
       fat_goal_g: fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null,
+      deficit_tracking_enabled: deficitTrackingEnabled,
+      deficit_start_weight_kg: deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : null,
+      deficit_start_date: deficitStartDateToSave,
+      deficit_target_weight_kg: deficitTargetWeightKg.trim() && !Number.isNaN(parsedDeficitTargetWeight) ? parsedDeficitTargetWeight : null,
+      deficit_target_date: deficitTargetDate || null,
+      deficit_neat_factor: deficitNeatFactor,
+      deficit_activity_fallback_kcal: deficitActivityFallbackKcal,
+      deficit_garmin_correction: deficitGarminCorrection.trim() && !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75,
+      deficit_weigh_in_weekday: deficitWeighInWeekday,
+      deficit_reminders_enabled: deficitRemindersEnabled,
+      ...deficitBudgetFields,
     }).eq('id', profile?.id ?? '')
 
     if (apiKey.trim()) {
@@ -642,6 +721,135 @@ export default function ProfileForm({
               />
               Påminn mig om jag glömmer logga en måltid
             </label>
+          </>
+        )}
+      </div>
+
+      {/* Viktmål */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Viktmål</div>
+          <p className="text-muted text-xs">Sätt en målvikt och ett datum — appen räknar ut en fast daglig kaloribudget istället för att lägga till vad du tränat bort. Av som standard.</p>
+        </div>
+        <label className="flex items-center justify-between">
+          <span className="text-sm text-fg">Följ ett viktmål</span>
+          <button
+            type="button"
+            role="switch"
+            aria-checked={deficitTrackingEnabled}
+            onClick={() => setDeficitTrackingEnabled(v => !v)}
+            className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${deficitTrackingEnabled ? 'bg-accent' : 'bg-edge'}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-bg transition-transform ${deficitTrackingEnabled ? 'translate-x-5' : ''}`} />
+          </button>
+        </label>
+
+        {deficitTrackingEnabled && (
+          <>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Startvikt (kg)</label>
+                <input type="number" min={30} max={300} step={0.1} inputMode="decimal" value={deficitStartWeightKg} onChange={e => setDeficitStartWeightKg(e.target.value)} placeholder="t.ex. 105" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+              </div>
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Målvikt (kg)</label>
+                <input type="number" min={30} max={300} step={0.1} inputMode="decimal" value={deficitTargetWeightKg} onChange={e => setDeficitTargetWeightKg(e.target.value)} placeholder="t.ex. 90" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+              </div>
+            </div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Måldatum</label>
+              <input type="date" value={deficitTargetDate} onChange={e => setDeficitTargetDate(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors" />
+            </div>
+
+            <div>
+              <label className="text-muted text-xs block mb-2">Vardagsaktivitet (utöver träningen)</label>
+              <div className="flex flex-wrap gap-2">
+                {([{ label: 'Stillasittande', v: 1.15 }, { label: 'Normal', v: 1.25 }, { label: 'Rörlig', v: 1.4 }] as const).map(chip => (
+                  <button key={chip.label} type="button" onClick={() => setDeficitNeatFactor(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitNeatFactor === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <label className="text-muted text-xs block mb-2">Antagen träningsförbränning (tills du loggat 14 dagar)</label>
+              <div className="flex flex-wrap gap-2">
+                {([{ label: 'Lätt (150 kcal)', v: 150 }, { label: 'Medel (300 kcal)', v: 300 }, { label: 'Hög (450 kcal)', v: 450 }] as const).map(chip => (
+                  <button key={chip.label} type="button" onClick={() => setDeficitActivityFallbackKcal(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitActivityFallbackKcal === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              {avgTrainingKcalRaw != null && (
+                <p className="text-muted text-xs mt-1.5">Byts automatiskt mot ditt eget snitt (~{Math.round(avgTrainingKcalRaw)} kcal/dag senaste 28 dagarna) eftersom du redan har tillräckligt med loggad träning.</p>
+              )}
+            </div>
+
+            <div>
+              <label className="text-muted text-xs block mb-2">Vägningsdag</label>
+              <div className="flex flex-wrap gap-2">
+                {[{ label: 'Sön', v: 0 }, { label: 'Mån', v: 1 }, { label: 'Tis', v: 2 }, { label: 'Ons', v: 3 }, { label: 'Tors', v: 4 }, { label: 'Fre', v: 5 }, { label: 'Lör', v: 6 }].map(chip => (
+                  <button key={chip.v} type="button" onClick={() => setDeficitWeighInWeekday(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitWeighInWeekday === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+              <p className="text-muted text-xs mt-1.5">Väg dig samma veckodag och tid (gärna morgon, före frukost) — det ger den mest tillförlitliga kurvan.</p>
+            </div>
+
+            <label className="flex items-center gap-2.5 text-sm text-fg">
+              <input type="checkbox" checked={deficitRemindersEnabled} onChange={e => setDeficitRemindersEnabled(e.target.checked)} className="w-4 h-4 accent-accent" />
+              Påminn mig om vägning, midjemått och avstämning
+            </label>
+
+            {(() => {
+              const bmr = estimateBMR({
+                weightKg: weightKg.trim() ? parseFloat(weightKg) : null,
+                heightCm: heightCm.trim() ? parseFloat(heightCm) : null,
+                birthYear: birthYear.trim() ? parseInt(birthYear, 10) : null,
+                biologicalSex: (biologicalSex || null) as 'male' | 'female' | null,
+              }).bmr
+              const startW = parseFloat(deficitStartWeightKg)
+              const targetW = parseFloat(deficitTargetWeightKg)
+              if (Number.isNaN(startW) || Number.isNaN(targetW) || !deficitTargetDate) {
+                return <p className="text-muted text-xs">Fyll i startvikt, målvikt och måldatum för att se din budget.</p>
+              }
+              const correction = parseFloat(deficitGarminCorrection)
+              const budget = computeDeficitBudget({
+                bmr,
+                goal: { startWeightKg: startW, targetWeightKg: targetW, targetDateISO: deficitTargetDate, neatFactor: deficitNeatFactor, garminCorrection: Number.isNaN(correction) ? 0.75 : correction },
+                avgTrainingKcalRaw,
+                activityFallbackKcal: deficitActivityFallbackKcal,
+                now: new Date(),
+              })
+              return (
+                <div className="bg-bg rounded-xl p-3 flex flex-col gap-1">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-muted text-xs">Din dagliga budget blir</span>
+                    <span className="font-mono text-accent text-lg font-bold">{budget.budgetKcal} kcal</span>
+                  </div>
+                  <div className="text-muted text-xs">TDEE ~{budget.tdeeKcal} kcal · underskott {budget.dailyDeficitKcal} kcal/dag</div>
+                  {budget.capped && (
+                    <p className="text-amber-400 text-xs mt-1">
+                      Det här måldatumet ger ett för snabbt underskott för att vara säkert — budgeten är satt till en säker lägstanivå istället.
+                      {budget.suggestedTargetDateISO && ` I den takten når du målet ${new Date(`${budget.suggestedTargetDateISO}T00:00:00`).toLocaleDateString('sv-SE')} istället.`}
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
+
+            <button type="button" onClick={() => setDeficitAdvancedOpen(v => !v)} className="text-xs text-muted hover:text-fg transition-colors self-start flex items-center gap-1.5">
+              {deficitAdvancedOpen ? '▾' : '▸'} Avancerat
+            </button>
+            {deficitAdvancedOpen && (
+              <div>
+                <label className="text-muted text-xs block mb-1.5">Korrigeringsfaktor på Garmins träningskalorier</label>
+                <input type="number" min={0.5} max={1.1} step={0.05} inputMode="decimal" value={deficitGarminCorrection} onChange={e => setDeficitGarminCorrection(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg font-mono focus:outline-none focus:border-accent transition-colors" />
+                <p className="text-muted text-xs mt-1.5">Garmin överskattar ofta träningsförbränning, särskilt för rodd. 0,75 är en rimlig startpunkt — sköts normalt av avstämningen var 3–4:e vecka istället för att ändras för hand. Påverkar bara den här budgeten, aldrig kalorirutan på Översikt eller andra sidor.</p>
+              </div>
+            )}
           </>
         )}
       </div>

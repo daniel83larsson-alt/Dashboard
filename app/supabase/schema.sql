@@ -1304,3 +1304,89 @@ as $$
 $$;
 revoke all on function public.food_quick_picks() from public;
 grant execute on function public.food_quick_picks() to authenticated;
+
+-- ============================================================
+-- Viktmål: valfri måluppföljning för kaloriunderskott — fast daglig budget
+-- (inte "ät tillbaka tränat"), 3 sanningslager (dag/veckosnitt/faktisk
+-- vikt), och en periodisk avstämning som kalibrerar hur mycket Garmins
+-- träningskalorier litas på. Av som standard, samma mönster som Kost-mål.
+-- Kör vid uppdatering av en befintlig databas:
+-- ============================================================
+
+alter table public.profiles add column if not exists deficit_tracking_enabled boolean not null default false;
+alter table public.profiles add column if not exists deficit_start_weight_kg numeric;
+alter table public.profiles add column if not exists deficit_start_date date;
+alter table public.profiles add column if not exists deficit_target_weight_kg numeric;
+alter table public.profiles add column if not exists deficit_target_date date;
+-- Vardagsaktivitet utöver loggad träning (NEAT-multiplikator på BMR).
+alter table public.profiles add column if not exists deficit_neat_factor numeric not null default 1.25;
+-- Antagen träningsförbränning/dag tills det finns 14 dagars egen historik.
+alter table public.profiles add column if not exists deficit_activity_fallback_kcal integer not null default 300;
+-- Korrigeringsfaktor på Garmins rapporterade träningskalorier — läses BARA
+-- av lib/deficit.ts och dess anropare, aldrig av dashboard/page.tsx,
+-- lib/load.ts, lib/records.ts eller något annat som redan visar
+-- activities.calories. route-invariants.test.ts håller den gränsen.
+alter table public.profiles add column if not exists deficit_garmin_correction numeric not null default 0.75;
+-- 0 = söndag, styr vägnings-/midjemåttspåminnelsen.
+alter table public.profiles add column if not exists deficit_weigh_in_weekday smallint not null default 0;
+alter table public.profiles add column if not exists deficit_reminders_enabled boolean not null default true;
+-- Fryst ögonblicksbild av budgeten — räknas INTE om vid varje sidladdning
+-- (då fladdrar den och slutar vara "fast"), bara när målet/inställningarna
+-- ändras, en avstämning appliceras, vikten rört sig ≥3kg sedan sist, eller
+-- det gått >60 dagar. Se lib/deficit.ts för själva formeln.
+alter table public.profiles add column if not exists deficit_tdee_kcal integer;
+alter table public.profiles add column if not exists deficit_budget_kcal integer;
+alter table public.profiles add column if not exists deficit_budget_computed_at timestamptz;
+
+-- En rad per vägning och/eller midjemätning — båda måtten nullbara i samma
+-- tabell så en söndag där man både väger sig och mäter midjan blir EN rad,
+-- inte två att hålla synkade. source='yazio' speglas in idempotent från
+-- YAZIO-synken (unik-nyckeln gör en omkörning ofarlig); source='manual' är
+-- inmatning via appen. Relevant för alla användare, inte bara de med
+-- deficit_tracking_enabled — vikthistorik är nyttigt oavsett.
+create table if not exists public.body_measurements (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  measured_on date not null,
+  weight_kg numeric,
+  waist_cm numeric,
+  source text not null default 'manual' check (source in ('manual', 'yazio')),
+  note text,
+  created_at timestamptz default now(),
+  unique (user_id, measured_on, source)
+);
+alter table public.body_measurements enable row level security;
+drop policy if exists "Users see own body measurements" on public.body_measurements;
+create policy "Users see own body measurements" on public.body_measurements
+  for all using (auth.uid() = user_id);
+create index if not exists body_measurements_user_date_idx on public.body_measurements (user_id, measured_on desc);
+
+-- En rad per genomförd avstämning (var 3–4:e vecka, på begäran — inte
+-- cron, se lib/deficit.ts). Historiken är poängen: den visar om
+-- kalibreringen faktiskt gör systemet mer träffsäkert över tid.
+create table if not exists public.deficit_checkins (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  period_start date not null,
+  period_end date not null,
+  weight_start_kg numeric,
+  weight_end_kg numeric,
+  waist_start_cm numeric,
+  waist_end_cm numeric,
+  period_days integer not null,
+  logged_days integer not null,
+  logged_deficit_kcal numeric not null,
+  predicted_kg numeric,
+  actual_kg numeric,
+  avg_training_kcal_raw numeric,
+  old_correction numeric not null,
+  suggested_correction numeric,
+  applied_correction numeric,
+  narrative text,
+  created_at timestamptz default now()
+);
+alter table public.deficit_checkins enable row level security;
+drop policy if exists "Users see own deficit checkins" on public.deficit_checkins;
+create policy "Users see own deficit checkins" on public.deficit_checkins
+  for all using (auth.uid() = user_id);
+create index if not exists deficit_checkins_user_date_idx on public.deficit_checkins (user_id, period_end desc);
