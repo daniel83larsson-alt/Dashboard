@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import ViktmalClient, { type DayEntry, type Measurement } from '@/components/ViktmalClient'
+import ViktmalClient, { type DayEntry, type Measurement, type CheckinHistoryRow } from '@/components/ViktmalClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
@@ -106,6 +106,13 @@ export default async function ViktmalPage() {
     source: r.source as 'manual' | 'yazio',
   }))
 
+  const { data: checkinRows } = await supabase
+    .from('deficit_checkins')
+    .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false })
+    .limit(10)
+
   return (
     <ViktmalClient
       todayKey={todayKey}
@@ -121,6 +128,7 @@ export default async function ViktmalPage() {
       weighInWeekday={profile.deficit_weigh_in_weekday ?? 0}
       todayTrainingKcalRaw={todayTrainingKcalRaw}
       garminCorrection={profile.deficit_garmin_correction ?? 0.75}
+      checkinHistory={(checkinRows ?? []) as CheckinHistoryRow[]}
     />
   )
 }

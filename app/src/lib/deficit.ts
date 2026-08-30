@@ -128,6 +128,44 @@ export function compute7DayAverage(days: { eatenKcal: number; isComplete: boolea
   return { avgDiffKcal: Math.round(avgEaten - budgetKcal), completeDays: complete.length, incompleteDays }
 }
 
+export type CheckinPeriodSelection = {
+  periodStartDate: string
+  periodEndDate: string
+  weightStartKg: number
+  weightEndKg: number
+} | null
+
+const MIN_PERIOD_DAYS = 21
+
+// The period runs from the oldest weigh-in that's at least MIN_PERIOD_DAYS
+// before the most recent one, through that most recent one. To dampen
+// fluid/glycogen swings (the spec flags this itself), the start/end weights
+// used are the MEAN of whatever weigh-ins fall in the first/last 7 days of
+// the period, not a single reading — same reasoning as the smoothing an
+// N-day average gives anywhere else in this app.
+export function selectCheckinPeriod(weighIns: { date: string; weightKg: number }[]): CheckinPeriodSelection {
+  if (weighIns.length < 2) return null
+  const sorted = [...weighIns].sort((a, b) => a.date.localeCompare(b.date))
+  const latest = sorted[sorted.length - 1]
+  const oldestEligible = sorted.find(w => daysBetween(w.date, latest.date) >= MIN_PERIOD_DAYS)
+  if (!oldestEligible) return null
+
+  const periodStartDate = oldestEligible.date
+  const periodEndDate = latest.date
+  const startWindowEnd = addDays(periodStartDate, 7)
+  const endWindowStart = addDays(periodEndDate, -7)
+  const startWindow = sorted.filter(w => w.date >= periodStartDate && w.date < startWindowEnd)
+  const endWindow = sorted.filter(w => w.date > endWindowStart && w.date <= periodEndDate)
+  const meanOf = (vals: number[]) => vals.reduce((s, v) => s + v, 0) / vals.length
+
+  return {
+    periodStartDate,
+    periodEndDate,
+    weightStartKg: meanOf(startWindow.map(w => w.weightKg)),
+    weightEndKg: meanOf(endWindow.map(w => w.weightKg)),
+  }
+}
+
 export type DeficitCheckinResult =
   | { status: 'too_sparse'; coverage: number }
   | { status: 'too_small_sample'; predictedKg: number; actualKg: number }

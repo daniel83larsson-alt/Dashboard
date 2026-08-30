@@ -1,3 +1,4 @@
 .vercel
 .env*
 .claude/worktrees/
+/node_modules

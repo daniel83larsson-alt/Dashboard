@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin } from './deficit'
+import { computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin, selectCheckinPeriod } from './deficit'
 
 describe('computeDeficitBudget', () => {
   // Daniel's own hand-calculated example from the spec: 105 kg -> 90 kg by
@@ -112,6 +112,41 @@ describe('compute7DayAverage', () => {
     // avg eaten = 2300, budget 2375 -> diff -75
     expect(result.avgDiffKcal).toBe(-75)
     expect(result.completeDays).toBe(4)
+  })
+})
+
+describe('selectCheckinPeriod', () => {
+  it('returns null when there are fewer than 2 weigh-ins', () => {
+    expect(selectCheckinPeriod([{ date: '2026-08-01', weightKg: 105 }])).toBeNull()
+  })
+
+  it('returns null when the span between weigh-ins is under 21 days', () => {
+    const result = selectCheckinPeriod([
+      { date: '2026-08-01', weightKg: 105 },
+      { date: '2026-08-10', weightKg: 104 },
+    ])
+    expect(result).toBeNull()
+  })
+
+  it('picks the oldest weigh-in at least 21 days before the latest one', () => {
+    const result = selectCheckinPeriod([
+      { date: '2026-07-01', weightKg: 106 }, // too old to matter, an even older eligible date exists later
+      { date: '2026-08-01', weightKg: 105 },
+      { date: '2026-08-25', weightKg: 103 }, // exactly 24 days after 2026-08-01
+    ])
+    expect(result?.periodStartDate).toBe('2026-07-01')
+    expect(result?.periodEndDate).toBe('2026-08-25')
+  })
+
+  it('averages multiple weigh-ins within the first/last 7 days to dampen fluid swings', () => {
+    const result = selectCheckinPeriod([
+      { date: '2026-08-01', weightKg: 106 },
+      { date: '2026-08-03', weightKg: 104 }, // avg with above = 105
+      { date: '2026-08-25', weightKg: 101 },
+      { date: '2026-08-26', weightKg: 103 }, // avg with above = 102
+    ])
+    expect(result?.weightStartKg).toBeCloseTo(105)
+    expect(result?.weightEndKg).toBeCloseTo(102)
   })
 })
 

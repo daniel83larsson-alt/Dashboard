@@ -15,6 +15,32 @@ const chartTooltip = {
 
 export type DayEntry = { date: string; eatenKcal: number; isComplete: boolean; source: 'yazio' | 'manual' }
 export type Measurement = { date: string; weightKg: number | null; waistCm: number | null; source: 'manual' | 'yazio' }
+export type CheckinHistoryRow = {
+  id: string
+  period_start: string
+  period_end: string
+  predicted_kg: number | null
+  actual_kg: number | null
+  old_correction: number
+  suggested_correction: number | null
+  applied_correction: number | null
+  created_at: string
+}
+
+type CheckinComputation =
+  | { available: false; reason: 'no_goal' | 'too_new' }
+  | {
+      available: true
+      periodStartDate: string
+      periodEndDate: string
+      loggedDays: number
+      periodDays: number
+      result:
+        | { status: 'too_sparse'; coverage: number }
+        | { status: 'too_small_sample'; predictedKg: number; actualKg: number }
+        | { status: 'on_track'; predictedKg: number; actualKg: number }
+        | { status: 'adjust'; predictedKg: number; actualKg: number; suggestedCorrection: number; kcalErrorPerDay: number }
+    }
 
 const STATUS_DOT: Record<string, string> = { grey: 'bg-muted', green: 'bg-accent', yellow: 'bg-amber-400', red: 'bg-red-400' }
 const STATUS_LABEL: Record<string, string> = { grey: 'Ej färdigloggad', green: 'Inom budget', yellow: 'Lite över', red: 'Klart över' }
@@ -37,6 +63,7 @@ export default function ViktmalClient({
   weighInWeekday,
   todayTrainingKcalRaw,
   garminCorrection,
+  checkinHistory,
 }: {
   todayKey: string
   days: DayEntry[]
@@ -51,8 +78,16 @@ export default function ViktmalClient({
   weighInWeekday: number
   todayTrainingKcalRaw: number
   garminCorrection: number
+  checkinHistory: CheckinHistoryRow[]
 }) {
   const router = useRouter()
+  const [checkin, setCheckin] = useState<CheckinComputation | null>(null)
+  const [checkinLoading, setCheckinLoading] = useState(false)
+  const [checkinError, setCheckinError] = useState('')
+  const [checkinId, setCheckinId] = useState<string | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [applied, setApplied] = useState(false)
+  const [kept, setKept] = useState(false)
   const [measurements, setMeasurements] = useState(initialMeasurements)
   const [logDate, setLogDate] = useState(todayKey)
   const [logWeight, setLogWeight] = useState('')
@@ -115,6 +150,43 @@ export default function ViktmalClient({
       setLogError('Nätverksfel')
     }
     setLogging(false)
+  }
+
+  async function runCheckin() {
+    setCheckinLoading(true)
+    setCheckinError('')
+    setApplied(false)
+    setKept(false)
+    try {
+      const res = await fetch('/api/deficit/checkin', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) {
+        setCheckin(data)
+        setCheckinId(data.checkinId ?? null)
+      } else {
+        setCheckinError(data.error ?? 'Kunde inte köra avstämningen')
+      }
+    } catch {
+      setCheckinError('Nätverksfel')
+    }
+    setCheckinLoading(false)
+  }
+
+  async function applyCorrection() {
+    if (!checkinId) return
+    setApplying(true)
+    try {
+      const res = await fetch('/api/deficit/checkin/apply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ checkinId }),
+      })
+      if (res.ok) {
+        setApplied(true)
+        router.refresh()
+      }
+    } catch { /* leave the button available to retry */ }
+    setApplying(false)
   }
 
   return (
@@ -241,6 +313,75 @@ export default function ViktmalClient({
           </button>
         </div>
       )}
+
+      {/* Avstämning — på begäran, inte cron (kräver data med minst 21 dagars mellanrum) */}
+      <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+        <div>
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Avstämning</div>
+          <p className="text-muted text-xs">Jämför vad loggen förutsåg mot vad vågen faktiskt visade, var 3–4:e vecka. Föreslår en justering av Garmin-korrigeringen — appliceras aldrig automatiskt.</p>
+        </div>
+
+        {!checkin && (
+          <button type="button" onClick={runCheckin} disabled={checkinLoading} className="bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50 self-start px-4">
+            {checkinLoading ? 'Räknar...' : 'Kör avstämning'}
+          </button>
+        )}
+        {checkinError && <p className="text-red-400 text-xs">{checkinError}</p>}
+
+        {checkin && !checkin.available && (
+          <p className="text-muted text-xs">
+            {checkin.reason === 'no_goal' ? 'Ingen budget uträknad än — fyll i ditt viktmål i Profil.' : 'Behöver minst två vägningar med 21+ dagars mellanrum för att kunna räkna en avstämning. Väg dig regelbundet så blir den tillgänglig.'}
+          </p>
+        )}
+
+        {checkin && checkin.available && (
+          <div className="bg-bg rounded-xl p-3 flex flex-col gap-2">
+            <p className="text-muted text-xs">{fmtDate(checkin.periodStartDate)} – {fmtDate(checkin.periodEndDate)} · {checkin.loggedDays} av {checkin.periodDays} dagar loggade</p>
+            {checkin.result.status === 'too_sparse' && (
+              <p className="text-fg text-sm">För glest loggat ({Math.round(checkin.result.coverage * 100)}% av dagarna) för att kalibrera. Logga mer konsekvent till nästa avstämning.</p>
+            )}
+            {checkin.result.status === 'too_small_sample' && (
+              <p className="text-fg text-sm">För litet underlag för att kalibrera — bruset är större än signalen den här perioden.</p>
+            )}
+            {checkin.result.status === 'on_track' && (
+              <p className="text-fg text-sm">✓ På spår — {checkin.result.actualKg.toFixed(1)} kg faktisk förändring, nära det loggen antydde ({checkin.result.predictedKg.toFixed(1)} kg). Ingen justering behövs.</p>
+            )}
+            {checkin.result.status === 'adjust' && (
+              <>
+                <p className="text-fg text-sm">Loggen antydde {checkin.result.predictedKg.toFixed(1)} kg, faktisk förändring var {checkin.result.actualKg.toFixed(1)} kg.</p>
+                <p className="text-fg text-sm font-mono">Föreslagen justering: {checkin.result.suggestedCorrection > garminCorrection ? '↑' : '↓'} {garminCorrection.toFixed(2)} → {checkin.result.suggestedCorrection.toFixed(2)}</p>
+                {applied ? (
+                  <p className="text-accent text-xs">✓ Använd — din budget är omräknad.</p>
+                ) : kept ? (
+                  <p className="text-muted text-xs">Behållit — ingen ändring gjord.</p>
+                ) : (
+                  <div className="flex gap-2 mt-1">
+                    <button type="button" onClick={applyCorrection} disabled={applying} className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
+                      {applying ? 'Sparar...' : 'Använd'}
+                    </button>
+                    <button type="button" onClick={() => setKept(true)} className="text-xs text-muted border border-edge rounded-lg px-4 py-2">Behåll</button>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
+
+        {checkinHistory.length > 0 && (
+          <div className="pt-2 border-t border-edge flex flex-col gap-1.5">
+            <p className="text-muted text-[10px] uppercase tracking-wider">Tidigare avstämningar</p>
+            {checkinHistory.map(c => (
+              <div key={c.id} className="flex items-center justify-between text-xs">
+                <span className="text-muted">{fmtDate(c.period_start)} – {fmtDate(c.period_end)}</span>
+                <span className="font-mono text-fg">
+                  {c.actual_kg != null ? `${c.actual_kg.toFixed(1)} kg` : '–'}
+                  {c.applied_correction != null && <span className="text-accent"> · {c.old_correction.toFixed(2)}→{c.applied_correction.toFixed(2)}</span>}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
