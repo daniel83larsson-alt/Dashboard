@@ -5,7 +5,6 @@ const BASE_NAV_ITEMS: NavItem[] = [
   { href: '/dashboard/veckoplan', label: 'Veckoplan', icon: 'calendar' },
   { href: '/dashboard/passlogg', label: 'Aktiviteter', icon: 'log' },
   { href: '/dashboard/mat', label: 'Kost', icon: 'food' },
-  { href: '/dashboard/rutter', label: 'Rutter', icon: 'route' },
   { href: '/dashboard/halsa', label: 'Hälsa & Insikter', icon: 'heart' },
   { href: '/dashboard/coach', label: 'Coach', icon: 'chat' },
   { href: '/dashboard/profil', label: 'Profil & Inställningar', icon: 'profile' },

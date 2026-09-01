@@ -54,12 +54,6 @@ const GRID: Feature[] = [
     body: 'Sök, fota eller välj bland dina vanligaste — se direkt ätit mot bränt.',
   },
   {
-    image: 'rutter.png',
-    eyebrow: 'Rutter.',
-    title: 'Hitta nya vägar.',
-    body: 'Löp-, cykel- och vandringsleder var du än befinner dig, helt gratis.',
-  },
-  {
     image: 'rekord.png',
     eyebrow: 'Rekord.',
     title: 'Dina personbästa.',
