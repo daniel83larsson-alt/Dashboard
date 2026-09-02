@@ -61,6 +61,11 @@ export type UserContext = {
   // Profilens 'snall' | 'neutral' | 'tuff' — se lib/coach-tone.ts. Saknas
   // (äldre profil, fältet inte satt än) betyder samma sak som 'neutral'.
   coachTone?: string | null
+  // Förformaterad text från lib/nutrition-summary.ts (vecka + 30 dagar +
+  // Viktmål/viktförändring om påslaget) — bara ifylld för Nutritionisten
+  // (se /api/coach), de andra åtta coacherna behöver den inte och sparar
+  // in databasfrågorna den kräver.
+  nutritionSummary?: string
 }
 
 function compact(ctx: UserContext, sport: string): string {
@@ -158,6 +163,7 @@ ANVÄNDARE: ${ctx.name} | ${sportLabel(ctx.sport)}
 MÅL: ${ctx.goals.map(g => g.title).join(' · ') || 'inga'}
 ${ctx.overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${ctx.overviewGoal}` : ''}
 ${ctx.userBio ? `KONTEXT: ${ctx.userBio}` : ''}
+${ctx.nutritionSummary ? `\nFAKTISK KOSTLOGGNING (använd den här datan när frågan gäller matvanor — svara konkret utifrån vad som faktiskt loggats, inte generiskt):\n${ctx.nutritionSummary}` : ''}
 
 Fokus: proteinintag 1,6–2,2 g/kg, timing runt träning, kreatin, kasein. Leaner kropp = lätt energiunderskott, aldrig sänkt protein.`,
   },

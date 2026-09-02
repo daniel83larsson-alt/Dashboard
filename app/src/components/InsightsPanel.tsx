@@ -11,6 +11,8 @@ type AgentInsights = {
   mental: string
   strength: string
   mobility: string
+  kostWeek: string
+  kostGeneral: string
   summary: string
 }
 
@@ -65,6 +67,7 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
   // Date.now() can't be called directly during render (React treats it as
   // impure) — a lazy initializer runs it once outside the render body itself.
   const [now] = useState<number>(() => Date.now())
+  const [kostScope, setKostScope] = useState<'week' | 'general'>('week')
   const router = useRouter()
 
   async function generate() {
@@ -172,6 +175,37 @@ export default function InsightsPanel({ savedInsight, activityCount = 0, hasWell
               </div>
             )
           })}
+
+          {(insight.agents.kostWeek || insight.agents.kostGeneral) && (
+            <div className="bg-card border border-edge rounded-2xl p-4">
+              <div className="flex items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-xl">🍽️</span>
+                  <div>
+                    <div className="text-sm font-medium text-fg">Kostcoach</div>
+                    <div className="text-xs text-muted">Loggning · Kalorier · Viktmål</div>
+                  </div>
+                </div>
+                <div className="flex gap-1 bg-bg border border-edge rounded-lg p-0.5">
+                  <button
+                    onClick={() => setKostScope('week')}
+                    className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostScope === 'week' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+                  >
+                    Vecka
+                  </button>
+                  <button
+                    onClick={() => setKostScope('general')}
+                    className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostScope === 'general' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+                  >
+                    Allmänt
+                  </button>
+                </div>
+              </div>
+              <div className="text-sm text-fg/90 leading-relaxed">
+                <Markdown text={(kostScope === 'week' ? insight.agents.kostWeek : insight.agents.kostGeneral) || ''} />
+              </div>
+            </div>
+          )}
         </div>
       )}
 

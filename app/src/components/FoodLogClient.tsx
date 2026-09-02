@@ -95,6 +95,7 @@ export default function FoodLogClient({
   kostSettings,
   dayOverrides: initialDayOverrides,
   deficitSummary,
+  kostReview,
 }: {
   dailyCalorieGoal: number | null
   entries: FoodEntry[]
@@ -104,8 +105,10 @@ export default function FoodLogClient({
   kostSettings: KostSettings
   dayOverrides: string[]
   deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
+  kostReview: { generatedAt: string; kostWeek: string; kostGeneral: string } | null
 }) {
   const router = useRouter()
+  const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
   const hasYazio = yazioHistory.length > 0
   const yazioToday = hasYazio ? yazioHistory[0] : null
 
@@ -526,6 +529,45 @@ export default function FoodLogClient({
           </a>
         )}
       </div>
+
+      {/* Kost-granskning — samma AI-genererade text som Kostcoachen på Hälsa
+          & Insikter, bara återgiven här så man slipper byta sida. */}
+      {kostReview && (kostReview.kostWeek || kostReview.kostGeneral) ? (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs text-muted uppercase tracking-wider">🍽️ Kost-granskning</span>
+            <div className="flex gap-1 bg-bg border border-edge rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setKostReviewScope('week')}
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'week' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+              >
+                Vecka
+              </button>
+              <button
+                type="button"
+                onClick={() => setKostReviewScope('general')}
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'general' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+              >
+                Allmänt
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-fg/90 leading-relaxed">
+            {kostReviewScope === 'week' ? kostReview.kostWeek : kostReview.kostGeneral}
+          </p>
+          <a href="/dashboard/halsa?tab=insikter" className="text-xs text-accent hover:underline mt-2 inline-block">
+            Se hela tränarteamets analys →
+          </a>
+        </div>
+      ) : (
+        <a
+          href="/dashboard/halsa?tab=insikter"
+          className="bg-card border border-edge rounded-2xl p-4 text-xs text-muted hover:border-accent transition-colors block"
+        >
+          🍽️ Hämta en AI-granskning av dina matvanor under Hälsa & Insikter →
+        </a>
+      )}
 
       {/* YAZIO-sammanfattning */}
       {hasYazio && yazioToday && (
