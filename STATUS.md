@@ -443,6 +443,12 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Verifierat:** typkontrollerat, lintat, 309/309 tester gröna (8 nya för `nutrition-summary.ts`), `next build` ren. Committat, pushat.
   **Kvarstår:** inte livetestat (samma kända sandlåde-begränsning — ingen webbläsarsession, ingen `GEMINI_API_KEY` här). Inte mergad till produktion än.
 
+- ✅ **Daniel: skärmdumpar + "Redigera post saknar namn, Snabbval borde fyllas på med allt jag lagt till, och lättare att fota mat/logga i efterhand med bild från galleriet + text till bilden."** Tre separata fynd:
+  1. Redigera-modalen saknade ett namnfält trots att PATCH-routen redan stödde det — bara UI:t som inte hade hunnit med. Lade till.
+  2. Snabbval var hårdkodat till 12 poster både i databasfrågan och i vyn — äldre/mindre använda rätter försvann bara. Höjde hämtningen till 60, la till en "Visa fler"-knapp i UI:t istället för att dumpa alla 60 direkt.
+  3. Fotoinmatningen hade `capture="environment"`, vilket hoppar förbi telefonens egna väljare och går rakt till kameran — omöjligt att välja en redan tagen bild ur galleriet. Borttaget. Lade även till ett valfritt textfält bredvid bilderna ("dubbel portion pasta" etc.) som nu skickas med till AI-uppskattningen för bättre träffsäkerhet.
+  **Verifierat:** typkontrollerat, lintat, 310/310 tester gröna, `next build` ren. Committat, pushat. **Kvarstår:** inte livetestat i en riktig mobilbrowser (samma kända sandlåde-begränsning) — värt att Daniel själv provar fotoflödet efter deploy, eftersom `capture`-beteendet skiljer sig lite mellan iOS/Android.
+
 ---
 
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
