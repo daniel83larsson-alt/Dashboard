@@ -32,9 +32,13 @@ export default async function MatPage() {
   const todayKey = stockholmDateKey()
   const entries = (recentLog ?? []) as FoodEntry[]
 
+  // 12 räckte inte — Daniel: listan ska fyllas på med allt han lagt till,
+  // inte klippas av tidigt. 60 är gott om utrymme utan att bli ett
+  // obegränsat query mot en tabell som bara växer; FoodLogClient visar
+  // en delmängd med "Visa fler" istället för allt på en gång.
   const quickPicks = ((quickPicksRaw ?? []) as QuickPick[])
     .sort((a, b) => b.times_logged - a.times_logged || b.last_logged.localeCompare(a.last_logged))
-    .slice(0, 12)
+    .slice(0, 60)
 
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   // normalizeYazioDay backfills fields a row written before meals/water/
