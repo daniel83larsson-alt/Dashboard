@@ -1,5 +1,13 @@
 {
   "regions": ["fra1"],
+  "functions": {
+    "src/app/api/cron/sync-all/route.ts": { "regions": ["iad1"] },
+    "src/app/api/activities/sync-garmin/route.ts": { "regions": ["iad1"] },
+    "src/app/api/garmin/save-credentials/route.ts": { "regions": ["iad1"] },
+    "src/app/api/activities/[id]/garmin-route/route.ts": { "regions": ["iad1"] },
+    "src/app/api/activities/[id]/garmin-zones/route.ts": { "regions": ["iad1"] },
+    "src/app/api/admin/test-garmin/route.ts": { "regions": ["iad1"] }
+  },
   "crons": [
     {
       "path": "/api/cron/sync-all",
