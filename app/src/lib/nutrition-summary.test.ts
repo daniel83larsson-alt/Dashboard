@@ -115,4 +115,26 @@ describe('formatNutritionForPrompt', () => {
     expect(text).toContain('SENASTE 30 DAGARNA')
     expect(text).toContain('VIKTMÅL')
   })
+
+  it('never presents the not-yet-happened rest of the week as missing data (Daniel: reviewed on a Wednesday should judge Mon-Wed, not get diluted by a still-future Thu-Sun)', () => {
+    // Wednesday of the same Mon-Sun week as the other fixtures.
+    const wednesday = new Date(2026, 7, 26, 12, 0, 0)
+    const wednesdayKey = '2026-08-26'
+    const manualEntries = [
+      foodEntry({ logged_at: '2026-08-24T08:00:00Z', calories: 2800 }), // Mon
+      foodEntry({ logged_at: '2026-08-25T08:00:00Z', calories: 2900 }), // Tue
+      foodEntry({ logged_at: '2026-08-26T08:00:00Z', calories: 2700 }), // Wed (today)
+    ]
+    const s = buildNutritionSummary({ ...base, now: wednesday, todayKey: wednesdayKey, yazioHistory: [], manualEntries })
+    expect(s.weekDaysElapsed).toBe(3)
+    expect(s.week?.daysWithData).toBe(3)
+
+    const text = formatNutritionForPrompt(s)
+    // The denominator must be the 3 days that have actually happened, never
+    // a bare "/7" that would read as 4 missing days.
+    expect(text).toContain('3 av 7 dagar har hänt')
+    expect(text).toContain('3/3 dagar loggade')
+    expect(text).not.toContain('3/7 dagar loggade')
+    expect(text).toContain('kommande dagar i veckan har inte hänt än')
+  })
 })

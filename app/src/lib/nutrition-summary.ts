@@ -34,6 +34,7 @@ export type NutritionSummaryInput = {
 export type NutritionSummary = {
   hasData: boolean
   week: WeeklyKostData | null
+  weekDaysElapsed: number // Monday..today (1-7) — how many days of the calendar week have actually happened, for wording "week" data without implying the remaining days are "missing"
   generalWindowDays: number
   generalDaysLogged: number
   generalAvgKcal: number | null
@@ -65,6 +66,14 @@ export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSu
     yazioHistory, manualEntries, trackedMeals, dayOverrides,
     calorieGoal, proteinGoalG, carbGoalG, fatGoalG,
   })
+  // Monday..today, so a review run mid-week doesn't present the remaining
+  // (not-yet-happened) days of the calendar week as "missing data" — Daniel
+  // caught this: "är de onsdag och måndag/tisdag är loggade så är det de
+  // man gör review på", not the full 7 diluted by days that haven't
+  // happened yet. week.daysWithData/avgKcal already only ever counted past
+  // days (verified in weekly-kost.ts) — this is purely about the WORDING
+  // fed to the AI, so it can't itself confuse "future" with "forgot to log".
+  const weekDaysElapsed = Math.min(7, Math.floor((new Date(`${todayKey}T00:00:00`).getTime() - weekStart.getTime()) / 86400000) + 1)
 
   const yazioByDate = new Map(yazioHistory.map(d => [d.date, d]))
   const manualByDate = new Map<string, KostFoodEntry[]>()
@@ -97,6 +106,7 @@ export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSu
   return {
     hasData: week != null || complete.length > 0,
     week,
+    weekDaysElapsed,
     generalWindowDays: GENERAL_WINDOW_DAYS,
     generalDaysLogged: complete.length,
     generalAvgKcal,
@@ -114,14 +124,19 @@ export function formatNutritionForPrompt(s: NutritionSummary): string {
   const lines: string[] = []
   if (s.week) {
     const w = s.week
+    // "X av Y dagar HITTILLS" — Y is days-elapsed-in-the-week, never 7,
+    // so mid-week this can never read as "missing" the days that haven't
+    // happened yet (Daniel caught this: a Wednesday review should judge
+    // Mon-Wed, not get compared against a still-future Thu-Sun).
     lines.push(
-      `DENNA VECKA: ${w.daysWithData}/7 dagar loggade` +
+      `DENNA VECKA (hittills, ${s.weekDaysElapsed} av 7 dagar har hänt): ${w.daysWithData}/${s.weekDaysElapsed} dagar loggade` +
       (w.avgKcal != null ? `, snitt ${w.avgKcal} kcal${w.kcalGoal != null ? ` (mål ${w.kcalGoal})` : ''}` : '') +
       (w.avgProteinG != null ? `, protein ${Math.round(w.avgProteinG)}g${w.proteinGoalG != null ? `/${Math.round(w.proteinGoalG)}g` : ''}` : '') +
-      (w.mostSkippedMeal ? `, missar oftast ${w.mostSkippedMeal}` : '')
+      (w.mostSkippedMeal ? `, missar oftast ${w.mostSkippedMeal}` : '') +
+      ' (kommande dagar i veckan har inte hänt än — räkna dem INTE som saknad loggning)'
     )
   } else {
-    lines.push('DENNA VECKA: ingen loggning än.')
+    lines.push(`DENNA VECKA: ingen loggning än (${s.weekDaysElapsed} av 7 dagar har hänt).`)
   }
 
   lines.push(

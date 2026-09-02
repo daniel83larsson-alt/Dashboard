@@ -215,8 +215,8 @@ mobility (Rörlighets-/stretchcoach, KONKRETA övningar): ${hasActivities
       ? 'Namnge 2-3 rörlighets-/stretchövningar (med hur länge/ofta) för de muskelgrupper träningen belastar mest.'
       : 'Inga pass är loggade än. Namnge 2-3 generella rörlighetsövningar med hur länge/ofta.'}
 
-kostWeek (Kostcoach, fokusera ENBART på DENNA VECKA-raden under KOST): ${nutrition.hasData
-      ? 'Kommentera hur veckans loggning/kalorier/protein ser ut mot målen, och peka ut EN konkret förbättring för nästa vecka.'
+kostWeek (Kostcoach, fokusera ENBART på DENNA VECKA-raden under KOST — bedöm BARA de dagar som redan hänt, ALDRIG kommande dagar i veckan som "saknad" eller "ofullständig" loggning): ${nutrition.hasData
+      ? 'Kommentera hur veckans loggning/kalorier/protein ser ut mot målen SÅ HÄR LÅNGT i veckan, och peka ut EN konkret förbättring för resten av veckan.'
       : 'Ingen kost är loggad än. Ge en kort, peppande uppmaning att börja logga i Kost, och nämn kort varför det gör resten av teamets råd bättre.'}
 
 kostGeneral (Kostcoach, fokusera ENBART på SENASTE 30 DAGARNA/VIKTMÅL/VIKTFÖRÄNDRING-raderna under KOST): ${nutrition.hasData
