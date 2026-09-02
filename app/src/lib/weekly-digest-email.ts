@@ -78,6 +78,7 @@ export function renderWeeklyDigestHtml({
           ? `<p style="margin:10px 0 0;color:#1a1a1a;font-size:13px;">Vikt: ${kost.weightStartKg.toFixed(1)} kg → ${kost.weightEndKg.toFixed(1)} kg</p>`
           : ''}
         ${kost.mostSkippedMeal ? `<p style="margin:6px 0 0;color:#1a1a1a;font-size:13px;">Loggas sällan: ${kost.mostSkippedMeal.toLowerCase()}</p>` : ''}
+        ${record.deficit ? `<p style="margin:6px 0 0;color:#1a1a1a;font-size:13px;">Viktmål: snitt ${record.deficit.avgDiffKcal > 0 ? '+' : ''}${record.deficit.avgDiffKcal} kcal/dag mot budgeten (${record.deficit.budgetKcal} kcal)</p>` : ''}
         ${record.insights?.nutrition ? `<p style="margin:10px 0 0;color:#1a1a1a;line-height:1.5;font-size:13.5px;">${record.insights.nutrition}</p>` : ''}
       </div>`
     : ''

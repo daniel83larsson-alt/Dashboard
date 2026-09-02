@@ -1,5 +1,7 @@
+import { Suspense } from 'react'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
+import ViktmalOverviewCard from '@/components/ViktmalOverviewCard'
 import WeeklyPlanSummaryCard from '@/components/WeeklyPlanSummaryCard'
 import ActivityCalendar from '@/components/ActivityCalendar'
 import { startOfWeek, stockholmDateKey, stockholmDayElapsedFraction } from '@/lib/dates'
@@ -479,6 +481,11 @@ export default async function DashboardPage() {
           <div className="text-muted text-xs mt-1">Logga vad du äter och se det mot vad du bränner — sök, fota eller snabbval.</div>
         </a>
       )}
+
+      {/* ── Viktmål (självständig komponent — se dess egen kommentar för varför) ── */}
+      <Suspense fallback={null}>
+        <ViktmalOverviewCard />
+      </Suspense>
 
       {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
       {(() => {

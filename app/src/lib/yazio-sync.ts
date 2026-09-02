@@ -48,6 +48,19 @@ export async function syncYazioForUser(supabase: SupabaseClient, userId: string)
 
   const todayDay = summaryToYazioDay(todayKey, summary)
 
+  // Mirrors into the shared body_measurements table so Viktmål's check-in
+  // works the same for YAZIO-synced users as manual ones, without asking
+  // them to log weight twice. Idempotent upsert on (user_id, measured_on,
+  // 'yazio') — safe to run every sync. Never touches source='manual' rows.
+  if (todayDay?.weightKg != null) {
+    await supabase.from('body_measurements').upsert({
+      user_id: userId,
+      measured_on: todayKey,
+      weight_kg: todayDay.weightKg,
+      source: 'yazio',
+    }, { onConflict: 'user_id,measured_on,source' })
+  }
+
   const { data: historyRow } = await supabase
     .from('coach_sessions')
     .select('messages')

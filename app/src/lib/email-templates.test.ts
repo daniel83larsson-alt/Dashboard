@@ -41,6 +41,7 @@ describe('renderWeeklyDigestHtml', () => {
       newRecords: [{ activityId: 'a1', sport: 'Run', label: 'Löpning', startDate: '2026-07-16T06:00:00Z', records: ['Snabbaste 10 km'] }],
     },
     kost: null,
+    deficit: null,
     insights: { sessions: 'Bra vecka med jämna pass.', wellness: 'Sömnen såg stabil ut.', motivation: 'Kör på mot målet!', nutrition: null },
     viewedAt: null,
   }

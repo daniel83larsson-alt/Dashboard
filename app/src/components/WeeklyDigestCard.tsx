@@ -111,6 +111,9 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
           {record.kost.mostSkippedMeal && (
             <div className="text-sm text-fg">Loggas sällan: {record.kost.mostSkippedMeal.toLowerCase()}</div>
           )}
+          {record.deficit && (
+            <div className="text-sm text-fg">Viktmål: snitt {record.deficit.avgDiffKcal > 0 ? '+' : ''}{record.deficit.avgDiffKcal} kcal/dag mot budgeten ({record.deficit.budgetKcal} kcal)</div>
+          )}
           {record.insights?.nutrition && (
             <p className="text-sm text-fg leading-relaxed pt-1 border-t border-edge">{record.insights.nutrition}</p>
           )}

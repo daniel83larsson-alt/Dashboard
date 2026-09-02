@@ -48,6 +48,7 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     'app/api/cron/weekly-digest/route.ts',
     'app/api/cron/sync-all/route.ts',
     'app/api/cron/meal-reminders/route.ts',
+    'app/api/cron/body-reminders/route.ts',
     'app/api/weekly-digest/unsubscribe/route.ts',
     'app/api/webhooks/new-signup/route.ts',
     'app/api/newsletter/unsubscribe/route.ts',
@@ -158,6 +159,7 @@ describe('every route that calls Gemini directly is rate-limited (or is a cron r
   // file's comments), and it isn't a route.ts so it's out of scope here.
   const GEMINI_CALL_SITES = [
     'app/api/coach/route.ts',
+    'app/api/deficit/checkin/route.ts',
     'app/api/plan/generate/route.ts',
     'app/api/food/estimate/route.ts',
     'app/api/food/feedback/route.ts',
@@ -195,4 +197,34 @@ describe('proxy.ts', () => {
   it('exports a config.matcher that still covers /dashboard', () => {
     expect(content).toMatch(/matcher\s*[:=][\s\S]*\/dashboard/)
   })
+})
+
+describe('Viktmål\'s Garmin correction factor never leaks into pages/calcs that already show activities.calories', () => {
+  // Daniel's explicit decision when this feature was scoped: the
+  // correction factor may only reweight Viktmål's own budget/check-in
+  // math — dashboard/page.tsx's "ätit vs bränt" card, the weekly load
+  // calc, and Rekord must keep reading activities.calories exactly as
+  // they did before this feature existed. This mechanically enforces
+  // that boundary instead of relying on nobody ever touching it by hand.
+  const FORBIDDEN_FILES = [
+    'app/dashboard/page.tsx',
+    'lib/load.ts',
+    'lib/records.ts',
+    'lib/calories.ts',
+  ]
+
+  it('found the expected files (sanity check the paths are still real)', () => {
+    for (const rel of FORBIDDEN_FILES) {
+      expect(fs.existsSync(path.join(SRC_ROOT, rel)), `${rel} no longer exists — update this test`).toBe(true)
+    }
+  })
+
+  for (const rel of FORBIDDEN_FILES) {
+    it(`${rel} never mentions the correction factor or imports lib/deficit`, () => {
+      const content = read(path.join(SRC_ROOT, rel))
+      expect(content).not.toContain('deficit_garmin_correction')
+      expect(content).not.toMatch(/from ['"]@\/lib\/deficit['"]/)
+      expect(content).not.toMatch(/from ['"]\.\.?\/.*\bdeficit['"]/)
+    })
+  }
 })

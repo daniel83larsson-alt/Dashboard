@@ -94,6 +94,7 @@ export default function FoodLogClient({
   todayKey,
   kostSettings,
   dayOverrides: initialDayOverrides,
+  deficitSummary,
 }: {
   dailyCalorieGoal: number | null
   entries: FoodEntry[]
@@ -102,6 +103,7 @@ export default function FoodLogClient({
   todayKey: string
   kostSettings: KostSettings
   dayOverrides: string[]
+  deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
 }) {
   const router = useRouter()
   const hasYazio = yazioHistory.length > 0
@@ -518,6 +520,11 @@ export default function FoodLogClient({
         <p className="text-muted text-sm mt-1">
           {hasYazio ? 'Synkas från YAZIO — logga manuellt bara om du vill lägga till något.' : 'Logga vad du äter — sök, fota eller välj från snabbval.'}
         </p>
+        {deficitSummary && (
+          <a href="/dashboard/viktmal" className="text-xs text-accent hover:underline mt-1.5 inline-block">
+            Ditt viktmål: {deficitSummary.avgDiffKcal > 0 ? '+' : ''}{deficitSummary.avgDiffKcal} kcal/dag i snitt →
+          </a>
+        )}
       </div>
 
       {/* YAZIO-sammanfattning */}
