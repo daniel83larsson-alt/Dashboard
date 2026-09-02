@@ -9,6 +9,7 @@ import {
   fetchGarminDayWellness,
   fetchGarminHrZones,
   fetchGarminVo2max,
+  fetchGarminPolyline,
   mapActivityType,
 } from './garmin'
 import { decrypt } from './encrypt'
@@ -277,7 +278,7 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
   // her activities table empty. Deduping by strava_id here (keep the first
   // occurrence) closes that specific failure mode outright.
   const seenStravaIds = new Set<number>()
-  const toUpsert = allGarminActivities
+  const newRows = allGarminActivities
     .map(a => garminActivityToRow(a, userId))
     .filter(row => !existingRows.some(e => e.strava_id === row.strava_id))
     .filter(row => {
@@ -285,6 +286,26 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
       seenStravaIds.add(row.strava_id)
       return true
     })
+
+  // Daniel: friends should see the GPS route on each other's passes, not
+  // just a start pin — fetch it now, once, for brand-new activities only
+  // (never re-fetched once a row exists, same "cache it and never touch
+  // again" contract garmin-route/route.ts already established for a
+  // user's own on-demand view). Scoped to distance > 0 so a GPS-less
+  // activity (strength, mobility) doesn't spend a Garmin call on a route
+  // that can't exist. Runs inside this user's already-authenticated,
+  // already-withGarminLock-serialized window — see lib/garmin.ts — so it
+  // adds a bit of wall-clock time to THIS sync, not extra queue gaps
+  // between different users' syncs.
+  const toUpsert = await Promise.all(newRows.map(async row => {
+    if (row.distance <= 0) return row
+    try {
+      const polyline = await fetchGarminPolyline(row.strava_id, garminEmail, garminPassword)
+      return polyline ? { ...row, raw_data: { ...row.raw_data, polyline } } : row
+    } catch {
+      return row
+    }
+  }))
 
   if (toUpsert.length > 0) {
     const { error: upsertError } = await supabase.from('activities').upsert(toUpsert, { onConflict: 'user_id,strava_id' })
