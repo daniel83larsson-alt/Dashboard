@@ -12,6 +12,7 @@ import {
   fetchGarminPolyline,
   mapActivityType,
 } from './garmin'
+import { loadAndWarmGarminSession, persistGarminSession } from './garmin-session'
 import { decrypt } from './encrypt'
 import { autoCleanupDuplicates } from './duplicates-cleanup'
 
@@ -88,6 +89,12 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
   const garminPassword = userCreds?.password
 
   if (!garminEmail || !garminPassword) throw new GarminNotConfiguredError()
+
+  // Reuse the last saved OAuth session instead of a fresh username/password
+  // login every sync — see loadAndWarmGarminSession/warmGarminClient's own
+  // comments for why (Garmin flags every real login as a new device, mailed
+  // Daniel about it every single night).
+  await loadAndWarmGarminSession(supabase, userId, garminEmail, garminPassword)
 
   const { data: activityCursorRow } = await supabase
     .from('coach_sessions')
@@ -359,6 +366,11 @@ export async function syncGarminForUser(supabase: SupabaseClient, userId: string
     }
   }
   const zonesRemaining = missingZones.length - zoneBatch.length
+
+  // Save whatever session is live now (freshly logged in, or the stored one
+  // refreshed during this run) so next sync can reuse it instead of doing
+  // another real login.
+  await persistGarminSession(supabase, userId, garminEmail)
 
   return {
     synced: toUpsert.length,
