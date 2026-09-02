@@ -17,10 +17,17 @@ export default function WeeklyPlanSummaryCard({
   plan: initialPlan,
   hasActiveGoal,
   initialSports = [],
+  compact = false,
 }: {
   plan: Plan | null
   hasActiveGoal: boolean
   initialSports?: string[]
+  // Ren visuell variant — samma auto-generera-planen-om-den-saknas-effekt
+  // som alltid, bara en enda rad istället för hela kortet (Daniel: "Veckoplan
+  // skulle man kunna ha en liten länk i själva kalender ... så blir det lite
+  // renare"). Auto-genereringen får aldrig bero på vilken variant som
+  // råkar renderas, så den logiken rörs inte alls.
+  compact?: boolean
 }) {
   const [plan, setPlan] = useState<Plan | null>(initialPlan)
   const [loading, setLoading] = useState(false)
@@ -44,6 +51,22 @@ export default function WeeklyPlanSummaryCard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  const nonRest = plan?.sessions.filter(s => !s.is_rest) ?? []
+  const doneCount = nonRest.filter(s => s.status === 'done').length
+
+  if (compact) {
+    // Ingen synlig kortyta alls utan ett godkänt mål — det finns inget att
+    // länka till än, och Coach/Profil äger redan den nudge:en.
+    if (!hasActiveGoal) return null
+    return (
+      <a href="/dashboard/veckoplan" className="text-xs text-accent hover:underline inline-block">
+        {plan
+          ? `Veckoplan: ${doneCount}/${nonRest.length} pass gjorda denna vecka →`
+          : loading ? 'Genererar veckans plan...' : 'Öppna veckoplan →'}
+      </a>
+    )
+  }
+
   if (!hasActiveGoal) {
     return (
       <div>
@@ -55,9 +78,6 @@ export default function WeeklyPlanSummaryCard({
       </div>
     )
   }
-
-  const nonRest = plan?.sessions.filter(s => !s.is_rest) ?? []
-  const doneCount = nonRest.filter(s => s.status === 'done').length
 
   return (
     <div>
