@@ -119,7 +119,7 @@ export default async function ViktmalPage() {
     source: r.source as 'manual' | 'yazio',
   }))
 
-  const [{ data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: recentlyResolvedRow }] = await Promise.all([
+  const [{ data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: recentlyResolvedRow }, { data: todayNoteRow }] = await Promise.all([
     supabase.from('deficit_checkins')
       .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
       .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
@@ -137,6 +137,7 @@ export default async function ViktmalPage() {
       .eq('user_id', user.id).in('status', ['passed', 'reached'])
       .gte('resolved_at', new Date(new Date().getTime() - 3 * 86400000).toISOString())
       .order('resolved_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('day_context_notes').select('tag, note').eq('user_id', user.id).eq('date', todayKey).maybeSingle(),
   ])
 
   return (
@@ -160,6 +161,7 @@ export default async function ViktmalPage() {
       activeMilestone={activeMilestoneRow as ActiveMilestone | null}
       budgetEvents={(budgetEventRows ?? []) as BudgetEvent[]}
       recentlyResolvedMilestone={recentlyResolvedRow as { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null}
+      todayNote={todayNoteRow as { tag: string | null; note: string | null } | null}
     />
   )
 }

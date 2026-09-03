@@ -214,9 +214,23 @@ export async function POST() {
   if (result.status === 'on_track' || result.status === 'adjust') {
     logApiCall(supabase, user.id, 'deficit_checkin_narrative')
     const { data: profileForTone } = await supabase.from('profiles').select('coach_tone').eq('id', user.id).single()
-    const summary = result.status === 'on_track'
+    let summary = result.status === 'on_track'
       ? `Period ${periodStartDate} till ${periodEndDate} (${periodDays} dagar, ${loggedDays} loggade). Loggen antydde ${result.predictedKg.toFixed(1)} kg förändring, faktisk vägning visade ${result.actualKg.toFixed(1)} kg. Systemet är rimligt kalibrerat, ingen justering föreslås.`
       : `Period ${periodStartDate} till ${periodEndDate} (${periodDays} dagar, ${loggedDays} loggade). Loggen antydde ${result.predictedKg.toFixed(1)} kg förändring, faktisk vägning visade ${result.actualKg.toFixed(1)} kg — en avvikelse. Föreslagen justering av träningskaloriernas korrigeringsfaktor: ${oldCorrection.toFixed(2)} → ${result.suggestedCorrection.toFixed(2)} (${result.suggestedCorrection > oldCorrection ? 'höjs, verklig förbrukning verkar högre än antaget' : 'sänks, träningskalorierna verkar mer överskattade än antaget'}).`
+
+    // Daniels idé #4 — dagarnas egna "varför"-taggar ger den här perioden
+    // kontext att kommentera mot, istället för att bara se en avvikelse
+    // utan förklaring.
+    const { data: dayNoteRows } = await supabase
+      .from('day_context_notes').select('tag')
+      .eq('user_id', user.id).gte('date', periodStartDate).lte('date', periodEndDate).not('tag', 'is', null)
+    if (dayNoteRows?.length) {
+      const counts = new Map<string, number>()
+      for (const r of dayNoteRows) counts.set(r.tag as string, (counts.get(r.tag as string) ?? 0) + 1)
+      const parts = Array.from(counts.entries()).filter(([tag]) => tag !== 'normal').map(([tag, n]) => `${tag} (${n})`)
+      if (parts.length) summary += ` Dagar med noterad kontext den här perioden: ${parts.join(', ')}.`
+    }
+
     narrative = await generateCheckinNarrative(supabase, user.id, summary, profileForTone?.coach_tone)
   }
 

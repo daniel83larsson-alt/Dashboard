@@ -48,6 +48,18 @@ export type BudgetEvent = {
   created_at: string
 }
 
+// Samma sju taggar som Kost-sidans dagsdetalj (FoodLogClient) — dupliceras
+// hellre än delas här, samma UI-bara-konstant-mönster som EVENT_KIND_LABEL.
+const DAY_TAGS: { value: string; label: string }[] = [
+  { value: 'normal', label: 'Vanlig dag' },
+  { value: 'sick', label: 'Sjuk' },
+  { value: 'social', label: 'Socialt' },
+  { value: 'travel', label: 'Resa' },
+  { value: 'stress', label: 'Stress' },
+  { value: 'injury', label: 'Skada' },
+  { value: 'other', label: 'Annat' },
+]
+
 const EVENT_KIND_LABEL: Record<string, string> = {
   settings_changed: 'Inställning ändrad',
   checkin_applied: 'Avstämning applicerad',
@@ -102,6 +114,7 @@ export default function ViktmalClient({
   activeMilestone,
   budgetEvents,
   recentlyResolvedMilestone,
+  todayNote,
 }: {
   todayKey: string
   days: DayEntry[]
@@ -122,6 +135,7 @@ export default function ViktmalClient({
   activeMilestone: ActiveMilestone | null
   budgetEvents: BudgetEvent[]
   recentlyResolvedMilestone: { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null
+  todayNote: { tag: string | null; note: string | null } | null
 }) {
   const router = useRouter()
   const [checkin, setCheckin] = useState<CheckinComputation | null>(null)
@@ -147,6 +161,18 @@ export default function ViktmalClient({
   const [milestoneCancelling, setMilestoneCancelling] = useState(false)
   const [milestoneError, setMilestoneError] = useState('')
   const [resolvedBannerDismissed, setResolvedBannerDismissed] = useState(false)
+  const [todayNoteTag, setTodayNoteTag] = useState<string | null>(todayNote?.tag ?? null)
+
+  async function saveTodayNote(tag: string | null) {
+    setTodayNoteTag(tag)
+    try {
+      await fetch('/api/kost/day-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: todayKey, tag, note: todayNote?.note ?? null }),
+      })
+    } catch { /* optimistic — will show correctly again on next load if this failed */ }
+  }
 
   const today = days[days.length - 1]
   const budget = budgetKcal ?? 0
@@ -349,6 +375,21 @@ export default function ViktmalClient({
           <p className="text-muted text-xs mt-2">Ingen budget uträknad än — fyll i startvikt, målvikt och måldatum i Profil.</p>
         )}
         <p className="text-muted text-xs mt-2">Dagssiffran är en uppskattning och svänger mycket. Titta på snittet nedan.</p>
+        <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-edge">
+          {DAY_TAGS.map(t => {
+            const active = todayNoteTag === t.value
+            return (
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => saveTodayNote(active ? null : t.value)}
+                className={`text-[11px] font-medium px-2 py-1 rounded-lg border transition-colors ${active ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-muted hover:border-accent/30'}`}
+              >
+                {t.label}
+              </button>
+            )
+          })}
+        </div>
       </div>
 
       {/* Lager 2: 7-dagars snitt */}

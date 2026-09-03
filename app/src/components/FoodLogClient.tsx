@@ -14,6 +14,8 @@ import {
   KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, metricTotalForDay, kostMealLabel, kostMetricLabel,
   type KostMeal, type KostMetric, type KostFoodEntry,
 } from '@/lib/kost'
+import { resolveDayNutrition } from '@/lib/day-nutrition-source'
+import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
 
 // Same palette/tooltip convention as the other chart components in the app
 // (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
@@ -52,7 +54,22 @@ export type KostSettings = {
   proteinGoalG: number | null
   carbGoalG: number | null
   fatGoalG: number | null
+  eveningGuardEnabled: boolean
+  eveningGuardHour: number
 }
+
+export type DayContextTag = 'normal' | 'sick' | 'social' | 'travel' | 'stress' | 'injury' | 'other'
+export type DayNote = { date: string; tag: string | null; note: string | null }
+
+const DAY_TAGS: { value: DayContextTag; label: string }[] = [
+  { value: 'normal', label: 'Vanlig dag' },
+  { value: 'sick', label: 'Sjuk' },
+  { value: 'social', label: 'Socialt' },
+  { value: 'travel', label: 'Resa' },
+  { value: 'stress', label: 'Stress' },
+  { value: 'injury', label: 'Skada' },
+  { value: 'other', label: 'Annat' },
+]
 
 type Estimate = { name: string; kcal: number; protein_g: number; carb_g: number; fat_g: number; portion_desc: string; confidence: string; source: 'ai_text' | 'photo' }
 type PendingPhoto = { data: string; mimeType: string }
@@ -96,6 +113,7 @@ export default function FoodLogClient({
   dayOverrides: initialDayOverrides,
   deficitSummary,
   kostReview,
+  dayNotes: initialDayNotes,
 }: {
   dailyCalorieGoal: number | null
   entries: FoodEntry[]
@@ -106,6 +124,7 @@ export default function FoodLogClient({
   dayOverrides: string[]
   deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
   kostReview: { generatedAt: string; kostWeek: string; kostGeneral: string } | null
+  dayNotes: DayNote[]
 }) {
   const router = useRouter()
   const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
@@ -195,6 +214,22 @@ export default function FoodLogClient({
         body: JSON.stringify({ date: dateKey }),
       })
     } catch { /* optimistic — a failed network call just means it'll show as incomplete again on next load */ }
+  }
+
+  // ── Dagskontext (Daniels idé #4) — kort tagg + valfri text per dag,
+  // instant-save på klick/blur snarare än ett separat sparknapp-flöde.
+  const [dayNotes, setDayNotes] = useState<Map<string, { tag: DayContextTag | null; note: string }>>(
+    () => new Map(initialDayNotes.map(n => [n.date, { tag: n.tag as DayContextTag | null, note: n.note ?? '' }]))
+  )
+  async function saveDayNote(dateKey: string, tag: DayContextTag | null, note: string) {
+    setDayNotes(prev => new Map(prev).set(dateKey, { tag, note }))
+    try {
+      await fetch('/api/kost/day-note', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date: dateKey, tag, note: note.trim() || null }),
+      })
+    } catch { /* optimistic — will show correctly again on next load if this failed */ }
   }
 
   // ── Redigera en loggad post ──────────────────────────────────────────────
@@ -478,10 +513,17 @@ export default function FoodLogClient({
     setLogging(false)
   }
 
-  async function logQuickPick(pick: QuickPick) {
+  // Idé #7 — kvällsloggning-vakten. Ett snabbval postar alltid en otaggad
+  // post, så när flera tappas snabbt på kvällen är det lätt att råka
+  // logga samma mellanmål två gånger. Bara ett förslag, aldrig en spärr —
+  // "lägg till ändå" fungerar precis som innan.
+  const [pendingQuickPick, setPendingQuickPick] = useState<QuickPick | null>(null)
+
+  async function logQuickPick(pick: QuickPick, options?: { replaceEntryId?: string }) {
     setLogging(true)
     setError('')
     try {
+      if (options?.replaceEntryId) await deleteEntry(options.replaceEntryId)
       const body = pick.source === 'database' && pick.off_id && pick.quantity
         ? { name: pick.name, source: 'database', offId: pick.off_id, grams: pick.quantity }
         : { name: pick.name, source: pick.source, baseKcal: pick.calories, baseProteinG: pick.protein_g, multiplier: 1 }
@@ -497,6 +539,13 @@ export default function FoodLogClient({
       setError('Nätverksfel')
     }
     setLogging(false)
+    setPendingQuickPick(null)
+  }
+
+  function handleQuickPickTap(pick: QuickPick) {
+    const guardActive = kostSettings.eveningGuardEnabled && new Date().getHours() >= kostSettings.eveningGuardHour
+    if (guardActive && todayEntries.length > 0) setPendingQuickPick(pick)
+    else logQuickPick(pick)
   }
 
   const previewKcal = selectedCandidate
@@ -949,7 +998,7 @@ export default function FoodLogClient({
             {visibleQuickPicks.map(p => (
               <div key={p.name} className="flex items-center gap-2 py-2 border-b border-edge last:border-b-0 text-xs">
                 <button
-                  onClick={() => logQuickPick(p)}
+                  onClick={() => handleQuickPickTap(p)}
                   disabled={logging}
                   className="flex-1 text-left text-fg hover:text-accent transition-colors disabled:opacity-50 truncate"
                 >
@@ -1395,7 +1444,29 @@ export default function FoodLogClient({
                   )}
                   {completeness.status === 'complete' && (
                     <>
-                      <p className="text-muted text-sm mb-4 font-mono">{kcal} kcal{kostSettings.calorieGoal != null && <span> / {kostSettings.calorieGoal} kcal</span>}</p>
+                      <p className="text-muted text-sm mb-2 font-mono">{kcal} kcal{kostSettings.calorieGoal != null && <span> / {kostSettings.calorieGoal} kcal</span>}</p>
+                      {(() => {
+                        const yazioDay = yazioByDate.get(selectedDay)
+                        const daySource: 'yazio' | 'manual' = yazioDay?.kcalEaten != null ? 'yazio' : 'manual'
+                        const dayProteinG = daySource === 'yazio' ? (yazioDay?.proteinG ?? null) : dayEntries.reduce((s, e) => s + (e.protein_g ?? 0), 0)
+                        let baselineSum = 0
+                        let baselineCount = 0
+                        for (let i = 1; i <= 30; i++) {
+                          const d = new Date(`${todayKey}T00:00:00`)
+                          d.setDate(d.getDate() - i)
+                          const key = d.toISOString().slice(0, 10)
+                          const n = resolveDayNutrition(key, yazioByDate, entriesByDate, kostSettings.trackedMeals, dayOverrides)
+                          if (n.isComplete) { baselineSum += n.eatenKcal; baselineCount++ }
+                        }
+                        const flags = detectDayAnomalies({
+                          day: { eatenKcal: kcal, proteinG: dayProteinG, entries: dayEntries, isComplete: true, source: daySource },
+                          baselineAvgKcal: baselineCount > 0 ? baselineSum / baselineCount : null,
+                          baselineDaysLogged: baselineCount,
+                          proteinGoalG: kostSettings.proteinGoalG,
+                          budgetKcal: deficitSummary?.budgetKcal ?? null,
+                        })
+                        return flags.length > 0 ? <p className="text-amber-400 text-xs mb-4">{dayFlagLabel(flags[0])}</p> : <div className="mb-4" />
+                      })()}
                       <div className="flex flex-col gap-2 mb-3">
                         {dayEntries.map(e => (
                           <button
@@ -1418,7 +1489,49 @@ export default function FoodLogClient({
                 </>
               )
             })()}
+
+            <div className="pt-3 mt-1 border-t border-edge">
+              <p className="text-muted text-[10px] uppercase tracking-wider mb-2">Kontext för dagen (valfritt)</p>
+              <div className="flex flex-wrap gap-1.5 mb-2">
+                {DAY_TAGS.map(t => {
+                  const active = dayNotes.get(selectedDay)?.tag === t.value
+                  return (
+                    <button
+                      key={t.value}
+                      type="button"
+                      onClick={() => saveDayNote(selectedDay, active ? null : t.value, dayNotes.get(selectedDay)?.note ?? '')}
+                      className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${active ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
+                    >
+                      {t.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <input
+                key={`${selectedDay}-note`}
+                type="text"
+                defaultValue={dayNotes.get(selectedDay)?.note ?? ''}
+                onBlur={e => saveDayNote(selectedDay, dayNotes.get(selectedDay)?.tag ?? null, e.target.value)}
+                placeholder="Kort anteckning, t.ex. vad som hände (valfritt)"
+                className="w-full bg-bg border border-edge rounded-xl px-3 py-2 text-xs text-fg placeholder-muted focus:outline-none focus:border-accent"
+              />
+            </div>
+
             <button onClick={() => setSelectedDay(null)} className="text-muted text-xs mt-4 w-full text-center">Stäng</button>
+          </div>
+        </div>
+      )}
+
+      {pendingQuickPick && (
+        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setPendingQuickPick(null)}>
+          <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <p className="text-fg text-sm mb-1">Logga &quot;{pendingQuickPick.name}&quot; nu på kvällen?</p>
+            <p className="text-muted text-xs mb-4">Du har redan loggat något idag — ersätt din senaste post eller lägg till en till?</p>
+            <div className="flex flex-col gap-2">
+              <button type="button" onClick={() => logQuickPick(pendingQuickPick, { replaceEntryId: todayEntries[0]?.id })} disabled={!todayEntries[0]} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">Ersätt senaste post</button>
+              <button type="button" onClick={() => logQuickPick(pendingQuickPick)} className="w-full text-fg border border-edge rounded-xl py-2.5 text-sm">Lägg till ändå</button>
+              <button type="button" onClick={() => setPendingQuickPick(null)} className="text-muted text-xs mt-1">Avbryt</button>
+            </div>
           </div>
         </div>
       )}

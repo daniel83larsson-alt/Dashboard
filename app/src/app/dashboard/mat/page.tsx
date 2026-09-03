@@ -17,8 +17,8 @@ export default async function MatPage() {
 
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
-  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }] = await Promise.all([
-    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
+  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }] = await Promise.all([
+    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, kost_evening_guard_enabled, kost_evening_guard_hour').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -27,6 +27,7 @@ export default async function MatPage() {
     // återanvänds här istället för ett eget AI-anrop, så en sida inte
     // tömmer kvoten som en annan sida redan betalat för.
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
+    supabase.from('day_context_notes').select('date, tag, note').eq('user_id', user.id).gte('date', sinceIso.slice(0, 10)),
   ])
 
   const todayKey = stockholmDateKey()
@@ -63,7 +64,11 @@ export default async function MatPage() {
     proteinGoalG: profile?.protein_goal_g ?? null,
     carbGoalG: profile?.carb_goal_g ?? null,
     fatGoalG: profile?.fat_goal_g ?? null,
+    eveningGuardEnabled: profile?.kost_evening_guard_enabled ?? false,
+    eveningGuardHour: profile?.kost_evening_guard_hour ?? 20,
   }
+
+  const dayNotes = (dayNoteRows ?? []) as { date: string; tag: string | null; note: string | null }[]
 
   const dayOverrides = (dayStatusRows ?? []).map(r => r.date as string)
 
@@ -112,6 +117,7 @@ export default async function MatPage() {
       dayOverrides={dayOverrides}
       deficitSummary={deficitSummary}
       kostReview={kostReview}
+      dayNotes={dayNotes}
     />
   )
 }

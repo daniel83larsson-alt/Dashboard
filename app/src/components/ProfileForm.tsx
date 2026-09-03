@@ -34,6 +34,8 @@ type Profile = {
   kost_tracked_metrics?: string[] | null
   kost_tracked_meals?: string[] | null
   kost_reminders_enabled?: boolean | null
+  kost_evening_guard_enabled?: boolean | null
+  kost_evening_guard_hour?: number | null
   protein_goal_g?: number | null
   carb_goal_g?: number | null
   fat_goal_g?: number | null
@@ -110,6 +112,8 @@ export default function ProfileForm({
   const [kostTrackedMetrics, setKostTrackedMetrics] = useState<KostMetric[]>((profile?.kost_tracked_metrics as KostMetric[] | null) ?? ['kcal'])
   const [kostTrackedMeals, setKostTrackedMeals] = useState<KostMeal[]>((profile?.kost_tracked_meals as KostMeal[] | null) ?? ['breakfast', 'lunch', 'dinner'])
   const [kostRemindersEnabled, setKostRemindersEnabled] = useState(profile?.kost_reminders_enabled ?? true)
+  const [eveningGuardEnabled, setEveningGuardEnabled] = useState(profile?.kost_evening_guard_enabled ?? false)
+  const [eveningGuardHour, setEveningGuardHour] = useState(profile?.kost_evening_guard_hour ?? 20)
   const [proteinGoalG, setProteinGoalG] = useState(profile?.protein_goal_g?.toString() ?? '')
   const [carbGoalG, setCarbGoalG] = useState(profile?.carb_goal_g?.toString() ?? '')
   const [fatGoalG, setFatGoalG] = useState(profile?.fat_goal_g?.toString() ?? '')
@@ -234,6 +238,8 @@ export default function ProfileForm({
       kost_tracked_metrics: kostTrackedMetrics.length ? kostTrackedMetrics : ['kcal'],
       kost_tracked_meals: kostTrackedMeals,
       kost_reminders_enabled: kostRemindersEnabled,
+      kost_evening_guard_enabled: eveningGuardEnabled,
+      kost_evening_guard_hour: eveningGuardHour,
       protein_goal_g: proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null,
       carb_goal_g: carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null,
       fat_goal_g: fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null,
@@ -729,6 +735,30 @@ export default function ProfileForm({
               />
               Påminn mig om jag glömmer logga en måltid
             </label>
+
+            <div>
+              <label className="flex items-center gap-2.5 text-sm text-fg">
+                <input
+                  type="checkbox"
+                  checked={eveningGuardEnabled}
+                  onChange={e => setEveningGuardEnabled(e.target.checked)}
+                  className="w-4 h-4 accent-accent"
+                />
+                Fråga innan snabbval loggas sent på kvällen
+              </label>
+              <p className="text-muted text-xs mt-1.5 ml-6">Förhindrar att samma mellanmål råkar loggas två gånger vid snabb tapping på kvällen — frågar om du vill ersätta senaste posten eller lägga till en till.</p>
+              {eveningGuardEnabled && (
+                <div className="ml-6 mt-2 flex items-center gap-2">
+                  <span className="text-muted text-xs">Från klockan</span>
+                  <input
+                    type="number" min={0} max={23} step={1} inputMode="numeric"
+                    value={eveningGuardHour}
+                    onChange={e => setEveningGuardHour(Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 0)))}
+                    className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
+                  />
+                </div>
+              )}
+            </div>
           </>
         )}
       </div>
