@@ -183,39 +183,17 @@ export default function ProfileForm({
     const deficitStartDateToSave = profile?.deficit_start_date
       ?? (deficitTrackingEnabled && deficitTargetWeightKg.trim() ? new Date().toISOString().slice(0, 10) : null)
 
-    // Budget snapshot recomputed and frozen here — save() is exactly the
-    // "settings changed" trigger lib/deficit.ts's budget-freeze design
-    // calls for. Uses the CURRENT weight for BMR (not the frozen start
-    // weight) since resting metabolism tracks the body as it actually is.
-    let deficitBudgetFields: { deficit_tdee_kcal: number | null; deficit_budget_kcal: number | null; deficit_budget_computed_at: string | null } = {
-      deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null,
-    }
-    if (deficitTrackingEnabled && deficitStartWeightKg.trim() && deficitTargetWeightKg.trim() && deficitTargetDate) {
-      const bmr = estimateBMR({
-        weightKg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
-        heightCm: heightCm.trim() && !Number.isNaN(parsedHeight) ? parsedHeight : null,
-        birthYear: birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null,
-        biologicalSex: (biologicalSex || null) as 'male' | 'female' | null,
-      }).bmr
-      const budget = computeDeficitBudget({
-        bmr,
-        goal: {
-          startWeightKg: !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : parsedWeight,
-          targetWeightKg: parsedDeficitTargetWeight,
-          targetDateISO: deficitTargetDate,
-          neatFactor: deficitNeatFactor,
-          garminCorrection: !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75,
-        },
-        avgTrainingKcalRaw,
-        activityFallbackKcal: deficitActivityFallbackKcal,
-        now: new Date(),
-      })
-      deficitBudgetFields = {
-        deficit_tdee_kcal: budget.tdeeKcal,
-        deficit_budget_kcal: budget.budgetKcal,
-        deficit_budget_computed_at: new Date().toISOString(),
-      }
-    }
+    // The frozen budget snapshot itself is no longer computed here — it's
+    // recomputed server-side (lib/deficit-budget-refreeze.ts, called right
+    // after this update lands) so it can account for an active delmål and
+    // an acknowledged above-safe override, neither of which this form
+    // knows about. Only the "goal turned off/incomplete → clear it" case
+    // stays here, since the refreeze route requires a goal to already be
+    // saved and won't touch these fields when there isn't one.
+    const goalWillBeComplete = deficitTrackingEnabled && deficitStartWeightKg.trim() && deficitTargetWeightKg.trim() && deficitTargetDate
+    const deficitBudgetFields = goalWillBeComplete
+      ? {}
+      : { deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null, deficit_budget_source: 'overall', deficit_budget_valid_until: null, deficit_budget_daily_deficit_kcal: null }
 
     await supabase.from('profiles').update({
       name,
@@ -250,6 +228,14 @@ export default function ProfileForm({
       deficit_reminders_enabled: deficitRemindersEnabled,
       ...deficitBudgetFields,
     }).eq('id', profile?.id ?? '')
+
+    if (goalWillBeComplete) {
+      await fetch('/api/deficit/budget/refreeze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'settings_changed' }),
+      })
+    }
 
     if (apiKey.trim()) {
       await fetch('/api/profile/save-llm-key', {

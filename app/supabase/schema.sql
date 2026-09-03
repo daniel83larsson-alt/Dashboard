@@ -1390,3 +1390,100 @@ drop policy if exists "Users see own deficit checkins" on public.deficit_checkin
 create policy "Users see own deficit checkins" on public.deficit_checkins
   for all using (auth.uid() = user_id);
 create index if not exists deficit_checkins_user_date_idx on public.deficit_checkins (user_id, period_end desc);
+
+-- ── Viktmål fas 2: delmål, tydlig varning istället för tyst spärr, samt
+-- vardagskontext/kvällsloggnings-idéerna Daniel skrev själv. Se lib/
+-- deficit.ts (resolveActiveGoalSegment, computeRollingWeightAverage,
+-- deficitOverrideSignature) och lib/deficit-budget-refreeze.ts, som är den
+-- ENDA platsen budgeten någonsin skrivs efter den här migreringen.
+
+-- Ett aktivt delmål i taget (Daniels beslut) — partiellt unikt index
+-- garanterar det på databasnivå, inte bara i applikationskoden.
+create table if not exists public.deficit_milestones (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  target_weight_kg numeric not null,
+  target_date date not null,
+  -- Ögonblicksbild av vad segmentet räknades FRÅN, så en senare omräkning
+  -- aldrig behöver gissa.
+  start_weight_kg numeric not null,
+  start_date date not null,
+  segment_tdee_kcal integer,
+  segment_budget_kcal integer,
+  segment_daily_deficit_kcal integer,
+  override_acknowledged_at timestamptz,
+  override_signature text,
+  status text not null default 'active'
+    check (status in ('active','passed','reached','cancelled')),
+  resolved_at timestamptz,
+  resolution_notified_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table public.deficit_milestones enable row level security;
+drop policy if exists "Users see own deficit milestones" on public.deficit_milestones;
+create policy "Users see own deficit milestones" on public.deficit_milestones
+  for all using (auth.uid() = user_id);
+create unique index if not exists deficit_milestones_one_active
+  on public.deficit_milestones (user_id) where status = 'active';
+create index if not exists deficit_milestones_user_date_idx
+  on public.deficit_milestones (user_id, target_date desc);
+
+-- Varje budgetändring, med före/efter — driver "din budget ändrades nyss"-
+-- bannern (via acknowledged_at), en "Budgethistorik"-panel, och avstämningens
+-- per-dag-budget-rekonstruktion när en budget ändrats mitt i en period.
+create table if not exists public.deficit_budget_events (
+  id uuid default gen_random_uuid() primary key,
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  kind text not null check (kind in (
+    'settings_changed','checkin_applied','milestone_set','milestone_expired',
+    'milestone_reached','milestone_cancelled','override_acknowledged','override_voided','stale_refresh')),
+  milestone_id uuid references public.deficit_milestones(id) on delete set null,
+  old_budget_kcal integer,
+  new_budget_kcal integer,
+  old_daily_deficit_kcal integer,
+  new_daily_deficit_kcal integer,
+  budget_source text check (budget_source in ('overall','milestone')),
+  override_active boolean not null default false,
+  acknowledged_at timestamptz,
+  created_at timestamptz default now()
+);
+alter table public.deficit_budget_events enable row level security;
+drop policy if exists "Users see own deficit budget events" on public.deficit_budget_events;
+create policy "Users see own deficit budget events" on public.deficit_budget_events
+  for all using (auth.uid() = user_id);
+create index if not exists deficit_budget_events_user_idx
+  on public.deficit_budget_events (user_id, created_at desc);
+
+-- Daniels idé #4 — kort "varför"-fält per dag. Frånvaro av en rad betyder
+-- alltid "obesvarat", aldrig "vanlig dag" — samma hållning kost_day_status
+-- redan har för avsaknad av en rad.
+create table if not exists public.day_context_notes (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  date date not null,
+  tag text check (tag in ('normal','sick','social','travel','stress','injury','other')),
+  note text,
+  updated_at timestamptz default now(),
+  primary key (user_id, date)
+);
+alter table public.day_context_notes enable row level security;
+drop policy if exists "Users see own day context notes" on public.day_context_notes;
+create policy "Users see own day context notes" on public.day_context_notes
+  for all using (auth.uid() = user_id);
+
+-- Vilken budget som gäller just nu och hur länge — det billiga triggret för
+-- auto-återgång: varje yta som håller profilen jämför bara
+-- deficit_budget_valid_until mot dagens datum.
+alter table public.profiles add column if not exists deficit_budget_source text not null default 'overall'
+  check (deficit_budget_source in ('overall','milestone'));
+alter table public.profiles add column if not exists deficit_budget_valid_until date;
+alter table public.profiles add column if not exists deficit_budget_daily_deficit_kcal integer;
+
+-- Synlig varning istället för tyst spärr (Daniels idé #8) — bindningen
+-- till exakt det mål den gavs för sköts av deficitOverrideSignature.
+alter table public.profiles add column if not exists deficit_override_acknowledged_at timestamptz;
+alter table public.profiles add column if not exists deficit_override_signature text;
+alter table public.profiles add column if not exists deficit_override_deficit_kcal integer;
+
+-- Idé #7, av som standard som alla andra opt-in-inställningar i appen.
+alter table public.profiles add column if not exists kost_evening_guard_enabled boolean not null default false;
+alter table public.profiles add column if not exists kost_evening_guard_hour smallint not null default 20;
