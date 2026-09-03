@@ -7,7 +7,7 @@ import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPi
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
 import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
 import { estimateBMR } from '@/lib/bmr'
-import { computeDeficitBudget } from '@/lib/deficit'
+import { computeDeficitBudget, deficitOverrideSignature, safetyBreachLabel } from '@/lib/deficit'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -47,6 +47,8 @@ type Profile = {
   deficit_garmin_correction?: number | null
   deficit_weigh_in_weekday?: number | null
   deficit_reminders_enabled?: boolean | null
+  deficit_override_acknowledged_at?: string | null
+  deficit_override_signature?: string | null
 }
 
 
@@ -121,6 +123,14 @@ export default function ProfileForm({
   const [deficitWeighInWeekday, setDeficitWeighInWeekday] = useState(profile?.deficit_weigh_in_weekday ?? 0)
   const [deficitRemindersEnabled, setDeficitRemindersEnabled] = useState(profile?.deficit_reminders_enabled ?? true)
   const [deficitAdvancedOpen, setDeficitAdvancedOpen] = useState(false)
+  // The signature of the goal the last "jag förstår riskerna, använd ändå"
+  // click applied to — null means not confirmed. Comparing this against
+  // the CURRENT goal's signature (rather than storing a plain boolean) is
+  // what makes the confirmation void itself the moment start/target/date
+  // changes, with no separate reset logic needed.
+  const [confirmedOverrideSignature, setConfirmedOverrideSignature] = useState<string | null>(
+    profile?.deficit_override_acknowledged_at ? (profile?.deficit_override_signature ?? null) : null,
+  )
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
@@ -195,6 +205,17 @@ export default function ProfileForm({
       ? {}
       : { deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null, deficit_budget_source: 'overall', deficit_budget_valid_until: null, deficit_budget_daily_deficit_kcal: null }
 
+    // Written BEFORE the refreeze call below runs, since refreezeDeficitBudget
+    // reads these back to decide allowUnsafe — an unconfirmed or stale
+    // (goal-changed) signature always saves as voided, never carried over.
+    const currentOverrideSignature = goalWillBeComplete
+      ? deficitOverrideSignature({ startWeightKg: parsedDeficitStartWeight, targetWeightKg: parsedDeficitTargetWeight, targetDateISO: deficitTargetDate })
+      : null
+    const overrideConfirmedNow = goalWillBeComplete && confirmedOverrideSignature === currentOverrideSignature
+    const deficitOverrideFields = overrideConfirmedNow
+      ? { deficit_override_acknowledged_at: new Date().toISOString(), deficit_override_signature: currentOverrideSignature }
+      : { deficit_override_acknowledged_at: null, deficit_override_signature: null, deficit_override_deficit_kcal: null }
+
     await supabase.from('profiles').update({
       name,
       llm_provider: provider,
@@ -227,6 +248,7 @@ export default function ProfileForm({
       deficit_weigh_in_weekday: deficitWeighInWeekday,
       deficit_reminders_enabled: deficitRemindersEnabled,
       ...deficitBudgetFields,
+      ...deficitOverrideFields,
     }).eq('id', profile?.id ?? '')
 
     if (goalWillBeComplete) {
@@ -801,6 +823,8 @@ export default function ProfileForm({
               if (Number.isNaN(startW) || Number.isNaN(targetW) || !deficitTargetDate) {
                 return <p className="text-muted text-xs">Fyll i startvikt, målvikt och måldatum för att se din budget.</p>
               }
+              const currentSignature = deficitOverrideSignature({ startWeightKg: startW, targetWeightKg: targetW, targetDateISO: deficitTargetDate })
+              const overrideConfirmed = confirmedOverrideSignature === currentSignature
               const correction = parseFloat(deficitGarminCorrection)
               const budget = computeDeficitBudget({
                 bmr,
@@ -808,19 +832,42 @@ export default function ProfileForm({
                 avgTrainingKcalRaw,
                 activityFallbackKcal: deficitActivityFallbackKcal,
                 now: new Date(),
+                allowUnsafe: overrideConfirmed,
               })
+              const { safety } = budget
               return (
-                <div className="bg-bg rounded-xl p-3 flex flex-col gap-1">
-                  <div className="flex items-baseline justify-between">
-                    <span className="text-muted text-xs">Din dagliga budget blir</span>
-                    <span className="font-mono text-accent text-lg font-bold">{budget.budgetKcal} kcal</span>
+                <div className="flex flex-col gap-2">
+                  <div className="bg-bg rounded-xl p-3 flex flex-col gap-1">
+                    <div className="flex items-baseline justify-between">
+                      <span className="text-muted text-xs">Din dagliga budget blir</span>
+                      <span className="font-mono text-accent text-lg font-bold">{budget.budgetKcal} kcal</span>
+                    </div>
+                    <div className="text-muted text-xs">TDEE ~{budget.tdeeKcal} kcal · underskott {budget.dailyDeficitKcal} kcal/dag</div>
                   </div>
-                  <div className="text-muted text-xs">TDEE ~{budget.tdeeKcal} kcal · underskott {budget.dailyDeficitKcal} kcal/dag</div>
-                  {budget.capped && (
-                    <p className="text-amber-400 text-xs mt-1">
-                      Det här måldatumet ger ett för snabbt underskott för att vara säkert — budgeten är satt till en säker lägstanivå istället.
-                      {budget.suggestedTargetDateISO && ` I den takten når du målet ${new Date(`${budget.suggestedTargetDateISO}T00:00:00`).toLocaleDateString('sv-SE')} istället.`}
-                    </p>
+
+                  {safety.breaches.length > 0 && (
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-2">
+                      <p className="text-amber-400 text-xs font-medium">Det här måldatumet är mer aggressivt än vi normalt rekommenderar:</p>
+                      <ul className="text-amber-400/90 text-xs list-disc list-inside flex flex-col gap-0.5">
+                        {safety.breaches.map(b => <li key={b}>{safetyBreachLabel(b)}</li>)}
+                      </ul>
+                      <p className="text-muted text-xs">
+                        En säkrare budget vore <span className="font-mono">{safety.safeBudgetKcal} kcal</span> (underskott {safety.safeDailyDeficitKcal} kcal/dag)
+                        {safety.suggestedTargetDateISO && `, vilket når målet ${new Date(`${safety.suggestedTargetDateISO}T00:00:00`).toLocaleDateString('sv-SE')} istället`}.
+                      </p>
+                      <label className="flex items-start gap-2.5 text-xs text-fg pt-1 border-t border-amber-500/20">
+                        <input
+                          type="checkbox"
+                          checked={overrideConfirmed}
+                          onChange={e => setConfirmedOverrideSignature(e.target.checked ? currentSignature : null)}
+                          className="w-4 h-4 accent-amber-500 mt-0.5 flex-shrink-0"
+                        />
+                        <span>Jag förstår riskerna och vill använda {safety.breaches.includes('below_hard_floor') ? 'den snabbare' : 'det här'} takten ändå.</span>
+                      </label>
+                      {overrideConfirmed && safety.breaches.includes('below_hard_floor') && (
+                        <p className="text-muted text-xs">Budgeten klamras ändå till en absolut säkerhetsgräns på minst {safety.hardFloorKcal} kcal — den kan inte gå lägre än så oavsett bekräftelse.</p>
+                      )}
+                    </div>
                   )}
                 </div>
               )

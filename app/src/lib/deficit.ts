@@ -186,6 +186,20 @@ export function deficitOverrideSignature(goal: { startWeightKg: number; targetWe
   return `${goal.startWeightKg.toFixed(1)}|${goal.targetWeightKg.toFixed(1)}|${goal.targetDateISO}`
 }
 
+// Swedish one-liner per breach, used by the warn-but-allow UI (Profil-
+// formuläret) to name which specific rail a too-aggressive goal breaks —
+// never just a generic "for aggressive" message.
+export function safetyBreachLabel(breach: SafetyBreach): string {
+  switch (breach) {
+    case 'deficit_above_max':
+      return 'Underskottet är högre än vad vi normalt rekommenderar (max 1000 kcal/dag).'
+    case 'below_budget_floor':
+      return 'Budgeten hamnar under en säker lägstanivå för din kropp.'
+    case 'below_hard_floor':
+      return 'Det här ligger vid den absoluta säkerhetsgränsen — går inte att sätta lägre ens med en bekräftelse.'
+  }
+}
+
 export type RollingWeight = {
   avgKg: number | null // null below minReadings — never a fake-precise number from too little data
   readings: number

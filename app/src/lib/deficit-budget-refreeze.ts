@@ -147,6 +147,12 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
     deficit_budget_source: segment.source,
     deficit_budget_valid_until: segment.validUntilISO,
     deficit_budget_daily_deficit_kcal: budget.dailyDeficitKcal,
+    // Snapshot for display only ("du använder ett bekräftat underskott på X
+    // kcal/dag") — the acknowledgement itself (acknowledged_at/signature)
+    // is written by the caller before this runs; this just mirrors the
+    // number that acknowledgement is currently producing, null once it
+    // stops applying.
+    deficit_override_deficit_kcal: budget.overrideActive ? budget.dailyDeficitKcal : null,
   }).eq('id', userId)
 
   if (milestoneRow) {
