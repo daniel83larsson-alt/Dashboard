@@ -78,7 +78,7 @@ export default async function DashboardPage() {
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
-    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
     // stays: dedupeForStats() needs it for Concept2/Garmin pair matching.
@@ -455,10 +455,28 @@ export default async function DashboardPage() {
                   <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
                 </>
               )}
-              {proteinToday > 0 && (
-                <div className="flex items-baseline justify-between mt-2 pt-2 border-t border-edge">
-                  <span className="text-muted text-xs">Protein (uppskattat)</span>
-                  <span className="font-mono text-fg text-sm">{Math.round(proteinToday)} g</span>
+            </div>
+          )}
+          {/* Protein — samma visuella vikt som kcal-korten (Daniel: "lika
+              synligt som kalorier"), inte undangömt som en liten rad. */}
+          {eatenToday > 0 && (proteinToday > 0 || profile?.protein_goal_g) && (
+            <div className="col-span-2 bg-card border border-edge rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs text-muted uppercase tracking-wider">Protein idag</div>
+                {!profile?.protein_goal_g && (
+                  <a href="/dashboard/profil" className="text-xs text-accent hover:underline">Sätt ett proteinmål →</a>
+                )}
+              </div>
+              <div className="flex items-baseline justify-between">
+                <span className="font-mono text-accent text-2xl font-bold">{Math.round(proteinToday)}</span>
+                <span className="text-muted text-xs">{profile?.protein_goal_g ? `/ ${profile.protein_goal_g} g mål` : 'g'}</span>
+              </div>
+              {profile?.protein_goal_g && (
+                <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
+                  <div
+                    className="h-full bg-accent rounded-full"
+                    style={{ width: `${Math.min(100, Math.round((proteinToday / profile.protein_goal_g) * 100))}%` }}
+                  />
                 </div>
               )}
             </div>

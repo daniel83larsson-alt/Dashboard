@@ -48,7 +48,7 @@ export default async function ViktmalPage() {
   const measurementSince = new Date(new Date().getTime() - MEASUREMENT_LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10)
 
   const todayStartIso = new Date(`${todayKey}T00:00:00`).toISOString()
-  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: measurementRows }, { data: todayActs }] = await Promise.all([
+  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: measurementRows }, { data: todayActs }, { data: wellnessRow }] = await Promise.all([
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
       .eq('user_id', user.id).gte('logged_at', sinceIso),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -60,8 +60,21 @@ export default async function ViktmalPage() {
     // budget) — today's own training calories, same "raw, uncorrected"
     // number the Kalorier-idag card already reads.
     supabase.from('activities').select('calories').eq('user_id', user.id).gte('start_date', todayStartIso),
+    // Idea #3/#6: rest-day-mode signal + sleep context — same wellness
+    // history dashboard/page.tsx and Hälsa already read, info-only here,
+    // never touches the budget.
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
   ])
   const todayTrainingKcalRaw = (todayActs ?? []).reduce((s, a) => s + (a.calories ?? 0), 0)
+
+  const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const wellnessHistory: { date: string; restingHR: number | null; bodyBattery: number | null; sleepHours: number | null }[] =
+    wellnessRaw ? (() => {
+      try {
+        const parsed = JSON.parse(wellnessRaw)
+        return Array.isArray(parsed?.history) ? parsed.history : []
+      } catch { return [] }
+    })() : []
 
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
@@ -129,6 +142,7 @@ export default async function ViktmalPage() {
       todayTrainingKcalRaw={todayTrainingKcalRaw}
       garminCorrection={profile.deficit_garmin_correction ?? 0.75}
       checkinHistory={(checkinRows ?? []) as CheckinHistoryRow[]}
+      wellnessHistory={wellnessHistory}
     />
   )
 }

@@ -774,20 +774,33 @@ export default function FoodLogClient({
             Inget kalorimål satt — <a href="/dashboard/profil" className="text-accent hover:underline">ange ett i Profil</a> för att se det som en budget.
           </p>
         )}
-        {!kostSettings.trackingEnabled && (
-          <div className="flex items-baseline justify-between mt-3 pt-3 border-t border-edge">
-            <span className="text-muted text-xs">Protein (uppskattat)</span>
-            <span className="font-mono text-fg text-sm">{Math.round(todayProtein)} g</span>
+        {/* Protein — samma visuella vikt som kalorierna ovan, inte en liten
+            rad eller en av tre likvärdiga rutor (Daniel: "lika synligt som
+            kalorier"). Visas alltid när något är loggat, oavsett om
+            Kost-mål är påslaget. */}
+        {todayProtein > 0 && (
+          <div className="mt-3 pt-3 border-t border-edge">
+            <div className="flex items-baseline justify-between">
+              <span className="text-muted text-xs">Protein idag</span>
+              <span className="font-mono text-accent text-lg font-bold">
+                {Math.round(todayProtein)} {kostSettings.proteinGoalG ? <span className="text-muted text-sm font-normal">/ {kostSettings.proteinGoalG} g mål</span> : <span className="text-muted text-sm font-normal">g</span>}
+              </span>
+            </div>
+            {kostSettings.proteinGoalG && (
+              <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden mt-1">
+                <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(100, Math.round((todayProtein / kostSettings.proteinGoalG) * 100))}%` }} />
+              </div>
+            )}
           </div>
         )}
         {kostSettings.trackingEnabled && (() => {
-          const shownMetrics = (['protein', 'carb', 'fat'] as const).filter(m => kostSettings.trackedMetrics.includes(m))
+          const shownMetrics = (['carb', 'fat'] as const).filter(m => kostSettings.trackedMetrics.includes(m))
           if (shownMetrics.length === 0) return null
           return (
             <div className="grid gap-2 mt-3 pt-3 border-t border-edge text-center" style={{ gridTemplateColumns: `repeat(${shownMetrics.length}, minmax(0, 1fr))` }}>
               {shownMetrics.map(m => {
                 const total = metricTotalForDay(todayEntries, m)
-                const goal = m === 'protein' ? kostSettings.proteinGoalG : m === 'carb' ? kostSettings.carbGoalG : kostSettings.fatGoalG
+                const goal = m === 'carb' ? kostSettings.carbGoalG : kostSettings.fatGoalG
                 return (
                   <div key={m} className="bg-bg rounded-lg py-2">
                     <div className="font-mono text-fg text-sm font-bold">

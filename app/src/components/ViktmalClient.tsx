@@ -3,7 +3,9 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage } from '@/lib/deficit'
+import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
+import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
 const ACCENT = '#ccd400'
 const MUTED = '#6b7280'
@@ -64,6 +66,7 @@ export default function ViktmalClient({
   todayTrainingKcalRaw,
   garminCorrection,
   checkinHistory,
+  wellnessHistory,
 }: {
   todayKey: string
   days: DayEntry[]
@@ -79,6 +82,7 @@ export default function ViktmalClient({
   todayTrainingKcalRaw: number
   garminCorrection: number
   checkinHistory: CheckinHistoryRow[]
+  wellnessHistory: { date: string; restingHR: number | null; bodyBattery: number | null; sleepHours: number | null }[]
 }) {
   const router = useRouter()
   const [checkin, setCheckin] = useState<CheckinComputation | null>(null)
@@ -110,11 +114,32 @@ export default function ViktmalClient({
     [measurements]
   )
   const currentWeightKg = weightHistory.length ? weightHistory[weightHistory.length - 1].weightKg : startWeightKg
+  // 3-weigh-in rolling average — one atypical morning (dehydration, a late
+  // heavy meal) shouldn't move the headline number, same smoothing
+  // philosophy as the 7-day calorie average above.
+  const rollingWeight = useMemo(
+    () => computeRollingWeightAverage(weightHistory.map(m => ({ date: m.date, weightKg: m.weightKg })), todayKey),
+    [weightHistory, todayKey]
+  )
   const waistHistory = useMemo(
     () => measurements.filter((m): m is Measurement & { waistCm: number } => m.waistCm != null).sort((a, b) => a.date.localeCompare(b.date)),
     [measurements]
   )
   const latestWaist = waistHistory.length ? waistHistory[waistHistory.length - 1] : null
+  const waistChartData = waistHistory.map(m => ({ date: fmtDate(m.date), Midja: m.waistCm }))
+  const waistDeltaCm = waistHistory.length >= 2 ? Math.round((waistHistory[waistHistory.length - 1].waistCm - waistHistory[0].waistCm) * 10) / 10 : null
+
+  const bodyTrendNote = useMemo(
+    () => detectBodyTrendNote({
+      weighIns: weightHistory.map(m => ({ date: m.date, weightKg: m.weightKg })),
+      waistMeasurements: waistHistory.map(m => ({ date: m.date, waistCm: m.waistCm })),
+      todayKey,
+    }),
+    [weightHistory, waistHistory, todayKey]
+  )
+
+  const restingHrSignal = useMemo(() => computeRestingHrSignal(wellnessHistory, todayKey), [wellnessHistory, todayKey])
+  const sleepContext = useMemo(() => computeSleepContext(wellnessHistory, todayKey), [wellnessHistory, todayKey])
 
   const progressPct = startWeightKg != null && targetWeightKg != null && currentWeightKg != null && startWeightKg !== targetWeightKg
     ? Math.min(100, Math.max(0, Math.round(((startWeightKg - currentWeightKg) / (startWeightKg - targetWeightKg)) * 100)))
@@ -247,7 +272,12 @@ export default function ViktmalClient({
           <>
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="font-mono text-fg">{startWeightKg.toFixed(1)} kg</span>
-              {currentWeightKg != null && currentWeightKg !== startWeightKg && (
+              {rollingWeight.avgKg != null ? (
+                <span className="text-right">
+                  <span className="font-mono text-accent font-bold block">{rollingWeight.avgKg.toFixed(1)} kg</span>
+                  <span className="text-muted text-[10px]">snitt av {rollingWeight.readings} vägningar{currentWeightKg != null && Math.abs(currentWeightKg - rollingWeight.avgKg) >= 0.1 ? ` · senast ${currentWeightKg.toFixed(1)}` : ''}</span>
+                </span>
+              ) : currentWeightKg != null && currentWeightKg !== startWeightKg && (
                 <span className="font-mono text-accent font-bold">{currentWeightKg.toFixed(1)} kg</span>
               )}
               <span className="font-mono text-muted">{targetWeightKg.toFixed(1)} kg</span>
@@ -263,8 +293,8 @@ export default function ViktmalClient({
           <p className="text-muted text-xs">Sätt startvikt och målvikt i Profil för att se din resa här.</p>
         )}
 
-        {latestWaist && (
-          <p className="text-muted text-xs mt-3 pt-3 border-t border-edge">Midjemått senast: {latestWaist.waistCm} cm ({fmtDate(latestWaist.date)})</p>
+        {bodyTrendNote && (
+          <p className="text-accent text-xs mt-3 pt-3 border-t border-edge">{bodyTrendNoteLabel(bodyTrendNote)}</p>
         )}
 
         {chartData.length > 2 && (
@@ -282,10 +312,53 @@ export default function ViktmalClient({
           </div>
         )}
 
+        {latestWaist && (
+          <div className="mt-4 pt-3 border-t border-edge">
+            <div className="flex items-baseline justify-between">
+              <span className="text-muted text-xs">Midjemått senast: {latestWaist.waistCm} cm ({fmtDate(latestWaist.date)})</span>
+              {waistDeltaCm != null && (
+                <span className={`text-xs font-mono ${waistDeltaCm < 0 ? 'text-accent' : 'text-muted'}`}>{waistDeltaCm > 0 ? '+' : ''}{waistDeltaCm} cm sedan start</span>
+              )}
+            </div>
+            {waistChartData.length > 2 && (
+              <ResponsiveContainer width="100%" height={90}>
+                <LineChart data={waistChartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
+                  <Tooltip {...chartTooltip} formatter={(v) => [`${v} cm`, 'Midja']} />
+                  <Line type="monotone" dataKey="Midja" stroke={MUTED} strokeWidth={2} dot={{ r: 2 }} connectNulls />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+        )}
+
         {tdeeKcal != null && budgetComputedAt && (
           <p className="text-muted text-[10px] mt-3">Budget uträknad {new Date(budgetComputedAt).toLocaleDateString('sv-SE')} (TDEE ~{tdeeKcal} kcal) — räknas om automatiskt om vikten rör sig mycket eller inställningarna ändras.</p>
         )}
       </div>
+
+      {/* Bakgrundskontext — vilopuls/Body Battery och sömn, rör aldrig
+          budgeten (Daniel: "inte tänkt att påverka kaloriberäkningen
+          automatiskt"). */}
+      {(restingHrSignal.status === 'elevated' || sleepContext.avgSleepHours != null) && (
+        <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-2">
+          {restingHrSignal.status === 'elevated' && (
+            <div className="flex items-start gap-2">
+              <span className="text-amber-400 text-sm">⚠</span>
+              <p className="text-fg text-sm">
+                Förhöjd vilopuls senaste dagarna ({restingHrSignal.recentAvgBpm} bpm mot ditt snitt på {restingHrSignal.baselineBpm} bpm)
+                {restingHrSignal.bodyBatteryCorroborates ? ', och Body Battery bekräftar samma bild' : ''} — överväg att äta närmare underhåll tills den normaliseras.
+              </p>
+            </div>
+          )}
+          {sleepContext.avgSleepHours != null && (
+            <p className="text-muted text-xs">
+              Snittsömn senaste {sleepContext.nights} dygnen: {sleepContext.avgSleepHours} h
+              <span className="text-muted"> — bara bakgrund, styr inte budgeten.</span>
+            </p>
+          )}
+        </div>
+      )}
 
       {/* Väg in */}
       <button type="button" onClick={() => setLogOpen(v => !v)} className="bg-accent text-bg font-semibold py-3 rounded-2xl text-sm hover:opacity-90 transition-opacity">
