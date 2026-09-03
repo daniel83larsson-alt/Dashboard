@@ -22,20 +22,52 @@ export type DeficitGoalInput = {
   garminCorrection: number // default 0.75, clamped to [0.5, 1.1] by the caller/UI
 }
 
+export type SafetyBreach = 'deficit_above_max' | 'below_budget_floor' | 'below_hard_floor'
+
+// The honest numbers behind a possibly-capped budget — always present, even
+// when nothing was breached (breaches: []). Lets a caller show "here's what
+// your date actually implies, and here's the safe alternative" instead of
+// silently substituting one for the other (Daniel: warn, don't silently
+// block or silently allow).
+export type DeficitSafety = {
+  requestedDailyDeficitKcal: number // what targetDateISO literally implies, floored at 0 (never negative for a "gain" goal)
+  requestedBudgetKcal: number // tdee - requested, NOT floored — can be unrealistically low
+  breaches: SafetyBreach[] // empty = the requested budget is already safe
+  maxSafeDeficitKcal: number
+  budgetFloorKcal: number // max(round(bmr*1.1), MIN_BUDGET_FLOOR_KCAL)
+  hardFloorKcal: number // ABSOLUTE_MIN_BUDGET_KCAL — never overridable, see computeDeficitBudget
+  safeDailyDeficitKcal: number
+  safeBudgetKcal: number
+  // The date reachable at the SAFE rate — present whenever there's a breach
+  // to explain, regardless of whether allowUnsafe ended up overriding it.
+  suggestedTargetDateISO: string | null
+}
+
 export type DeficitBudget = {
   tdeeKcal: number
   dailyDeficitKcal: number
   budgetKcal: number
   capped: boolean
-  // Present only when capped — the deficit needed to hit targetDateISO was
-  // outside the safe range, so this is the date that IS achievable at the
-  // safe deficit instead, computed from `now`.
+  // True when a breach exists AND allowUnsafe was passed — the budget in
+  // force is the (clamped-to-the-hard-floor) requested one, not the safe one.
+  overrideActive: boolean
+  // Present only when capped (unchanged meaning from before overrides
+  // existed) — the date achievable at the safe deficit instead. Use
+  // safety.suggestedTargetDateISO to see it even while overriding.
   suggestedTargetDateISO: string | null
+  safety: DeficitSafety
 }
 
 const MIN_SAFE_DEFICIT_KCAL = 0
 const MAX_SAFE_DEFICIT_KCAL = 1000
 const MIN_BUDGET_FLOOR_KCAL = 1400
+
+// A hard floor/ceiling that NOT EVEN an explicit user acknowledgement can
+// cross — Daniel's confirmed call: this is health data, and a ceiling that
+// can never be clicked away protects against a genuinely dangerous goal
+// regardless of how many times "use anyway" gets pressed.
+const ABSOLUTE_MIN_BUDGET_KCAL = 1200
+const ABSOLUTE_MAX_DEFICIT_KCAL = 1500
 
 function addDays(iso: string, days: number): string {
   const d = new Date(`${iso}T00:00:00`)
@@ -62,12 +94,17 @@ export function computeDeficitBudget({
   avgTrainingKcalRaw,
   activityFallbackKcal,
   now,
+  allowUnsafe = false,
 }: {
   bmr: number
   goal: DeficitGoalInput
   avgTrainingKcalRaw: number | null
   activityFallbackKcal: number
   now: Date
+  // Caller has already verified a valid, still-matching acknowledgement
+  // (see deficitOverrideSignature) — this function does not check that
+  // itself, it only applies the ABSOLUTE_* hard floor once asked to.
+  allowUnsafe?: boolean
 }): DeficitBudget {
   const trainingKcal = avgTrainingKcalRaw ?? activityFallbackKcal
   const tdeeKcal = Math.round(bmr * goal.neatFactor + trainingKcal * goal.garminCorrection)
@@ -76,21 +113,196 @@ export function computeDeficitBudget({
   const daysLeft = Math.max(1, daysBetween(nowKey, goal.targetDateISO))
   const kgToLose = goal.startWeightKg - goal.targetWeightKg
   const rawDailyDeficit = (kgToLose * KCAL_PER_KG) / daysLeft
-  const dailyDeficitKcal = Math.round(Math.min(MAX_SAFE_DEFICIT_KCAL, Math.max(MIN_SAFE_DEFICIT_KCAL, rawDailyDeficit)))
 
-  const floor = Math.max(Math.round(bmr * 1.1), MIN_BUDGET_FLOOR_KCAL)
-  const rawBudget = tdeeKcal - dailyDeficitKcal
-  const capped = rawBudget < floor
-  const budgetKcal = capped ? floor : rawBudget
+  // What the target date literally implies, floored at 0 (a "gain" goal is
+  // never a negative deficit) but NOT capped at MAX_SAFE_DEFICIT_KCAL —
+  // this is the honest number shown to the user, safe or not.
+  const requestedDailyDeficitKcal = Math.round(Math.max(MIN_SAFE_DEFICIT_KCAL, rawDailyDeficit))
+  const requestedBudgetKcal = tdeeKcal - requestedDailyDeficitKcal
+
+  const budgetFloorKcal = Math.max(Math.round(bmr * 1.1), MIN_BUDGET_FLOOR_KCAL)
+
+  const breaches: SafetyBreach[] = []
+  if (requestedDailyDeficitKcal > MAX_SAFE_DEFICIT_KCAL) breaches.push('deficit_above_max')
+  if (requestedBudgetKcal < budgetFloorKcal) breaches.push('below_budget_floor')
+  if (requestedDailyDeficitKcal > ABSOLUTE_MAX_DEFICIT_KCAL || requestedBudgetKcal < ABSOLUTE_MIN_BUDGET_KCAL) {
+    breaches.push('below_hard_floor')
+  }
+
+  const safeDailyDeficitKcal = Math.round(Math.min(MAX_SAFE_DEFICIT_KCAL, Math.max(MIN_SAFE_DEFICIT_KCAL, rawDailyDeficit)))
+  const safeBudgetKcal = Math.max(budgetFloorKcal, tdeeKcal - safeDailyDeficitKcal)
 
   let suggestedTargetDateISO: string | null = null
-  if (capped) {
-    const realisticDailyDeficit = Math.max(1, tdeeKcal - floor)
+  if (breaches.length > 0) {
+    const realisticDailyDeficit = Math.max(1, tdeeKcal - budgetFloorKcal)
     const realisticDaysNeeded = (kgToLose * KCAL_PER_KG) / realisticDailyDeficit
     suggestedTargetDateISO = addDays(nowKey, realisticDaysNeeded)
   }
 
-  return { tdeeKcal, dailyDeficitKcal, budgetKcal, capped, suggestedTargetDateISO }
+  const safety: DeficitSafety = {
+    requestedDailyDeficitKcal,
+    requestedBudgetKcal,
+    breaches,
+    maxSafeDeficitKcal: MAX_SAFE_DEFICIT_KCAL,
+    budgetFloorKcal,
+    hardFloorKcal: ABSOLUTE_MIN_BUDGET_KCAL,
+    safeDailyDeficitKcal,
+    safeBudgetKcal,
+    suggestedTargetDateISO,
+  }
+
+  if (breaches.length === 0) {
+    return {
+      tdeeKcal, dailyDeficitKcal: requestedDailyDeficitKcal, budgetKcal: requestedBudgetKcal,
+      capped: false, overrideActive: false, suggestedTargetDateISO: null, safety,
+    }
+  }
+
+  if (allowUnsafe) {
+    // Recompute the budget FROM the clamped deficit so budget+deficit
+    // always sum to tdeeKcal exactly, rather than clamping each
+    // independently and risking them disagreeing.
+    const clampedDeficit = Math.min(requestedDailyDeficitKcal, ABSOLUTE_MAX_DEFICIT_KCAL)
+    const budgetKcal = Math.max(tdeeKcal - clampedDeficit, ABSOLUTE_MIN_BUDGET_KCAL)
+    return {
+      tdeeKcal, dailyDeficitKcal: tdeeKcal - budgetKcal, budgetKcal,
+      capped: false, overrideActive: true, suggestedTargetDateISO: null, safety,
+    }
+  }
+
+  return {
+    tdeeKcal, dailyDeficitKcal: safeDailyDeficitKcal, budgetKcal: safeBudgetKcal,
+    capped: true, overrideActive: false, suggestedTargetDateISO, safety,
+  }
+}
+
+// Binds an above-safe acknowledgement to the exact goal it was given for —
+// change the target weight or date and the signature no longer matches, so
+// a stale "yes, use this anyway" can never silently carry over onto a
+// different (possibly even more aggressive) goal. Deliberately excludes
+// neatFactor/garminCorrection: a check-in nudging the correction factor is
+// not the user changing their mind about the goal itself.
+export function deficitOverrideSignature(goal: { startWeightKg: number; targetWeightKg: number; targetDateISO: string }): string {
+  return `${goal.startWeightKg.toFixed(1)}|${goal.targetWeightKg.toFixed(1)}|${goal.targetDateISO}`
+}
+
+export type RollingWeight = {
+  avgKg: number | null // null below minReadings — never a fake-precise number from too little data
+  readings: number
+  latestKg: number | null
+  latestDate: string | null
+  windowDays: number
+}
+
+// Smooths the "current weight" figure the same way compute7DayAverage
+// smooths the calorie diff — one bad morning (dehydration, a late heavy
+// meal) shouldn't move the headline number. Two call shapes in practice:
+// display (small window/sample, hidden fast when data's thin) and the
+// goal-segment math (wider window, falls back to a single reading sooner
+// since a delmål calculation needs SOME number to start from).
+export function computeRollingWeightAverage(
+  weighIns: { date: string; weightKg: number }[],
+  todayKey: string,
+  opts?: { windowDays?: number; maxReadings?: number; minReadings?: number },
+): RollingWeight {
+  const windowDays = opts?.windowDays ?? 10
+  const maxReadings = opts?.maxReadings ?? 3
+  const minReadings = opts?.minReadings ?? 2
+
+  const sorted = [...weighIns].sort((a, b) => b.date.localeCompare(a.date)) // newest first
+  const latest = sorted[0] ?? null
+  const windowStart = addDays(todayKey, -windowDays)
+  const inWindow = sorted.filter(w => w.date >= windowStart && w.date <= todayKey).slice(0, maxReadings)
+
+  const avgKg = inWindow.length >= minReadings
+    ? Math.round((inWindow.reduce((s, w) => s + w.weightKg, 0) / inWindow.length) * 10) / 10
+    : null
+
+  return {
+    avgKg,
+    readings: inWindow.length,
+    latestKg: latest?.weightKg ?? null,
+    latestDate: latest?.date ?? null,
+    windowDays,
+  }
+}
+
+export type GoalSegmentSource = 'overall' | 'milestone'
+
+export type MilestoneInput = {
+  targetWeightKg: number
+  targetDateISO: string
+  overrideAcknowledged: boolean
+}
+
+export type MilestoneRejectedReason = 'wrong_direction' | 'beyond_overall_target' | 'not_before_overall_date'
+
+export type GoalSegment = {
+  source: GoalSegmentSource
+  targetWeightKg: number
+  targetDateISO: string
+  overrideAcknowledged: boolean
+  validUntilISO: string | null // the milestone's own date when source === 'milestone', else null
+  milestoneExpired: boolean // a milestone existed but its date has already passed
+  milestoneRejectedReason: MilestoneRejectedReason | null
+}
+
+// Decides which goal the ONE active budget is aimed at right now — the
+// overall goal, or a nearer-term milestone layered on top of it. A
+// milestone never replaces the overall goal's own stored target; it's
+// always resolved fresh against it here.
+export function resolveActiveGoalSegment(input: {
+  overall: { startWeightKg: number; targetWeightKg: number; targetDateISO: string; overrideAcknowledged: boolean }
+  milestone: MilestoneInput | null
+  todayKey: string
+}): GoalSegment {
+  const { overall, milestone, todayKey } = input
+
+  const overallSegment: GoalSegment = {
+    source: 'overall',
+    targetWeightKg: overall.targetWeightKg,
+    targetDateISO: overall.targetDateISO,
+    overrideAcknowledged: overall.overrideAcknowledged,
+    validUntilISO: null,
+    milestoneExpired: false,
+    milestoneRejectedReason: null,
+  }
+
+  if (!milestone) return overallSegment
+
+  if (milestone.targetDateISO < todayKey) {
+    return { ...overallSegment, milestoneExpired: true }
+  }
+
+  // Valid range for a loss goal: overallTarget <= milestoneTarget < overallStart
+  // (mirrored for a gain goal). Two distinct ways to fall outside it:
+  // not even past the starting weight ('wrong_direction'), or past the
+  // overall target itself — more aggressive than the final goal
+  // ('beyond_overall_target').
+  const isLossGoal = overall.targetWeightKg < overall.startWeightKg
+  let rejectedReason: MilestoneRejectedReason | null = null
+  if (isLossGoal) {
+    if (milestone.targetWeightKg >= overall.startWeightKg) rejectedReason = 'wrong_direction'
+    else if (milestone.targetWeightKg < overall.targetWeightKg) rejectedReason = 'beyond_overall_target'
+  } else {
+    if (milestone.targetWeightKg <= overall.startWeightKg) rejectedReason = 'wrong_direction'
+    else if (milestone.targetWeightKg > overall.targetWeightKg) rejectedReason = 'beyond_overall_target'
+  }
+  if (!rejectedReason && milestone.targetDateISO >= overall.targetDateISO) {
+    rejectedReason = 'not_before_overall_date'
+  }
+
+  if (rejectedReason) return { ...overallSegment, milestoneRejectedReason: rejectedReason }
+
+  return {
+    source: 'milestone',
+    targetWeightKg: milestone.targetWeightKg,
+    targetDateISO: milestone.targetDateISO,
+    overrideAcknowledged: milestone.overrideAcknowledged,
+    validUntilISO: milestone.targetDateISO,
+    milestoneExpired: false,
+    milestoneRejectedReason: null,
+  }
 }
 
 export type DailyDeficitStatus = 'grey' | 'green' | 'yellow' | 'red'
