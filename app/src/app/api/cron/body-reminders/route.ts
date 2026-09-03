@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { sendPushToUser } from '@/lib/push'
 import { stockholmDateKey } from '@/lib/dates'
-import { selectCheckinPeriod } from '@/lib/deficit'
+import { selectCheckinPeriod, computeRollingWeightAverage } from '@/lib/deficit'
+import { refreezeDeficitBudget } from '@/lib/deficit-budget-refreeze'
 
 // Runs once a day (see dl-trainer-cron.yml) — three independent, cheap
 // checks per opted-in user: is today their weigh-in day and they haven't
@@ -80,11 +81,64 @@ export async function GET(request: NextRequest) {
     }))),
   ])
 
+  // Delmål expiry/early-reach — a date-driven check, so it runs against
+  // EVERY active milestone regardless of the user's weigh-in weekday (the
+  // filter the block above is scoped to would silently skip most users
+  // most days).
+  const { data: activeMilestones } = await supabase
+    .from('deficit_milestones')
+    .select('id, user_id, target_weight_kg, target_date, start_weight_kg')
+    .eq('status', 'active')
+
+  let milestoneExpired = 0
+  let milestoneReached = 0
+  if (activeMilestones?.length) {
+    const milestoneUserIds = activeMilestones.map(m => m.user_id)
+    const { data: milestoneWeights } = await supabase
+      .from('body_measurements')
+      .select('user_id, measured_on, weight_kg')
+      .in('user_id', milestoneUserIds).not('weight_kg', 'is', null)
+      .order('measured_on', { ascending: false })
+
+    const weightsByMilestoneUser = new Map<string, { date: string; weightKg: number }[]>()
+    for (const row of (milestoneWeights ?? [])) {
+      const list = weightsByMilestoneUser.get(row.user_id) ?? []
+      list.push({ date: row.measured_on as string, weightKg: row.weight_kg as number })
+      weightsByMilestoneUser.set(row.user_id, list)
+    }
+
+    await Promise.allSettled(activeMilestones.map(async milestone => {
+      const isExpired = milestone.target_date < todayKey
+      let reason: 'milestone_expired' | 'milestone_reached' | null = isExpired ? 'milestone_expired' : null
+
+      if (!isExpired) {
+        const rolling = computeRollingWeightAverage(weightsByMilestoneUser.get(milestone.user_id) ?? [], todayKey, { windowDays: 14, maxReadings: 7, minReadings: 1 })
+        const currentKg = rolling.avgKg ?? rolling.latestKg
+        if (currentKg != null) {
+          const isLoss = milestone.target_weight_kg < milestone.start_weight_kg
+          const reached = isLoss ? currentKg <= milestone.target_weight_kg : currentKg >= milestone.target_weight_kg
+          if (reached) reason = 'milestone_reached'
+        }
+      }
+      if (!reason) return
+
+      await refreezeDeficitBudget(supabase, milestone.user_id, reason)
+      if (reason === 'milestone_expired') milestoneExpired++
+      else milestoneReached++
+
+      await sendPushToUser(supabase, milestone.user_id, reason === 'milestone_reached'
+        ? { title: 'Delmål nått! 🎉', body: `Du nådde ditt delmål på ${milestone.target_weight_kg} kg tidigt — budgeten är omräknad mot den lugnare övergripande takten.`, url: '/dashboard/viktmal' }
+        : { title: 'Delmålsperioden är slut', body: `Delmålet på ${milestone.target_weight_kg} kg gick ut utan att nås — budgeten är omräknad mot den lugnare övergripande takten.`, url: '/dashboard/viktmal' })
+    }))
+  }
+
   return NextResponse.json({
     ranAt: new Date().toISOString(),
     candidates: userIds.length,
     weighInReminded: weighInResults.filter(r => r.status === 'fulfilled').length,
     waistReminded: waistResults.filter(r => r.status === 'fulfilled').length,
     checkinReminded: checkinResults.filter(r => r.status === 'fulfilled').length,
+    milestoneExpired,
+    milestoneReached,
   })
 }

@@ -78,6 +78,7 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
     .single()
 
   if (!profile?.deficit_tracking_enabled || profile.deficit_budget_kcal == null) return { available: false, reason: 'no_goal' }
+  const currentBudgetKcal = profile.deficit_budget_kcal
 
   const { data: weightRows } = await supabase
     .from('body_measurements')
@@ -94,7 +95,7 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
   const periodStartIso = `${periodStartDate}T00:00:00.000Z`
   const periodEndIsoExclusive = new Date(new Date(`${periodEndDate}T00:00:00Z`).getTime() + 86400000).toISOString()
 
-  const [{ data: waistRows }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: acts }] = await Promise.all([
+  const [{ data: waistRows }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: acts }, { data: budgetEventRows }] = await Promise.all([
     supabase.from('body_measurements').select('measured_on, waist_cm').eq('user_id', userId).not('waist_cm', 'is', null)
       .gte('measured_on', periodStartDate).lte('measured_on', periodEndDate).order('measured_on', { ascending: true }),
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
@@ -104,6 +105,11 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
       .gte('date', periodStartDate).lte('date', periodEndDate),
     supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
       .eq('user_id', userId).gte('start_date', periodStartIso).lt('start_date', periodEndIsoExclusive),
+    // Everything up to the period's end, unbounded on the start side — a
+    // day near the start of the period needs whichever event was most
+    // recently in effect even if that event predates periodStartDate.
+    supabase.from('deficit_budget_events').select('created_at, new_budget_kcal')
+      .eq('user_id', userId).lte('created_at', periodEndIsoExclusive).order('created_at', { ascending: true }),
   ])
 
   const waistList = (waistRows ?? []) as { measured_on: string; waist_cm: number }[]
@@ -134,6 +140,23 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
     return d.toISOString().slice(0, 10)
   })
 
+  // Reconstructs which budget was actually in force on a given day instead
+  // of assuming today's current budget applied for the whole period — a
+  // settings change or a delmål starting/ending mid-period used to make
+  // every day before it silently wrong. Falls back to the current budget
+  // for any day with no event yet in effect (covers the whole history
+  // before this event log existed).
+  const budgetEvents = (budgetEventRows ?? []) as { created_at: string; new_budget_kcal: number | null }[]
+  function budgetInForceOn(dateKey: string): number {
+    const dayEndIso = new Date(`${dateKey}T23:59:59.999`).toISOString()
+    let effective = currentBudgetKcal
+    for (const ev of budgetEvents) {
+      if (ev.created_at > dayEndIso) break
+      if (ev.new_budget_kcal != null) effective = ev.new_budget_kcal
+    }
+    return effective
+  }
+
   let loggedDays = 0
   let loggedDeficitKcal = 0
   for (const dateKey of dayKeys) {
@@ -151,7 +174,7 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
     }
     if (isComplete) {
       loggedDays++
-      loggedDeficitKcal += profile.deficit_budget_kcal - eatenKcal
+      loggedDeficitKcal += budgetInForceOn(dateKey) - eatenKcal
     }
   }
 

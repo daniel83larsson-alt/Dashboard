@@ -200,6 +200,21 @@ export function safetyBreachLabel(breach: SafetyBreach): string {
   }
 }
 
+// Swedish one-liner per rejection, used by the delmål-create UI/route to
+// explain exactly why a proposed milestone falls outside the "closer,
+// same-direction, before-the-overall-date" range resolveActiveGoalSegment
+// requires.
+export function milestoneRejectedReasonLabel(reason: MilestoneRejectedReason): string {
+  switch (reason) {
+    case 'wrong_direction':
+      return 'Delmålet går åt fel håll jämfört med din nuvarande vikt.'
+    case 'beyond_overall_target':
+      return 'Delmålet går längre än ditt övergripande mål — det ska vara en delsträcka på vägen dit, inte förbi.'
+    case 'not_before_overall_date':
+      return 'Delmålets datum måste ligga före ditt övergripande måldatum.'
+  }
+}
+
 export type RollingWeight = {
   avgKg: number | null // null below minReadings — never a fake-precise number from too little data
   readings: number

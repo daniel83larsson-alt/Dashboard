@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import ViktmalClient, { type DayEntry, type Measurement, type CheckinHistoryRow } from '@/components/ViktmalClient'
+import ViktmalClient, { type DayEntry, type Measurement, type CheckinHistoryRow, type ActiveMilestone, type BudgetEvent } from '@/components/ViktmalClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
@@ -23,7 +23,7 @@ export default async function ViktmalPage() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, deficit_budget_computed_at, deficit_weigh_in_weekday, deficit_garmin_correction, kost_tracked_meals')
+    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, deficit_budget_computed_at, deficit_budget_source, deficit_budget_valid_until, deficit_weigh_in_weekday, deficit_garmin_correction, kost_tracked_meals')
     .eq('id', user.id)
     .single()
 
@@ -119,12 +119,25 @@ export default async function ViktmalPage() {
     source: r.source as 'manual' | 'yazio',
   }))
 
-  const { data: checkinRows } = await supabase
-    .from('deficit_checkins')
-    .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(10)
+  const [{ data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: recentlyResolvedRow }] = await Promise.all([
+    supabase.from('deficit_checkins')
+      .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
+      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('deficit_milestones')
+      .select('id, target_weight_kg, target_date, start_weight_kg, start_date, segment_budget_kcal, segment_daily_deficit_kcal')
+      .eq('user_id', user.id).eq('status', 'active').maybeSingle(),
+    supabase.from('deficit_budget_events')
+      .select('id, kind, old_budget_kcal, new_budget_kcal, budget_source, override_active, created_at')
+      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+    // A milestone resolved in the last few days gets a one-time banner —
+    // shown for a fixed window rather than tracked as "seen" server-side,
+    // simplest thing that still surfaces it without a dismiss round-trip.
+    supabase.from('deficit_milestones')
+      .select('target_weight_kg, status, resolved_at')
+      .eq('user_id', user.id).in('status', ['passed', 'reached'])
+      .gte('resolved_at', new Date(new Date().getTime() - 3 * 86400000).toISOString())
+      .order('resolved_at', { ascending: false }).limit(1).maybeSingle(),
+  ])
 
   return (
     <ViktmalClient
@@ -134,6 +147,7 @@ export default async function ViktmalPage() {
       budgetKcal={profile.deficit_budget_kcal ?? null}
       tdeeKcal={profile.deficit_tdee_kcal ?? null}
       budgetComputedAt={profile.deficit_budget_computed_at ?? null}
+      budgetSource={(profile.deficit_budget_source ?? 'overall') as 'overall' | 'milestone'}
       startWeightKg={profile.deficit_start_weight_kg ?? null}
       startDate={profile.deficit_start_date ?? null}
       targetWeightKg={profile.deficit_target_weight_kg ?? null}
@@ -143,6 +157,9 @@ export default async function ViktmalPage() {
       garminCorrection={profile.deficit_garmin_correction ?? 0.75}
       checkinHistory={(checkinRows ?? []) as CheckinHistoryRow[]}
       wellnessHistory={wellnessHistory}
+      activeMilestone={activeMilestoneRow as ActiveMilestone | null}
+      budgetEvents={(budgetEventRows ?? []) as BudgetEvent[]}
+      recentlyResolvedMilestone={recentlyResolvedRow as { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null}
     />
   )
 }

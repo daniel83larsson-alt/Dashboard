@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel } from '@/lib/deficit'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
@@ -27,6 +27,37 @@ export type CheckinHistoryRow = {
   suggested_correction: number | null
   applied_correction: number | null
   created_at: string
+}
+
+export type ActiveMilestone = {
+  id: string
+  target_weight_kg: number
+  target_date: string
+  start_weight_kg: number
+  start_date: string
+  segment_budget_kcal: number | null
+  segment_daily_deficit_kcal: number | null
+}
+export type BudgetEvent = {
+  id: string
+  kind: string
+  old_budget_kcal: number | null
+  new_budget_kcal: number | null
+  budget_source: string | null
+  override_active: boolean
+  created_at: string
+}
+
+const EVENT_KIND_LABEL: Record<string, string> = {
+  settings_changed: 'Inställning ändrad',
+  checkin_applied: 'Avstämning applicerad',
+  milestone_set: 'Delmål satt',
+  milestone_expired: 'Delmål utgånget',
+  milestone_reached: 'Delmål nått',
+  milestone_cancelled: 'Delmål avbrutet',
+  override_acknowledged: 'Override bekräftad',
+  override_voided: 'Override upphävd',
+  stale_refresh: 'Omräknad',
 }
 
 type CheckinComputation =
@@ -67,6 +98,10 @@ export default function ViktmalClient({
   garminCorrection,
   checkinHistory,
   wellnessHistory,
+  budgetSource,
+  activeMilestone,
+  budgetEvents,
+  recentlyResolvedMilestone,
 }: {
   todayKey: string
   days: DayEntry[]
@@ -83,6 +118,10 @@ export default function ViktmalClient({
   garminCorrection: number
   checkinHistory: CheckinHistoryRow[]
   wellnessHistory: { date: string; restingHR: number | null; bodyBattery: number | null; sleepHours: number | null }[]
+  budgetSource: 'overall' | 'milestone'
+  activeMilestone: ActiveMilestone | null
+  budgetEvents: BudgetEvent[]
+  recentlyResolvedMilestone: { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null
 }) {
   const router = useRouter()
   const [checkin, setCheckin] = useState<CheckinComputation | null>(null)
@@ -100,6 +139,14 @@ export default function ViktmalClient({
   const [logging, setLogging] = useState(false)
   const [logError, setLogError] = useState('')
   const [logOpen, setLogOpen] = useState(false)
+  const [milestoneFormOpen, setMilestoneFormOpen] = useState(false)
+  const [milestoneTargetWeightKg, setMilestoneTargetWeightKg] = useState('')
+  const [milestoneTargetDate, setMilestoneTargetDate] = useState('')
+  const [milestoneOverrideConfirmed, setMilestoneOverrideConfirmed] = useState(false)
+  const [milestoneSaving, setMilestoneSaving] = useState(false)
+  const [milestoneCancelling, setMilestoneCancelling] = useState(false)
+  const [milestoneError, setMilestoneError] = useState('')
+  const [resolvedBannerDismissed, setResolvedBannerDismissed] = useState(false)
 
   const today = days[days.length - 1]
   const budget = budgetKcal ?? 0
@@ -216,6 +263,50 @@ export default function ViktmalClient({
     setApplying(false)
   }
 
+  async function createMilestone() {
+    setMilestoneError('')
+    const targetW = parseFloat(milestoneTargetWeightKg)
+    if (Number.isNaN(targetW) || !milestoneTargetDate) { setMilestoneError('Ange delmålsvikt och datum'); return }
+    setMilestoneSaving(true)
+    try {
+      const res = await fetch('/api/deficit/milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetWeightKg: targetW, targetDateISO: milestoneTargetDate, overrideAcknowledged: milestoneOverrideConfirmed }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setMilestoneFormOpen(false)
+        setMilestoneTargetWeightKg('')
+        setMilestoneTargetDate('')
+        setMilestoneOverrideConfirmed(false)
+        router.refresh()
+      } else {
+        setMilestoneError(data.error ?? 'Kunde inte spara delmålet')
+      }
+    } catch {
+      setMilestoneError('Nätverksfel')
+    }
+    setMilestoneSaving(false)
+  }
+
+  async function cancelMilestone() {
+    setMilestoneError('')
+    setMilestoneCancelling(true)
+    try {
+      const res = await fetch('/api/deficit/milestone', { method: 'DELETE' })
+      if (res.ok) {
+        router.refresh()
+      } else {
+        const data = await res.json()
+        setMilestoneError(data.error ?? 'Kunde inte avbryta delmålet')
+      }
+    } catch {
+      setMilestoneError('Nätverksfel')
+    }
+    setMilestoneCancelling(false)
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full mx-auto flex flex-col gap-4">
       <div>
@@ -224,6 +315,17 @@ export default function ViktmalClient({
           {targetWeightKg != null ? `Mot ${targetWeightKg} kg${targetDate ? ` till ${new Date(`${targetDate}T00:00:00`).toLocaleDateString('sv-SE')}` : ''}` : 'Inget mål satt'}
         </p>
       </div>
+
+      {recentlyResolvedMilestone && !resolvedBannerDismissed && (
+        <div className="bg-accent/10 border border-accent/30 rounded-2xl p-3 flex items-center justify-between gap-3">
+          <p className="text-fg text-sm">
+            {recentlyResolvedMilestone.status === 'reached'
+              ? `🎉 Du nådde ditt delmål på ${recentlyResolvedMilestone.target_weight_kg} kg tidigt — budgeten är omräknad mot den lugnare övergripande takten.`
+              : `Delmålet på ${recentlyResolvedMilestone.target_weight_kg} kg gick ut utan att nås — budgeten är omräknad mot den lugnare övergripande takten.`}
+          </p>
+          <button type="button" onClick={() => setResolvedBannerDismissed(true)} className="text-muted text-sm flex-shrink-0">✕</button>
+        </div>
+      )}
 
       {/* Lager 1: idag */}
       <div className="bg-card border border-edge rounded-2xl p-4">
@@ -306,6 +408,7 @@ export default function ViktmalClient({
                 <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
                 <Tooltip {...chartTooltip} formatter={(v) => [`${v} kg`, 'Vikt']} />
                 {targetWeightKg != null && <ReferenceLine y={targetWeightKg} stroke={MUTED} strokeDasharray="3 3" />}
+                {activeMilestone && <ReferenceLine y={activeMilestone.target_weight_kg} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Delmål', position: 'insideTopRight', fill: '#f59e0b', fontSize: 10 }} />}
                 <Line type="monotone" dataKey="Vikt" stroke={ACCENT} strokeWidth={2} dot={{ r: 3 }} connectNulls />
               </LineChart>
             </ResponsiveContainer>
@@ -336,6 +439,96 @@ export default function ViktmalClient({
           <p className="text-muted text-[10px] mt-3">Budget uträknad {new Date(budgetComputedAt).toLocaleDateString('sv-SE')} (TDEE ~{tdeeKcal} kcal) — räknas om automatiskt om vikten rör sig mycket eller inställningarna ändras.</p>
         )}
       </div>
+
+      {/* Delmål — en snabbare, närmare deletapp ovanpå det övergripande
+          målet (Daniel: "vill ha ett snabbare delmål och sen lugnare
+          övergripande mål"). Ett i taget, avslutas automatiskt av
+          cron-svepet i cron/body-reminders när det går ut eller nås tidigt. */}
+      {targetWeightKg != null && (
+        <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs text-muted uppercase tracking-wider">Delmål</div>
+            {activeMilestone && budgetSource === 'milestone' && (
+              <span className="text-[10px] bg-accent/10 text-accent px-2 py-0.5 rounded-full font-medium">Styr budgeten just nu</span>
+            )}
+          </div>
+
+          {activeMilestone ? (
+            <>
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-mono text-fg">{activeMilestone.start_weight_kg.toFixed(1)} kg</span>
+                <span className="font-mono text-[#f59e0b] font-bold">{activeMilestone.target_weight_kg.toFixed(1)} kg</span>
+              </div>
+              <p className="text-muted text-xs">
+                Till {fmtDate(activeMilestone.target_date)}
+                {activeMilestone.segment_budget_kcal != null && ` · ${activeMilestone.segment_budget_kcal} kcal/dag (underskott ${activeMilestone.segment_daily_deficit_kcal} kcal/dag)`}
+              </p>
+              {milestoneError && <p className="text-red-400 text-xs">{milestoneError}</p>}
+              <button type="button" onClick={cancelMilestone} disabled={milestoneCancelling} className="text-xs text-muted border border-edge rounded-lg px-4 py-2 self-start disabled:opacity-50">
+                {milestoneCancelling ? 'Avbryter...' : 'Avbryt delmål'}
+              </button>
+            </>
+          ) : milestoneFormOpen ? (
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-muted text-xs block mb-1.5">Delmålsvikt (kg)</label>
+                  <input type="number" step={0.1} inputMode="decimal" value={milestoneTargetWeightKg} onChange={e => { setMilestoneTargetWeightKg(e.target.value); setMilestoneOverrideConfirmed(false) }} placeholder="t.ex. 95" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent" />
+                </div>
+                <div>
+                  <label className="text-muted text-xs block mb-1.5">Datum</label>
+                  <input type="date" value={milestoneTargetDate} min={todayKey} onChange={e => { setMilestoneTargetDate(e.target.value); setMilestoneOverrideConfirmed(false) }} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent" />
+                </div>
+              </div>
+
+              {(() => {
+                const targetW = parseFloat(milestoneTargetWeightKg)
+                const previewStartKg = rollingWeight.avgKg ?? currentWeightKg
+                if (Number.isNaN(targetW) || !milestoneTargetDate || tdeeKcal == null || previewStartKg == null) return null
+                // Reuses the current overall TDEE as an approximation (bmr=tdeeKcal,
+                // neatFactor 1, no training term) so the preview needs no extra
+                // BMR inputs — the authoritative number is recomputed server-side.
+                const preview = computeDeficitBudget({
+                  bmr: tdeeKcal,
+                  goal: { startWeightKg: previewStartKg, targetWeightKg: targetW, targetDateISO: milestoneTargetDate, neatFactor: 1, garminCorrection: 0 },
+                  avgTrainingKcalRaw: 0,
+                  activityFallbackKcal: 0,
+                  now: new Date(),
+                  allowUnsafe: milestoneOverrideConfirmed,
+                })
+                if (preview.safety.breaches.length === 0) {
+                  return <p className="text-muted text-xs">Ungefärlig budget under delmålet: ~{preview.budgetKcal} kcal/dag (underskott ~{preview.dailyDeficitKcal} kcal) — exakt tal räknas ut när du sparar.</p>
+                }
+                return (
+                  <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-2">
+                    <p className="text-amber-400 text-xs font-medium">Det här delmålet är mer aggressivt än vi normalt rekommenderar:</p>
+                    <ul className="text-amber-400/90 text-xs list-disc list-inside flex flex-col gap-0.5">
+                      {preview.safety.breaches.map(b => <li key={b}>{safetyBreachLabel(b)}</li>)}
+                    </ul>
+                    <label className="flex items-start gap-2.5 text-xs text-fg pt-1 border-t border-amber-500/20">
+                      <input type="checkbox" checked={milestoneOverrideConfirmed} onChange={e => setMilestoneOverrideConfirmed(e.target.checked)} className="w-4 h-4 accent-amber-500 mt-0.5 flex-shrink-0" />
+                      <span>Jag förstår riskerna och vill använda den här snabbare takten för delmålet ändå.</span>
+                    </label>
+                  </div>
+                )
+              })()}
+
+              {milestoneError && <p className="text-red-400 text-xs">{milestoneError}</p>}
+              <div className="flex gap-2">
+                <button type="button" onClick={createMilestone} disabled={milestoneSaving} className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
+                  {milestoneSaving ? 'Sparar...' : 'Sätt delmål'}
+                </button>
+                <button type="button" onClick={() => { setMilestoneFormOpen(false); setMilestoneError(''); setMilestoneOverrideConfirmed(false) }} className="text-xs text-muted border border-edge rounded-lg px-4 py-2">Avbryt</button>
+              </div>
+            </>
+          ) : (
+            <>
+              <p className="text-muted text-xs">Vill du köra en snabbare takt fram till ett närmare delmål, och sen landa lugnare mot ditt övergripande mål? Sätt ett delmål här.</p>
+              <button type="button" onClick={() => setMilestoneFormOpen(true)} className="text-xs text-accent border border-accent/30 rounded-lg px-4 py-2 self-start">+ Sätt ett delmål</button>
+            </>
+          )}
+        </div>
+      )}
 
       {/* Bakgrundskontext — vilopuls/Body Battery och sömn, rör aldrig
           budgeten (Daniel: "inte tänkt att påverka kaloriberäkningen
@@ -461,6 +654,25 @@ export default function ViktmalClient({
           </div>
         )}
       </div>
+
+      {/* Budgethistorik — varje gång budgeten räknats om, med orsak, så det
+          går att se VARFÖR den ändrades utan att gissa. */}
+      {budgetEvents.length > 0 && (
+        <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-1.5">
+          <div className="text-xs text-muted uppercase tracking-wider mb-1">Budgethistorik</div>
+          {budgetEvents.map(ev => (
+            <div key={ev.id} className="flex items-center justify-between text-xs">
+              <span className="text-muted">{fmtDate(ev.created_at.slice(0, 10))} · {EVENT_KIND_LABEL[ev.kind] ?? ev.kind}</span>
+              <span className="font-mono text-fg">
+                {ev.old_budget_kcal != null && ev.new_budget_kcal != null && ev.old_budget_kcal !== ev.new_budget_kcal
+                  ? `${ev.old_budget_kcal} → ${ev.new_budget_kcal} kcal`
+                  : ev.new_budget_kcal != null ? `${ev.new_budget_kcal} kcal` : '–'}
+                {ev.override_active && <span className="text-amber-400"> · override</span>}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
