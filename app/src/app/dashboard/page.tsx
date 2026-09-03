@@ -42,11 +42,6 @@ function fmtDateLong(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
-function shortTake(text: string, max = 140): string {
-  const clean = text.replace(/[#*_`>]/g, '').replace(/\s+/g, ' ').trim()
-  return clean.length > max ? clean.slice(0, max - 1).trimEnd() + '…' : clean
-}
-
 // ── PR helpers ────────────────────────────────────────────────────────────────
 
 type Activity = {
@@ -82,7 +77,7 @@ export default async function DashboardPage() {
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: insightRow }, { data: healthInsightRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -96,7 +91,10 @@ export default async function DashboardPage() {
     // query alone after narrowing). PR/streak detection genuinely needs the
     // full history, not just a recent slice, so no date/row limit here.
     supabase.from('activities').select('id, strava_id, source, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, hr_zones:raw_data->hrZones, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
-    supabase.from('goals').select('*').eq('user_id', user.id).eq('status', 'active'),
+    // Only .length is read on this page now (the read-only goals list moved
+    // to just linking to Profil, where GoalsCard already owns the full
+    // set/edit/delete UI) — narrowed from select('*').
+    supabase.from('goals').select('id').eq('user_id', user.id).eq('status', 'active'),
     // Replaces the old coach_sessions('weekly_plan') JSON blob — this week's
     // plan (if generated) plus its sessions in one round-trip via the FK
     // relationship, ordered so the card can render Mon→Sun directly.
@@ -107,8 +105,6 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
-    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
-    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
     supabase.rpc('friend_activity_feed'),
     supabase.rpc('pending_follow_requests'),
     supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
@@ -322,13 +318,6 @@ export default async function DashboardPage() {
     })),
   ]
   const newMilestones = user ? await recordNewMilestones(supabase, user.id, milestoneCandidates) : []
-
-  // Latest team insights, for a short desktop-sidebar teaser — reuses
-  // whatever's already been generated on Insikter/Hälsa, no extra AI calls.
-  const insightRaw = (insightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const savedInsight = insightRaw ? (() => { try { return JSON.parse(insightRaw) } catch { return null } })() : null
-  const healthInsightRaw = (healthInsightRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const savedHealthInsight = healthInsightRaw ? (() => { try { return JSON.parse(healthInsightRaw) } catch { return null } })() : null
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-6xl w-full mx-auto space-y-6">
@@ -624,28 +613,6 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Senaste insikter (teaser, desktop sidebar) ───────────────────────── */}
-      {(savedInsight?.agents?.summary || savedHealthInsight?.recovery) && (
-        <div className="bg-card border border-edge rounded-2xl p-4 lg:order-2">
-          <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Senaste insikter</h2>
-          <div className="flex flex-col gap-3">
-            {savedInsight?.agents?.summary && (
-              <div>
-                <div className="text-xs text-accent font-medium mb-1">🚣 Tränarteamet</div>
-                <p className="text-xs text-fg/90 leading-relaxed">{shortTake(savedInsight.agents.summary)}</p>
-                <a href="/dashboard/halsa?tab=insikter" className="text-xs text-accent hover:underline mt-1 inline-block">Se hela analysen →</a>
-              </div>
-            )}
-            {savedHealthInsight?.recovery && (
-              <div className={savedInsight?.agents?.summary ? 'pt-3 border-t border-edge' : ''}>
-                <div className="text-xs text-accent font-medium mb-1">💤 Återhämtning</div>
-                <p className="text-xs text-fg/90 leading-relaxed">{shortTake(savedHealthInsight.recovery)}</p>
-                <a href="/dashboard/halsa" className="text-xs text-accent hover:underline mt-1 inline-block">Se hälsodata →</a>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ── Garmin Wellness ───────────────────────────────────────────────────── */}
       {!wellness && latest && (
@@ -739,54 +706,30 @@ export default async function DashboardPage() {
         <HabitsCard habits={habits ?? []} logs={habitLogs ?? []} />
       </div>
 
-      {/* ── Kalender ──────────────────────────────────────────────────────────── */}
-      {activities.length > 0 && (
-        <div className="lg:col-span-3 lg:order-8">
+      {/* ── Kalender, med en liten Veckoplan-länk under (Daniel: "minamål,
+          insikter och veckoplan är lite onödiga [som egna kort] ... veckoplan
+          skulle man kunna ha en liten länk i själva kalender") — "Mina mål"
+          är borttaget helt: det var bara en skrivskyddad kopia av samma lista
+          som redan går att sätta/ändra under Profil (GoalsCard), ingen
+          funktion försvinner. Veckoplan-länken ligger utanför
+          activities.length-villkoret så auto-genereringen av veckans plan
+          (WeeklyPlanSummaryCard's egen effekt) fortfarande kör för en
+          helt ny användare utan pass än. ─────────────────────────────────── */}
+      <div className="lg:col-span-3 lg:order-8 flex flex-col gap-2">
+        {activities.length > 0 && (
           <ActivityCalendar
             trainedDates={activities.map(a => a.start_date)}
             mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
             plannedDates={plannedDates}
             habitDates={habitDates}
           />
-        </div>
-      )}
-
-      {/* ── Veckoplan + Mina mål (hålls ihop, Daniel: "kan lägga sig under
-          veckoplan så håller man ihop det") ───────────────────────────────── */}
-      <div className="lg:col-span-3 lg:order-9">
+        )}
         <WeeklyPlanSummaryCard
           plan={weeklyPlan}
           hasActiveGoal={(goals?.length ?? 0) > 0}
           initialSports={(planRow?.requested_sports ?? prevPlanRow?.requested_sports ?? []) as string[]}
+          compact
         />
-      </div>
-
-      <div className="lg:col-span-3 lg:order-10">
-        <h2 className="text-xs text-muted uppercase tracking-wider mb-3">Mina mål</h2>
-        {goals && goals.length > 0 ? (
-          <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-            {goals.map(g => (
-              <div key={g.id} className="px-4 py-3 flex items-center justify-between">
-                <div>
-                  <div className="text-sm font-medium">{g.title}</div>
-                  {g.target_date && (
-                    <div className="text-muted text-xs mt-0.5">
-                      Mål: {new Date(g.target_date).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })}
-                    </div>
-                  )}
-                </div>
-                <span className="text-xs bg-bg text-lcd px-2 py-1 rounded-lg">{g.goal_type}</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="bg-card border border-edge rounded-2xl p-6 text-center">
-            <div className="text-muted text-sm">Inga aktiva mål</div>
-            <p className="text-muted text-xs mt-1">
-              <a href="/dashboard/profil" className="text-accent hover:underline">Sätt ett mål under Profil</a>
-            </p>
-          </div>
-        )}
       </div>
 
       </div>

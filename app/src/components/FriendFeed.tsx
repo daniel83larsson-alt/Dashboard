@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { sportIcon, sportLabel } from '@/lib/sport'
+import FriendActivityMap from '@/components/FriendActivityMap'
 
 type FeedEntry = {
   activity_id: string
@@ -41,6 +42,7 @@ function fmtRelative(iso: string) {
 export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId: string }) {
   const [entries, setEntries] = useState(feed)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
   const supabase = createSupabaseClient()
 
   async function toggleLike(activityId: string, liked: boolean) {
@@ -74,36 +76,50 @@ export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId
         </div>
       ) : (
         <div className="bg-card border border-edge rounded-2xl divide-y divide-edge">
-          {entries.map(e => (
-            <div key={e.activity_id} className="px-4 py-3 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{e.owner_name}</span>
-                  <span className="text-muted text-xs">{fmtRelative(e.start_date)}</span>
+          {entries.map(e => {
+            const isExpanded = expandedId === e.activity_id
+            return (
+              <div key={e.activity_id}>
+                <div className="px-4 py-3 flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setExpandedId(isExpanded ? null : e.activity_id)}
+                    className="min-w-0 text-left flex-1"
+                  >
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="font-medium">{e.owner_name}</span>
+                      <span className="text-muted text-xs">{fmtRelative(e.start_date)}</span>
+                    </div>
+                    <div className="text-muted text-xs mt-0.5 truncate">
+                      {sportIcon(e.sport_type)} {e.activity_name} · {sportLabel(e.sport_type)}
+                    </div>
+                  </button>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    <div className="text-right">
+                      {e.distance > 0 && <div className="font-mono text-accent text-sm font-bold leading-none">{fmtKm(e.distance)}</div>}
+                      <div className="text-muted text-xs mt-0.5">{fmtDur(e.moving_time)}</div>
+                    </div>
+                    <button
+                      onClick={() => toggleLike(e.activity_id, e.liked_by_me)}
+                      disabled={busyId === e.activity_id}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50 ${
+                        e.liked_by_me ? 'bg-accent/15 text-accent' : 'bg-bg text-muted hover:text-fg'
+                      }`}
+                      title={e.liked_by_me ? 'Ta bort tummen upp' : 'Ge tummen upp'}
+                    >
+                      <span>👍</span>
+                      {e.kudos_count > 0 && <span>{e.kudos_count}</span>}
+                    </button>
+                  </div>
                 </div>
-                <div className="text-muted text-xs mt-0.5 truncate">
-                  {sportIcon(e.sport_type)} {e.activity_name} · {sportLabel(e.sport_type)}
-                </div>
+                {isExpanded && (
+                  <div className="px-4 pb-4">
+                    <FriendActivityMap activityId={e.activity_id} label={e.activity_name} />
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-3 flex-shrink-0">
-                <div className="text-right">
-                  {e.distance > 0 && <div className="font-mono text-accent text-sm font-bold leading-none">{fmtKm(e.distance)}</div>}
-                  <div className="text-muted text-xs mt-0.5">{fmtDur(e.moving_time)}</div>
-                </div>
-                <button
-                  onClick={() => toggleLike(e.activity_id, e.liked_by_me)}
-                  disabled={busyId === e.activity_id}
-                  className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs transition-colors disabled:opacity-50 ${
-                    e.liked_by_me ? 'bg-accent/15 text-accent' : 'bg-bg text-muted hover:text-fg'
-                  }`}
-                  title={e.liked_by_me ? 'Ta bort tummen upp' : 'Ge tummen upp'}
-                >
-                  <span>👍</span>
-                  {e.kudos_count > 0 && <span>{e.kudos_count}</span>}
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>

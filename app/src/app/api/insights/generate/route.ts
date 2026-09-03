@@ -9,18 +9,22 @@ import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { currentStepGoalStreak } from '@/lib/streaks'
 import { dedupeForStats } from '@/lib/duplicates'
 import { coachToneInstruction } from '@/lib/coach-tone'
+import { stockholmDateKey } from '@/lib/dates'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
+import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
+import { buildNutritionSummary, formatNutritionForPrompt } from '@/lib/nutrition-summary'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
-type AgentInsights = { data: string; sleep: string; steps: string; mental: string; strength: string; mobility: string; summary: string }
+type AgentInsights = { data: string; sleep: string; steps: string; mental: string; strength: string; mobility: string; kostWeek: string; kostGeneral: string; summary: string }
 
-// Single call producing all six specialist perspectives + the head coach's
-// summary in one structured response, instead of seven separate Gemini
-// calls (one per specialist + one synthesis) — same shared quota, a
-// seventh of the requests, at the cost of each perspective being generated
+// Single call producing all seven specialist perspectives + the head
+// coach's summary in one structured response, instead of eight separate
+// Gemini calls (one per specialist + one synthesis) — same shared quota, a
+// fraction of the requests, at the cost of each perspective being generated
 // in the same pass rather than fully independently.
 async function askAgentTeam(apiKey: string, question: string, coachTone: string | null | undefined): Promise<AgentInsights> {
-  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker (fokus: helhetsdata + hur upplägget/målen går), sömncoach, stegcoach, mentalcoach, styrkecoach (kompletterande träning) och rörlighets-/stretchcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.
+  const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker (fokus: helhetsdata + hur upplägget/målen går), sömncoach, stegcoach, mentalcoach, styrkecoach (kompletterande träning), rörlighets-/stretchcoach och kostcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.
 ${coachToneInstruction(coachTone)}`
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
@@ -42,9 +46,11 @@ ${coachToneInstruction(coachTone)}`
             mental: { type: 'STRING' },
             strength: { type: 'STRING' },
             mobility: { type: 'STRING' },
+            kostWeek: { type: 'STRING' },
+            kostGeneral: { type: 'STRING' },
             summary: { type: 'STRING' },
           },
-          required: ['data', 'sleep', 'steps', 'mental', 'strength', 'mobility', 'summary'],
+          required: ['data', 'sleep', 'steps', 'mental', 'strength', 'mobility', 'kostWeek', 'kostGeneral', 'summary'],
         },
       },
     }),
@@ -65,14 +71,19 @@ export async function POST() {
     if (isDemoAccount(user.email)) return NextResponse.json({ error: DEMO_BLOCKED_MESSAGE }, { status: 403 })
     logApiCall(supabase, user.id, 'insights_generate')
 
-    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }] = await Promise.all([
-      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal, coach_tone').eq('id', user.id).single(),
+    const foodSinceIso = new Date(Date.now() - 37 * 86400000).toISOString()
+
+    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
+      supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal, coach_tone, kost_tracking_enabled, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
       supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, hr_zones:raw_data->hrZones')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
       supabase.from('goals').select('goal_type, title, target_date').eq('user_id', user.id).eq('status', 'active'),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
+      supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at').eq('user_id', user.id).gte('logged_at', foodSinceIso).order('logged_at', { ascending: false }),
+      supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
+      supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete'),
     ])
 
     const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
@@ -131,6 +142,31 @@ export async function POST() {
     const daysMetGoalLast7 = wellnessHistory.slice(0, 7).filter(d => typeof d.steps === 'number' && (d.steps as number) >= stepGoal).length
     const hasGoals = (goals ?? []).length > 0 || overviewGoal.trim().length > 0
 
+    const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+    const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
+      try {
+        const parsed = JSON.parse(yazioHistoryRaw)
+        return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+      } catch { return [] }
+    })() : []
+    const trackedMeals = ((profile?.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
+    const dayOverrides = new Set((dayStatusRows ?? []).map(r => r.date as string))
+
+    const nutrition = buildNutritionSummary({
+      now,
+      todayKey: stockholmDateKey(now),
+      yazioHistory,
+      manualEntries: (foodLog ?? []) as KostFoodEntry[],
+      trackedMeals,
+      dayOverrides,
+      calorieGoal: profile?.daily_calorie_goal ?? null,
+      proteinGoalG: profile?.protein_goal_g ?? null,
+      carbGoalG: profile?.carb_goal_g ?? null,
+      fatGoalG: profile?.fat_goal_g ?? null,
+      deficitEnabled: profile?.deficit_tracking_enabled ?? false,
+      deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
+    })
+
     // Shared data context (short — each agent focuses on what they need)
     const dataBlock = `ATLET: ${profile?.name ?? 'Okänd'}
 PASS: ${thisWeek} denna vecka | ${thisMonth} denna månad | ${totalKm} km totalt
@@ -142,7 +178,10 @@ ${overviewGoal ? `ÖVERGRIPANDE MÅL/FILOSOFI: ${overviewGoal}` : ''}
 UTRUSTNING HEMMA: ${profile?.home_equipment?.length ? profile.home_equipment.join(', ') : 'ingen angiven — anta INGEN gymtillgång i styrke-/rörlighetsförslag'}
 ${profile?.selected_sports?.length ? `AKTIVITETER/SPORTER: ${profile.selected_sports.join(', ')}` : ''}
 ${userBio ? `BAKGRUND: ${userBio}` : ''}
-${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE ÄNNU — endast Garmin-hälsodata (sömn/puls/steg) tillgänglig.'}`
+${hasActivities ? `SENASTE 15 PASS:\n${recentStr}` : 'INGA TRÄNINGSPASS LOGGADE ÄNNU — endast Garmin-hälsodata (sömn/puls/steg) tillgänglig.'}
+
+KOST:
+${formatNutritionForPrompt(nutrition)}`
 
     // One combined question covering all six specialist angles plus the
     // head-coach synthesis — adapted when there's no logged training yet so
@@ -176,14 +215,22 @@ mobility (Rörlighets-/stretchcoach, KONKRETA övningar): ${hasActivities
       ? 'Namnge 2-3 rörlighets-/stretchövningar (med hur länge/ofta) för de muskelgrupper träningen belastar mest.'
       : 'Inga pass är loggade än. Namnge 2-3 generella rörlighetsövningar med hur länge/ofta.'}
 
-summary (Huvudcoach): Läs de sex bedömningarna du själv precis formulerat. Vad är den ENA viktigaste prioriteringen för atleten just nu?`
+kostWeek (Kostcoach, fokusera ENBART på DENNA VECKA-raden under KOST — bedöm BARA de dagar som redan hänt, ALDRIG kommande dagar i veckan som "saknad" eller "ofullständig" loggning): ${nutrition.hasData
+      ? 'Kommentera hur veckans loggning/kalorier/protein ser ut mot målen SÅ HÄR LÅNGT i veckan, och peka ut EN konkret förbättring för resten av veckan.'
+      : 'Ingen kost är loggad än. Ge en kort, peppande uppmaning att börja logga i Kost, och nämn kort varför det gör resten av teamets råd bättre.'}
 
-    const { data, sleep, steps, mental, strength, mobility, summary } = await askAgentTeam(apiKey, question, profile?.coach_tone)
+kostGeneral (Kostcoach, fokusera ENBART på SENASTE 30 DAGARNA/VIKTMÅL/VIKTFÖRÄNDRING-raderna under KOST): ${nutrition.hasData
+      ? 'Ge en bredare bild av matvanorna över tid — konsistens, trend, och om Viktmål/vikttrenden (om de finns) stämmer med hur mycket som faktiskt loggas ätits.'
+      : 'Ingen kost är loggad än. Håll det till EN kort mening — inget att analysera över tid ännu.'}
+
+summary (Huvudcoach): Läs de sju bedömningarna du själv precis formulerat. Vad är den ENA viktigaste prioriteringen för atleten just nu?`
+
+    const { data, sleep, steps, mental, strength, mobility, kostWeek, kostGeneral, summary } = await askAgentTeam(apiKey, question, profile?.coach_tone)
 
     const insight = {
       generatedAt: now.toISOString(),
       stats: { sessions: activities.length, thisWeek, thisMonth, totalKm, pr30: b30 ? `${b30.distance}m${b30SpeedOrPace ? ` (${b30SpeedOrPace.value})` : ''}` : null },
-      agents: { data, sleep, steps, mental, strength, mobility, summary },
+      agents: { data, sleep, steps, mental, strength, mobility, kostWeek, kostGeneral, summary },
     }
 
     await supabase.from('coach_sessions').upsert({

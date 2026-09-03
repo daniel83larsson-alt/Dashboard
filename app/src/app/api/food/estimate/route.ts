@@ -43,6 +43,7 @@ export async function POST(request: NextRequest) {
       description?: string
       images?: { data: string; mimeType: string }[]
       photoKind?: 'dish' | 'label'
+      note?: string
     }
 
     let parts: Array<{ text: string } | { inlineData: { mimeType: string; data: string } }>
@@ -62,8 +63,10 @@ export async function POST(request: NextRequest) {
         if (img.data.length > MAX_IMAGE_BASE64_LENGTH) return NextResponse.json({ error: 'Bilden är för stor' }, { status: 400 })
       }
       const isLabel = body.photoKind === 'label'
+      const note = body.note?.trim().slice(0, 300)
       parts = [
         { text: isLabel ? 'Läs av näringsvärdesetiketten på bilderna.' : 'Identifiera maträtten på bilderna och uppskatta näringsvärde för en normal portion.' },
+        ...(note ? [{ text: `Extra kontext från användaren: ${note}` }] : []),
         ...images.map(img => ({ inlineData: { mimeType: img.mimeType, data: img.data } })),
       ]
       systemInstruction = isLabel ? ESTIMATE_SYSTEM_LABEL : ESTIMATE_SYSTEM_DISH

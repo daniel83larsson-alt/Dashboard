@@ -3,13 +3,16 @@ import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coache
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { moderateMessage, FLAG_THRESHOLD } from '@/lib/moderation'
-import { startOfWeek } from '@/lib/dates'
+import { startOfWeek, stockholmDateKey } from '@/lib/dates'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { fmtMinSec, sportLabel } from '@/lib/sport'
 import { logApiCall } from '@/lib/log-api-call'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { callGemini, callAnthropic, type LlmMessage as Message } from '@/lib/llm'
+import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
+import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
+import { buildNutritionSummary, formatNutritionForPrompt } from '@/lib/nutrition-summary'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -30,7 +33,7 @@ export async function POST(request: NextRequest) {
 
     const { data: profile } = await supabase
       .from('profiles')
-      .select('name, llm_api_key_encrypted, llm_provider, locked, flagged_attempts, flag_log, home_equipment, selected_sports, coach_tone')
+      .select('name, llm_api_key_encrypted, llm_provider, locked, flagged_attempts, flag_log, home_equipment, selected_sports, coach_tone, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal')
       .eq('id', user.id)
       .single()
 
@@ -102,7 +105,12 @@ export async function POST(request: NextRequest) {
       })
     }
 
-    const [{ data: allActivities }, { data: goals }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }] = await Promise.all([
+    // Nutrition data is only fetched for the Nutritionist persona — every
+    // other coach never reads it, so this doesn't add DB round-trips to
+    // the hot path for the other eight personas.
+    const isNutritionist = coachId === 'nutritionist'
+
+    const [{ data: allActivities }, { data: goals }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
       supabase
         .from('activities')
         .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts, sport_type')
@@ -133,6 +141,15 @@ export async function POST(request: NextRequest) {
             .eq('id', activityId)
             .eq('user_id', user.id)
             .single()
+        : Promise.resolve({ data: null }),
+      isNutritionist
+        ? supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at').eq('user_id', user.id).gte('logged_at', new Date(Date.now() - 37 * 86400000).toISOString()).order('logged_at', { ascending: false })
+        : Promise.resolve({ data: null }),
+      isNutritionist
+        ? supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single()
+        : Promise.resolve({ data: null }),
+      isNutritionist
+        ? supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete')
         : Promise.resolve({ data: null }),
     ])
 
@@ -207,12 +224,42 @@ export async function POST(request: NextRequest) {
       focusActivity = lines.join('\n')
     }
 
+    let nutritionSummary: string | undefined
+    if (isNutritionist) {
+      const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+      const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
+        try {
+          const parsed = JSON.parse(yazioHistoryRaw)
+          return Array.isArray(parsed) ? parsed.map(normalizeYazioDay) : []
+        } catch { return [] }
+      })() : []
+      const trackedMeals = ((profile?.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
+      const dayOverrides = new Set((dayStatusRows ?? []).map((r: { date: string }) => r.date))
+
+      const nutrition = buildNutritionSummary({
+        now,
+        todayKey: stockholmDateKey(now),
+        yazioHistory,
+        manualEntries: (foodLog ?? []) as KostFoodEntry[],
+        trackedMeals,
+        dayOverrides,
+        calorieGoal: profile?.daily_calorie_goal ?? null,
+        proteinGoalG: profile?.protein_goal_g ?? null,
+        carbGoalG: profile?.carb_goal_g ?? null,
+        fatGoalG: profile?.fat_goal_g ?? null,
+        deficitEnabled: profile?.deficit_tracking_enabled ?? false,
+        deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
+      })
+      nutritionSummary = formatNutritionForPrompt(nutrition)
+    }
+
     const userContext: UserContext = {
       sport,
       name: profile?.name ?? 'Användaren',
       userBio: userBio || undefined,
       overviewGoal: overviewGoal || undefined,
       focusActivity,
+      nutritionSummary,
       homeEquipment: profile?.home_equipment ?? undefined,
       activeSports: profile?.selected_sports ?? undefined,
       coachTone: profile?.coach_tone,

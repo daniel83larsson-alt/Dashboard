@@ -95,6 +95,7 @@ export default function FoodLogClient({
   kostSettings,
   dayOverrides: initialDayOverrides,
   deficitSummary,
+  kostReview,
 }: {
   dailyCalorieGoal: number | null
   entries: FoodEntry[]
@@ -104,8 +105,10 @@ export default function FoodLogClient({
   kostSettings: KostSettings
   dayOverrides: string[]
   deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
+  kostReview: { generatedAt: string; kostWeek: string; kostGeneral: string } | null
 }) {
   const router = useRouter()
+  const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
   const hasYazio = yazioHistory.length > 0
   const yazioToday = hasYazio ? yazioHistory[0] : null
 
@@ -196,6 +199,7 @@ export default function FoodLogClient({
 
   // ── Redigera en loggad post ──────────────────────────────────────────────
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [editName, setEditName] = useState('')
   const [editKcal, setEditKcal] = useState('')
   const [editProtein, setEditProtein] = useState('')
   const [editCarb, setEditCarb] = useState('')
@@ -205,6 +209,7 @@ export default function FoodLogClient({
 
   function startEdit(entry: FoodEntry) {
     setEditingId(entry.id)
+    setEditName(entry.name)
     setEditKcal(String(entry.calories))
     setEditProtein(entry.protein_g != null ? String(entry.protein_g) : '')
     setEditCarb(entry.carb_g != null ? String(entry.carb_g) : '')
@@ -219,6 +224,10 @@ export default function FoodLogClient({
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // Tomt namn skickas inte med — PATCH-routen avvisar det ändå
+          // (name saknas), och det befintliga namnet ska stå kvar orört
+          // om fältet av misstag rensats istället för redigerats.
+          ...(editName.trim() ? { name: editName.trim() } : {}),
           calories: Number(editKcal) || 0,
           proteinG: editProtein.trim() ? Number(editProtein) : null,
           carbG: editCarb.trim() ? Number(editCarb) : null,
@@ -238,6 +247,9 @@ export default function FoodLogClient({
   // ── Snabbval: favoriter överst, kan tas bort ─────────────────────────────
   const [quickPicks, setQuickPicks] = useState(initialQuickPicks)
   const sortedQuickPicks = useMemo(() => [...quickPicks].sort((a, b) => (Number(b.pinned) - Number(a.pinned))), [quickPicks])
+  const QUICK_PICKS_COLLAPSED_COUNT = 12
+  const [quickPicksExpanded, setQuickPicksExpanded] = useState(false)
+  const visibleQuickPicks = quickPicksExpanded ? sortedQuickPicks : sortedQuickPicks.slice(0, QUICK_PICKS_COLLAPSED_COUNT)
 
   async function toggleFavorite(name: string) {
     const current = quickPicks.find(q => q.name === name)
@@ -281,6 +293,7 @@ export default function FoodLogClient({
   const [error, setError] = useState('')
 
   const [logPhotos, setLogPhotos] = useState<PendingPhoto[]>([])
+  const [logPhotoNote, setLogPhotoNote] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -372,7 +385,7 @@ export default function FoodLogClient({
       const res = await fetch('/api/food/estimate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode: 'photo', images: logPhotos, photoKind: logMethod === 'label' ? 'label' : 'dish' }),
+        body: JSON.stringify({ mode: 'photo', images: logPhotos, photoKind: logMethod === 'label' ? 'label' : 'dish', note: logPhotoNote.trim() || undefined }),
       })
       const data = await res.json()
       if (res.ok) { setEstimate({ ...data, source: 'photo' }); setMultiplier(1); setSelectedCandidate(null) }
@@ -391,6 +404,7 @@ export default function FoodLogClient({
     setGrams('100')
     setMultiplier(1)
     setLogPhotos([])
+    setLogPhotoNote('')
   }
 
   async function logDatabaseCandidate() {
@@ -526,6 +540,45 @@ export default function FoodLogClient({
           </a>
         )}
       </div>
+
+      {/* Kost-granskning — samma AI-genererade text som Kostcoachen på Hälsa
+          & Insikter, bara återgiven här så man slipper byta sida. */}
+      {kostReview && (kostReview.kostWeek || kostReview.kostGeneral) ? (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs text-muted uppercase tracking-wider">🍽️ Kost-granskning</span>
+            <div className="flex gap-1 bg-bg border border-edge rounded-lg p-0.5">
+              <button
+                type="button"
+                onClick={() => setKostReviewScope('week')}
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'week' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+              >
+                Vecka
+              </button>
+              <button
+                type="button"
+                onClick={() => setKostReviewScope('general')}
+                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'general' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
+              >
+                Allmänt
+              </button>
+            </div>
+          </div>
+          <p className="text-sm text-fg/90 leading-relaxed">
+            {kostReviewScope === 'week' ? kostReview.kostWeek : kostReview.kostGeneral}
+          </p>
+          <a href="/dashboard/halsa?tab=insikter" className="text-xs text-accent hover:underline mt-2 inline-block">
+            Se hela tränarteamets analys →
+          </a>
+        </div>
+      ) : (
+        <a
+          href="/dashboard/halsa?tab=insikter"
+          className="bg-card border border-edge rounded-2xl p-4 text-xs text-muted hover:border-accent transition-colors block"
+        >
+          🍽️ Hämta en AI-granskning av dina matvanor under Hälsa & Insikter →
+        </a>
+      )}
 
       {/* YAZIO-sammanfattning */}
       {hasYazio && yazioToday && (
@@ -880,7 +933,7 @@ export default function FoodLogClient({
             <span className="text-[10px] text-muted">⭐ fäst överst · ✕ ta bort</span>
           </div>
           <div className="flex flex-col">
-            {sortedQuickPicks.map(p => (
+            {visibleQuickPicks.map(p => (
               <div key={p.name} className="flex items-center gap-2 py-2 border-b border-edge last:border-b-0 text-xs">
                 <button
                   onClick={() => logQuickPick(p)}
@@ -894,6 +947,15 @@ export default function FoodLogClient({
               </div>
             ))}
           </div>
+          {sortedQuickPicks.length > QUICK_PICKS_COLLAPSED_COUNT && (
+            <button
+              type="button"
+              onClick={() => setQuickPicksExpanded(v => !v)}
+              className="w-full text-center text-xs text-accent hover:underline mt-3 pt-2"
+            >
+              {quickPicksExpanded ? 'Visa färre' : `Visa fler (${sortedQuickPicks.length - QUICK_PICKS_COLLAPSED_COUNT} till)`}
+            </button>
+          )}
         </div>
       )}
 
@@ -1046,10 +1108,16 @@ export default function FoodLogClient({
                   ref={fileInputRef}
                   type="file"
                   accept="image/jpeg,image/png,image/webp"
-                  capture="environment"
                   multiple
                   className="hidden"
                   onChange={e => { if (e.target.files?.length) onPhotosSelected(e.target.files); e.target.value = '' }}
+                />
+                <input
+                  type="text"
+                  value={logPhotoNote}
+                  onChange={e => setLogPhotoNote(e.target.value)}
+                  placeholder="Extra info till AI:n (valfritt), t.ex. &quot;dubbel portion pasta&quot;"
+                  className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
                 />
                 <button
                   onClick={analyzePhotos}
@@ -1215,6 +1283,10 @@ export default function FoodLogClient({
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
           <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
             <div className="text-sm font-semibold">Redigera post</div>
+            <div>
+              <label className="text-muted text-xs block mb-1.5">Namn</label>
+              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+            </div>
             {kostSettings.trackingEnabled && (
               <div>
                 <label className="text-muted text-xs block mb-1.5">Måltid</label>

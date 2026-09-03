@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { fetchGarminHrZones } from '@/lib/garmin'
+import { loadAndWarmGarminSession, persistGarminSession } from '@/lib/garmin-session'
 import { decrypt } from '@/lib/encrypt'
 
 // Fetches HR-zone breakdown for one activity on demand (only when the user
@@ -52,7 +53,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       return NextResponse.json({ zones: null })
     }
 
+    await loadAndWarmGarminSession(supabase, user.id, userCreds.email, userCreds.password)
     const zones = await fetchGarminHrZones(activity.strava_id, userCreds.email, userCreds.password)
+    await persistGarminSession(supabase, user.id, userCreds.email)
 
     if (zones) {
       await supabase.from('activities').update({ raw_data: { ...raw, hrZones: zones } }).eq('id', id)

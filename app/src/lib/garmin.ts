@@ -1,5 +1,8 @@
 import { GarminConnect } from 'garmin-connect'
 import type { IActivity } from 'garmin-connect/dist/garmin/types/activity'
+import type { IGarminTokens } from 'garmin-connect/dist/garmin/types'
+
+export type GarminTokens = IGarminTokens
 
 // Per-user client cache keyed by email
 const clientCache = new Map<string, { client: GarminConnect; loginTime: number }>()
@@ -62,6 +65,65 @@ export async function getGarminClientForUser(email: string, password: string): P
 export async function getGarminClient(userEmail?: string, userPassword?: string): Promise<GarminConnect> {
   if (!userEmail || !userPassword) throw new Error('Garmin credentials not configured')
   return getGarminClientForUser(userEmail, userPassword)
+}
+
+// Reuses a previously-persisted OAuth session instead of a fresh username/
+// password login whenever one is available and still works. Garmin's fraud
+// detection flags every full login as a new-device event — regardless of
+// source region, confirmed live (Daniel got "Ny inloggning upptäckt" mail
+// again immediately after the iad1 pin-back fix) — and every sync before
+// this called gc.login() from scratch every single time. loadToken() only
+// sets local state (no network call at all), and the library's HttpClient
+// already knows how to silently refresh an expired OAuth2 access token
+// using the long-lived OAuth1 token (garmin-connect/dist/common/
+// HttpClient.js's own proactive-expiry check and 401 interceptor) — Garmin
+// does not treat that refresh as a login. Call this once, awaited, before
+// firing the batch of fetchGarmin*() calls for one user — they all share
+// this same cached client via getGarminClient()'s email-keyed cache, so
+// only the FIRST call in a sync needs to warm it.
+export async function warmGarminClient(
+  email: string,
+  password: string,
+  storedTokens?: GarminTokens | null,
+): Promise<'reused_session' | 'fresh_login'> {
+  const now = Date.now()
+  const cached = clientCache.get(email)
+  if (cached && now - cached.loginTime < LOGIN_TTL_MS) return 'reused_session'
+
+  const gc = new GarminConnect({ username: email, password })
+  if (storedTokens) {
+    try {
+      gc.loadToken(storedTokens.oauth1, storedTokens.oauth2)
+      // A cheap real call proves the loaded session actually still works —
+      // if Garmin's rejected it (the OAuth1 token itself finally expired —
+      // that's roughly annual for Garmin, not nightly), this throws and
+      // falls through to a real login below instead of silently caching a
+      // dead session.
+      await gc.getUserSettings()
+      clientCache.set(email, { client: gc, loginTime: now })
+      return 'reused_session'
+    } catch {
+      // Stored session no longer works — fall through to a real login.
+    }
+  }
+
+  await gc.login()
+  clientCache.set(email, { client: gc, loginTime: now })
+  return 'fresh_login'
+}
+
+// Reads back the (possibly refreshed) OAuth tokens from a warm cached
+// client, for the caller to persist for next time. Null if this user has
+// no warm client right now (shouldn't happen right after warmGarminClient,
+// but a sync that only ever fails shouldn't crash trying to save nothing).
+export function exportGarminTokens(email: string): GarminTokens | null {
+  const cached = clientCache.get(email)
+  if (!cached) return null
+  try {
+    return cached.client.exportToken()
+  } catch {
+    return null
+  }
 }
 
 export async function fetchGarminActivities(limit = 100, email?: string, password?: string, start = 0): Promise<IActivity[]> {
