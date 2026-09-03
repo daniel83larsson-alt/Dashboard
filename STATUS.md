@@ -473,6 +473,8 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Verifierat:** typkontrollerat, lintat, 311/311 tester gröna, `next build` ren. Committat, pushat till arbetsgrenen (INTE mergat till produktion än — väntar på Daniels klartecken, se nedan).
   **Kunde INTE testas mot riktiga Garmin-API:et härifrån** — den här sandlådan saknar både nätverksåtkomst till Garmin och krypteringsnyckeln för sparade lösenord. Det riktiga testet är om nästa nattliga synk (eller nästa appöppning) fortfarande utlöser ett "ny inloggning"-mejl. Det FÖRSTA synket efter den här ändringen kommer ändå bli ett riktigt login (ingen sparad session finns än) — så ett sista mejl kan komma, men de DÄREFTER bör upphöra.
 
+- ✅ **Daniel: "Flytta till prod."** Slog ihop resten av dagens arbete (Kost-granskning, Översikt-städning, mat-UX-fixarna, GPS-ruttsynk, Garmin-sessionsåteranvändningen) till huvudgrenen — helt konfliktfri merge, inklusive `vercel.json` som redan konvergerade mot den tidigare cherry-pickade nödfixen utan diff. Full verifiering på det sammanslagna resultatet INNAN push: typkontrollerat, lintat, 311/311 tester gröna, `next build` (dummy-env) ren. Pushat till huvudgrenen.
+
 ---
 
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
