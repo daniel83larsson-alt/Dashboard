@@ -59,7 +59,10 @@ export type DeficitBudget = {
 }
 
 const MIN_SAFE_DEFICIT_KCAL = 0
-const MAX_SAFE_DEFICIT_KCAL = 1000
+// Exported so UI code (the 7-dagars-snitt color) can flag "your actual
+// pace has drifted past the recommended max" without duplicating the
+// threshold — same number computeDeficitBudget's own breach check uses.
+export const MAX_SAFE_DEFICIT_KCAL = 1000
 const MIN_BUDGET_FLOOR_KCAL = 1400
 
 // A hard floor/ceiling that NOT EVEN an explicit user acknowledgement can

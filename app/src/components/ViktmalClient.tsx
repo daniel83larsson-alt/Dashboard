@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
@@ -181,6 +181,20 @@ export default function ViktmalClient({
     () => compute7DayAverage(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete })), budget),
     [days, budget]
   )
+  // weekAvg.avgDiffKcal is eaten-vs-BUDGET, not the actual deficit against
+  // TDEE — converting it onto the same axis as "mål" is what lets the
+  // color (and the two numbers) actually mean something side by side.
+  // Daniel: "går man massa under målet är väl det heller inte bra" — so
+  // this flags both directions, not just "any minus is green".
+  const targetDeficitKcal = tdeeKcal != null && budgetKcal != null ? tdeeKcal - budgetKcal : null
+  const weekActualDeficitKcal = targetDeficitKcal != null && weekAvg.avgDiffKcal != null
+    ? targetDeficitKcal - weekAvg.avgDiffKcal
+    : null
+  const weekAvgColor = weekActualDeficitKcal == null
+    ? 'text-accent'
+    : weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
+    : weekActualDeficitKcal <= 0 ? 'text-amber-400'
+    : 'text-accent'
 
   const weightHistory = useMemo(
     () => measurements.filter((m): m is Measurement & { weightKg: number } => m.weightKg != null).sort((a, b) => a.date.localeCompare(b.date)),
@@ -398,10 +412,16 @@ export default function ViktmalClient({
         {weekAvg.avgDiffKcal != null ? (
           <>
             <div className="flex items-baseline gap-3">
-              <span className="font-mono text-accent text-2xl font-bold">{weekAvg.avgDiffKcal > 0 ? '+' : ''}{weekAvg.avgDiffKcal} kcal/dag</span>
-              {tdeeKcal != null && budgetKcal != null && <span className="text-muted text-xs">mål −{tdeeKcal - budgetKcal} kcal/dag</span>}
+              <span className={`font-mono ${weekAvgColor} text-2xl font-bold`}>{weekAvg.avgDiffKcal > 0 ? '+' : ''}{weekAvg.avgDiffKcal} kcal/dag</span>
+              {targetDeficitKcal != null && <span className="text-muted text-xs">mål −{targetDeficitKcal} kcal/dag</span>}
             </div>
             <p className="text-muted text-xs mt-1">{weekAvg.completeDays} av 7 dagar färdigloggade{weekAvg.incompleteDays > 0 ? ` · ${weekAvg.incompleteDays} räknas inte med` : ''}</p>
+            {weekActualDeficitKcal != null && weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL && (
+              <p className="text-red-400 text-xs mt-2 pt-2 border-t border-edge">Din faktiska takt just nu är ~{weekActualDeficitKcal} kcal/dag i underskott — snabbare än vad vi rekommenderar (max {MAX_SAFE_DEFICIT_KCAL}). Överväg att äta lite mer.</p>
+            )}
+            {weekActualDeficitKcal != null && weekActualDeficitKcal <= 0 && (
+              <p className="text-amber-400 text-xs mt-2 pt-2 border-t border-edge">Just nu skapar du inget underskott — du äter i linje med eller över det som krävs för att gå ner i vikt.</p>
+            )}
           </>
         ) : (
           <p className="text-muted text-xs">Logga några dagar till så kan vi räkna ({weekAvg.completeDays} av minst 4 färdigloggade dagar hittills).</p>
