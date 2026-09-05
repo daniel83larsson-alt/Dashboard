@@ -1,9 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { isDoneInCurrentPeriod, currentHabitStreak, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
+import { stockholmDateKey } from '@/lib/dates'
+
+const BACKDATE_DAYS = 7
 
 export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: HabitLog[] }) {
   const [open, setOpen] = useState(false)
@@ -13,6 +16,7 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [pending, setPending] = useState<string | null>(null)
+  const [pendingDate, setPendingDate] = useState<string | null>(null)
   const router = useRouter()
 
   const logsByHabit = new Map<string, HabitLog[]>()
@@ -21,6 +25,18 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
     list.push(l)
     logsByHabit.set(l.habit_id, list)
   }
+
+  // Daniel: "glömde kryssa i kreatin igår" — en kompakt rad med de senaste 7
+  // dagarna så en missad dag går att rätta i efterhand, utan att öppna en
+  // hel kalender för något som bara är en avkryssning.
+  const recentDays = useMemo(() => {
+    const todayKey = stockholmDateKey()
+    return Array.from({ length: BACKDATE_DAYS }, (_, i) => {
+      const d = new Date(`${todayKey}T00:00:00`)
+      d.setDate(d.getDate() - (BACKDATE_DAYS - 1 - i))
+      return { dateKey: d.toISOString().slice(0, 10), dayNum: d.getDate(), isToday: d.toISOString().slice(0, 10) === todayKey }
+    })
+  }, [])
 
   async function addHabit(e: React.FormEvent) {
     e.preventDefault()
@@ -66,6 +82,18 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
     setPending(null)
   }
 
+  async function toggleDate(habit: Habit, dateKey: string) {
+    const key = `${habit.id}:${dateKey}`
+    setPendingDate(key)
+    await fetch('/api/habits/toggle', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ habitId: habit.id, date: dateKey }),
+    })
+    router.refresh()
+    setPendingDate(null)
+  }
+
   async function removeHabit(id: string) {
     const supabase = createSupabaseClient()
     await supabase.from('habits').update({ active: false }).eq('id', id)
@@ -99,26 +127,52 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
             const done = isDoneInCurrentPeriod(h, habitLogs)
             const streak = currentHabitStreak(h, habitLogs)
             return (
-              <div key={h.id} className="bg-bg rounded-xl p-3 flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={() => toggle(h)}
-                  disabled={pending === h.id}
-                  aria-label={done ? `Ångra ${h.title}` : `Markera ${h.title} som gjord`}
-                  className={`w-6 h-6 flex-shrink-0 rounded-lg border flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 ${
-                    done ? 'bg-habit border-habit text-bg' : 'border-edge text-transparent hover:border-habit'
-                  }`}
-                >
-                  ✓
-                </button>
-                <div className="min-w-0 flex-1">
-                  <div className="text-sm text-fg truncate">{h.title}</div>
-                  <div className="text-[10px] text-muted mt-0.5">
-                    {intervalLabel(h.interval_days)}
-                    {streak > 0 && <span className="text-habit"> · {streak} i rad</span>}
+              <div key={h.id} className="bg-bg rounded-xl p-3 flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    onClick={() => toggle(h)}
+                    disabled={pending === h.id}
+                    aria-label={done ? `Ångra ${h.title}` : `Markera ${h.title} som gjord`}
+                    className={`w-6 h-6 flex-shrink-0 rounded-lg border flex items-center justify-center text-xs font-bold transition-colors disabled:opacity-50 ${
+                      done ? 'bg-habit border-habit text-bg' : 'border-edge text-transparent hover:border-habit'
+                    }`}
+                  >
+                    ✓
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm text-fg truncate">{h.title}</div>
+                    <div className="text-[10px] text-muted mt-0.5">
+                      {intervalLabel(h.interval_days)}
+                      {streak > 0 && <span className="text-habit"> · {streak} i rad</span>}
+                    </div>
                   </div>
+                  <button type="button" onClick={() => removeHabit(h.id)} className="text-[10px] text-muted hover:text-red-400 flex-shrink-0">Ta bort</button>
                 </div>
-                <button type="button" onClick={() => removeHabit(h.id)} className="text-[10px] text-muted hover:text-red-400 flex-shrink-0">Ta bort</button>
+
+                {/* Glömde du kryssa i en dag? Rätta den här — täcker de
+                    senaste 7 dagarna, ingen full kalender behövs för en
+                    enkel avkryssning. */}
+                <div className="flex items-center gap-1.5 pl-9">
+                  {recentDays.map(d => {
+                    const doneThatDay = habitLogs.some(l => l.done_date === d.dateKey)
+                    const isPending = pendingDate === `${h.id}:${d.dateKey}`
+                    return (
+                      <button
+                        key={d.dateKey}
+                        type="button"
+                        onClick={() => toggleDate(h, d.dateKey)}
+                        disabled={isPending}
+                        aria-label={`${doneThatDay ? 'Ångra' : 'Markera'} ${h.title} för ${d.dateKey}`}
+                        className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-mono transition-colors disabled:opacity-50 ${
+                          doneThatDay ? 'bg-habit border-habit text-bg' : 'border-edge text-muted hover:border-habit'
+                        } ${d.isToday ? 'ring-1 ring-accent/50' : ''}`}
+                      >
+                        {d.dayNum}
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             )
           })}
