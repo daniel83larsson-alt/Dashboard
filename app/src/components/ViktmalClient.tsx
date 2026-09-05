@@ -87,7 +87,10 @@ type CheckinComputation =
         | { status: 'adjust'; predictedKg: number; actualKg: number; suggestedCorrection: number; kcalErrorPerDay: number }
     }
 
-const STATUS_DOT: Record<string, string> = { grey: 'bg-muted', green: 'bg-accent', yellow: 'bg-amber-400', red: 'bg-red-400' }
+// Daniel: the app's usual accent color already reads as yellow-ish, which
+// made "grönt = bra" easy to mistake for the amber warning color right
+// next to it — a real, distinct green removes that ambiguity.
+const STATUS_DOT: Record<string, string> = { grey: 'bg-muted', green: 'bg-green-400', yellow: 'bg-amber-400', red: 'bg-red-400' }
 const STATUS_LABEL: Record<string, string> = { grey: 'Ej färdigloggad', green: 'Inom budget', yellow: 'Lite över', red: 'Klart över' }
 
 function fmtDate(dateKey: string) {
@@ -190,11 +193,14 @@ export default function ViktmalClient({
   const weekActualDeficitKcal = targetDeficitKcal != null && weekAvg.avgDiffKcal != null
     ? targetDeficitKcal - weekAvg.avgDiffKcal
     : null
+  // A real green for "on track", not the app's usual accent color — Daniel
+  // pointed out the accent is already yellow-ish and easy to mistake for
+  // the amber warning right next to it (see STATUS_DOT above).
   const weekAvgColor = weekActualDeficitKcal == null
     ? 'text-accent'
     : weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
     : weekActualDeficitKcal <= 0 ? 'text-amber-400'
-    : 'text-accent'
+    : 'text-green-400'
 
   const weightHistory = useMemo(
     () => measurements.filter((m): m is Measurement & { weightKg: number } => m.weightKg != null).sort((a, b) => a.date.localeCompare(b.date)),
