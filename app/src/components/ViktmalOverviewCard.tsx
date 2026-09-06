@@ -24,7 +24,18 @@ export default async function ViktmalOverviewCard() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.deficit_tracking_enabled || profile.deficit_budget_kcal == null) return null
+  // Innan detta kort visade ingenting alls här om Viktmål inte var påslaget
+  // — till skillnad från kalori-kortet på samma sida, som redan hade en
+  // matchande "Sätt ett kalorimål"-CTA. Daniel: sidan ska kännas lika
+  // komplett oavsett vilka valfria funktioner man använder.
+  if (!profile?.deficit_tracking_enabled || profile.deficit_budget_kcal == null) {
+    return (
+      <a href="/dashboard/profil" className="bg-card border border-edge rounded-2xl p-4 block hover:border-accent/30 transition-colors">
+        <div className="text-sm font-medium">🎯 Sätt upp ett viktmål</div>
+        <div className="text-muted text-xs mt-1">Sätt en målvikt och ett datum så räknar vi ut en fast daglig kaloribudget istället för att gissa.</div>
+      </a>
+    )
+  }
 
   const todayKey = stockholmDateKey()
   const days = Array.from({ length: ROLLING_WINDOW_DAYS }, (_, i) => {

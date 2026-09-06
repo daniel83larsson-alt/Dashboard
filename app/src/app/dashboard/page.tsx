@@ -361,18 +361,27 @@ export default async function DashboardPage() {
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {/* Samma mönster som kcal-korten nedanför (etikett ovanför, enhet
+              alltid inline bredvid siffran) — Daniel: "siffror utan någon
+              enhet bakom", eftersom det här kortet tidigare lade enheten
+              som liten text UNDER istället, till skillnad från kcal-korten. */}
           <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="font-mono text-accent text-2xl font-bold leading-none">🔥 {weeklyStreak}</div>
-            <div className="text-muted text-xs mt-1">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-2">Streak</div>
+            <div className="flex items-baseline justify-between">
+              <span className="font-mono text-accent text-2xl font-bold">🔥 {weeklyStreak}</span>
+              <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka' : 'veckor'} i rad</span>
+            </div>
           </div>
           {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="font-mono text-accent text-2xl font-bold leading-none">{stepsToday.toLocaleString('sv-SE')}</div>
-              <div className="text-muted text-xs mt-1">
-                steg idag{avgSteps != null && avgSteps > 0 && (
-                  ` · ${stepsToday >= avgSteps ? '+' : ''}${Math.round(((stepsToday - avgSteps) / avgSteps) * 100)}% mot ditt 30-dagarssnitt`
-                )}
+              <div className="text-xs text-muted uppercase tracking-wider mb-2">Steg idag</div>
+              <div className="flex items-baseline justify-between">
+                <span className="font-mono text-accent text-2xl font-bold">{stepsToday.toLocaleString('sv-SE')}</span>
+                <span className="text-muted text-xs">steg</span>
               </div>
+              {avgSteps != null && avgSteps > 0 && (
+                <div className="text-muted text-xs mt-2">{stepsToday >= avgSteps ? '+' : ''}{Math.round(((stepsToday - avgSteps) / avgSteps) * 100)}% mot ditt 30-dagarssnitt</div>
+              )}
             </div>
           )}
         </div>
