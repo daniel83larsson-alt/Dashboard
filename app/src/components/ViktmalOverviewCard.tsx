@@ -3,7 +3,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { compute7DayAverage } from '@/lib/deficit'
+import { compute7DayAverage, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 
 const ROLLING_WINDOW_DAYS = 7
 
@@ -20,7 +20,7 @@ export default async function ViktmalOverviewCard() {
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('deficit_tracking_enabled, deficit_budget_kcal, deficit_target_weight_kg, deficit_target_date, kost_tracked_meals')
+    .select('deficit_tracking_enabled, deficit_budget_kcal, deficit_tdee_kcal, deficit_target_weight_kg, deficit_target_date, kost_tracked_meals')
     .eq('id', user.id)
     .single()
 
@@ -66,6 +66,21 @@ export default async function ViktmalOverviewCard() {
   })
   const weekAvg = compute7DayAverage(dayEntries, profile.deficit_budget_kcal)
 
+  // Same conversion as the full Viktmål page (ViktmalClient) — the raw
+  // eaten-vs-BUDGET number reads as "kcal under the target" and gets
+  // confused with the actual TDEE-relative deficit shown as "mål" there.
+  // Converting onto the same axis here too keeps the two cards consistent
+  // instead of only fixing one of them.
+  const targetDeficitKcal = profile.deficit_tdee_kcal != null ? profile.deficit_tdee_kcal - profile.deficit_budget_kcal : null
+  const weekActualDeficitKcal = targetDeficitKcal != null && weekAvg.avgDiffKcal != null
+    ? targetDeficitKcal - weekAvg.avgDiffKcal
+    : null
+  const cardColor = weekActualDeficitKcal == null
+    ? 'text-accent'
+    : weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
+    : weekActualDeficitKcal <= 0 ? 'text-amber-400'
+    : 'text-green-400'
+
   return (
     <a href="/dashboard/viktmal" className="bg-card border border-edge rounded-2xl p-4 block hover:border-accent/30 transition-colors">
       <div className="flex items-center justify-between mb-2">
@@ -75,10 +90,17 @@ export default async function ViktmalOverviewCard() {
       {weekAvg.avgDiffKcal != null ? (
         <>
           <div className="flex items-baseline justify-between">
-            <span className="font-mono text-accent text-2xl font-bold">{weekAvg.avgDiffKcal > 0 ? '+' : ''}{weekAvg.avgDiffKcal}</span>
+            <span className={`font-mono ${cardColor} text-2xl font-bold`}>
+              {weekActualDeficitKcal != null
+                ? (weekActualDeficitKcal >= 0 ? `−${weekActualDeficitKcal}` : `+${Math.abs(weekActualDeficitKcal)}`)
+                : (weekAvg.avgDiffKcal > 0 ? '+' : '') + weekAvg.avgDiffKcal}
+            </span>
             <span className="text-muted text-xs">kcal/dag, 7-dagars snitt</span>
           </div>
-          <div className="text-muted text-xs mt-2">{weekAvg.completeDays} av 7 dagar färdigloggade mot budgeten på {profile.deficit_budget_kcal} kcal</div>
+          <div className="text-muted text-xs mt-2">
+            {weekAvg.completeDays} av 7 dagar färdigloggade
+            {targetDeficitKcal != null ? ` · mål −${targetDeficitKcal} kcal/dag` : ` mot budgeten på ${profile.deficit_budget_kcal} kcal`}
+          </div>
         </>
       ) : (
         <div className="text-muted text-xs">Logga några dagar till ({weekAvg.completeDays} av minst 4) så visas ditt snitt här.</div>
