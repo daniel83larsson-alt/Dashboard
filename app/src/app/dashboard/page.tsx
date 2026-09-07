@@ -14,7 +14,7 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
-import { currentDailyStreak, currentWeeklyStreak } from '@/lib/streaks'
+import { currentDailyStreak, currentWeeklyStreak, averageSessionsPerWeek } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
 import MilestoneBanner from '@/components/MilestoneBanner'
 import { currentHabitStreak } from '@/lib/habits'
@@ -191,6 +191,11 @@ export default async function DashboardPage() {
   const weekLoad = weeklyLoad(activities, restingHRForLoad, personalMaxHR, weekStart, nextWeekStart)
   const loadGoal = profile?.weekly_load_goal ?? rollingBaselineLoad(activities, restingHRForLoad, personalMaxHR, now)
   const loadPct = loadGoal ? Math.round((weekLoad / loadGoal) * 100) : null
+
+  // Daniel: streak-kortet kändes tomt med bara "53 veckor i rad" — snittet
+  // räknat över samma period som streaken själv täcker ger sammanhang utan
+  // att behöva ett till godtyckligt tidsfönster.
+  const avgSessionsPerWeek = weeklyStreak > 0 ? averageSessionsPerWeek(activities, weeklyStreak, now) : null
 
   // ── Kalorier idag ─────────────────────────────────────────────────────────
   // "Bränt idag" = summan av redan uträknade träningspass-kalorier (kolumnen
@@ -375,6 +380,9 @@ export default async function DashboardPage() {
               <span className="font-mono text-accent text-2xl font-bold">🔥 {weeklyStreak}</span>
               <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</span>
             </div>
+            {avgSessionsPerWeek != null && (
+              <div className="text-muted text-xs mt-2">snitt {avgSessionsPerWeek} pass/vecka</div>
+            )}
           </div>
           {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">

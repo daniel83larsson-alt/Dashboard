@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek } from './streaks'
+import { currentDailyStreak, currentWeeklyStreak, currentStepGoalStreak, daysMetStepGoalThisWeek, daysElapsedThisWeek, averageSessionsPerWeek } from './streaks'
 
 // Fixed reference "now": Wednesday 2026-07-22, matches the week used
 // throughout this session's plan-reconcile tests.
@@ -169,5 +169,37 @@ describe('daysMetStepGoalThisWeek', () => {
 
   it('returns 0 for no wellness history at all', () => {
     expect(daysMetStepGoalThisWeek([], GOAL, now)).toBe(0)
+  })
+})
+
+describe('averageSessionsPerWeek', () => {
+  it('averages session count over the given window', () => {
+    // 8 activities spread across the last 4 weeks → 2.0/week
+    const activities = [
+      activity('2026-07-22'), activity('2026-07-20'),
+      activity('2026-07-15'), activity('2026-07-13'),
+      activity('2026-07-08'), activity('2026-07-06'),
+      activity('2026-07-01'), activity('2026-06-29'),
+    ]
+    expect(averageSessionsPerWeek(activities, 4, now)).toBe(2)
+  })
+
+  it('rounds to one decimal', () => {
+    const activities = [activity('2026-07-22'), activity('2026-07-21'), activity('2026-07-20')]
+    // 3 sessions / 2 weeks = 1.5
+    expect(averageSessionsPerWeek(activities, 2, now)).toBe(1.5)
+  })
+
+  it('ignores activities outside the window', () => {
+    const activities = [activity('2026-07-22'), activity('2026-01-01')]
+    expect(averageSessionsPerWeek(activities, 1, now)).toBe(1)
+  })
+
+  it('returns null when there are no sessions in the window', () => {
+    expect(averageSessionsPerWeek([], 4, now)).toBeNull()
+  })
+
+  it('returns null for a non-positive window', () => {
+    expect(averageSessionsPerWeek([activity('2026-07-22')], 0, now)).toBeNull()
   })
 })

@@ -103,3 +103,16 @@ export function currentStepGoalStreak(history: { date: string; steps: number | n
   }
   return streak
 }
+
+// Daniel: streak-kortet på Översikt kändes tomt med bara "53 veckor i rad" —
+// snittet över samma period som streaken själv täcker ger sammanhang utan
+// att kräva ett eget godtyckligt fönster (8 veckor, 30 dagar, etc). null när
+// det inte finns någon streak att räkna ett snitt över.
+export function averageSessionsPerWeek(activities: { start_date: string }[], weeks: number, now = new Date()): number | null {
+  if (weeks <= 0) return null
+  const cutoff = new Date(now)
+  cutoff.setDate(cutoff.getDate() - weeks * 7)
+  const count = activities.filter(a => new Date(a.start_date) >= cutoff).length
+  if (count === 0) return null
+  return Math.round((count / weeks) * 10) / 10
+}
