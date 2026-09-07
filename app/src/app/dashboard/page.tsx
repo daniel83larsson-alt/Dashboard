@@ -364,26 +364,23 @@ export default async function DashboardPage() {
           del av "ser rörigt ut"-känslan. Tätare rytm inom klustret, oförändrat
           mellanrum före/efter det. */}
       <div className="space-y-3">
-      {/* ── Streaks ───────────────────────────────────────────────────────────── */}
+      {/* ── Aktivitet idag ────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Etikett ovanför, enhet DIREKT bredvid siffran (samma gap, ingen
-              justify-between) — Daniel: att bara lägga enheten på samma rad
-              räckte inte, den måste sitta ihop med talet, inte spridd till
-              kortets högerkant med en stor tom lucka emellan. */}
+          {/* Ingen egen "Streak"-etikett ovanför längre — texten
+              "veckor i rad" bredvid siffran säger redan vad det är,
+              en rubrik ovanpå bara upprepade samma sak en gång till. */}
           <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="text-xs text-muted uppercase tracking-wider mb-2">Streak</div>
             <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-accent text-2xl font-bold">🔥 {weeklyStreak}</span>
-              <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka' : 'veckor'} i rad</span>
+              <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</span>
             </div>
           </div>
           {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="text-xs text-muted uppercase tracking-wider mb-2">Steg idag</div>
               <div className="flex items-baseline gap-1.5">
                 <span className="font-mono text-accent text-2xl font-bold">{stepsToday.toLocaleString('sv-SE')}</span>
-                <span className="text-muted text-xs">steg</span>
+                <span className="text-muted text-xs">steg idag</span>
               </div>
               {avgSteps != null && avgSteps > 0 && (
                 <div className="text-muted text-xs mt-2">{stepsToday >= avgSteps ? '+' : ''}{Math.round(((stepsToday - avgSteps) / avgSteps) * 100)}% mot ditt 30-dagarssnitt</div>
@@ -415,75 +412,84 @@ export default async function DashboardPage() {
         </div>
       )}
 
-      {/* ── Kalorier idag ─────────────────────────────────────────────────────── */}
+      {/* ── Kalorier idag ───────────────────────────────────────────────────────
+          Ett enda kort istället för tre (Daniel: "borde kunna slå ihop
+          bränt idag, netto och protein") — Förbränt/Netto som två små
+          rutor (samma mönster som redan fanns i "Senaste pass"), sen
+          kalorimål-stapeln och protein som egna rader under, allt inom
+          samma kortram. Loggar man ingen mat blir det bara den ena lilla
+          rutan (Förbränt) kvar i kortet, inget annat ändras. */}
       {showCalorieCard ? (
-        <div className={`grid gap-2 ${eatenToday > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <div className="text-xs text-muted uppercase tracking-wider">Förbränt idag</div>
-              {eatenToday === 0 && <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>}
-            </div>
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-accent text-2xl font-bold">{burnedForNet}</span>
-              <span className="text-muted text-xs">kcal</span>
-            </div>
-            <div className="text-muted text-xs mt-2">
-              {garminCaloriesToday != null ? (
-                'Garmin'
-              ) : (
-                <>
-                  uppskattning
-                  {bmrResult.usedDefaults.length > 0 && (
-                    <> · <a href="/dashboard/profil" className="text-accent hover:underline">fyll i i Profil</a> för mer exakt</>
-                  )}
-                </>
-              )}
-              {yazioToday?.activityKcal != null && (
-                <> · YAZIO aktivitet: {yazioToday.activityKcal} kcal</>
-              )}
-            </div>
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-xs text-muted uppercase tracking-wider">Kalorier idag</div>
+            <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
           </div>
-          {eatenToday > 0 && (
-            <div className="bg-card border border-edge rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs text-muted uppercase tracking-wider">Netto</div>
-                <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
-              </div>
+
+          <div className={`grid gap-2 ${eatenToday > 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            <div className="bg-bg rounded-xl p-3">
               <div className="flex items-baseline gap-1.5">
-                <span className={`font-mono text-2xl font-bold ${netCalories > 0 ? 'text-amber-500' : 'text-accent'}`}>
-                  {netCalories > 0 ? '+' : ''}{netCalories}
-                </span>
+                <span className="font-mono text-accent text-lg font-bold">{burnedForNet}</span>
                 <span className="text-muted text-xs">kcal</span>
               </div>
-              <div className="text-muted text-xs mt-2">
-                {eatenToday} ätit − {burnedForNet} förbränt
-                {netCalories > 0 && ' · ätit mer än förbränt'}
+              <div className="text-muted text-xs mt-1">
+                Förbränt{garminCaloriesToday != null ? ' · Garmin' : ' · uppskattning'}
               </div>
-              {profile?.daily_calorie_goal && (
-                <>
-                  <div className="h-2 bg-bg rounded-full overflow-hidden mt-1.5">
-                    <div
-                      className="h-full bg-accent rounded-full"
-                      style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
-                    />
-                  </div>
-                  <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
-                </>
-              )}
             </div>
+            {eatenToday > 0 && (
+              <div className="bg-bg rounded-xl p-3">
+                <div className="flex items-baseline gap-1.5">
+                  <span className={`font-mono text-lg font-bold ${netCalories > 0 ? 'text-amber-500' : 'text-green-400'}`}>
+                    {netCalories > 0 ? '+' : ''}{netCalories}
+                  </span>
+                  <span className="text-muted text-xs">kcal</span>
+                </div>
+                <div className="text-muted text-xs mt-1">Netto</div>
+              </div>
+            )}
+          </div>
+
+          {(() => {
+            const notes: React.ReactNode[] = []
+            if (bmrResult.usedDefaults.length > 0 && garminCaloriesToday == null) {
+              notes.push(<span key="profil"><a href="/dashboard/profil" className="text-accent hover:underline">Fyll i i Profil</a> för mer exakt förbränning</span>)
+            }
+            if (yazioToday?.activityKcal != null) {
+              notes.push(<span key="yazio">YAZIO aktivitet: {yazioToday.activityKcal} kcal</span>)
+            }
+            if (eatenToday > 0) {
+              notes.push(<span key="eaten">{eatenToday} ätit − {burnedForNet} förbränt{netCalories > 0 && ' · ätit mer än förbränt'}</span>)
+            }
+            if (notes.length === 0) return null
+            return (
+              <div className="text-muted text-xs mt-2">
+                {notes.map((note, i) => <span key={i}>{i > 0 && ' · '}{note}</span>)}
+              </div>
+            )
+          })()}
+
+          {eatenToday > 0 && profile?.daily_calorie_goal && (
+            <>
+              <div className="h-2 bg-bg rounded-full overflow-hidden mt-3">
+                <div
+                  className="h-full bg-accent rounded-full"
+                  style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
+                />
+              </div>
+              <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
+            </>
           )}
-          {/* Protein — samma visuella vikt som kcal-korten (Daniel: "lika
-              synligt som kalorier"), inte undangömt som en liten rad. */}
+
           {eatenToday > 0 && (proteinToday > 0 || profile?.protein_goal_g) && (
-            <div className="col-span-2 bg-card border border-edge rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs text-muted uppercase tracking-wider">Protein idag</div>
+            <div className="mt-3 pt-3 border-t border-edge">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-muted text-xs">Protein</span>
                 {!profile?.protein_goal_g && (
                   <a href="/dashboard/profil" className="text-xs text-accent hover:underline">Sätt ett proteinmål →</a>
                 )}
               </div>
               <div className="flex items-baseline gap-1.5">
-                <span className="font-mono text-accent text-2xl font-bold">{Math.round(proteinToday)}</span>
+                <span className="font-mono text-accent text-lg font-bold">{Math.round(proteinToday)}</span>
                 <span className="text-muted text-xs">{profile?.protein_goal_g ? `/ ${profile.protein_goal_g} g mål` : 'g'}</span>
               </div>
               {profile?.protein_goal_g && (
