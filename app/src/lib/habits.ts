@@ -16,6 +16,26 @@ export function intervalLabel(days: number): string {
   return `Var ${days}:e dag`
 }
 
+// Gives every habit a stable, distinct visual identity shared between
+// HabitsCard's checkbox and ActivityCalendar's dots/legend — so "Kreatin"
+// is always the same color everywhere instead of every habit looking like
+// a generic "vana" (Daniel: vill kunna se VILKEN vana i kalendern, och
+// tydligare rader i Vanor-kortet). Cycles past 4 habits rather than
+// erroring — a rare case, not worth a bigger palette for.
+// Every class below is a complete, static literal (never built by string
+// concatenation) so Tailwind's content scanner can actually find them —
+// a template string like `${color.border}/30` would never generate CSS.
+const HABIT_COLORS = [
+  { bg: 'bg-habit', border: 'border-habit', borderMuted: 'border-habit/30', hoverBorder: 'hover:border-habit', text: 'text-habit' },
+  { bg: 'bg-lcd', border: 'border-lcd', borderMuted: 'border-lcd/30', hoverBorder: 'hover:border-lcd', text: 'text-lcd' },
+  { bg: 'bg-amber-400', border: 'border-amber-400', borderMuted: 'border-amber-400/30', hoverBorder: 'hover:border-amber-400', text: 'text-amber-400' },
+  { bg: 'bg-accent', border: 'border-accent', borderMuted: 'border-accent/30', hoverBorder: 'hover:border-accent', text: 'text-accent' },
+] as const
+
+export function habitColor(index: number) {
+  return HABIT_COLORS[index % HABIT_COLORS.length]
+}
+
 function toDayKey(d: Date) {
   return d.toISOString().slice(0, 10)
 }

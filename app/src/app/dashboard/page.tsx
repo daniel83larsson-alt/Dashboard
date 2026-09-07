@@ -301,8 +301,6 @@ export default async function DashboardPage() {
     .filter(s => !s.is_rest && s.status === 'planned')
     .map(s => s.planned_date)
 
-  const habitDates = [...new Set((habitLogs ?? []).map(l => l.done_date))]
-
   // ── Milstolpar: "Grattis 5 veckor på raken!!" ──────────────────────────
   // Idempotent per (user, streaktyp, nivå) via celebrated_milestones unika
   // constraint — säkert att köra på varje sidladdning, en milstolpe visas
@@ -755,12 +753,17 @@ export default async function DashboardPage() {
           (WeeklyPlanSummaryCard's egen effekt) fortfarande kör för en
           helt ny användare utan pass än. ─────────────────────────────────── */}
       <div className="lg:col-span-3 lg:order-8 flex flex-col gap-2">
-        {activities.length > 0 && (
+        {/* Vanor-avkryssning bakåt flyttades hit från Vanor-kortet och beror
+            inte på om man har några träningspass — annars skulle någon med
+            vanor men inga synkade pass tappa möjligheten att rätta en
+            missad dag helt. */}
+        {(activities.length > 0 || (habits ?? []).length > 0) && (
           <ActivityCalendar
             trainedDates={activities.map(a => a.start_date)}
             mobilityDates={activities.filter(a => a.sport_type === 'Mobility').map(a => a.start_date)}
             plannedDates={plannedDates}
-            habitDates={habitDates}
+            habits={habits ?? []}
+            habitLogs={habitLogs ?? []}
           />
         )}
         <WeeklyPlanSummaryCard
