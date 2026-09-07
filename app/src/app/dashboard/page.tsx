@@ -358,6 +358,14 @@ export default async function DashboardPage() {
         </a>
       )}
 
+      {/* ── Idag, vid en blick ────────────────────────────────────────────────
+          Streak/Steg/Veckobelastning/Kalorier/Viktmål hör alla ihop tematiskt
+          ("läget just nu"), men ärvde tidigare samma space-y-6 som skiljer
+          HELT olika sektioner åt (Senaste pass, Vanor, Kalender) — allting
+          fick samma luft oavsett om det hörde ihop eller inte, vilket var en
+          del av "ser rörigt ut"-känslan. Tätare rytm inom klustret, oförändrat
+          mellanrum före/efter det. */}
+      <div className="space-y-3">
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -502,6 +510,7 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <ViktmalOverviewCard />
       </Suspense>
+      </div>
 
       {/* ── Kom igång-checklista ─────────────────────────────────────────────── */}
       {(() => {
@@ -681,7 +690,10 @@ export default async function DashboardPage() {
                 )}
               </div>
             )}
-            {wellness.steps != null && wellness.steps > 0 && (
+            {/* stepsToday == null täcker upp för dagar då dagens synk inte
+                landat än — annars visas exakt samma stegtal två gånger på
+                sidan (en gång här, en gång i "Idag"-klustret ovanför). */}
+            {wellness.steps != null && wellness.steps > 0 && stepsToday == null && (
               <div className="bg-card border border-edge rounded-2xl p-4">
                 <div className="font-mono text-accent text-2xl font-bold leading-none">{wellness.steps.toLocaleString('sv-SE')}</div>
                 <div className="text-muted text-xs mt-1">Steg idag</div>
