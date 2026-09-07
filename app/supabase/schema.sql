@@ -1487,3 +1487,52 @@ alter table public.profiles add column if not exists deficit_override_deficit_kc
 -- Idé #7, av som standard som alla andra opt-in-inställningar i appen.
 alter table public.profiles add column if not exists kost_evening_guard_enabled boolean not null default false;
 alter table public.profiles add column if not exists kost_evening_guard_hour smallint not null default 20;
+
+-- friend_activity_feed() nu returnerar `source` också, så vyn kan slå ihop
+-- samma pass synkat från flera källor precis som Passlogg/dashboard/Rekord
+-- redan gör via lib/duplicates.ts (Daniel: "Nackdel när mina 2 pass synkas.
+-- Att de visas som 2 i väntlistan." — en egen rodd-session synkad från både
+-- Garmin och Concept2 visades som två separata rader hos vänner). Gränsen
+-- höjs från 10 till 40 råa rader eftersom sammanslagningen sker klient-sida
+-- (grupperat per owner_id) EFTER hämtningen — annars kunde en användare med
+-- flera dubbletter i rad tränga ut äldre, redan unika pass ur de 10 som
+-- visas.
+drop function public.friend_activity_feed();
+create function public.friend_activity_feed()
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  activity_name text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz,
+  kudos_count bigint,
+  liked_by_me boolean,
+  source text,
+  strava_id bigint
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.name, a.distance, a.moving_time, a.start_date,
+    (select count(*) from public.activity_kudos k where k.activity_id = a.id),
+    exists(select 1 from public.activity_kudos k2 where k2.activity_id = a.id and k2.giver_id = auth.uid()),
+    a.source, a.strava_id
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  where exists (
+    select 1 from public.follows f
+    where f.status = 'accepted' and (
+      (f.follower_id = auth.uid() and f.followee_id = a.user_id) or
+      (f.followee_id = auth.uid() and f.follower_id = a.user_id)
+    )
+  )
+  order by a.start_date desc
+  limit 40;
+$$;
+revoke all on function public.friend_activity_feed() from public;
+grant execute on function public.friend_activity_feed() to authenticated;
