@@ -166,7 +166,7 @@ export default function HabitsCard({ habits, logs }: { habits: Habit[]; logs: Ha
                         aria-label={`${doneThatDay ? 'Ångra' : 'Markera'} ${h.title} för ${d.dateKey}`}
                         className={`w-6 h-6 rounded-full border flex items-center justify-center text-[10px] font-mono transition-colors disabled:opacity-50 ${
                           doneThatDay ? 'bg-habit border-habit text-bg' : 'border-edge text-muted hover:border-habit'
-                        } ${d.isToday ? 'ring-1 ring-accent/50' : ''}`}
+                        }`}
                       >
                         {d.dayNum}
                       </button>
