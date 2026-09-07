@@ -361,13 +361,13 @@ export default async function DashboardPage() {
       {/* ── Streaks ───────────────────────────────────────────────────────────── */}
       {activities.length > 0 && (
         <div className={`grid gap-2 ${stepsToday != null ? 'grid-cols-2' : 'grid-cols-1'}`}>
-          {/* Samma mönster som kcal-korten nedanför (etikett ovanför, enhet
-              alltid inline bredvid siffran) — Daniel: "siffror utan någon
-              enhet bakom", eftersom det här kortet tidigare lade enheten
-              som liten text UNDER istället, till skillnad från kcal-korten. */}
+          {/* Etikett ovanför, enhet DIREKT bredvid siffran (samma gap, ingen
+              justify-between) — Daniel: att bara lägga enheten på samma rad
+              räckte inte, den måste sitta ihop med talet, inte spridd till
+              kortets högerkant med en stor tom lucka emellan. */}
           <div className="bg-card border border-edge rounded-2xl p-4">
             <div className="text-xs text-muted uppercase tracking-wider mb-2">Streak</div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-accent text-2xl font-bold">🔥 {weeklyStreak}</span>
               <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka' : 'veckor'} i rad</span>
             </div>
@@ -375,7 +375,7 @@ export default async function DashboardPage() {
           {stepsToday != null && (
             <div className="bg-card border border-edge rounded-2xl p-4">
               <div className="text-xs text-muted uppercase tracking-wider mb-2">Steg idag</div>
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
                 <span className="font-mono text-accent text-2xl font-bold">{stepsToday.toLocaleString('sv-SE')}</span>
                 <span className="text-muted text-xs">steg</span>
               </div>
@@ -417,7 +417,7 @@ export default async function DashboardPage() {
               <div className="text-xs text-muted uppercase tracking-wider">Förbränt idag</div>
               {eatenToday === 0 && <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>}
             </div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline gap-1.5">
               <span className="font-mono text-accent text-2xl font-bold">{burnedForNet}</span>
               <span className="text-muted text-xs">kcal</span>
             </div>
@@ -443,7 +443,7 @@ export default async function DashboardPage() {
                 <div className="text-xs text-muted uppercase tracking-wider">Netto</div>
                 <a href="/dashboard/mat" className="text-xs text-accent hover:underline">Logga mat →</a>
               </div>
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
                 <span className={`font-mono text-2xl font-bold ${netCalories > 0 ? 'text-amber-500' : 'text-accent'}`}>
                   {netCalories > 0 ? '+' : ''}{netCalories}
                 </span>
@@ -476,7 +476,7 @@ export default async function DashboardPage() {
                   <a href="/dashboard/profil" className="text-xs text-accent hover:underline">Sätt ett proteinmål →</a>
                 )}
               </div>
-              <div className="flex items-baseline justify-between">
+              <div className="flex items-baseline gap-1.5">
                 <span className="font-mono text-accent text-2xl font-bold">{Math.round(proteinToday)}</span>
                 <span className="text-muted text-xs">{profile?.protein_goal_g ? `/ ${profile.protein_goal_g} g mål` : 'g'}</span>
               </div>

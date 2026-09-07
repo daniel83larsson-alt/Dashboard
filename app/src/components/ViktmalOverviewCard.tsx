@@ -100,7 +100,7 @@ export default async function ViktmalOverviewCard() {
       </div>
       {weekAvg.avgDiffKcal != null ? (
         <>
-          <div className="flex items-baseline justify-between">
+          <div className="flex items-baseline gap-1.5">
             <span className={`font-mono ${cardColor} text-2xl font-bold`}>
               {weekActualDeficitKcal != null
                 ? (weekActualDeficitKcal >= 0 ? `−${weekActualDeficitKcal}` : `+${Math.abs(weekActualDeficitKcal)}`)
