@@ -14,6 +14,7 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
+import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 import { currentDailyStreak, currentWeeklyStreak, averageSessionsPerWeek } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
 import MilestoneBanner from '@/components/MilestoneBanner'
@@ -115,7 +116,7 @@ export default async function DashboardPage() {
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
 
   const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
-    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g').eq('id', user.id).single(),
+    supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
     // stays: dedupeForStats() needs it for Concept2/Garmin pair matching.
@@ -275,7 +276,15 @@ export default async function DashboardPage() {
   const garminCaloriesToday = wellness?.date === todayKey ? (wellness.totalCalories ?? null) : null
   const burnedForNet = garminCaloriesToday ?? burnedSoFar
   const netCalories = eatenToday - burnedForNet
-  const showCalorieCard = !!profile?.daily_calorie_goal || eatenToday > 0
+  // Viktmåls uträknade budget vinner över det fristående manuella fältet i
+  // Profil när båda finns (Daniel: "man bör väl säga vilken som är
+  // viktigast att följa") — se lib/calorie-goal.ts.
+  const effectiveCalorieGoal = resolveEffectiveCalorieGoal({
+    dailyCalorieGoal: profile?.daily_calorie_goal ?? null,
+    deficitTrackingEnabled: profile?.deficit_tracking_enabled ?? false,
+    deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
+  })
+  const showCalorieCard = !!effectiveCalorieGoal.kcal || eatenToday > 0
 
   // ── Steg idag mot snitt ──────────────────────────────────────────────────
   // Rullande 30-dagarssnitt, dagens egen (ännu ofärdiga) rad exkluderad så
@@ -513,15 +522,18 @@ export default async function DashboardPage() {
             )
           })()}
 
-          {eatenToday > 0 && profile?.daily_calorie_goal && (
+          {eatenToday > 0 && effectiveCalorieGoal.kcal && (
             <>
               <div className="h-2 bg-bg rounded-full overflow-hidden mt-3">
                 <div
                   className="h-full bg-accent rounded-full"
-                  style={{ width: `${Math.min(100, Math.round((eatenToday / profile.daily_calorie_goal) * 100))}%` }}
+                  style={{ width: `${Math.min(100, Math.round((eatenToday / effectiveCalorieGoal.kcal) * 100))}%` }}
                 />
               </div>
-              <div className="text-muted text-xs mt-1">{eatenToday} / {profile.daily_calorie_goal} mål ätit</div>
+              <div className="text-muted text-xs mt-1">
+                {eatenToday} / {effectiveCalorieGoal.kcal} mål ätit
+                {effectiveCalorieGoal.source === 'deficit_budget' && ' · Viktmål'}
+              </div>
             </>
           )}
 

@@ -16,6 +16,8 @@ import {
 } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
 import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
+import { estimateBurnedKcalForDay } from '@/lib/burned-calories'
+import type { CalorieGoalSource } from '@/lib/calorie-goal'
 
 // Same palette/tooltip convention as the other chart components in the app
 // (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
@@ -105,6 +107,7 @@ function fileToBase64(file: File): Promise<string> {
 
 export default function FoodLogClient({
   dailyCalorieGoal,
+  calorieGoalSource,
   entries: initialEntries,
   quickPicks: initialQuickPicks,
   yazioHistory,
@@ -114,8 +117,12 @@ export default function FoodLogClient({
   deficitSummary,
   kostReview,
   dayNotes: initialDayNotes,
+  bmrKcal,
+  activityKcalByDate,
+  garminTotalCaloriesByDate,
 }: {
   dailyCalorieGoal: number | null
+  calorieGoalSource: CalorieGoalSource | null
   entries: FoodEntry[]
   quickPicks: QuickPick[]
   yazioHistory: YazioDay[]
@@ -125,6 +132,9 @@ export default function FoodLogClient({
   deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
   kostReview: { generatedAt: string; kostWeek: string; kostGeneral: string } | null
   dayNotes: DayNote[]
+  bmrKcal: number
+  activityKcalByDate: Record<string, number>
+  garminTotalCaloriesByDate: Record<string, number>
 }) {
   const router = useRouter()
   const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
@@ -576,6 +586,13 @@ export default function FoodLogClient({
     return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
   }
 
+  // Förbränt för en given dag i dagslistorna nedan (Daniel: "smidigt om
+  // totalt förbränt loggades där med") — Garmins uppmätta dygnstotal när
+  // den finns, annars BMR + den dagens loggade träning.
+  function burnedKcalForDate(dateKey: string): number {
+    return estimateBurnedKcalForDay(bmrKcal, activityKcalByDate[dateKey] ?? 0, garminTotalCaloriesByDate[dateKey] ?? null).kcal
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full mx-auto flex flex-col gap-4">
       <div>
@@ -734,12 +751,14 @@ export default function FoodLogClient({
                 const isToday = key === todayKey
                 const label = new Date(`${key}T00:00:00`).toLocaleDateString('sv-SE', { weekday: 'short' })
                 const diff = day?.kcalEaten != null && day.kcalGoal != null ? day.kcalEaten - day.kcalGoal : null
+                const burned = !isFuture && day?.kcalEaten != null ? burnedKcalForDate(key) : null
                 return (
                   <div key={key} className={`flex items-center justify-between text-xs py-1.5 ${isFuture ? 'opacity-40' : ''}`}>
                     <span className={`capitalize ${isToday ? 'text-fg font-medium' : 'text-muted'}`}>{label}</span>
                     {day?.kcalEaten != null ? (
                       <div className="flex items-center gap-2 font-mono">
                         <span className="text-fg">{day.kcalEaten} kcal</span>
+                        {burned != null && <span className="text-muted">/ {burned} bränt</span>}
                         {diff != null && (
                           <span className={diff > 0 ? 'text-amber-500' : 'text-accent'}>
                             {diff > 0 ? '+' : ''}{diff}
@@ -810,7 +829,7 @@ export default function FoodLogClient({
         <div className="flex items-baseline justify-between mb-2">
           <span className="text-sm font-medium">Idag</span>
           <span className="font-mono text-accent text-lg font-bold">
-            {todayTotal} {dailyCalorieGoal ? <span className="text-muted text-sm font-normal">/ {dailyCalorieGoal} kcal</span> : <span className="text-muted text-sm font-normal">kcal</span>}
+            {todayTotal} {dailyCalorieGoal ? <span className="text-muted text-sm font-normal">/ {dailyCalorieGoal} kcal{calorieGoalSource === 'deficit_budget' ? ' · Viktmål' : ''}</span> : <span className="text-muted text-sm font-normal">kcal</span>}
           </span>
         </div>
         {goalPct != null && (
@@ -1041,6 +1060,7 @@ export default function FoodLogClient({
                   const completeness = computeDayCompleteness(kostSettings.trackedMeals, dayEntries, dayOverrides.has(key))
                   const kcal = kcalTotalForDay(dayEntries)
                   const diff = kostSettings.calorieGoal != null ? kcal - kostSettings.calorieGoal : null
+                  const burned = !isFuture && completeness.status === 'complete' ? burnedKcalForDate(key) : null
                   return (
                     <button
                       key={key}
@@ -1058,6 +1078,7 @@ export default function FoodLogClient({
                       ) : (
                         <span className="flex items-center gap-2 font-mono">
                           <span className="text-fg">{kcal} kcal</span>
+                          {burned != null && <span className="text-muted">/ {burned} bränt</span>}
                           {diff != null && <span className={diff > 0 ? 'text-amber-500' : 'text-accent'}>{diff > 0 ? '+' : ''}{diff}</span>}
                         </span>
                       )}
@@ -1068,7 +1089,25 @@ export default function FoodLogClient({
             </div>
           )}
 
-          {kostView === 'calendar' && (
+          {kostView === 'calendar' && (() => {
+            // Nettodiff denna månad (Daniel: "summan av diffen på
+            // månadsbasis kanske räcker" — istället för en förbränt-siffra
+            // per dag i den redan trånga kalenderrutan) — summerar ätit
+            // minus förbränt över dagar med komplett loggning hittills i
+            // den visade månaden.
+            let monthNetDiffSum = 0
+            let monthNetDiffDays = 0
+            for (let day = 1; day <= calDays.daysInMonth; day++) {
+              const key = dateKeyFor(calDays.year, calDays.month, day)
+              if (key > todayKey) continue
+              const dayEntries = entriesByDate.get(key) ?? []
+              const completeness = computeDayCompleteness(kostSettings.trackedMeals, dayEntries, dayOverrides.has(key))
+              if (completeness.status !== 'complete') continue
+              monthNetDiffSum += kcalTotalForDay(dayEntries) - burnedKcalForDate(key)
+              monthNetDiffDays++
+            }
+
+            return (
             <div className="bg-card border border-edge rounded-2xl p-4">
               <div className="flex items-center justify-between mb-3">
                 <span className="text-sm font-semibold">{new Date(calDays.year, calDays.month, 1).toLocaleDateString('sv-SE', { month: 'long', year: 'numeric' })}</span>
@@ -1110,8 +1149,15 @@ export default function FoodLogClient({
                 <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block bg-edge" />Ingen/lite data</span>
                 <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full" style={{ background: RED }} />Flaggad</span>
               </div>
+              {monthNetDiffDays > 0 && (
+                <div className="text-xs text-muted mt-3 pt-3 border-t border-edge">
+                  Nettodiff denna månad: <span className={`font-mono ${monthNetDiffSum > 0 ? 'text-amber-500' : 'text-green-400'}`}>{monthNetDiffSum > 0 ? '+' : ''}{monthNetDiffSum} kcal</span>
+                  {' '}({monthNetDiffDays} {monthNetDiffDays === 1 ? 'dag' : 'dagar'} med data)
+                </div>
+              )}
             </div>
-          )}
+            )
+          })()}
         </>
       )}
 

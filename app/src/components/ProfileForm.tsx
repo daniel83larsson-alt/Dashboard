@@ -40,6 +40,7 @@ type Profile = {
   carb_goal_g?: number | null
   fat_goal_g?: number | null
   deficit_tracking_enabled?: boolean | null
+  deficit_budget_kcal?: number | null
   deficit_start_weight_kg?: number | null
   deficit_start_date?: string | null
   deficit_target_weight_kg?: number | null
@@ -646,7 +647,11 @@ export default function ProfileForm({
             placeholder="t.ex. 2400"
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
-          <p className="text-muted text-xs mt-1.5">Styr kalorirutan på Översikt. Lämna tomt för att bara se ätit/bränt utan ett mål att jämföra mot.</p>
+          <p className="text-muted text-xs mt-1.5">
+            {deficitTrackingEnabled
+              ? 'Används bara om du stänger av Viktmål-spårning nedan — så länge den är på styr Viktmåls uträknade budget kalorirutan på Översikt och Kost istället.'
+              : 'Styr kalorirutan på Översikt och Kost. Lämna tomt för att bara se ätit/bränt utan ett mål att jämföra mot.'}
+          </p>
         </div>
       </div>
 
@@ -705,8 +710,8 @@ export default function ProfileForm({
                 <input type="number" min={0} step={5} inputMode="numeric" value={fatGoalG} onChange={e => setFatGoalG(e.target.value)} placeholder="t.ex. 70" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
               </div>
             )}
-            {kostTrackedMetrics.includes('kcal') && !calorieGoal.trim() && (
-              <p className="text-amber-400 text-xs -mt-2">Ange ett dagligt kalorimål ovan under &quot;Kropp &amp; kalorier&quot; för att kalorier ska räknas med i kalendern.</p>
+            {kostTrackedMetrics.includes('kcal') && !calorieGoal.trim() && !(deficitTrackingEnabled && profile?.deficit_budget_kcal != null) && (
+              <p className="text-amber-400 text-xs -mt-2">Ange ett dagligt kalorimål ovan under &quot;Kropp &amp; kalorier&quot; (eller sätt upp ett viktmål) för att kalorier ska räknas med i kalendern.</p>
             )}
 
             <div>

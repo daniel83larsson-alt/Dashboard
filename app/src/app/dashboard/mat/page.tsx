@@ -5,6 +5,9 @@ import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_METRICS, KOST_MEALS, type KostMetric, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
 import { compute7DayAverage } from '@/lib/deficit'
+import { estimateBMR } from '@/lib/bmr'
+import { dedupeForStats } from '@/lib/duplicates'
+import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 
 // 90 dagar bak i tiden räcker för vecka/månad-vyerna utan att hämta hela
 // historiken varje sidladdning.
@@ -17,8 +20,8 @@ export default async function MatPage() {
 
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
-  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }] = await Promise.all([
-    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, kost_evening_guard_enabled, kost_evening_guard_hour').eq('id', user.id).single(),
+  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }] = await Promise.all([
+    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -28,6 +31,12 @@ export default async function MatPage() {
     // tömmer kvoten som en annan sida redan betalat för.
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('day_context_notes').select('date, tag, note').eq('user_id', user.id).gte('date', sinceIso.slice(0, 10)),
+    // För "totalt förbränt"-kolumnen i dagslistorna nedan (Daniel: "smidigt
+    // om totalt förbränt loggades där med"). Samma smala kolumnval och
+    // dedupeForStats-hantering som dashboard/page.tsx redan använder — ett
+    // Garmin+Concept2-synkat pass ska bara räknas en gång.
+    supabase.from('activities').select('id, strava_id, source, sport_type, start_date, distance, moving_time, calories').eq('user_id', user.id).gte('start_date', sinceIso),
+    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
   ])
 
   const todayKey = stockholmDateKey()
@@ -56,16 +65,61 @@ export default async function MatPage() {
   const trackedMetrics = ((profile?.kost_tracked_metrics as string[] | null) ?? ['kcal']).filter((m): m is KostMetric => (KOST_METRICS as string[]).includes(m))
   const trackedMeals = ((profile?.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
 
+  // Viktmåls uträknade budget vinner över det fristående manuella fältet
+  // när båda finns (Daniel: "man bör väl säga vilken som är viktigast att
+  // följa" — se lib/calorie-goal.ts). Samma resolverade tal används både
+  // här och på Översikt, så de aldrig visar olika mål.
+  const effectiveCalorieGoal = resolveEffectiveCalorieGoal({
+    dailyCalorieGoal: profile?.daily_calorie_goal ?? null,
+    deficitTrackingEnabled: profile?.deficit_tracking_enabled ?? false,
+    deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
+  })
+
   const kostSettings: KostSettings = {
     trackingEnabled: profile?.kost_tracking_enabled ?? false,
     trackedMetrics,
     trackedMeals,
-    calorieGoal: profile?.daily_calorie_goal ?? null,
+    calorieGoal: effectiveCalorieGoal.kcal,
     proteinGoalG: profile?.protein_goal_g ?? null,
     carbGoalG: profile?.carb_goal_g ?? null,
     fatGoalG: profile?.fat_goal_g ?? null,
     eveningGuardEnabled: profile?.kost_evening_guard_enabled ?? false,
     eveningGuardHour: profile?.kost_evening_guard_hour ?? 20,
+  }
+
+  // Förbränt-kolumnen i dagslistorna (Daniel: "smidigt om totalt förbränt
+  // loggades där med"). Samma modell som Översikts "Kalorier idag"-kort:
+  // Garmins uppmätta dygnstotal när den finns, annars BMR + den dagens
+  // träning (dedupeForStats säkerställer att ett Garmin+Concept2-synkat
+  // pass inte räknas dubbelt — samma bugg vi nyss fixade i vänners
+  // träningspass). Räknas per-dag i klienten (estimateBurnedKcalForDay) —
+  // här skickas bara de tre råa ingredienserna ner.
+  const bmrKcal = estimateBMR({
+    weightKg: profile?.weight_kg ?? null,
+    heightCm: profile?.height_cm ?? null,
+    birthYear: profile?.birth_year ?? null,
+    biologicalSex: profile?.biological_sex ?? null,
+  }).bmr
+
+  type ActivityForCalories = { start_date: string; calories: number | null; id: string; strava_id: number; source?: string; sport_type: string; distance: number; moving_time: number }
+  const dedupedActivities = dedupeForStats((recentActivitiesRaw ?? []) as ActivityForCalories[])
+  const activityKcalByDate: Record<string, number> = {}
+  for (const a of dedupedActivities) {
+    const key = a.start_date.slice(0, 10)
+    activityKcalByDate[key] = (activityKcalByDate[key] ?? 0) + (a.calories ?? 0)
+  }
+
+  type DayWellness = { date: string; totalCalories: number | null }
+  const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
+  const wellnessHistory: DayWellness[] = wellnessRaw ? (() => {
+    try {
+      const parsed = JSON.parse(wellnessRaw) as { history?: DayWellness[] }
+      return Array.isArray(parsed.history) ? parsed.history : []
+    } catch { return [] }
+  })() : []
+  const garminTotalCaloriesByDate: Record<string, number> = {}
+  for (const w of wellnessHistory) {
+    if (w.totalCalories != null) garminTotalCaloriesByDate[w.date] = w.totalCalories
   }
 
   const dayNotes = (dayNoteRows ?? []) as { date: string; tag: string | null; note: string | null }[]
@@ -108,7 +162,8 @@ export default async function MatPage() {
 
   return (
     <FoodLogClient
-      dailyCalorieGoal={profile?.daily_calorie_goal ?? null}
+      dailyCalorieGoal={effectiveCalorieGoal.kcal}
+      calorieGoalSource={effectiveCalorieGoal.source}
       entries={entries}
       quickPicks={quickPicks}
       yazioHistory={yazioHistory}
@@ -118,6 +173,9 @@ export default async function MatPage() {
       deficitSummary={deficitSummary}
       kostReview={kostReview}
       dayNotes={dayNotes}
+      bmrKcal={bmrKcal}
+      activityKcalByDate={activityKcalByDate}
+      garminTotalCaloriesByDate={garminTotalCaloriesByDate}
     />
   )
 }

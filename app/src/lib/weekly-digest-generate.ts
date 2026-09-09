@@ -19,6 +19,7 @@ import { sportLabel } from './sport'
 import { coachToneInstruction } from './coach-tone'
 import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
+import { resolveEffectiveCalorieGoal } from './calorie-goal'
 
 const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
 
@@ -291,7 +292,11 @@ export async function generateWeeklyDigestForUser(
     manualEntries: (manualFoodLog ?? []) as KostFoodEntry[],
     trackedMeals: (profile?.kost_tracked_meals as KostMeal[] | null) ?? [],
     dayOverrides: new Set((dayStatusRows ?? []).map(r => r.date as string)),
-    calorieGoal: profile?.daily_calorie_goal ?? null,
+    calorieGoal: resolveEffectiveCalorieGoal({
+      dailyCalorieGoal: profile?.daily_calorie_goal ?? null,
+      deficitTrackingEnabled: profile?.deficit_tracking_enabled ?? false,
+      deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
+    }).kcal,
     proteinGoalG: profile?.protein_goal_g ?? null,
     carbGoalG: profile?.carb_goal_g ?? null,
     fatGoalG: profile?.fat_goal_g ?? null,
