@@ -21,6 +21,10 @@ export type NutritionSummaryInput = {
   todayKey: string // stockholmDateKey() of `now` — keeps the day boundary in Swedish local time, matching every other Kost/Viktmål computation
   yazioHistory: YazioDay[]
   manualEntries: KostFoodEntry[] // needs to cover at least GENERAL_WINDOW_DAYS + 7 back for the "previous week" trend line
+  // The same shared table Viktmål reads (and YAZIO's sync already mirrors
+  // weight into) — covers both YAZIO- and manually-logged weight/waist in
+  // one place, needs to cover at least GENERAL_WINDOW_DAYS back.
+  bodyMeasurements: { measured_on: string; weight_kg: number | null; waist_cm: number | null }[]
   trackedMeals: KostMeal[]
   dayOverrides: Set<string>
   calorieGoal: number | null
@@ -39,7 +43,8 @@ export type NutritionSummary = {
   generalDaysLogged: number
   generalAvgKcal: number | null
   generalDeficitAvgDiffKcal: number | null // 7-day avg vs Viktmål budget, only when deficit tracking is on
-  weightChangeKg: number | null // over the general window — YAZIO-only, manual Kost doesn't track weight
+  weightChangeKg: number | null // over the general window, from body_measurements (YAZIO- or manually-logged)
+  waistChangeCm: number | null // over the general window, from body_measurements — Daniel: "kollar den på... loggade midjemått också om den datan finns"
 }
 
 function dateKeysBack(todayKey: string, days: number): string[] {
@@ -53,7 +58,7 @@ function dateKeysBack(todayKey: string, days: number): string[] {
 
 export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSummary {
   const {
-    now, todayKey, yazioHistory, manualEntries, trackedMeals, dayOverrides,
+    now, todayKey, yazioHistory, manualEntries, bodyMeasurements, trackedMeals, dayOverrides,
     calorieGoal, proteinGoalG, carbGoalG, fatGoalG, deficitEnabled, deficitBudgetKcal,
   } = input
 
@@ -96,11 +101,18 @@ export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSu
     generalDeficitAvgDiffKcal = compute7DayAverage(resolved.slice(0, 7), deficitBudgetKcal).avgDiffKcal
   }
 
-  const weightPoints = yazioHistory
-    .filter(d => generalDays.includes(d.date) && d.weightKg != null)
-    .sort((a, b) => a.date < b.date ? -1 : 1)
+  const measurementsInWindow = bodyMeasurements
+    .filter(m => generalDays.includes(m.measured_on))
+    .sort((a, b) => a.measured_on < b.measured_on ? -1 : 1)
+
+  const weightPoints = measurementsInWindow.filter((m): m is typeof m & { weight_kg: number } => m.weight_kg != null)
   const weightChangeKg = weightPoints.length >= 2
-    ? Math.round((weightPoints[weightPoints.length - 1].weightKg! - weightPoints[0].weightKg!) * 10) / 10
+    ? Math.round((weightPoints[weightPoints.length - 1].weight_kg - weightPoints[0].weight_kg) * 10) / 10
+    : null
+
+  const waistPoints = measurementsInWindow.filter((m): m is typeof m & { waist_cm: number } => m.waist_cm != null)
+  const waistChangeCm = waistPoints.length >= 2
+    ? Math.round((waistPoints[waistPoints.length - 1].waist_cm - waistPoints[0].waist_cm) * 10) / 10
     : null
 
   return {
@@ -112,6 +124,7 @@ export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSu
     generalAvgKcal,
     generalDeficitAvgDiffKcal,
     weightChangeKg,
+    waistChangeCm,
   }
 }
 
@@ -147,9 +160,11 @@ export function formatNutritionForPrompt(s: NutritionSummary): string {
     const sign = s.generalDeficitAvgDiffKcal > 0 ? '+' : ''
     lines.push(`VIKTMÅL: snitt ${sign}${s.generalDeficitAvgDiffKcal} kcal/dag mot budgeten senaste veckan`)
   }
-  if (s.weightChangeKg != null) {
-    const sign = s.weightChangeKg > 0 ? '+' : ''
-    lines.push(`VIKTFÖRÄNDRING (${s.generalWindowDays} dagar, YAZIO): ${sign}${s.weightChangeKg} kg`)
+  if (s.weightChangeKg != null || s.waistChangeCm != null) {
+    const parts: string[] = []
+    if (s.weightChangeKg != null) parts.push(`vikt ${s.weightChangeKg > 0 ? '+' : ''}${s.weightChangeKg} kg`)
+    if (s.waistChangeCm != null) parts.push(`midjemått ${s.waistChangeCm > 0 ? '+' : ''}${s.waistChangeCm} cm`)
+    lines.push(`KROPPSMÅTT (${s.generalWindowDays} dagar): ${parts.join(', ')}`)
   }
   return lines.join('\n')
 }

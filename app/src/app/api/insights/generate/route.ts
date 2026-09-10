@@ -74,7 +74,7 @@ export async function POST() {
 
     const foodSinceIso = new Date(Date.now() - 37 * 86400000).toISOString()
 
-    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
+    const [{ data: profile }, { data: acts }, { data: goals }, { data: ctxRow }, { data: wellnessRow }, { data: overviewRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: bodyMeasurementRows }] = await Promise.all([
       supabase.from('profiles').select('name, llm_api_key_encrypted, home_equipment, selected_sports, daily_step_goal, coach_tone, kost_tracking_enabled, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
       supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, average_heartrate, average_watts, sport_type, name, description, hr_zones:raw_data->hrZones')
         .eq('user_id', user.id).order('start_date', { ascending: false }).limit(60),
@@ -85,6 +85,11 @@ export async function POST() {
       supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at').eq('user_id', user.id).gte('logged_at', foodSinceIso).order('logged_at', { ascending: false }),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
       supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete'),
+      // Samma delade tabell Viktmål redan läser (och YAZIO-synken redan
+      // speglar in i) — så viktresan syns för Kostspecialisten oavsett om
+      // man loggar vikt via YAZIO eller manuellt (Daniel: "kollar den på
+      // viktnedgång och loggade midjemått också om den datan finns").
+      supabase.from('body_measurements').select('measured_on, weight_kg, waist_cm').eq('user_id', user.id).gte('measured_on', foodSinceIso.slice(0, 10)).order('measured_on', { ascending: true }),
     ])
 
     const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
@@ -158,6 +163,7 @@ export async function POST() {
       todayKey: stockholmDateKey(now),
       yazioHistory,
       manualEntries: (foodLog ?? []) as KostFoodEntry[],
+      bodyMeasurements: (bodyMeasurementRows ?? []) as { measured_on: string; weight_kg: number | null; waist_cm: number | null }[],
       trackedMeals,
       dayOverrides,
       calorieGoal: resolveEffectiveCalorieGoal({
@@ -224,7 +230,7 @@ kostWeek (Kostcoach, fokusera ENBART på DENNA VECKA-raden under KOST — bedöm
       ? 'Kommentera hur veckans loggning/kalorier/protein ser ut mot målen SÅ HÄR LÅNGT i veckan, och peka ut EN konkret förbättring för resten av veckan.'
       : 'Ingen kost är loggad än. Ge en kort, peppande uppmaning att börja logga i Kost, och nämn kort varför det gör resten av teamets råd bättre.'}
 
-kostGeneral (Kostcoach, fokusera ENBART på SENASTE 30 DAGARNA/VIKTMÅL/VIKTFÖRÄNDRING-raderna under KOST): ${nutrition.hasData
+kostGeneral (Kostcoach, fokusera ENBART på SENASTE 30 DAGARNA/VIKTMÅL/KROPPSMÅTT-raderna under KOST): ${nutrition.hasData
       ? 'Ge en bredare bild av matvanorna över tid — konsistens, trend, och om Viktmål/vikttrenden (om de finns) stämmer med hur mycket som faktiskt loggas ätits.'
       : 'Ingen kost är loggad än. Håll det till EN kort mening — inget att analysera över tid ännu.'}
 

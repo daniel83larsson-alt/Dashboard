@@ -1,22 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { buildNutritionSummary, formatNutritionForPrompt, GENERAL_WINDOW_DAYS } from './nutrition-summary'
-import type { YazioDay } from './yazio-history'
 import type { KostFoodEntry } from './kost'
 
 // Sunday 2026-08-30 — same anchor weekly-kost.test.ts uses, so "this week"
 // lines up with a fully-past Monday..Sunday window.
 const NOW = new Date(2026, 7, 30, 12, 0, 0)
 const TODAY_KEY = '2026-08-30'
-
-function yazioDay(overrides: Partial<YazioDay> & { date: string }): YazioDay {
-  return {
-    kcalEaten: null, kcalGoal: null, proteinG: null, proteinGoalG: null, carbG: null, fatG: null,
-    steps: null, weightKg: null, startWeightKg: null, weightGoal: null, waterMl: null, waterGoalMl: null,
-    activityKcal: null, fastingTemplate: null,
-    meals: { breakfast: null, lunch: null, dinner: null, snack: null },
-    ...overrides,
-  }
-}
 
 function foodEntry(overrides: Partial<KostFoodEntry> = {}): KostFoodEntry {
   return {
@@ -29,6 +18,7 @@ function foodEntry(overrides: Partial<KostFoodEntry> = {}): KostFoodEntry {
 const base = {
   now: NOW,
   todayKey: TODAY_KEY,
+  bodyMeasurements: [] as { measured_on: string; weight_kg: number | null; waist_cm: number | null }[],
   trackedMeals: [] as ('breakfast' | 'lunch' | 'dinner' | 'supper' | 'snack')[],
   dayOverrides: new Set<string>(),
   calorieGoal: null,
@@ -81,19 +71,40 @@ describe('buildNutritionSummary', () => {
     expect(withoutDeficit.generalDeficitAvgDiffKcal).toBeNull()
   })
 
-  it('computes a weight change from YAZIO history within the window, ignoring points outside it', () => {
-    const yazioHistory = [
-      yazioDay({ date: '2026-08-01', kcalEaten: 2000, weightKg: 90 }),
-      yazioDay({ date: '2026-08-30', kcalEaten: 2000, weightKg: 88.5 }),
-      yazioDay({ date: '2026-01-01', kcalEaten: 2000, weightKg: 100 }), // outside the 30-day window
+  it('computes a weight change from body_measurements within the window, ignoring points outside it', () => {
+    const bodyMeasurements = [
+      { measured_on: '2026-08-01', weight_kg: 90, waist_cm: null },
+      { measured_on: '2026-08-30', weight_kg: 88.5, waist_cm: null },
+      { measured_on: '2026-01-01', weight_kg: 100, waist_cm: null }, // outside the 30-day window
     ]
-    const s = buildNutritionSummary({ ...base, yazioHistory, manualEntries: [] })
+    const s = buildNutritionSummary({ ...base, yazioHistory: [], manualEntries: [], bodyMeasurements })
     expect(s.weightChangeKg).toBe(-1.5)
   })
 
   it('does not compute a weight change from a single data point', () => {
-    const yazioHistory = [yazioDay({ date: '2026-08-30', kcalEaten: 2000, weightKg: 88.5 })]
-    const s = buildNutritionSummary({ ...base, yazioHistory, manualEntries: [] })
+    const bodyMeasurements = [{ measured_on: '2026-08-30', weight_kg: 88.5, waist_cm: null }]
+    const s = buildNutritionSummary({ ...base, yazioHistory: [], manualEntries: [], bodyMeasurements })
+    expect(s.weightChangeKg).toBeNull()
+  })
+
+  it('computes a weight change for a manual (non-YAZIO) user from the same shared body_measurements table', () => {
+    // Daniel: doesn't use YAZIO at all, only logs weight/waist manually via
+    // Viktmål — this must not silently be YAZIO-only.
+    const bodyMeasurements = [
+      { measured_on: '2026-08-05', weight_kg: 92, waist_cm: null },
+      { measured_on: '2026-08-29', weight_kg: 90.5, waist_cm: null },
+    ]
+    const s = buildNutritionSummary({ ...base, yazioHistory: [], manualEntries: [], bodyMeasurements })
+    expect(s.weightChangeKg).toBe(-1.5)
+  })
+
+  it('computes a waist change independently of weight', () => {
+    const bodyMeasurements = [
+      { measured_on: '2026-08-05', weight_kg: null, waist_cm: 92 },
+      { measured_on: '2026-08-29', weight_kg: null, waist_cm: 90 },
+    ]
+    const s = buildNutritionSummary({ ...base, yazioHistory: [], manualEntries: [], bodyMeasurements })
+    expect(s.waistChangeCm).toBe(-2)
     expect(s.weightChangeKg).toBeNull()
   })
 })
@@ -114,6 +125,17 @@ describe('formatNutritionForPrompt', () => {
     expect(text).toContain('DENNA VECKA')
     expect(text).toContain('SENASTE 30 DAGARNA')
     expect(text).toContain('VIKTMÅL')
+  })
+
+  it('formats a combined KROPPSMÅTT line with both weight and waist when both are known', () => {
+    const manualEntries = [foodEntry({ logged_at: '2026-08-24T08:00:00Z', calories: 2500 })]
+    const bodyMeasurements = [
+      { measured_on: '2026-08-05', weight_kg: 92, waist_cm: 92 },
+      { measured_on: '2026-08-29', weight_kg: 90.5, waist_cm: 90 },
+    ]
+    const s = buildNutritionSummary({ ...base, yazioHistory: [], manualEntries, bodyMeasurements })
+    const text = formatNutritionForPrompt(s)
+    expect(text).toContain('KROPPSMÅTT (30 dagar): vikt -1.5 kg, midjemått -2 cm')
   })
 
   it('never presents the not-yet-happened rest of the week as missing data (Daniel: reviewed on a Wednesday should judge Mon-Wed, not get diluted by a still-future Thu-Sun)', () => {

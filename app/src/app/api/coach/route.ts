@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
     // the hot path for the other eight personas.
     const isNutritionist = coachId === 'nutritionist'
 
-    const [{ data: allActivities }, { data: goals }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
+    const [{ data: allActivities }, { data: goals }, { data: ctxRow }, { data: overviewRow }, { data: focusRow }, { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: bodyMeasurementRows }] = await Promise.all([
       supabase
         .from('activities')
         .select('start_date, distance, moving_time, average_heartrate, max_heartrate, average_watts, sport_type')
@@ -151,6 +151,14 @@ export async function POST(request: NextRequest) {
         : Promise.resolve({ data: null }),
       isNutritionist
         ? supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete')
+        : Promise.resolve({ data: null }),
+      // Samma delade tabell Viktmål redan läser (och YAZIO-synken redan
+      // speglar in i) — så viktresan syns för Kostcoachen oavsett om man
+      // loggar vikt via YAZIO eller manuellt, inte bara YAZIO-fallet som
+      // tidigare (Daniel: "kollar den på viktnedgång och loggade midjemått
+      // också om den datan finns").
+      isNutritionist
+        ? supabase.from('body_measurements').select('measured_on, weight_kg, waist_cm').eq('user_id', user.id).gte('measured_on', new Date(Date.now() - 37 * 86400000).toISOString().slice(0, 10)).order('measured_on', { ascending: true })
         : Promise.resolve({ data: null }),
     ])
 
@@ -242,6 +250,7 @@ export async function POST(request: NextRequest) {
         todayKey: stockholmDateKey(now),
         yazioHistory,
         manualEntries: (foodLog ?? []) as KostFoodEntry[],
+        bodyMeasurements: (bodyMeasurementRows ?? []) as { measured_on: string; weight_kg: number | null; waist_cm: number | null }[],
         trackedMeals,
         dayOverrides,
         calorieGoal: resolveEffectiveCalorieGoal({
