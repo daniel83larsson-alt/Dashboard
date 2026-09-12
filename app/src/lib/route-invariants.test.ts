@@ -163,6 +163,7 @@ describe('every route that calls Gemini directly is rate-limited (or is a cron r
     'app/api/plan/generate/route.ts',
     'app/api/food/estimate/route.ts',
     'app/api/food/feedback/route.ts',
+    'app/api/food/plan-suggestion/route.ts',
     'app/api/insights/health/route.ts',
     'app/api/insights/generate/route.ts',
   ]

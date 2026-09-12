@@ -76,6 +76,9 @@ const DAY_TAGS: { value: DayContextTag; label: string }[] = [
 
 type Estimate = { name: string; kcal: number; protein_g: number; carb_g: number; fat_g: number; portion_desc: string; confidence: string; source: 'ai_text' | 'photo' }
 type PendingPhoto = { data: string; mimeType: string }
+type PlanItem = { name: string; portion: string; kcal: number; proteinG: number }
+type PlanOption = { note: string; items: PlanItem[]; totalKcal: number; totalProteinG: number }
+type PlanSuggestion = { minimal: PlanOption; maxed: PlanOption; remainingKcal: number; remainingProteinG: number | null }
 
 // Liten/Normal/Stor — a simple multiplier on the base (per-100g or
 // per-normal-portion) amount rather than asking for an exact gram figure
@@ -192,6 +195,29 @@ export default function FoodLogClient({
       setFeedbackError('Nätverksfel')
     }
     setFeedbackLoading(false)
+  }
+
+  // ── Upplägg-förslag (Daniel: "AI bedömning på bästa upplägget på mat...
+  // minimalt kcal upplägg... ett maxat, men ändå under plan. Baserat på de
+  // man ätit.") — byggs ENDAST av rätter från de egna quick picks, aldrig
+  // påhittade, se api/food/plan-suggestion.
+  const [planSuggestion, setPlanSuggestion] = useState<PlanSuggestion | null>(null)
+  const [planLoading, setPlanLoading] = useState(false)
+  const [planError, setPlanError] = useState('')
+
+  async function getPlanSuggestion() {
+    setPlanLoading(true)
+    setPlanError('')
+    setPlanSuggestion(null)
+    try {
+      const res = await fetch('/api/food/plan-suggestion', { method: 'POST' })
+      const data = await res.json()
+      if (res.ok) setPlanSuggestion(data)
+      else setPlanError(data.error ?? 'Något gick fel')
+    } catch {
+      setPlanError('Nätverksfel')
+    }
+    setPlanLoading(false)
   }
 
   // ── Loggade poster (manuell del) ────────────────────────────────────────
@@ -663,6 +689,58 @@ export default function FoodLogClient({
         >
           🍽️ Hämta en AI-granskning av dina matvanor under Hälsa & Insikter →
         </a>
+      )}
+
+      {/* Upplägg-förslag — Daniel: "kanske få upp ett tips eller något på
+          minimalt kcal upplägg... och ett maxat, men ändå under plan.
+          Baserat på de man ätit." Två AI-förslag för RESTEN av dagen,
+          byggda enbart av egna quick picks (aldrig påhittade rätter). */}
+      {kostSettings.calorieGoal != null && (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <span className="text-xs text-muted uppercase tracking-wider">🍽️ Upplägg för resten av dagen</span>
+            {!planLoading && (
+              <button
+                type="button"
+                onClick={getPlanSuggestion}
+                className="text-xs bg-bg border border-edge px-3 py-1.5 rounded-lg text-fg hover:border-accent transition-colors"
+              >
+                {planSuggestion ? 'Uppdatera' : '✨ Föreslå'}
+              </button>
+            )}
+          </div>
+          {planLoading && <p className="text-muted text-xs">Tar fram förslag...</p>}
+          {planError && <p className="text-red-400 text-xs">{planError}</p>}
+          {!planLoading && !planError && !planSuggestion && (
+            <p className="text-muted text-xs">Två färdiga förslag för resten av dagen, byggda av dina egna vanligaste rätter — ett minimalt och ett som maxar ut det du har kvar.</p>
+          )}
+          {planSuggestion && (
+            <div className="flex flex-col gap-3">
+              <p className="text-muted text-xs">
+                Kvar idag: <span className="font-mono text-fg">{planSuggestion.remainingKcal} kcal</span>
+                {planSuggestion.remainingProteinG != null && <span> · <span className="font-mono text-fg">{Math.round(planSuggestion.remainingProteinG)}g</span> protein</span>}
+              </p>
+              {([{ key: 'minimal', label: 'Minimalt', option: planSuggestion.minimal }, { key: 'maxed', label: 'Maxat', option: planSuggestion.maxed }] as const).map(({ key, label, option }) => (
+                <div key={key} className="bg-bg rounded-xl p-3">
+                  <div className="text-sm font-semibold mb-0.5">{label}</div>
+                  <p className="text-muted text-xs mb-2">{option.note}</p>
+                  <div className="flex flex-col gap-1">
+                    {option.items.map((item, i) => (
+                      <div key={i} className="flex items-center justify-between text-xs">
+                        <span className="text-fg">{item.name}{item.portion ? <span className="text-muted"> · {item.portion}</span> : null}</span>
+                        <span className="font-mono text-muted flex-shrink-0 ml-2">{item.kcal} kcal · {Math.round(item.proteinG)}g</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex items-center justify-between text-xs mt-2 pt-2 border-t border-edge font-mono">
+                    <span className="text-fg font-semibold">Totalt</span>
+                    <span className="text-fg font-semibold">{option.totalKcal} kcal · {Math.round(option.totalProteinG)}g protein</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       )}
 
       {/* YAZIO-sammanfattning */}
