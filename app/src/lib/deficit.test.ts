@@ -1,8 +1,45 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin, selectCheckinPeriod,
-  computeRollingWeightAverage, resolveActiveGoalSegment, deficitOverrideSignature,
+  computeRollingWeightAverage, resolveActiveGoalSegment, deficitOverrideSignature, daysWithRealTrainingCalories,
 } from './deficit'
+
+describe('daysWithRealTrainingCalories', () => {
+  // Real incident: Garmin's and Concept2's sync never populate
+  // activities.calories at all (Garmin only fetches calories at the
+  // whole-day wellness level, Concept2's sync doesn't touch it), so a
+  // rowing-only user's activities.calories is null for virtually every
+  // session. Counting bare activity-days as "training history" let
+  // computeDeficitBudget's caller cross the history threshold and start
+  // averaging a column of mostly nulls — collapsing training kcal toward
+  // 0 and dropping a real user's budget by ~220 kcal/day the moment their
+  // window crossed 14 active days, worse than the flat fallback it
+  // replaced. This must count only days with a REAL calories value.
+  it('ignores activity-only days with a null calories value', () => {
+    const activities = [
+      { start_date: '2026-09-01T10:00:00Z', calories: null },
+      { start_date: '2026-09-02T10:00:00Z', calories: null },
+      { start_date: '2026-09-03T10:00:00Z', calories: 400 },
+    ]
+    expect(daysWithRealTrainingCalories(activities)).toBe(1)
+  })
+
+  it('counts each distinct day once even with multiple same-day entries', () => {
+    const activities = [
+      { start_date: '2026-09-01T08:00:00Z', calories: 300 },
+      { start_date: '2026-09-01T18:00:00Z', calories: 200 },
+    ]
+    expect(daysWithRealTrainingCalories(activities)).toBe(1)
+  })
+
+  it('returns 0 when nothing has a real calories value', () => {
+    const activities = [
+      { start_date: '2026-09-01T10:00:00Z', calories: null },
+      { start_date: '2026-09-02T10:00:00Z', calories: undefined },
+    ]
+    expect(daysWithRealTrainingCalories(activities)).toBe(0)
+  })
+})
 
 describe('computeDeficitBudget', () => {
   // Daniel's own hand-calculated example from the spec: 105 kg -> 90 kg by

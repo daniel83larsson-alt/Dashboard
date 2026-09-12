@@ -10,6 +10,7 @@ import { dedupeForStats, type ActivityRow } from './duplicates'
 import { stockholmDateKey } from './dates'
 import {
   computeDeficitBudget, resolveActiveGoalSegment, computeRollingWeightAverage, deficitOverrideSignature,
+  daysWithRealTrainingCalories,
   type GoalSegment, type DeficitSafety, type GoalSegmentSource,
 } from './deficit'
 
@@ -109,8 +110,13 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
     : profile.deficit_start_weight_kg
 
   const dedupedActs = dedupeForStats((recentActs ?? []) as (ActivityRow & { calories?: number | null })[])
-  const trainingDaysWithActivity = new Set(dedupedActs.map(a => a.start_date.slice(0, 10))).size
-  const avgTrainingKcalRaw = trainingDaysWithActivity >= MIN_TRAINING_HISTORY_DAYS
+  // Days with an actual non-null calories value, NOT just any activity —
+  // see daysWithRealTrainingCalories's comment in lib/deficit.ts for the
+  // real incident this fixes (Garmin/Concept2 sync never populate
+  // activities.calories, so counting bare activity-days let the average
+  // silently collapse toward ~0 instead of falling back).
+  const trainingDaysWithRealCalories = daysWithRealTrainingCalories(dedupedActs)
+  const avgTrainingKcalRaw = trainingDaysWithRealCalories >= MIN_TRAINING_HISTORY_DAYS
     ? dedupedActs.reduce((s, a) => s + (a.calories ?? 0), 0) / TRAINING_LOOKBACK_DAYS
     : null
 

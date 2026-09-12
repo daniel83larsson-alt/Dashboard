@@ -84,13 +84,31 @@ function daysBetween(startISO: string, endISO: string): number {
   return Math.round((end - start) / 86400000)
 }
 
+// Whether there's enough REAL calorie data (not just activity rows) to
+// trust an average over a flat fallback. Real incident: Garmin's and
+// Concept2's sync never populate activities.calories at all (Garmin only
+// fetches calories at the whole-day wellness level, Concept2's sync
+// doesn't touch it) — so for a rowing-only user, "≥14 days WITH an
+// activity" is not the same as "≥14 days of real calorie data". Counting
+// bare activity-days let the average silently collapse toward ~0 (summing
+// mostly-null calories) the moment someone crossed the day threshold,
+// which is a WORSE estimate than the flat activityFallbackKcal it was
+// meant to graduate away from — a real user saw their budget drop ~220
+// kcal from this the moment their window happened to cross the line.
+// Counting only days that actually have a non-null calories value fixes
+// it: those users correctly keep falling back to the flat estimate.
+export function daysWithRealTrainingCalories(activities: { start_date: string; calories?: number | null }[]): number {
+  return new Set(activities.filter(a => a.calories != null).map(a => a.start_date.slice(0, 10))).size
+}
+
 // bmr: from estimateBMR (lib/bmr.ts) — resting metabolism only.
 // avgTrainingKcalRaw: mean of activities.calories per day over the last 28
 // calendar days (rest days included in the denominator — that's what turns
 // it into a "level" rather than a per-workout figure), deduped via
 // dedupeForStats first by the caller. null when fewer than 14 days of
-// activity history exist yet — the caller falls back to a user-chosen
-// estimate (activityFallbackKcal) instead of a thin, noisy real average.
+// REAL calorie data exist yet (see daysWithRealTrainingCalories above) —
+// the caller falls back to a user-chosen estimate (activityFallbackKcal)
+// instead of a thin, noisy real average.
 export function computeDeficitBudget({
   bmr,
   goal,
