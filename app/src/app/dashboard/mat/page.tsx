@@ -21,7 +21,7 @@ export default async function MatPage() {
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
   const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }] = await Promise.all([
-    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
+    supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, deficit_garmin_correction, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -109,7 +109,7 @@ export default async function MatPage() {
     activityKcalByDate[key] = (activityKcalByDate[key] ?? 0) + (a.calories ?? 0)
   }
 
-  type DayWellness = { date: string; totalCalories: number | null }
+  type DayWellness = { date: string; totalCalories: number | null; activeCalories: number | null }
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const wellnessHistory: DayWellness[] = wellnessRaw ? (() => {
     try {
@@ -118,9 +118,17 @@ export default async function MatPage() {
     } catch { return [] }
   })() : []
   const garminTotalCaloriesByDate: Record<string, number> = {}
+  const garminActiveCaloriesByDate: Record<string, number> = {}
   for (const w of wellnessHistory) {
     if (w.totalCalories != null) garminTotalCaloriesByDate[w.date] = w.totalCalories
+    if (w.activeCalories != null) garminActiveCaloriesByDate[w.date] = w.activeCalories
   }
+
+  // Samma försiktighetsprincip som Viktmåls egen budget (Daniel: "bra att
+  // se det med försiktighet... så jag inte tummar på budgeten") — bara
+  // träningsdelen av Garmins dygnstotal rabatteras med samma faktor, se
+  // lib/burned-calories.ts's estimateBurnedKcalForStatus.
+  const garminCorrection = profile?.deficit_garmin_correction ?? 0.75
 
   const dayNotes = (dayNoteRows ?? []) as { date: string; tag: string | null; note: string | null }[]
 
@@ -176,6 +184,8 @@ export default async function MatPage() {
       bmrKcal={bmrKcal}
       activityKcalByDate={activityKcalByDate}
       garminTotalCaloriesByDate={garminTotalCaloriesByDate}
+      garminActiveCaloriesByDate={garminActiveCaloriesByDate}
+      garminCorrection={garminCorrection}
     />
   )
 }

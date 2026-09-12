@@ -16,7 +16,7 @@ import {
 } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
 import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
-import { estimateBurnedKcalForDay } from '@/lib/burned-calories'
+import { estimateBurnedKcalForDay, estimateBurnedKcalForStatus } from '@/lib/burned-calories'
 import type { CalorieGoalSource } from '@/lib/calorie-goal'
 import { dayCalorieStatus, DAY_CALORIE_STATUS_TEXT_COLOR, DAY_CALORIE_STATUS_BG } from '@/lib/day-calorie-status'
 
@@ -121,6 +121,8 @@ export default function FoodLogClient({
   bmrKcal,
   activityKcalByDate,
   garminTotalCaloriesByDate,
+  garminActiveCaloriesByDate,
+  garminCorrection,
 }: {
   dailyCalorieGoal: number | null
   calorieGoalSource: CalorieGoalSource | null
@@ -136,6 +138,8 @@ export default function FoodLogClient({
   bmrKcal: number
   activityKcalByDate: Record<string, number>
   garminTotalCaloriesByDate: Record<string, number>
+  garminActiveCaloriesByDate: Record<string, number>
+  garminCorrection: number
 }) {
   const router = useRouter()
   const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
@@ -594,6 +598,20 @@ export default function FoodLogClient({
     return estimateBurnedKcalForDay(bmrKcal, activityKcalByDate[dateKey] ?? 0, garminTotalCaloriesByDate[dateKey] ?? null).kcal
   }
 
+  // Samma sak, fast bara för grön/gul/röd-bedömningen (dayCalorieStatus) —
+  // rabatterar träningsdelen med samma försiktighetsfaktor Viktmåls budget
+  // redan använder (Daniel: "bra att se det med försiktighet... så jag
+  // inte tummar på budgeten"). Den vanliga "bränt X kcal"-siffran ovan
+  // förblir okorrigerad.
+  function burnedKcalForStatus(dateKey: string): number {
+    return estimateBurnedKcalForStatus(
+      bmrKcal,
+      activityKcalByDate[dateKey] ?? 0,
+      { totalCalories: garminTotalCaloriesByDate[dateKey] ?? null, activeCalories: garminActiveCaloriesByDate[dateKey] ?? null },
+      garminCorrection
+    )
+  }
+
   return (
     <div className="p-4 md:p-8 max-w-2xl w-full mx-auto flex flex-col gap-4">
       <div>
@@ -754,7 +772,7 @@ export default function FoodLogClient({
                 const diff = day?.kcalEaten != null && day.kcalGoal != null ? day.kcalEaten - day.kcalGoal : null
                 const burned = !isFuture && day?.kcalEaten != null ? burnedKcalForDate(key) : null
                 const status = diff != null && burned != null && day?.kcalGoal != null && day?.kcalEaten != null
-                  ? dayCalorieStatus(day.kcalEaten, day.kcalGoal, burned) : null
+                  ? dayCalorieStatus(day.kcalEaten, day.kcalGoal, burnedKcalForStatus(key)) : null
                 return (
                   <div key={key} className={`flex items-center justify-between text-xs py-1.5 ${isFuture ? 'opacity-40' : ''}`}>
                     <span className={`capitalize ${isToday ? 'text-fg font-medium' : 'text-muted'}`}>{label}</span>
@@ -1065,7 +1083,7 @@ export default function FoodLogClient({
                   const diff = kostSettings.calorieGoal != null ? kcal - kostSettings.calorieGoal : null
                   const burned = !isFuture && completeness.status === 'complete' ? burnedKcalForDate(key) : null
                   const status = kostSettings.calorieGoal != null && burned != null
-                    ? dayCalorieStatus(kcal, kostSettings.calorieGoal, burned) : null
+                    ? dayCalorieStatus(kcal, kostSettings.calorieGoal, burnedKcalForStatus(key)) : null
                   return (
                     <button
                       key={key}
@@ -1099,7 +1117,10 @@ export default function FoodLogClient({
             // månadsbasis kanske räcker" — istället för en förbränt-siffra
             // per dag i den redan trånga kalenderrutan) — summerar ätit
             // minus förbränt över dagar med komplett loggning hittills i
-            // den visade månaden.
+            // den visade månaden. Använder burnedKcalForStatus (den
+            // försiktiga, Garmin-korrigerade siffran) precis som
+            // dayCalorieStatus nedan — det här är samma typ av "gick jag
+            // faktiskt framåt"-bedömning, bara summerad över månaden.
             let monthNetDiffSum = 0
             let monthNetDiffDays = 0
             for (let day = 1; day <= calDays.daysInMonth; day++) {
@@ -1108,7 +1129,7 @@ export default function FoodLogClient({
               const dayEntries = entriesByDate.get(key) ?? []
               const completeness = computeDayCompleteness(kostSettings.trackedMeals, dayEntries, dayOverrides.has(key))
               if (completeness.status !== 'complete') continue
-              monthNetDiffSum += kcalTotalForDay(dayEntries) - burnedKcalForDate(key)
+              monthNetDiffSum += kcalTotalForDay(dayEntries) - burnedKcalForStatus(key)
               monthNetDiffDays++
             }
 
@@ -1135,7 +1156,7 @@ export default function FoodLogClient({
                   let bg = 'bg-bg text-muted'
                   if (!isFuture && completeness.status === 'complete') {
                     bg = kostSettings.calorieGoal != null
-                      ? DAY_CALORIE_STATUS_BG[dayCalorieStatus(kcal, kostSettings.calorieGoal, burnedKcalForDate(key))]
+                      ? DAY_CALORIE_STATUS_BG[dayCalorieStatus(kcal, kostSettings.calorieGoal, burnedKcalForStatus(key))]
                       : 'bg-accent/10 text-fg'
                   }
                   return (
