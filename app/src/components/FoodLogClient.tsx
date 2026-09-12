@@ -18,6 +18,7 @@ import { resolveDayNutrition } from '@/lib/day-nutrition-source'
 import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
 import { estimateBurnedKcalForDay } from '@/lib/burned-calories'
 import type { CalorieGoalSource } from '@/lib/calorie-goal'
+import { dayCalorieStatus, DAY_CALORIE_STATUS_TEXT_COLOR, DAY_CALORIE_STATUS_BG } from '@/lib/day-calorie-status'
 
 // Same palette/tooltip convention as the other chart components in the app
 // (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
@@ -752,6 +753,8 @@ export default function FoodLogClient({
                 const label = new Date(`${key}T00:00:00`).toLocaleDateString('sv-SE', { weekday: 'short' })
                 const diff = day?.kcalEaten != null && day.kcalGoal != null ? day.kcalEaten - day.kcalGoal : null
                 const burned = !isFuture && day?.kcalEaten != null ? burnedKcalForDate(key) : null
+                const status = diff != null && burned != null && day?.kcalGoal != null && day?.kcalEaten != null
+                  ? dayCalorieStatus(day.kcalEaten, day.kcalGoal, burned) : null
                 return (
                   <div key={key} className={`flex items-center justify-between text-xs py-1.5 ${isFuture ? 'opacity-40' : ''}`}>
                     <span className={`capitalize ${isToday ? 'text-fg font-medium' : 'text-muted'}`}>{label}</span>
@@ -760,7 +763,7 @@ export default function FoodLogClient({
                         <span className="text-fg">{day.kcalEaten} kcal</span>
                         {burned != null && <span className="text-muted">/ {burned} bränt</span>}
                         {diff != null && (
-                          <span className={diff > 0 ? 'text-amber-500' : 'text-accent'}>
+                          <span className={status ? DAY_CALORIE_STATUS_TEXT_COLOR[status] : 'text-accent'}>
                             {diff > 0 ? '+' : ''}{diff}
                           </span>
                         )}
@@ -1061,6 +1064,8 @@ export default function FoodLogClient({
                   const kcal = kcalTotalForDay(dayEntries)
                   const diff = kostSettings.calorieGoal != null ? kcal - kostSettings.calorieGoal : null
                   const burned = !isFuture && completeness.status === 'complete' ? burnedKcalForDate(key) : null
+                  const status = kostSettings.calorieGoal != null && burned != null
+                    ? dayCalorieStatus(kcal, kostSettings.calorieGoal, burned) : null
                   return (
                     <button
                       key={key}
@@ -1079,7 +1084,7 @@ export default function FoodLogClient({
                         <span className="flex items-center gap-2 font-mono">
                           <span className="text-fg">{kcal} kcal</span>
                           {burned != null && <span className="text-muted">/ {burned} bränt</span>}
-                          {diff != null && <span className={diff > 0 ? 'text-amber-500' : 'text-accent'}>{diff > 0 ? '+' : ''}{diff}</span>}
+                          {diff != null && <span className={status ? DAY_CALORIE_STATUS_TEXT_COLOR[status] : 'text-accent'}>{diff > 0 ? '+' : ''}{diff}</span>}
                         </span>
                       )}
                     </button>
@@ -1126,10 +1131,13 @@ export default function FoodLogClient({
                   const dayEntries = entriesByDate.get(key) ?? []
                   const completeness = computeDayCompleteness(kostSettings.trackedMeals, dayEntries, dayOverrides.has(key))
                   const kcal = kcalTotalForDay(dayEntries)
-                  const over = kostSettings.calorieGoal != null && kcal > kostSettings.calorieGoal
                   const flagged = !isFuture && (completeness.status === 'incomplete' || completeness.status === 'no_data')
                   let bg = 'bg-bg text-muted'
-                  if (!isFuture && completeness.status === 'complete') bg = over ? 'bg-amber-500/10 text-fg' : 'bg-accent/10 text-fg'
+                  if (!isFuture && completeness.status === 'complete') {
+                    bg = kostSettings.calorieGoal != null
+                      ? DAY_CALORIE_STATUS_BG[dayCalorieStatus(kcal, kostSettings.calorieGoal, burnedKcalForDate(key))]
+                      : 'bg-accent/10 text-fg'
+                  }
                   return (
                     <button
                       key={key}
@@ -1144,14 +1152,15 @@ export default function FoodLogClient({
                 })}
               </div>
               <div className="flex flex-wrap gap-3 mt-3 text-[10px] text-muted">
-                <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block" style={{ background: 'rgba(204,212,0,.5)' }} />Inom mål</span>
-                <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block" style={{ background: 'rgba(240,180,41,.5)' }} />Över mål</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block bg-green-400/60" />Klarar budget</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block bg-amber-500/60" />Under förbränning</span>
+                <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block bg-red-400/60" />Över förbränning</span>
                 <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-sm inline-block bg-edge" />Ingen/lite data</span>
                 <span className="flex items-center gap-1"><i className="w-2 h-2 rounded-full" style={{ background: RED }} />Flaggad</span>
               </div>
               {monthNetDiffDays > 0 && (
                 <div className="text-xs text-muted mt-3 pt-3 border-t border-edge">
-                  Nettodiff denna månad: <span className={`font-mono ${monthNetDiffSum > 0 ? 'text-amber-500' : 'text-green-400'}`}>{monthNetDiffSum > 0 ? '+' : ''}{monthNetDiffSum} kcal</span>
+                  Nettodiff denna månad: <span className={`font-mono ${monthNetDiffSum > 0 ? 'text-red-400' : 'text-green-400'}`}>{monthNetDiffSum > 0 ? '+' : ''}{monthNetDiffSum} kcal</span>
                   {' '}({monthNetDiffDays} {monthNetDiffDays === 1 ? 'dag' : 'dagar'} med data)
                 </div>
               )}
