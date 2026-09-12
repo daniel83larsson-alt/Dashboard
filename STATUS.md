@@ -505,6 +505,10 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Tredje frågan (inga klagomål på dagar som inte hänt än) var redan korrekt löst** — både veckovyns AI-instruktion och det rullande 30-dagarsfönstret hanterar det rätt sedan tidigare. Ingen ändring behövdes där.
   **Verifierat:** typkontrollerat, lintat, 369/369 tester gröna, `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
 
+- ✅ **Daniel: "Vad tror ni, ska man synliggöra TDEE siffran också... Viktigt att inte gå helt back ändå?"** (skärmdumpar av Kost-veckolistan och Viktmål). Observerade att en dag som missar den snäva Viktmål-budgeten ändå kan vara en riktig deficit-dag (åt mindre än man faktiskt förbrände) — helt annat läge än att äta MER än man förbränt, men den gamla tvåfärgslogiken (klarade/missade budget) gjorde ingen skillnad. Föreslog att återanvända samma tre-nivålogik som redan fanns på Viktmåls veckosnitt, applicerad per dag. Daniel bekräftade prioriteringen ("Klarar budget, grönt. Under TDEE gult, äter mer än TDEE rött.") och valde att behålla den befintliga siffran (diff mot budget) med rätt färg istället för att lägga till en till uträkning i raden.
+  **Fix:** ny `lib/day-calorie-status.ts` (ren, testad funktion), återanvänd i YAZIO- och manuell-loggningens veckolistor samt Kalender-vyns dagsrutor/legend. Kalenderns månadsvisa nettodiff-rad fick samma korrigering (röd vid nettosurplus, grön vid nettodeficit — hade av misstag gult för samma läge).
+  **Verifierat:** typkontrollerat, lintat, 374/374 tester gröna (5 nya), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
 ---
 
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
