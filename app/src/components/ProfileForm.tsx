@@ -11,6 +11,14 @@ import { computeDeficitBudget, deficitOverrideSignature, safetyBreachLabel } fro
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
+// Native <input type="number"> is unreliable across browsers/keyboards for
+// a Swedish decimal comma ("105,2") — some simply refuse the character.
+// These decimal fields use type="text" instead and normalize the comma
+// themselves so parseFloat (which only understands ".") always works.
+function normalizeDecimalInput(raw: string): string {
+  return raw.replace(',', '.')
+}
+
 type Profile = {
   id: string
   name?: string | null
@@ -192,11 +200,69 @@ export default function ProfileForm({
     const parsedDeficitStartWeight = parseFloat(deficitStartWeightKg)
     const parsedDeficitTargetWeight = parseFloat(deficitTargetWeightKg)
     const parsedDeficitCorrection = parseFloat(deficitGarminCorrection)
-    // Start date freezes the first time the goal is ever saved with a
-    // target — later edits to other settings never move it, so the
-    // "starting point" of the goal stays meaningful.
-    const deficitStartDateToSave = profile?.deficit_start_date
-      ?? (deficitTrackingEnabled && deficitTargetWeightKg.trim() ? new Date().toISOString().slice(0, 10) : null)
+
+    // Only fields actually touched in this form get written back — Daniel:
+    // "känns som inställningar och de specifika sidorna kan krocka med
+    // varandra... Mitt dygnsmål gick från 2150 till 2049 helt plötsligt."
+    // Root cause: every field's React state is a one-time snapshot from
+    // when this page loaded, but the old code unconditionally rewrote ALL
+    // of them on every save — so anything changed elsewhere since (Viktmål's
+    // own budget refreeze, a milestone auto-revert) got silently reverted
+    // the next time this form was submitted for a totally unrelated field,
+    // e.g. from a background tab left open for a while. `profile` is a
+    // stable prop for this component's whole lifetime, so re-evaluating the
+    // exact expression each field's useState was seeded with still gives
+    // the true mount-time value here — comparing against it tells us
+    // whether the user actually touched a given control.
+    const updates: Record<string, unknown> = {}
+    function setIfChanged<T>(key: string, current: T, original: T) {
+      if (JSON.stringify(current) !== JSON.stringify(original)) updates[key] = current
+    }
+
+    setIfChanged('name', name, profile?.name ?? '')
+    setIfChanged('llm_provider', provider, profile?.llm_provider ?? 'gemini')
+    setIfChanged('home_equipment', equipment, profile?.home_equipment ?? [])
+    setIfChanged('selected_sports', sports, profile?.selected_sports ?? [])
+    setIfChanged('daily_step_goal', stepGoal, profile?.daily_step_goal ?? 10000)
+    setIfChanged('weight_kg', weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null, profile?.weight_kg ?? null)
+    setIfChanged('weekly_load_goal', loadGoal.trim() && !Number.isNaN(parsedLoadGoal) ? parsedLoadGoal : null, profile?.weekly_load_goal ?? null)
+    setIfChanged('height_cm', heightCm.trim() && !Number.isNaN(parsedHeight) ? parsedHeight : null, profile?.height_cm ?? null)
+    setIfChanged('birth_year', birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null, profile?.birth_year ?? null)
+    setIfChanged('biological_sex', biologicalSex || null, profile?.biological_sex ?? null)
+    setIfChanged('daily_calorie_goal', calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null, profile?.daily_calorie_goal ?? null)
+    setIfChanged('weekly_digest_opt_out', !weeklyDigestEnabled, !!profile?.weekly_digest_opt_out)
+    setIfChanged('coach_tone', coachTone, (profile?.coach_tone as CoachTone) ?? 'neutral')
+    setIfChanged('kost_tracking_enabled', kostTrackingEnabled, profile?.kost_tracking_enabled ?? false)
+    setIfChanged('kost_tracked_metrics', kostTrackedMetrics.length ? kostTrackedMetrics : ['kcal'], (profile?.kost_tracked_metrics as KostMetric[] | null) ?? ['kcal'])
+    setIfChanged('kost_tracked_meals', kostTrackedMeals, (profile?.kost_tracked_meals as KostMeal[] | null) ?? ['breakfast', 'lunch', 'dinner'])
+    setIfChanged('kost_reminders_enabled', kostRemindersEnabled, profile?.kost_reminders_enabled ?? true)
+    setIfChanged('kost_evening_guard_enabled', eveningGuardEnabled, profile?.kost_evening_guard_enabled ?? false)
+    setIfChanged('kost_evening_guard_hour', eveningGuardHour, profile?.kost_evening_guard_hour ?? 20)
+    setIfChanged('protein_goal_g', proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null, profile?.protein_goal_g ?? null)
+    setIfChanged('carb_goal_g', carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null, profile?.carb_goal_g ?? null)
+    setIfChanged('fat_goal_g', fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null, profile?.fat_goal_g ?? null)
+    setIfChanged('deficit_neat_factor', deficitNeatFactor, profile?.deficit_neat_factor ?? 1.25)
+    setIfChanged('deficit_activity_fallback_kcal', deficitActivityFallbackKcal, profile?.deficit_activity_fallback_kcal ?? 300)
+    setIfChanged('deficit_garmin_correction', deficitGarminCorrection.trim() && !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75, profile?.deficit_garmin_correction ?? 0.75)
+    setIfChanged('deficit_weigh_in_weekday', deficitWeighInWeekday, profile?.deficit_weigh_in_weekday ?? 0)
+    setIfChanged('deficit_reminders_enabled', deficitRemindersEnabled, profile?.deficit_reminders_enabled ?? true)
+
+    // The goal (start/target weight, target date, tracking on/off) is
+    // handled as one cohesive unit rather than diffed field-by-field —
+    // they're genuinely interdependent (the override signature covers all
+    // three together, the budget-clearing logic needs to know the goal as
+    // a whole is incomplete). If NONE of the four changed, none of this
+    // block runs at all — no stale goal fields get rewritten, and no
+    // refreeze fires off the back of an unrelated save.
+    const goalOriginalTrackingEnabled = profile?.deficit_tracking_enabled ?? false
+    const goalOriginalStartWeightKg = profile?.deficit_start_weight_kg?.toString() ?? profile?.weight_kg?.toString() ?? ''
+    const goalOriginalTargetWeightKg = profile?.deficit_target_weight_kg?.toString() ?? ''
+    const goalOriginalTargetDate = profile?.deficit_target_date ?? ''
+    const goalSectionTouched =
+      deficitTrackingEnabled !== goalOriginalTrackingEnabled ||
+      deficitStartWeightKg !== goalOriginalStartWeightKg ||
+      deficitTargetWeightKg !== goalOriginalTargetWeightKg ||
+      deficitTargetDate !== goalOriginalTargetDate
 
     // The frozen budget snapshot itself is no longer computed here — it's
     // recomputed server-side (lib/deficit-budget-refreeze.ts, called right
@@ -206,59 +272,46 @@ export default function ProfileForm({
     // stays here, since the refreeze route requires a goal to already be
     // saved and won't touch these fields when there isn't one.
     const goalWillBeComplete = deficitTrackingEnabled && deficitStartWeightKg.trim() && deficitTargetWeightKg.trim() && deficitTargetDate
-    const deficitBudgetFields = goalWillBeComplete
-      ? {}
-      : { deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null, deficit_budget_source: 'overall', deficit_budget_valid_until: null, deficit_budget_daily_deficit_kcal: null }
 
-    // Written BEFORE the refreeze call below runs, since refreezeDeficitBudget
-    // reads these back to decide allowUnsafe — an unconfirmed or stale
-    // (goal-changed) signature always saves as voided, never carried over.
-    const currentOverrideSignature = goalWillBeComplete
-      ? deficitOverrideSignature({ startWeightKg: parsedDeficitStartWeight, targetWeightKg: parsedDeficitTargetWeight, targetDateISO: deficitTargetDate })
-      : null
-    const overrideConfirmedNow = goalWillBeComplete && confirmedOverrideSignature === currentOverrideSignature
-    const deficitOverrideFields = overrideConfirmedNow
-      ? { deficit_override_acknowledged_at: new Date().toISOString(), deficit_override_signature: currentOverrideSignature }
-      : { deficit_override_acknowledged_at: null, deficit_override_signature: null, deficit_override_deficit_kcal: null }
+    if (goalSectionTouched) {
+      // Start date freezes the first time the goal is ever saved with a
+      // target — later edits to other settings never move it, so the
+      // "starting point" of the goal stays meaningful.
+      const deficitStartDateToSave = profile?.deficit_start_date
+        ?? (deficitTrackingEnabled && deficitTargetWeightKg.trim() ? new Date().toISOString().slice(0, 10) : null)
 
-    await supabase.from('profiles').update({
-      name,
-      llm_provider: provider,
-      home_equipment: equipment,
-      selected_sports: sports,
-      daily_step_goal: stepGoal,
-      weight_kg: weightKg.trim() && !Number.isNaN(parsedWeight) ? parsedWeight : null,
-      weekly_load_goal: loadGoal.trim() && !Number.isNaN(parsedLoadGoal) ? parsedLoadGoal : null,
-      height_cm: heightCm.trim() && !Number.isNaN(parsedHeight) ? parsedHeight : null,
-      birth_year: birthYear.trim() && !Number.isNaN(parsedBirthYear) ? parsedBirthYear : null,
-      biological_sex: biologicalSex || null,
-      daily_calorie_goal: calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null,
-      weekly_digest_opt_out: !weeklyDigestEnabled,
-      coach_tone: coachTone,
-      kost_tracking_enabled: kostTrackingEnabled,
-      kost_tracked_metrics: kostTrackedMetrics.length ? kostTrackedMetrics : ['kcal'],
-      kost_tracked_meals: kostTrackedMeals,
-      kost_reminders_enabled: kostRemindersEnabled,
-      kost_evening_guard_enabled: eveningGuardEnabled,
-      kost_evening_guard_hour: eveningGuardHour,
-      protein_goal_g: proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null,
-      carb_goal_g: carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null,
-      fat_goal_g: fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null,
-      deficit_tracking_enabled: deficitTrackingEnabled,
-      deficit_start_weight_kg: deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : null,
-      deficit_start_date: deficitStartDateToSave,
-      deficit_target_weight_kg: deficitTargetWeightKg.trim() && !Number.isNaN(parsedDeficitTargetWeight) ? parsedDeficitTargetWeight : null,
-      deficit_target_date: deficitTargetDate || null,
-      deficit_neat_factor: deficitNeatFactor,
-      deficit_activity_fallback_kcal: deficitActivityFallbackKcal,
-      deficit_garmin_correction: deficitGarminCorrection.trim() && !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75,
-      deficit_weigh_in_weekday: deficitWeighInWeekday,
-      deficit_reminders_enabled: deficitRemindersEnabled,
-      ...deficitBudgetFields,
-      ...deficitOverrideFields,
-    }).eq('id', profile?.id ?? '')
+      updates.deficit_tracking_enabled = deficitTrackingEnabled
+      updates.deficit_start_weight_kg = deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : null
+      updates.deficit_start_date = deficitStartDateToSave
+      updates.deficit_target_weight_kg = deficitTargetWeightKg.trim() && !Number.isNaN(parsedDeficitTargetWeight) ? parsedDeficitTargetWeight : null
+      updates.deficit_target_date = deficitTargetDate || null
 
-    if (goalWillBeComplete) {
+      if (!goalWillBeComplete) {
+        Object.assign(updates, { deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null, deficit_budget_source: 'overall', deficit_budget_valid_until: null, deficit_budget_daily_deficit_kcal: null })
+      }
+
+      // Written BEFORE the refreeze call below runs, since refreezeDeficitBudget
+      // reads these back to decide allowUnsafe — an unconfirmed or stale
+      // (goal-changed) signature always saves as voided, never carried over.
+      const currentOverrideSignature = goalWillBeComplete
+        ? deficitOverrideSignature({ startWeightKg: parsedDeficitStartWeight, targetWeightKg: parsedDeficitTargetWeight, targetDateISO: deficitTargetDate })
+        : null
+      const overrideConfirmedNow = goalWillBeComplete && confirmedOverrideSignature === currentOverrideSignature
+      if (overrideConfirmedNow) {
+        updates.deficit_override_acknowledged_at = new Date().toISOString()
+        updates.deficit_override_signature = currentOverrideSignature
+      } else {
+        updates.deficit_override_acknowledged_at = null
+        updates.deficit_override_signature = null
+        updates.deficit_override_deficit_kcal = null
+      }
+    }
+
+    if (Object.keys(updates).length > 0) {
+      await supabase.from('profiles').update(updates).eq('id', profile?.id ?? '')
+    }
+
+    if (goalSectionTouched && goalWillBeComplete) {
       await fetch('/api/deficit/budget/refreeze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -574,14 +627,11 @@ export default function ProfileForm({
         <div>
           <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>
           <input
-            type="number"
-            min={20}
-            max={300}
-            step={0.5}
+            type="text"
             inputMode="decimal"
             value={weightKg}
-            onChange={e => setWeightKg(e.target.value)}
-            placeholder="t.ex. 78"
+            onChange={e => setWeightKg(normalizeDecimalInput(e.target.value))}
+            placeholder="t.ex. 78 eller 78,5"
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
           />
           <p className="text-muted text-xs mt-1.5">Används för att räkna ut kalorier när du loggar ett pass manuellt.</p>
@@ -792,11 +842,11 @@ export default function ProfileForm({
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-muted text-xs block mb-1.5">Startvikt (kg)</label>
-                <input type="number" min={30} max={300} step={0.1} inputMode="decimal" value={deficitStartWeightKg} onChange={e => setDeficitStartWeightKg(e.target.value)} placeholder="t.ex. 105" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+                <input type="text" inputMode="decimal" value={deficitStartWeightKg} onChange={e => setDeficitStartWeightKg(normalizeDecimalInput(e.target.value))} placeholder="t.ex. 105 eller 105,2" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
               </div>
               <div>
                 <label className="text-muted text-xs block mb-1.5">Målvikt (kg)</label>
-                <input type="number" min={30} max={300} step={0.1} inputMode="decimal" value={deficitTargetWeightKg} onChange={e => setDeficitTargetWeightKg(e.target.value)} placeholder="t.ex. 90" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+                <input type="text" inputMode="decimal" value={deficitTargetWeightKg} onChange={e => setDeficitTargetWeightKg(normalizeDecimalInput(e.target.value))} placeholder="t.ex. 90" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
               </div>
             </div>
             <div>
@@ -914,7 +964,7 @@ export default function ProfileForm({
             {deficitAdvancedOpen && (
               <div>
                 <label className="text-muted text-xs block mb-1.5">Korrigeringsfaktor på Garmins träningskalorier</label>
-                <input type="number" min={0.5} max={1.1} step={0.05} inputMode="decimal" value={deficitGarminCorrection} onChange={e => setDeficitGarminCorrection(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg font-mono focus:outline-none focus:border-accent transition-colors" />
+                <input type="text" inputMode="decimal" value={deficitGarminCorrection} onChange={e => setDeficitGarminCorrection(normalizeDecimalInput(e.target.value))} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg font-mono focus:outline-none focus:border-accent transition-colors" />
                 <p className="text-muted text-xs mt-1.5">Garmin överskattar ofta träningsförbränning, särskilt för rodd. 0,75 är en rimlig startpunkt — sköts normalt av avstämningen var 3–4:e vecka istället för att ändras för hand. Påverkar bara den här budgeten, aldrig kalorirutan på Översikt eller andra sidor.</p>
               </div>
             )}
