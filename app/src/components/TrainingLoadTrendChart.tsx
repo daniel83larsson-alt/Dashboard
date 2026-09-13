@@ -55,7 +55,13 @@ export default function TrainingLoadTrendChart({ points }: Props) {
           <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
           <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
           <Tooltip {...tooltip} formatter={(v) => [`${v} kcal/dag`, 'Träning → TDEE']} />
-          <Line type="monotone" dataKey="Kcal" stroke={ACCENT} strokeWidth={2} dot={false} connectNulls={false} />
+          {/* dot (not false) matters here specifically — with two null
+              weeks possibly sitting right before the latest real one (a
+              real case: Daniel's own data has exactly this shape after a
+              sick week), an isolated point with no neighbor to connect a
+              line to would otherwise render as literally nothing, hiding
+              the most recent, most relevant value. */}
+          <Line type="monotone" dataKey="Kcal" stroke={ACCENT} strokeWidth={2} dot={{ r: 3, fill: ACCENT, strokeWidth: 0 }} connectNulls={false} />
         </LineChart>
       </ResponsiveContainer>
       {trendDeltaKcal != null && (
