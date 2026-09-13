@@ -14,8 +14,11 @@ import {
   type GoalSegment, type DeficitSafety, type GoalSegmentSource,
 } from './deficit'
 
-const TRAINING_LOOKBACK_DAYS = 28
-const MIN_TRAINING_HISTORY_DAYS = 14
+// Exported so lib/training-load-trend.ts's Insikter trend chart uses the
+// exact same "enough real data" threshold as the budget calc itself,
+// rather than a second, independently-drifting copy of the same rule.
+export const TRAINING_LOOKBACK_DAYS = 28
+export const MIN_TRAINING_HISTORY_DAYS = 14
 
 export type RefreezeReason =
   | 'settings_changed' | 'checkin_applied' | 'milestone_set'

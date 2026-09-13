@@ -13,8 +13,12 @@ import { dedupeForStats } from '@/lib/duplicates'
 import { sportLabel, sportIcon, usesDistance } from '@/lib/sport'
 import { computeAllSportPRs, longestSession, type Activity as RecordActivity } from '@/lib/records'
 import { currentHabitStreak, habitCompletionStats, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
+import { computeTrainingKcalTrend, type TrainingKcalTrendPoint } from '@/lib/training-load-trend'
+import { TRAINING_LOOKBACK_DAYS } from '@/lib/deficit-budget-refreeze'
+import TrainingLoadTrendChart from '@/components/TrainingLoadTrendChartLoader'
 
 const VO2MAX_LOOKBACK_DAYS = 90
+const TRAINING_TREND_WEEKS = 12
 
 function fmtKmRekord(m: number) { return (m / 1000).toFixed(1) + ' km' }
 
@@ -88,6 +92,9 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const yearStart = new Date(now.getFullYear(), 0, 1)
   const zoneQueryStart = weekStart < yearStart ? weekStart : yearStart
+  // Needs to cover the OLDEST week point's full 28-day rolling window, not
+  // just the 12 weekly anchors themselves.
+  const trainingTrendSince = new Date(now.getTime() - (TRAINING_TREND_WEEKS * 7 + TRAINING_LOOKBACK_DAYS) * 86400000)
 
   const [
     { data: wellnessRow },
@@ -101,11 +108,12 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     { data: recordActivities },
     { data: habits },
     { data: habitLogs },
+    { data: trainingTrendActivities },
   ] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
-    supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date, birth_year, biological_sex').eq('id', user.id).single(),
+    supabase.from('profiles').select('daily_step_goal, vo2max_value, vo2max_source, vo2max_date, birth_year, biological_sex, deficit_tracking_enabled, deficit_garmin_correction').eq('id', user.id).single(),
     supabase.from('activities').select('sport_type, distance, moving_time, start_date')
       .eq('user_id', user.id).in('sport_type', ['Run', 'TrailRun']).gte('start_date', ninetyDaysAgo),
     supabase.from('activities').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
@@ -119,6 +127,13 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
       .eq('user_id', user.id).order('start_date', { ascending: false }),
     supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
     supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
+    // Fetched unconditionally (profile isn't loaded yet to gate on it here,
+    // same as every other parallel query) but only ever RENDERED for users
+    // with Viktmål on below — the training→TDEE trend reuses the Garmin
+    // correction factor, which is scoped to Viktmål everywhere else in the
+    // app (see route-invariants.test.ts).
+    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
+      .eq('user_id', user.id).gte('start_date', trainingTrendSince.toISOString()),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
 
@@ -342,9 +357,25 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     }
   })
 
+  const trainingKcalTrend: TrainingKcalTrendPoint[] = profile?.deficit_tracking_enabled
+    ? computeTrainingKcalTrend(
+        trainingTrendActivities ?? [],
+        profile?.deficit_garmin_correction ?? 0.75,
+        now,
+        TRAINING_TREND_WEEKS
+      )
+    : []
+
   const insikterPanel = (
     <div className="space-y-8">
       <p className="text-muted text-sm">Hela tränarteamet analyserar din träning</p>
+
+      {trainingKcalTrend.some(p => p.correctedTrainingKcalPerDay != null) && (
+        <div>
+          <h2 className="text-xs text-muted uppercase tracking-wider mb-4">Träning & TDEE</h2>
+          <TrainingLoadTrendChart points={trainingKcalTrend} />
+        </div>
+      )}
 
       {hasAnyZoneData && (
         <div>
