@@ -17,7 +17,16 @@ export default function McpConnectorCard({ hasKey, createdAt }: { hasKey: boolea
   const [error, setError] = useState('')
   const [copied, setCopied] = useState<'key' | 'url' | null>(null)
 
-  const connectorUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp` : '/api/mcp'
+  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  // Leads with the key-in-URL fallback route (app/api/mcp/[key]/route.ts):
+  // Daniel's real claude.ai screen turned out to ask for OAuth "Client ID"/
+  // "Client secret" fields with no visible custom-header option, which the
+  // header-based URL below depends on — a URL with nothing left to
+  // configure sidesteps that screen entirely. The header variant is kept as
+  // a secondary option for whoever's account does show a headers field,
+  // since Anthropic's own docs prefer that over a URL-embedded credential.
+  const keyInUrlConnectorUrl = generatedKey ? `${origin}/api/mcp/${generatedKey}` : ''
+  const headerConnectorUrl = `${origin}/api/mcp`
 
   async function generate() {
     setGenerating(true)
@@ -58,14 +67,26 @@ export default function McpConnectorCard({ hasKey, createdAt }: { hasKey: boolea
             </div>
           </div>
           <div className="text-xs text-muted flex flex-col gap-1.5">
-            <p>I claude.ai → Inställningar → Connectors → Lägg till egen connector:</p>
+            <p>I claude.ai → Inställningar → Connectors → Lägg till egen connector, klistra in den här adressen (nyckeln sitter redan i den, inget mer att fylla i):</p>
             <div className="flex items-center gap-2">
-              <code className="flex-1 bg-bg rounded-lg px-3 py-2 text-fg break-all">{connectorUrl}</code>
-              <button type="button" onClick={() => copy(connectorUrl, 'url')} className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg hover:border-accent transition-colors flex-shrink-0">
+              <code className="flex-1 bg-bg rounded-lg px-3 py-2 text-fg break-all">{keyInUrlConnectorUrl}</code>
+              <button type="button" onClick={() => copy(keyInUrlConnectorUrl, 'url')} className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg hover:border-accent transition-colors flex-shrink-0">
                 {copied === 'url' ? 'Kopierad!' : 'Kopiera'}
               </button>
             </div>
-            <p>Autentisering: &quot;Ingen inloggning&quot;. Under &quot;Request headers&quot; (om fältet syns): namn <code className="text-fg">authorization</code>, värde <code className="text-fg">Bearer {generatedKey}</code> — hela texten inklusive ordet Bearer. Syns inte det fältet, säg till så löser vi det på ett annat sätt.</p>
+            <p>Ser du fält för &quot;Client ID&quot;/&quot;Client secret&quot; eller liknande inloggningsuppgifter — lämna dem tomma och gå vidare. De hör till connectors som kräver att man loggar in på en tredjepartstjänst, vilket den här inte gör.</p>
+            <details className="mt-1">
+              <summary className="cursor-pointer text-fg">Vill du hellre ha nyckeln i ett eget fält istället för i adressen?</summary>
+              <div className="flex flex-col gap-1.5 mt-1.5">
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 bg-bg rounded-lg px-3 py-2 text-fg break-all">{headerConnectorUrl}</code>
+                  <button type="button" onClick={() => copy(headerConnectorUrl, 'key')} className="text-xs bg-bg border border-edge px-3 py-2 rounded-lg text-fg hover:border-accent transition-colors flex-shrink-0">
+                    {copied === 'key' ? 'Kopierad!' : 'Kopiera'}
+                  </button>
+                </div>
+                <p>Om skärmen har ett &quot;Request headers&quot;-fält: namn <code className="text-fg">authorization</code>, värde <code className="text-fg">Bearer {generatedKey}</code> (hela texten, inklusive ordet Bearer).</p>
+              </div>
+            </details>
           </div>
         </div>
       ) : (
