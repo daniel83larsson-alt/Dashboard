@@ -1556,3 +1556,15 @@ where source = 'concept2' and calories is null and raw_data ? 'calories_total';
 update public.activities
 set calories = round((raw_data->>'calories')::numeric)
 where source = 'garmin' and calories is null and raw_data ? 'calories';
+
+-- Personlig MCP-nyckel: låter Daniels coach-chatt i claude.ai läsa hans egna
+-- siffror via strukturerade verktyg i stället för att tolka skärmdumpar.
+-- Hash-kolumnen är uppslagsnyckeln (lib/encrypt.ts använder en slumpad IV,
+-- så själva krypteringen är inte deterministisk och går aldrig att söka
+-- på); den krypterade kopian finns bara för att kunna visa nyckeln igen i
+-- Profil.
+alter table public.profiles add column if not exists mcp_api_key_hash text;
+alter table public.profiles add column if not exists mcp_api_key_encrypted text;
+alter table public.profiles add column if not exists mcp_api_key_created_at timestamptz;
+create unique index if not exists profiles_mcp_api_key_hash_unique
+  on public.profiles(mcp_api_key_hash) where mcp_api_key_hash is not null;

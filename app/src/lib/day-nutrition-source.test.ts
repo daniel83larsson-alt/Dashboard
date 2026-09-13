@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { resolveDayNutrition } from './day-nutrition-source'
+import { resolveDayNutrition, resolveDayProteinG } from './day-nutrition-source'
 import type { YazioDay } from './yazio-history'
 import type { KostFoodEntry } from './kost'
 
@@ -57,5 +57,46 @@ describe('resolveDayNutrition', () => {
   it('returns zero, incomplete for a day with nothing logged anywhere', () => {
     const result = resolveDayNutrition('2026-08-24', new Map(), new Map(), ['breakfast'], new Set())
     expect(result).toEqual({ eatenKcal: 0, isComplete: false, source: 'manual' })
+  })
+})
+
+describe('resolveDayProteinG', () => {
+  it('prefers a synced YAZIO day\'s own proteinG over the manual log', () => {
+    const yazioByDate = new Map([['2026-08-24', yazioDay({ date: '2026-08-24', kcalEaten: 2000, proteinG: 150 })]])
+    const manualByDate = new Map([['2026-08-24', [entry({ protein_g: 999 })]]])
+    const result = resolveDayProteinG('2026-08-24', yazioByDate, manualByDate, ['breakfast'], new Set())
+    expect(result).toEqual({ proteinG: 150, source: 'yazio' })
+  })
+
+  it('reports null (not 0) for a YAZIO day with no protein value recorded', () => {
+    const yazioByDate = new Map([['2026-08-24', yazioDay({ date: '2026-08-24', kcalEaten: 2000, proteinG: null })]])
+    const result = resolveDayProteinG('2026-08-24', yazioByDate, new Map(), ['breakfast'], new Set())
+    expect(result).toEqual({ proteinG: null, source: 'yazio' })
+  })
+
+  it('sums manual protein_g across entries when the day is complete and has protein data', () => {
+    const manualByDate = new Map([['2026-08-24', [
+      entry({ meal: 'breakfast', protein_g: 30 }),
+      entry({ meal: 'lunch', protein_g: 40 }),
+    ]]])
+    const result = resolveDayProteinG('2026-08-24', new Map(), manualByDate, ['breakfast', 'lunch'], new Set())
+    expect(result).toEqual({ proteinG: 70, source: 'manual' })
+  })
+
+  it('reports null (not 0) for a fully-logged manual day where protein was never recorded', () => {
+    const manualByDate = new Map([['2026-08-24', [entry({ meal: 'breakfast', protein_g: null })]]])
+    const result = resolveDayProteinG('2026-08-24', new Map(), manualByDate, ['breakfast'], new Set())
+    expect(result).toEqual({ proteinG: null, source: 'manual' })
+  })
+
+  it('reports null for an incomplete manual day even if some logged entries have protein', () => {
+    const manualByDate = new Map([['2026-08-24', [entry({ meal: 'breakfast', protein_g: 30 })]]])
+    const result = resolveDayProteinG('2026-08-24', new Map(), manualByDate, ['breakfast', 'lunch'], new Set())
+    expect(result).toEqual({ proteinG: null, source: 'manual' })
+  })
+
+  it('returns null for a day with nothing logged anywhere', () => {
+    const result = resolveDayProteinG('2026-08-24', new Map(), new Map(), ['breakfast'], new Set())
+    expect(result).toEqual({ proteinG: null, source: 'manual' })
   })
 })

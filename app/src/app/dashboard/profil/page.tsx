@@ -3,6 +3,7 @@ import ProfileForm from '@/components/ProfileForm'
 import GoalsCard from '@/components/GoalsCard'
 import FriendsCard from '@/components/FriendsCard'
 import NotificationSettings from '@/components/NotificationSettings'
+import McpConnectorCard from '@/components/McpConnectorCard'
 import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
 
 const DEFICIT_TRAINING_LOOKBACK_DAYS = 28
@@ -115,6 +116,11 @@ export default async function ProfilPage({
       <div className="mb-4">
         <NotificationSettings />
       </div>
+      {user.email === process.env.ADMIN_EMAIL && (
+        <div className="mb-4">
+          <McpConnectorCard hasKey={!!profile?.mcp_api_key_hash} createdAt={profile?.mcp_api_key_created_at ?? null} />
+        </div>
+      )}
       <div className="mb-4">
         <GoalsCard goals={goals ?? []} savedOverview={savedOverview} />
       </div>

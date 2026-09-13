@@ -55,6 +55,13 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     // The forgot-password flow itself — by definition reachable by someone
     // who can't log in. Uses the service-role client internally instead.
     'app/api/auth/forgot-password/route.ts',
+    // Daniel's personal MCP connector (see STATUS.md) — an MCP request
+    // from claude.ai carries no Supabase session/cookie, only the API key
+    // header (or path segment for the fallback route). Authenticated via
+    // lib/mcp/auth.ts's hash lookup instead, which maps a key to exactly
+    // one profile id — never a client-supplied user id.
+    'app/api/mcp/route.ts',
+    'app/api/mcp/[key]/route.ts',
   ]
 
   for (const file of allRouteFiles) {
