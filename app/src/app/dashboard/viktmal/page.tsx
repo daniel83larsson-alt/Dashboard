@@ -5,13 +5,19 @@ import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 
 const ROLLING_WINDOW_DAYS = 7
+// Daniel: "vi har ju datat, onödigt att bara räkna på veckan" — ett andra,
+// längre fönster för en mindre bullrig trendsiffra, utöver 7-dagars snitt.
+// Inte en ersättning: 7 dagar förblir "hur går det just nu", 14 dagar är
+// "är det här en riktig trend". Bygger på samma dagsdata, bara ett bredare
+// fönster.
+const TREND_WINDOW_DAYS = 14
 const MEASUREMENT_LOOKBACK_DAYS = 120
 
-function weekDateKeysEndingToday(todayKey: string): string[] {
+function dateKeysEndingToday(todayKey: string, count: number): string[] {
   const end = new Date(`${todayKey}T00:00:00`)
-  return Array.from({ length: ROLLING_WINDOW_DAYS }, (_, i) => {
+  return Array.from({ length: count }, (_, i) => {
     const d = new Date(end)
-    d.setDate(d.getDate() - (ROLLING_WINDOW_DAYS - 1 - i))
+    d.setDate(d.getDate() - (count - 1 - i))
     return d.toISOString().slice(0, 10)
   })
 }
@@ -43,8 +49,11 @@ export default async function ViktmalPage() {
   }
 
   const todayKey = stockholmDateKey()
-  const rollingDays = weekDateKeysEndingToday(todayKey)
-  const sinceIso = new Date(new Date(`${rollingDays[0]}T00:00:00`).getTime()).toISOString()
+  // Fetched wide enough to cover the trend window — the 7-day window used
+  // everywhere else below is just the most recent slice of the same data,
+  // one query instead of two.
+  const trendDays = dateKeysEndingToday(todayKey, TREND_WINDOW_DAYS)
+  const sinceIso = new Date(new Date(`${trendDays[0]}T00:00:00`).getTime()).toISOString()
   const measurementSince = new Date(new Date().getTime() - MEASUREMENT_LOOKBACK_DAYS * 86400000).toISOString().slice(0, 10)
 
   const todayStartIso = new Date(`${todayKey}T00:00:00`).toISOString()
@@ -53,7 +62,7 @@ export default async function ViktmalPage() {
       .eq('user_id', user.id).gte('logged_at', sinceIso),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
     supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete')
-      .gte('date', rollingDays[0]).lte('date', todayKey),
+      .gte('date', trendDays[0]).lte('date', todayKey),
     supabase.from('body_measurements').select('measured_on, weight_kg, waist_cm, source')
       .eq('user_id', user.id).gte('measured_on', measurementSince).order('measured_on', { ascending: true }),
     // Modell B reference (Daniel's spec: show it, never let it drive the
@@ -97,7 +106,7 @@ export default async function ViktmalPage() {
   // Precedence matches dashboard/page.tsx's own calorie card: a synced
   // YAZIO day (with an actual kcalEaten value) wins over the manual log for
   // that date — never both summed together.
-  const days: DayEntry[] = rollingDays.map(dateKey => {
+  const buildDayEntry = (dateKey: string): DayEntry => {
     const yazioDay = yazioByDate.get(dateKey)
     if (yazioDay?.kcalEaten != null) {
       return { date: dateKey, eatenKcal: yazioDay.kcalEaten, isComplete: true, source: 'yazio' as const }
@@ -110,7 +119,9 @@ export default async function ViktmalPage() {
       isComplete: completeness.status === 'complete',
       source: 'manual' as const,
     }
-  })
+  }
+  const trendDayEntries: DayEntry[] = trendDays.map(buildDayEntry)
+  const days: DayEntry[] = trendDayEntries.slice(-ROLLING_WINDOW_DAYS)
 
   const measurements: Measurement[] = (measurementRows ?? []).map(r => ({
     date: r.measured_on as string,
@@ -144,6 +155,7 @@ export default async function ViktmalPage() {
     <ViktmalClient
       todayKey={todayKey}
       days={days}
+      trendDays={trendDayEntries}
       measurements={measurements}
       budgetKcal={profile.deficit_budget_kcal ?? null}
       tdeeKcal={profile.deficit_tdee_kcal ?? null}

@@ -100,6 +100,7 @@ function fmtDate(dateKey: string) {
 export default function ViktmalClient({
   todayKey,
   days,
+  trendDays,
   measurements: initialMeasurements,
   budgetKcal,
   tdeeKcal,
@@ -121,6 +122,7 @@ export default function ViktmalClient({
 }: {
   todayKey: string
   days: DayEntry[]
+  trendDays: DayEntry[]
   measurements: Measurement[]
   budgetKcal: number | null
   tdeeKcal: number | null
@@ -201,6 +203,24 @@ export default function ViktmalClient({
     ? 'text-accent'
     : weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
     : weekActualDeficitKcal <= 0 ? 'text-amber-400'
+    : 'text-green-400'
+
+  // Daniel: "vi har ju datat, onödigt att bara räkna på veckan" — samma
+  // uträkning som weekAvg ovan (compute7DayAverage är generisk över
+  // fönsterstorlek, trots namnet), bara över ett bredare, mindre bullrigt
+  // 14-dagarsfönster för en trendsiffra bredvid 7-dagars snittet, inte i
+  // stället för det.
+  const trendAvg = useMemo(
+    () => compute7DayAverage(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete })), budget),
+    [trendDays, budget]
+  )
+  const trendActualDeficitKcal = targetDeficitKcal != null && trendAvg.avgDiffKcal != null
+    ? targetDeficitKcal - trendAvg.avgDiffKcal
+    : null
+  const trendAvgColor = trendActualDeficitKcal == null
+    ? 'text-accent'
+    : trendActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
+    : trendActualDeficitKcal <= 0 ? 'text-amber-400'
     : 'text-green-400'
 
   const weightHistory = useMemo(
@@ -436,6 +456,17 @@ export default function ViktmalClient({
           </>
         ) : (
           <p className="text-muted text-xs">Logga några dagar till så kan vi räkna ({weekAvg.completeDays} av minst 4 färdigloggade dagar hittills).</p>
+        )}
+        {trendAvg.avgDiffKcal != null && (
+          <div className="mt-3 pt-3 border-t border-edge flex items-baseline justify-between">
+            <span className="text-muted text-xs">14-dagars trend</span>
+            <span className={`font-mono ${trendAvgColor} text-sm font-semibold`}>
+              {trendActualDeficitKcal != null
+                ? (trendActualDeficitKcal >= 0 ? `−${trendActualDeficitKcal}` : `+${Math.abs(trendActualDeficitKcal)}`)
+                : (trendAvg.avgDiffKcal > 0 ? '+' : '') + trendAvg.avgDiffKcal} kcal/dag
+              <span className="text-muted font-normal"> · {trendAvg.completeDays} av 14 dagar</span>
+            </span>
+          </div>
         )}
       </div>
 
