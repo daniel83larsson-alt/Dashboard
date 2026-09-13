@@ -377,17 +377,108 @@ export type WeeklyDeficitAverage = {
 
 const MIN_COMPLETE_DAYS_FOR_AVERAGE = 4
 
-// Only complete days count, and the average itself is hidden (not shown
-// with a caveat) below MIN_COMPLETE_DAYS_FOR_AVERAGE — same "hellre inget
-// än ett tal som ser exakt ut men inte är det" stance as weekly-kost.ts.
-export function compute7DayAverage(days: { eatenKcal: number; isComplete: boolean }[], budgetKcal: number): WeeklyDeficitAverage {
+// Each day carries its OWN budget rather than one shared value for the
+// whole window — Daniel: "bara för de ändrades så ändrades siffrorna
+// längst ner över veckodagen... egentligen ska inte de ändras retroaktivt."
+// A day that already happened under an OLD budget must keep showing its
+// diff against THAT budget forever, even after today's budget changes —
+// see budgetInForceOn below, which reconstructs it per day from
+// deficit_budget_events. Averaging each day's own diff (rather than
+// avg(eaten) - one budget) is mathematically identical to the old
+// behavior whenever the budget never changed within the window, so this
+// is a pure widening, not a behavior change, for the common case.
+export function compute7DayAverage(days: { eatenKcal: number; isComplete: boolean; budgetKcal: number }[]): WeeklyDeficitAverage {
   const complete = days.filter(d => d.isComplete)
   const incompleteDays = days.length - complete.length
   if (complete.length < MIN_COMPLETE_DAYS_FOR_AVERAGE) {
     return { avgDiffKcal: null, completeDays: complete.length, incompleteDays }
   }
-  const avgEaten = complete.reduce((s, d) => s + d.eatenKcal, 0) / complete.length
-  return { avgDiffKcal: Math.round(avgEaten - budgetKcal), completeDays: complete.length, incompleteDays }
+  const avgDiffKcal = complete.reduce((s, d) => s + (d.eatenKcal - d.budgetKcal), 0) / complete.length
+  return { avgDiffKcal: Math.round(avgDiffKcal), completeDays: complete.length, incompleteDays }
+}
+
+// Each day carries its own TDEE for the same reason compute7DayAverage
+// takes a per-day budget — TDEE and budget are frozen together at every
+// refreeze, so a stale-TDEE "actual deficit vs TDEE" figure would still
+// drift retroactively even after the budget side alone was fixed. This is
+// the direct eaten-vs-TDEE average (negative = deficit) — no separate
+// conversion trick needed, unlike the old budget-relative-then-converted
+// approach.
+export function computeAvgDiffVsTdee(days: { eatenKcal: number; isComplete: boolean; tdeeKcal: number }[]): WeeklyDeficitAverage {
+  const complete = days.filter(d => d.isComplete)
+  const incompleteDays = days.length - complete.length
+  if (complete.length < MIN_COMPLETE_DAYS_FOR_AVERAGE) {
+    return { avgDiffKcal: null, completeDays: complete.length, incompleteDays }
+  }
+  const avgDiffKcal = complete.reduce((s, d) => s + (d.eatenKcal - d.tdeeKcal), 0) / complete.length
+  return { avgDiffKcal: Math.round(avgDiffKcal), completeDays: complete.length, incompleteDays }
+}
+
+export type BudgetEvent = { createdAt: string; newBudgetKcal: number | null; newTdeeKcal?: number | null }
+
+// Reconstructs which budget was actually in force on a given day, instead
+// of assuming today's current budget applied retroactively for the whole
+// history — moved here from the one place that already got this right
+// (deficit/checkin/route.ts's avstämning) so every other day-list/average
+// in the app can share it instead of just assuming "today's budget always
+// applied". Falls back to the current budget for any day at or before the
+// first event (covers the whole history before this event log existed, or
+// before the user's very first budget was ever frozen).
+export function budgetInForceOn(dateKey: string, currentBudgetKcal: number, events: BudgetEvent[]): number {
+  const dayEndIso = new Date(`${dateKey}T23:59:59.999`).toISOString()
+  let effective = currentBudgetKcal
+  for (const ev of events) {
+    if (ev.createdAt > dayEndIso) break
+    if (ev.newBudgetKcal != null) effective = ev.newBudgetKcal
+  }
+  return effective
+}
+
+// Same reconstruction as budgetInForceOn, for TDEE — see
+// computeAvgDiffVsTdee's comment for why this needs its own history
+// rather than reusing the current TDEE for every day. Events recorded
+// before new_tdee_kcal existed simply have no opinion (newTdeeKcal null)
+// and are skipped, same graceful bootstrap as the budget side.
+export function tdeeInForceOn(dateKey: string, currentTdeeKcal: number, events: BudgetEvent[]): number {
+  const dayEndIso = new Date(`${dateKey}T23:59:59.999`).toISOString()
+  let effective = currentTdeeKcal
+  for (const ev of events) {
+    if (ev.createdAt > dayEndIso) break
+    if (ev.newTdeeKcal != null) effective = ev.newTdeeKcal
+  }
+  return effective
+}
+
+// The point-in-time inputs a budget/TDEE event was computed from — lets
+// the UI diff two consecutive events and say what actually changed
+// (Daniel: "lite dumt att man ser ändringen, men inte vad egentligen de
+// var som triggade ett lägre TDEE") instead of just showing before/after
+// kcal with no explanation. Missing/null fields (events recorded before
+// these columns existed) are silently skipped rather than shown as "null
+// → 1980", so old history doesn't produce a nonsense explanation.
+export type BudgetChangeInputs = {
+  bmrKcal: number | null
+  trainingKcal: number | null
+  neatFactor: number | null
+  garminCorrection: number | null
+}
+
+export function explainBudgetChange(current: BudgetChangeInputs, previous: BudgetChangeInputs | null): string | null {
+  if (!previous) return null
+  const parts: string[] = []
+  if (previous.trainingKcal != null && current.trainingKcal != null && previous.trainingKcal !== current.trainingKcal) {
+    parts.push(`Träningssnitt ${previous.trainingKcal} → ${current.trainingKcal} kcal/dag`)
+  }
+  if (previous.bmrKcal != null && current.bmrKcal != null && previous.bmrKcal !== current.bmrKcal) {
+    parts.push(`Vilo-omsättning ${previous.bmrKcal} → ${current.bmrKcal} kcal`)
+  }
+  if (previous.neatFactor != null && current.neatFactor != null && previous.neatFactor !== current.neatFactor) {
+    parts.push(`Vardagsaktivitet ${previous.neatFactor} → ${current.neatFactor}`)
+  }
+  if (previous.garminCorrection != null && current.garminCorrection != null && previous.garminCorrection !== current.garminCorrection) {
+    parts.push(`Garmin-korrigering ${previous.garminCorrection} → ${current.garminCorrection}`)
+  }
+  return parts.length ? parts.join(' · ') : null
 }
 
 export type CheckinPeriodSelection = {

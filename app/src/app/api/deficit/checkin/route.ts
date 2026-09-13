@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
-import { selectCheckinPeriod, computeDeficitCheckin, type DeficitCheckinResult } from '@/lib/deficit'
+import { selectCheckinPeriod, computeDeficitCheckin, budgetInForceOn, type DeficitCheckinResult } from '@/lib/deficit'
 import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
@@ -143,19 +143,10 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
   // Reconstructs which budget was actually in force on a given day instead
   // of assuming today's current budget applied for the whole period — a
   // settings change or a delmål starting/ending mid-period used to make
-  // every day before it silently wrong. Falls back to the current budget
-  // for any day with no event yet in effect (covers the whole history
-  // before this event log existed).
-  const budgetEvents = (budgetEventRows ?? []) as { created_at: string; new_budget_kcal: number | null }[]
-  function budgetInForceOn(dateKey: string): number {
-    const dayEndIso = new Date(`${dateKey}T23:59:59.999`).toISOString()
-    let effective = currentBudgetKcal
-    for (const ev of budgetEvents) {
-      if (ev.created_at > dayEndIso) break
-      if (ev.new_budget_kcal != null) effective = ev.new_budget_kcal
-    }
-    return effective
-  }
+  // every day before it silently wrong. Now shared via lib/deficit.ts so
+  // every other day-list/average in the app gets the same fix (Daniel:
+  // "egentligen ska inte de ändras retroaktivt").
+  const budgetEvents = (budgetEventRows ?? []).map(r => ({ createdAt: r.created_at as string, newBudgetKcal: r.new_budget_kcal as number | null }))
 
   let loggedDays = 0
   let loggedDeficitKcal = 0
@@ -174,7 +165,7 @@ async function computeCheckinForUser(supabase: SupabaseClient, userId: string): 
     }
     if (isComplete) {
       loggedDays++
-      loggedDeficitKcal += budgetInForceOn(dateKey) - eatenKcal
+      loggedDeficitKcal += budgetInForceOn(dateKey, currentBudgetKcal, budgetEvents) - eatenKcal
     }
   }
 

@@ -3,7 +3,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { compute7DayAverage, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { compute7DayAverage, computeAvgDiffVsTdee, budgetInForceOn, tdeeInForceOn, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 
 const ROLLING_WINDOW_DAYS = 7
 
@@ -45,13 +45,24 @@ export default async function ViktmalOverviewCard() {
   })
   const sinceIso = new Date(`${days[0]}T00:00:00`).toISOString()
 
-  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }] = await Promise.all([
+  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: budgetEventRows }] = await Promise.all([
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
       .eq('user_id', user.id).gte('logged_at', sinceIso),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
     supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete')
       .gte('date', days[0]).lte('date', todayKey),
+    // Reconstructs which budget/TDEE was actually in force on each day
+    // (Daniel: "egentligen ska inte de ändras retroaktivt") instead of
+    // assuming today's current ones applied for the whole week.
+    supabase.from('deficit_budget_events')
+      .select('created_at, new_budget_kcal, new_tdee_kcal')
+      .eq('user_id', user.id).order('created_at', { ascending: true }),
   ])
+  const budgetEvents = (budgetEventRows ?? []).map(r => ({
+    createdAt: r.created_at as string,
+    newBudgetKcal: r.new_budget_kcal as number | null,
+    newTdeeKcal: r.new_tdee_kcal as number | null,
+  }))
 
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
@@ -73,19 +84,25 @@ export default async function ViktmalOverviewCard() {
 
   const dayEntries = days.map(dateKey => {
     const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides)
-    return { eatenKcal: day.eatenKcal, isComplete: day.isComplete }
+    return {
+      eatenKcal: day.eatenKcal,
+      isComplete: day.isComplete,
+      budgetKcal: budgetInForceOn(dateKey, profile.deficit_budget_kcal!, budgetEvents),
+      tdeeKcal: tdeeInForceOn(dateKey, profile.deficit_tdee_kcal ?? 0, budgetEvents),
+    }
   })
-  const weekAvg = compute7DayAverage(dayEntries, profile.deficit_budget_kcal)
+  const weekAvg = compute7DayAverage(dayEntries)
 
   // Same conversion as the full Viktmål page (ViktmalClient) — the raw
   // eaten-vs-BUDGET number reads as "kcal under the target" and gets
   // confused with the actual TDEE-relative deficit shown as "mål" there.
-  // Converting onto the same axis here too keeps the two cards consistent
-  // instead of only fixing one of them.
+  // Computed directly per day against each day's own historical TDEE
+  // (computeAvgDiffVsTdee) rather than a conversion trick, since that only
+  // cancels out correctly when TDEE never changed within the week — the
+  // same retroactive-change bug Daniel flagged.
   const targetDeficitKcal = profile.deficit_tdee_kcal != null ? profile.deficit_tdee_kcal - profile.deficit_budget_kcal : null
-  const weekActualDeficitKcal = targetDeficitKcal != null && weekAvg.avgDiffKcal != null
-    ? targetDeficitKcal - weekAvg.avgDiffKcal
-    : null
+  const weekTdeeAvg = computeAvgDiffVsTdee(dayEntries)
+  const weekActualDeficitKcal = weekTdeeAvg.avgDiffKcal != null ? -weekTdeeAvg.avgDiffKcal : null
   const cardColor = weekActualDeficitKcal == null
     ? 'text-accent'
     : weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'

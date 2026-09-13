@@ -98,7 +98,13 @@ export function buildNutritionSummary(input: NutritionSummaryInput): NutritionSu
     // Most recent 7 of the general window — same rolling-average math the
     // Viktmål page and its Översikt card already use, just recomputed here
     // from the same resolved days instead of a fourth ad-hoc merge.
-    generalDeficitAvgDiffKcal = compute7DayAverage(resolved.slice(0, 7), deficitBudgetKcal).avgDiffKcal
+    // Deliberately uses today's current budget for every day rather than
+    // reconstructing each day's historical one (unlike the Viktmål/Kost UI
+    // surfaces) — this feeds one line of ephemeral AI-coaching context
+    // regenerated fresh on every call, not a number the user keeps on
+    // screen and compares over time, so the retroactive-change bug those
+    // surfaces were fixed for doesn't apply here the same way.
+    generalDeficitAvgDiffKcal = compute7DayAverage(resolved.slice(0, 7).map(d => ({ ...d, budgetKcal: deficitBudgetKcal }))).avgDiffKcal
   }
 
   const measurementsInWindow = bodyMeasurements

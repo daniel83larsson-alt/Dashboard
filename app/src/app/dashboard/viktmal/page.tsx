@@ -3,6 +3,7 @@ import ViktmalClient, { type DayEntry, type Measurement, type CheckinHistoryRow,
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
+import { budgetInForceOn, tdeeInForceOn } from '@/lib/deficit'
 
 const ROLLING_WINDOW_DAYS = 7
 // Daniel: "vi har ju datat, onödigt att bara räkna på veckan" — ett andra,
@@ -103,13 +104,55 @@ export default async function ViktmalPage() {
   const dayOverrides = new Set((dayStatusRows ?? []).map(r => r.date as string))
   const trackedMeals = ((profile?.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
 
+  const [{ data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: allBudgetEventRows }, { data: recentlyResolvedRow }, { data: todayNoteRow }] = await Promise.all([
+    supabase.from('deficit_checkins')
+      .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
+      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+    supabase.from('deficit_milestones')
+      .select('id, target_weight_kg, target_date, start_weight_kg, start_date, segment_budget_kcal, segment_daily_deficit_kcal')
+      .eq('user_id', user.id).eq('status', 'active').maybeSingle(),
+    supabase.from('deficit_budget_events')
+      .select('id, kind, old_budget_kcal, new_budget_kcal, budget_source, override_active, created_at, bmr_kcal, training_kcal, neat_factor, garmin_correction')
+      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
+    // Separate, unlimited, ascending fetch for reconstructing which
+    // budget/TDEE was actually in force on each day of the trend window
+    // (Daniel: "egentligen ska inte de ändras retroaktivt") — the
+    // descending limit-10 fetch above is for the Budgethistorik display
+    // only and can't be reused here, since a burst of changes could push a
+    // relevant older event past that limit.
+    supabase.from('deficit_budget_events')
+      .select('created_at, new_budget_kcal, new_tdee_kcal')
+      .eq('user_id', user.id).order('created_at', { ascending: true }),
+    // A milestone resolved in the last few days gets a one-time banner —
+    // shown for a fixed window rather than tracked as "seen" server-side,
+    // simplest thing that still surfaces it without a dismiss round-trip.
+    supabase.from('deficit_milestones')
+      .select('target_weight_kg, status, resolved_at')
+      .eq('user_id', user.id).in('status', ['passed', 'reached'])
+      .gte('resolved_at', new Date(new Date().getTime() - 3 * 86400000).toISOString())
+      .order('resolved_at', { ascending: false }).limit(1).maybeSingle(),
+    supabase.from('day_context_notes').select('tag, note').eq('user_id', user.id).eq('date', todayKey).maybeSingle(),
+  ])
+  const budgetEventsAsc = (allBudgetEventRows ?? []).map(r => ({
+    createdAt: r.created_at as string,
+    newBudgetKcal: r.new_budget_kcal as number | null,
+    newTdeeKcal: r.new_tdee_kcal as number | null,
+  }))
+  const currentBudgetKcal = profile.deficit_budget_kcal ?? 0
+  const currentTdeeKcal = profile.deficit_tdee_kcal ?? 0
+
   // Precedence matches dashboard/page.tsx's own calorie card: a synced
   // YAZIO day (with an actual kcalEaten value) wins over the manual log for
-  // that date — never both summed together.
+  // that date — never both summed together. Each day carries the
+  // budget/TDEE that was ACTUALLY in force that day (see budgetInForceOn/
+  // tdeeInForceOn) rather than today's current ones, so a later budget
+  // change never silently rewrites how an already-passed day is judged.
   const buildDayEntry = (dateKey: string): DayEntry => {
     const yazioDay = yazioByDate.get(dateKey)
+    const budgetKcalForDay = budgetInForceOn(dateKey, currentBudgetKcal, budgetEventsAsc)
+    const tdeeKcalForDay = tdeeInForceOn(dateKey, currentTdeeKcal, budgetEventsAsc)
     if (yazioDay?.kcalEaten != null) {
-      return { date: dateKey, eatenKcal: yazioDay.kcalEaten, isComplete: true, source: 'yazio' as const }
+      return { date: dateKey, eatenKcal: yazioDay.kcalEaten, isComplete: true, source: 'yazio' as const, budgetKcal: budgetKcalForDay, tdeeKcal: tdeeKcalForDay }
     }
     const entries = manualByDate.get(dateKey) ?? []
     const completeness = computeDayCompleteness(trackedMeals, entries, dayOverrides.has(dateKey))
@@ -118,6 +161,8 @@ export default async function ViktmalPage() {
       eatenKcal: kcalTotalForDay(entries),
       isComplete: completeness.status === 'complete',
       source: 'manual' as const,
+      budgetKcal: budgetKcalForDay,
+      tdeeKcal: tdeeKcalForDay,
     }
   }
   const trendDayEntries: DayEntry[] = trendDays.map(buildDayEntry)
@@ -129,27 +174,6 @@ export default async function ViktmalPage() {
     waistCm: r.waist_cm as number | null,
     source: r.source as 'manual' | 'yazio',
   }))
-
-  const [{ data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: recentlyResolvedRow }, { data: todayNoteRow }] = await Promise.all([
-    supabase.from('deficit_checkins')
-      .select('id, period_start, period_end, predicted_kg, actual_kg, old_correction, suggested_correction, applied_correction, created_at')
-      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-    supabase.from('deficit_milestones')
-      .select('id, target_weight_kg, target_date, start_weight_kg, start_date, segment_budget_kcal, segment_daily_deficit_kcal')
-      .eq('user_id', user.id).eq('status', 'active').maybeSingle(),
-    supabase.from('deficit_budget_events')
-      .select('id, kind, old_budget_kcal, new_budget_kcal, budget_source, override_active, created_at')
-      .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
-    // A milestone resolved in the last few days gets a one-time banner —
-    // shown for a fixed window rather than tracked as "seen" server-side,
-    // simplest thing that still surfaces it without a dismiss round-trip.
-    supabase.from('deficit_milestones')
-      .select('target_weight_kg, status, resolved_at')
-      .eq('user_id', user.id).in('status', ['passed', 'reached'])
-      .gte('resolved_at', new Date(new Date().getTime() - 3 * 86400000).toISOString())
-      .order('resolved_at', { ascending: false }).limit(1).maybeSingle(),
-    supabase.from('day_context_notes').select('tag, note').eq('user_id', user.id).eq('date', todayKey).maybeSingle(),
-  ])
 
   return (
     <ViktmalClient

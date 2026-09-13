@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin, selectCheckinPeriod,
   computeRollingWeightAverage, resolveActiveGoalSegment, deficitOverrideSignature, daysWithRealTrainingCalories,
+  budgetInForceOn, tdeeInForceOn, computeAvgDiffVsTdee, explainBudgetChange,
 } from './deficit'
 
 describe('daysWithRealTrainingCalories', () => {
@@ -303,15 +304,15 @@ describe('dailyDiffStatus', () => {
 describe('compute7DayAverage', () => {
   it('hides the average entirely below 4 complete days, matching the Kost calendar\'s stance', () => {
     const days = [
-      { eatenKcal: 2000, isComplete: true },
-      { eatenKcal: 2100, isComplete: true },
-      { eatenKcal: 2200, isComplete: true },
-      { eatenKcal: 0, isComplete: false },
-      { eatenKcal: 0, isComplete: false },
-      { eatenKcal: 0, isComplete: false },
-      { eatenKcal: 0, isComplete: false },
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 2100, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 2200, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 0, isComplete: false, budgetKcal: 2375 },
+      { eatenKcal: 0, isComplete: false, budgetKcal: 2375 },
+      { eatenKcal: 0, isComplete: false, budgetKcal: 2375 },
+      { eatenKcal: 0, isComplete: false, budgetKcal: 2375 },
     ]
-    const result = compute7DayAverage(days, 2375)
+    const result = compute7DayAverage(days)
     expect(result.avgDiffKcal).toBeNull()
     expect(result.completeDays).toBe(3)
     expect(result.incompleteDays).toBe(4)
@@ -319,15 +320,119 @@ describe('compute7DayAverage', () => {
 
   it('computes the average diff once at least 4 days are complete', () => {
     const days = [
-      { eatenKcal: 2000, isComplete: true },
-      { eatenKcal: 2200, isComplete: true },
-      { eatenKcal: 2400, isComplete: true },
-      { eatenKcal: 2600, isComplete: true },
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 2200, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 2400, isComplete: true, budgetKcal: 2375 },
+      { eatenKcal: 2600, isComplete: true, budgetKcal: 2375 },
     ]
-    const result = compute7DayAverage(days, 2375)
+    const result = compute7DayAverage(days)
     // avg eaten = 2300, budget 2375 -> diff -75
     expect(result.avgDiffKcal).toBe(-75)
     expect(result.completeDays).toBe(4)
+  })
+
+  it('locks each day to the budget that was actually in force that day instead of a single shared one', () => {
+    const days = [
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2160 }, // under the old, higher budget
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2160 },
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2049 }, // under the new, lower budget
+      { eatenKcal: 2000, isComplete: true, budgetKcal: 2049 },
+    ]
+    const result = compute7DayAverage(days)
+    // per-day diffs: -160, -160, -49, -49 -> avg -104.5 -> rounds to -105 or -104
+    expect(result.avgDiffKcal).toBe(Math.round((-160 - 160 - 49 - 49) / 4))
+  })
+})
+
+describe('budgetInForceOn', () => {
+  it('returns the current budget when no event has happened yet by that day', () => {
+    expect(budgetInForceOn('2026-09-01', 2160, [])).toBe(2160)
+  })
+
+  it('uses the most recent event at or before the end of that day', () => {
+    const events = [
+      { createdAt: '2026-09-05T10:00:00Z', newBudgetKcal: 2200 },
+      { createdAt: '2026-09-10T10:00:00Z', newBudgetKcal: 2049 },
+    ]
+    // Before the first-ever logged event, there's no record of what applied,
+    // so it falls back to the current budget passed in (same as "no events
+    // at all" — see the test above).
+    expect(budgetInForceOn('2026-09-03', 2049, events)).toBe(2049)
+    expect(budgetInForceOn('2026-09-07', 2049, events)).toBe(2200)
+    expect(budgetInForceOn('2026-09-12', 2049, events)).toBe(2049)
+  })
+
+  it('is unaffected by an event landing later the same day it queries', () => {
+    const events = [{ createdAt: '2026-09-10T23:59:59.998Z', newBudgetKcal: 2049 }]
+    expect(budgetInForceOn('2026-09-10', 2160, events)).toBe(2049)
+  })
+})
+
+describe('tdeeInForceOn', () => {
+  it('reconstructs TDEE the same way budgetInForceOn reconstructs budget', () => {
+    const events = [
+      { createdAt: '2026-09-05T10:00:00Z', newBudgetKcal: 2200, newTdeeKcal: 2680 },
+      { createdAt: '2026-09-10T10:00:00Z', newBudgetKcal: 2049, newTdeeKcal: 2455 },
+    ]
+    expect(tdeeInForceOn('2026-09-03', 2455, events)).toBe(2455)
+    expect(tdeeInForceOn('2026-09-07', 2455, events)).toBe(2680)
+    expect(tdeeInForceOn('2026-09-12', 2455, events)).toBe(2455)
+  })
+
+  it('skips events recorded before new_tdee_kcal existed instead of treating a missing value as a change', () => {
+    const events = [
+      { createdAt: '2026-09-05T10:00:00Z', newBudgetKcal: 2200 }, // no newTdeeKcal at all — old event
+      { createdAt: '2026-09-10T10:00:00Z', newBudgetKcal: 2049, newTdeeKcal: 2455 },
+    ]
+    expect(tdeeInForceOn('2026-09-07', 2455, events)).toBe(2455) // still the fallback, not silently null->something
+    expect(tdeeInForceOn('2026-09-12', 2455, events)).toBe(2455)
+  })
+})
+
+describe('computeAvgDiffVsTdee', () => {
+  it('averages eaten-vs-TDEE directly, each day against its own historical TDEE', () => {
+    const days = [
+      { eatenKcal: 2200, isComplete: true, tdeeKcal: 2680 }, // -480
+      { eatenKcal: 2200, isComplete: true, tdeeKcal: 2680 }, // -480
+      { eatenKcal: 2200, isComplete: true, tdeeKcal: 2455 }, // -255
+      { eatenKcal: 2200, isComplete: true, tdeeKcal: 2455 }, // -255
+    ]
+    const result = computeAvgDiffVsTdee(days)
+    expect(result.avgDiffKcal).toBe(Math.round((-480 - 480 - 255 - 255) / 4))
+  })
+
+  it('hides the average below 4 complete days, same stance as compute7DayAverage', () => {
+    const days = [{ eatenKcal: 2200, isComplete: true, tdeeKcal: 2680 }]
+    expect(computeAvgDiffVsTdee(days).avgDiffKcal).toBeNull()
+  })
+})
+
+describe('explainBudgetChange', () => {
+  it('returns null when there is no previous event to compare against', () => {
+    expect(explainBudgetChange({ bmrKcal: 1980, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }, null)).toBeNull()
+  })
+
+  it('describes a training-average drop, matching the real TDEE-collapse incident', () => {
+    const previous = { bmrKcal: 1964, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    const current = { bmrKcal: 1964, trainingKcal: 12, neatFactor: 1.25, garminCorrection: 0.75 }
+    expect(explainBudgetChange(current, previous)).toBe('Träningssnitt 300 → 12 kcal/dag')
+  })
+
+  it('describes multiple simultaneous changes', () => {
+    const previous = { bmrKcal: 1980, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    const current = { bmrKcal: 1964, trainingKcal: 12, neatFactor: 1.25, garminCorrection: 0.75 }
+    expect(explainBudgetChange(current, previous)).toBe('Träningssnitt 300 → 12 kcal/dag · Vilo-omsättning 1980 → 1964 kcal')
+  })
+
+  it('returns null when nothing meaningful actually changed between the two events', () => {
+    const inputs = { bmrKcal: 1980, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    expect(explainBudgetChange(inputs, inputs)).toBeNull()
+  })
+
+  it('skips a field missing on either side instead of showing a nonsense null diff', () => {
+    const previous = { bmrKcal: null, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    const current = { bmrKcal: 1964, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    expect(explainBudgetChange(current, previous)).toBeNull()
   })
 })
 

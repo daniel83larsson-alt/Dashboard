@@ -178,6 +178,12 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
 
   let eventId: string | null = null
   if (changed) {
+    // The effective inputs THIS computation actually used — stored so the
+    // UI can diff two consecutive events and say what moved (Daniel:
+    // "vad egentligen de var som triggade ett lägre TDEE") instead of just
+    // showing before/after kcal. new_tdee_kcal doubles as the per-day TDEE
+    // reconstruction lib/deficit.ts's tdeeInForceOn needs.
+    const effectiveTrainingKcal = avgTrainingKcalRaw ?? (profile.deficit_activity_fallback_kcal ?? 300)
     const { data: eventRow } = await supabase.from('deficit_budget_events').insert({
       user_id: userId,
       kind: reason,
@@ -188,6 +194,11 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
       new_daily_deficit_kcal: budget.dailyDeficitKcal,
       budget_source: segment.source,
       override_active: budget.overrideActive,
+      new_tdee_kcal: budget.tdeeKcal,
+      bmr_kcal: Math.round(bmr),
+      training_kcal: Math.round(effectiveTrainingKcal),
+      neat_factor: profile.deficit_neat_factor ?? 1.25,
+      garmin_correction: profile.deficit_garmin_correction ?? 0.75,
     }).select('id').single()
     eventId = eventRow?.id ?? null
   }

@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
@@ -15,7 +15,7 @@ const chartTooltip = {
   cursor: { fill: 'rgba(255,255,255,0.03)' },
 }
 
-export type DayEntry = { date: string; eatenKcal: number; isComplete: boolean; source: 'yazio' | 'manual' }
+export type DayEntry = { date: string; eatenKcal: number; isComplete: boolean; source: 'yazio' | 'manual'; budgetKcal: number; tdeeKcal: number }
 export type Measurement = { date: string; weightKg: number | null; waistCm: number | null; source: 'manual' | 'yazio' }
 export type CheckinHistoryRow = {
   id: string
@@ -46,6 +46,10 @@ export type BudgetEvent = {
   budget_source: string | null
   override_active: boolean
   created_at: string
+  bmr_kcal: number | null
+  training_kcal: number | null
+  neat_factor: number | null
+  garmin_correction: number | null
 }
 
 // Samma sju taggar som Kost-sidans dagsdetalj (FoodLogClient) — dupliceras
@@ -180,22 +184,29 @@ export default function ViktmalClient({
   }
 
   const today = days[days.length - 1]
-  const budget = budgetKcal ?? 0
-  const todayStatus = budgetKcal != null ? dailyDiffStatus(today.eatenKcal, budget, today.isComplete) : 'grey'
-  const weekAvg = useMemo(
-    () => compute7DayAverage(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete })), budget),
-    [days, budget]
-  )
-  // weekAvg.avgDiffKcal is eaten-vs-BUDGET, not the actual deficit against
-  // TDEE — Daniel found that confusing next to "mål" (which IS a TDEE
-  // figure), so the card's headline shows this converted number instead,
-  // directly comparable to the target with no mental math needed. Also
-  // flags both directions ("går man massa under målet är väl det heller
-  // inte bra"), not just "any minus is green".
+  const todayStatus = budgetKcal != null ? dailyDiffStatus(today.eatenKcal, today.budgetKcal, today.isComplete) : 'grey'
+  // Today's/current target deficit — deliberately CURRENT-only (not
+  // reconstructed historically), since this is a forward-looking "what are
+  // you aiming for right now" figure, not a record of a past day.
   const targetDeficitKcal = tdeeKcal != null && budgetKcal != null ? tdeeKcal - budgetKcal : null
-  const weekActualDeficitKcal = targetDeficitKcal != null && weekAvg.avgDiffKcal != null
-    ? targetDeficitKcal - weekAvg.avgDiffKcal
-    : null
+  const weekAvg = useMemo(
+    () => compute7DayAverage(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
+    [days]
+  )
+  // The actual deficit achieved vs TDEE (not vs budget) — Daniel found the
+  // raw eaten-vs-budget number confusing next to "mål" (which IS a TDEE
+  // figure). Computed directly from each day's own historically-correct
+  // TDEE (computeAvgDiffVsTdee) rather than converting weekAvg via
+  // arithmetic, since that conversion trick only cancels out correctly
+  // when TDEE never changed within the window — exactly the retroactive-
+  // change bug Daniel flagged ("egentligen ska inte de ändras
+  // retroaktivt"). Also flags both directions ("går man massa under målet
+  // är väl det heller inte bra"), not just "any minus is green".
+  const weekTdeeAvg = useMemo(
+    () => computeAvgDiffVsTdee(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
+    [days]
+  )
+  const weekActualDeficitKcal = weekTdeeAvg.avgDiffKcal != null ? -weekTdeeAvg.avgDiffKcal : null
   // A real green for "on track", not the app's usual accent color — Daniel
   // pointed out the accent is already yellow-ish and easy to mistake for
   // the amber warning right next to it (see STATUS_DOT above).
@@ -211,12 +222,14 @@ export default function ViktmalClient({
   // 14-dagarsfönster för en trendsiffra bredvid 7-dagars snittet, inte i
   // stället för det.
   const trendAvg = useMemo(
-    () => compute7DayAverage(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete })), budget),
-    [trendDays, budget]
+    () => compute7DayAverage(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
+    [trendDays]
   )
-  const trendActualDeficitKcal = targetDeficitKcal != null && trendAvg.avgDiffKcal != null
-    ? targetDeficitKcal - trendAvg.avgDiffKcal
-    : null
+  const trendTdeeAvg = useMemo(
+    () => computeAvgDiffVsTdee(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
+    [trendDays]
+  )
+  const trendActualDeficitKcal = trendTdeeAvg.avgDiffKcal != null ? -trendTdeeAvg.avgDiffKcal : null
   const trendAvgColor = trendActualDeficitKcal == null
     ? 'text-accent'
     : trendActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL ? 'text-red-400'
@@ -759,21 +772,36 @@ export default function ViktmalClient({
       </div>
 
       {/* Budgethistorik — varje gång budgeten räknats om, med orsak, så det
-          går att se VARFÖR den ändrades utan att gissa. */}
+          går att se VARFÖR den ändrades utan att gissa. Daniel: "lite dumt
+          att man ser ändringen, men inte vad egentligen de var som
+          triggade ett lägre TDEE" — en andra rad förklarar vad som
+          faktiskt flyttat sig (träningssnitt, vilo-omsättning m.m.) jämfört
+          med föregående (kronologiskt äldre — listan är nyast-först)
+          händelse, inte bara själva kcal-talet. */}
       {budgetEvents.length > 0 && (
         <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-1.5">
           <div className="text-xs text-muted uppercase tracking-wider mb-1">Budgethistorik</div>
-          {budgetEvents.map(ev => (
-            <div key={ev.id} className="flex items-center justify-between text-xs">
-              <span className="text-muted">{fmtDate(ev.created_at.slice(0, 10))} · {EVENT_KIND_LABEL[ev.kind] ?? ev.kind}</span>
-              <span className="font-mono text-fg">
-                {ev.old_budget_kcal != null && ev.new_budget_kcal != null && ev.old_budget_kcal !== ev.new_budget_kcal
-                  ? `${ev.old_budget_kcal} → ${ev.new_budget_kcal} kcal`
-                  : ev.new_budget_kcal != null ? `${ev.new_budget_kcal} kcal` : '–'}
-                {ev.override_active && <span className="text-amber-400"> · override</span>}
-              </span>
-            </div>
-          ))}
+          {budgetEvents.map((ev, i) => {
+            const previous = budgetEvents[i + 1] ?? null
+            const explanation = explainBudgetChange(
+              { bmrKcal: ev.bmr_kcal, trainingKcal: ev.training_kcal, neatFactor: ev.neat_factor, garminCorrection: ev.garmin_correction },
+              previous ? { bmrKcal: previous.bmr_kcal, trainingKcal: previous.training_kcal, neatFactor: previous.neat_factor, garminCorrection: previous.garmin_correction } : null
+            )
+            return (
+              <div key={ev.id} className="flex flex-col gap-0.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted">{fmtDate(ev.created_at.slice(0, 10))} · {EVENT_KIND_LABEL[ev.kind] ?? ev.kind}</span>
+                  <span className="font-mono text-fg">
+                    {ev.old_budget_kcal != null && ev.new_budget_kcal != null && ev.old_budget_kcal !== ev.new_budget_kcal
+                      ? `${ev.old_budget_kcal} → ${ev.new_budget_kcal} kcal`
+                      : ev.new_budget_kcal != null ? `${ev.new_budget_kcal} kcal` : '–'}
+                    {ev.override_active && <span className="text-amber-400"> · override</span>}
+                  </span>
+                </div>
+                {explanation && <div className="text-muted text-[11px]">{explanation}</div>}
+              </div>
+            )
+          })}
         </div>
       )}
     </div>

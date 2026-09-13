@@ -4,7 +4,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_METRICS, KOST_MEALS, type KostMetric, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { compute7DayAverage } from '@/lib/deficit'
+import { compute7DayAverage, budgetInForceOn } from '@/lib/deficit'
 import { estimateBMR } from '@/lib/bmr'
 import { dedupeForStats } from '@/lib/duplicates'
 import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
@@ -20,7 +20,7 @@ export default async function MatPage() {
 
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
-  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }] = await Promise.all([
+  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }, { data: budgetEventRows }] = await Promise.all([
     supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, deficit_garmin_correction, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
@@ -37,7 +37,14 @@ export default async function MatPage() {
     // Garmin+Concept2-synkat pass ska bara räknas en gång.
     supabase.from('activities').select('id, strava_id, source, sport_type, start_date, distance, moving_time, calories').eq('user_id', user.id).gte('start_date', sinceIso),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
+    // Reconstructs which budget was actually in force on each day for the
+    // header link below (Daniel: "egentligen ska inte de ändras
+    // retroaktivt") instead of assuming today's current budget applied.
+    supabase.from('deficit_budget_events')
+      .select('created_at, new_budget_kcal')
+      .eq('user_id', user.id).order('created_at', { ascending: true }),
   ])
+  const budgetEvents = (budgetEventRows ?? []).map(r => ({ createdAt: r.created_at as string, newBudgetKcal: r.new_budget_kcal as number | null }))
 
   const todayKey = stockholmDateKey()
   const entries = (recentLog ?? []) as FoodEntry[]
@@ -161,9 +168,9 @@ export default async function MatPage() {
     })
     const dayEntries = rollingDays.map(dateKey => {
       const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, new Set(dayOverrides))
-      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete }
+      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete, budgetKcal: budgetInForceOn(dateKey, profile.deficit_budget_kcal!, budgetEvents) }
     })
-    const weekAvg = compute7DayAverage(dayEntries, profile.deficit_budget_kcal)
+    const weekAvg = compute7DayAverage(dayEntries)
     if (weekAvg.avgDiffKcal != null) deficitSummary = { avgDiffKcal: weekAvg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal }
   }
 

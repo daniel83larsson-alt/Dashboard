@@ -317,11 +317,17 @@ export async function generateWeeklyDigestForUser(
       if (!manualByDate.has(key)) manualByDate.set(key, [])
       manualByDate.get(key)!.push(e)
     }
+    // Deliberately uses the current budget for every day of the week rather
+    // than reconstructing each day's historical one — this is a one-shot
+    // weekly email generated once, after the week is over, not a number
+    // the user keeps on screen and watches change, so the retroactive-
+    // change bug the Viktmål/Kost UI surfaces were fixed for doesn't apply
+    // here the same way.
     const weekDays = weekDateKeys(weekStart).map(dateKey => {
       const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides)
-      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete }
+      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete, budgetKcal: profile.deficit_budget_kcal! }
     })
-    const avg = compute7DayAverage(weekDays, profile.deficit_budget_kcal)
+    const avg = compute7DayAverage(weekDays)
     if (avg.avgDiffKcal != null) {
       deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays }
     }

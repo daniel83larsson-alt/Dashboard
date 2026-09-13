@@ -17,6 +17,7 @@ import { dateKeysEndingToday } from './window'
 import { fetchMcpActivities, fetchMcpStrengthGoal } from './fetch-training-data'
 import { fetchMcpWellnessHistory } from './fetch-wellness-data'
 import { fetchMcpActiveMilestone } from './fetch-milestone'
+import { fetchMcpBudgetEvents } from './fetch-budget-events'
 import { computeTrainingAdherence } from './training-adherence'
 import { computeRecentWorkouts } from './recent-workouts'
 import { computeRowingTrends } from './rowing-trends'
@@ -57,8 +58,11 @@ export function buildMcpHandler(auth: { userId: string } | null) {
         const supabase = createSupabaseAdminClient()
         const todayKey = stockholmDateKey()
         const windowStart = dateKeysEndingToday(todayKey, 7)[0]
-        const data = await fetchMcpUserData(supabase, auth.userId, todayKey, windowStart)
-        const payload = computeWeeklySummary(data, todayKey)
+        const [data, budgetEvents] = await Promise.all([
+          fetchMcpUserData(supabase, auth.userId, todayKey, windowStart),
+          fetchMcpBudgetEvents(supabase, auth.userId),
+        ])
+        const payload = computeWeeklySummary(data, todayKey, budgetEvents)
         logApiCall(supabase, auth.userId, 'mcp/get_weekly_summary')
         return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
       }

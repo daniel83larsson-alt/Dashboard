@@ -1454,6 +1454,19 @@ create policy "Users see own deficit budget events" on public.deficit_budget_eve
 create index if not exists deficit_budget_events_user_idx
   on public.deficit_budget_events (user_id, created_at desc);
 
+-- Daniel: "Fick ett lägre TDEE? ... lite dumt att man ser ändringen, men
+-- inte vad egentligen de var som triggade ett lägre TDEE." The point-in-
+-- time inputs behind THIS event's new_budget/new_tdee, so the UI can diff
+-- two consecutive events and say what actually moved (training average,
+-- BMR, NEAT factor, Garmin correction) instead of just before/after kcal.
+-- new_tdee_kcal doubles as the per-day TDEE reconstruction lib/deficit.ts's
+-- tdeeInForceOn needs, mirroring new_budget_kcal's existing role for budget.
+alter table public.deficit_budget_events add column if not exists new_tdee_kcal integer;
+alter table public.deficit_budget_events add column if not exists bmr_kcal integer;
+alter table public.deficit_budget_events add column if not exists training_kcal integer;
+alter table public.deficit_budget_events add column if not exists neat_factor numeric;
+alter table public.deficit_budget_events add column if not exists garmin_correction numeric;
+
 -- Daniels idé #4 — kort "varför"-fält per dag. Frånvaro av en rad betyder
 -- alltid "obesvarat", aldrig "vanlig dag" — samma hållning kost_day_status
 -- redan har för avsaknad av en rad.
