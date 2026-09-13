@@ -237,6 +237,7 @@ Claude agerar alltid som den personen tills du byter.
 
 - **Förklara enkelt.** Daniel är inte teknisk – undvik jargong utan förklaring.
 - **Fråga innan du antar.** Om något är oklart, fråga direkt.
+- **Ifrågasätt om ett önskemål inte känns vettigt.** Daniel: "jag vill ju veta varför mål ändras... men vill heller inte tvinga appen att göra något som inte är vettigt, så analysera alltid mina frågor och ställ fråga mot produktägare om den är vettig ändring." Utför inte en begäran rakt av bara för att den efterfrågats — bedöm den (teknisk rimlighet, konsekvenser för andra delar av appen, om den löser det underliggande problemet) och lyft det till Daniel innan ni bygger, om något känns fel eller onödigt komplext. Han är produktägaren som avgör, men vill bli tillfrågad först, inte bara serverad.
 - **Verifiera scope innan du börjar.** Vid öppna uppgifter (idéer, analys, design) – ställ alltid 2–3 klargörande frågor INNAN du påbörjar arbetet. Bekräfta att du förstått rätt kontext, målgrupp och avgränsning. Börja aldrig utan att ha fått svar.
 - **Flagga risker.** Säkerhet, kostnad eller teknisk skuld ska alltid lyftas.
 - **Leverera.** Inget halvfärdigt arbete utan tydlig förklaring varför.
