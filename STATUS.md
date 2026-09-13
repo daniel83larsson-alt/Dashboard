@@ -559,6 +559,9 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Den andra:** Vikt/målvikt/Garmin-korrigeringsfaktorn använde `<input type="number">`, som på flera webbläsare/tangentbord inte accepterar kommatecken som decimaltecken — att skriva "105,2" (naturligt på svenska) gav ett osynligt fel. Bytt till `type="text"` med normalisering av "," till "." innan `parseFloat`.
   **Verifierat:** typkontrollerat, lintat, 434/434 tester gröna, `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
 
+- ✅ **Daniel: "Är väl också bra att få en varning på inställningssidan, så ändrar man något specifikt där så ställer de om det från någon annan site."** Frågade var varningen skulle sitta — Daniel valde en riktad notis vid mål-fälten istället för en generell banner högst upp på sidan. Kort text under Måldatum i Viktmål-sektionen: "Ändrar du start-/målvikt eller måldatum räknas din dagliga budget om automatiskt när du sparar — det syns direkt på Viktmål." Den enda platsen där en sparning i Profil faktiskt, korrekt, avsiktligt påverkar en annan sida nu efter förra fixen.
+  **Verifierat:** typkontrollerat, lintat, 434/434 tester gröna, `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
 ---
 
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
