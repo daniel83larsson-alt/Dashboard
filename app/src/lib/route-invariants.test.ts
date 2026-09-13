@@ -207,6 +207,60 @@ describe('proxy.ts', () => {
   })
 })
 
+describe('no client-side settings form silently overwrites unrelated profile fields on save', () => {
+  // Real incident: ProfileForm.tsx used to write back all ~25 fields on
+  // every save, unconditionally — so if server-side code (Viktmål's budget
+  // refreeze, a milestone auto-revert) changed a field while the Profil
+  // tab sat open with stale state, saving any UNRELATED setting silently
+  // reverted that change. Daniel caught it via a calorie-goal figure that
+  // "jumped" for no visible reason. Fixed by diffing against the value the
+  // form was seeded with and sending only the changed keys (see
+  // ProfileForm.tsx's setIfChanged/updates). Two checks guard against this
+  // whole CLASS recurring, not just this one instance:
+  const COMPONENT_ROOTS = [path.join(SRC_ROOT, 'components'), path.join(SRC_ROOT, 'app')]
+  const clientTsxFiles = COMPONENT_ROOTS.flatMap(root => walk(root, p => p.endsWith('.tsx')))
+    .filter(f => read(f).startsWith("'use client'"))
+
+  it('found the expected client components (sanity check the walk didn\'t silently return nothing)', () => {
+    expect(clientTsxFiles.length).toBeGreaterThanOrEqual(10)
+  })
+
+  it('ProfileForm.tsx\'s own profiles.update() call passes the diffed `updates` object, never an inline literal', () => {
+    const content = read(path.join(SRC_ROOT, 'components', 'ProfileForm.tsx'))
+    expect(content).toContain('setIfChanged')
+    expect(content).toMatch(/Object\.keys\(updates\)\.length\s*>\s*0/)
+    expect(content).not.toMatch(/from\(['"]profiles['"]\)\.update\(\s*\{/)
+    expect(content).toMatch(/from\(['"]profiles['"]\)\.update\(updates\)/)
+  })
+
+  // Any OTHER client component that writes an inline object literal
+  // straight to profiles.update() is a candidate for the same bug class —
+  // verified against the real tree via
+  // `grep -rl "from('profiles').update({" src/components src/app --include=*.tsx`.
+  // A new match here isn't automatically wrong (a single-field toggle like
+  // AdminUserRow's lock switch is fine), but it must be reviewed and
+  // explicitly added below rather than silently shipping — that review is
+  // the whole point of this test.
+  const KNOWN_INLINE_PROFILE_UPDATE_SITES = [
+    // Single boolean field, admin-only action button — no multi-field
+    // form state to go stale.
+    'components/AdminUserRow.tsx',
+    // Onboarding only ever runs once right after signup, writes 1-2 fields
+    // tied to that exact screen, and nothing else mutates those same
+    // columns concurrently — none of the conditions that made ProfileForm
+    // risky (long-lived open tab, many fields, other flows racing it).
+    'components/OnboardingWizard.tsx',
+  ]
+
+  it('the known-inline-update allowlist matches what\'s actually in the tree (no drift, no new unreviewed site)', () => {
+    const actual = clientTsxFiles
+      .filter(f => /from\(['"]profiles['"]\)\.update\(\s*\{/.test(read(f)))
+      .map(relToSrc)
+      .sort()
+    expect(actual).toEqual([...KNOWN_INLINE_PROFILE_UPDATE_SITES].sort())
+  })
+})
+
 describe('Viktmål\'s Garmin correction factor never leaks into pages/calcs that already show activities.calories', () => {
   // Daniel's explicit decision when this feature was scoped: the
   // correction factor may only reweight Viktmål's own budget/check-in
