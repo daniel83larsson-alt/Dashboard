@@ -27,6 +27,7 @@ import FriendRequestBadge from '@/components/FriendRequestBadge'
 import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
 import InstallAppButton from '@/components/InstallAppButton'
 import { hrvStatusLabel } from '@/lib/wellness'
+import { estimateBurnedKcalForDay } from '@/lib/burned-calories'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -242,8 +243,14 @@ export default async function DashboardPage() {
   // som att man redan bränt ett helt dygns vila. dedupeForStats säkerställer
   // att ett Concept2+Garmin-par för samma pass inte räknas dubbelt.
   const todayKey = stockholmDateKey(now)
-  const activityCaloriesToday = activities
-    .filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
+  const activitiesToday = activities.filter(a => stockholmDateKey(new Date(a.start_date)) === todayKey)
+  const activityCaloriesToday = activitiesToday.reduce((s, a) => s + (a.calories ?? 0), 0)
+  // Manuellt loggade pass (t.ex. via "Logga pass" — kettlebell är svårt att
+  // ha klockan på för) är per definition inte med i Garmins dygnstotal, så
+  // de läggs alltid ovanpå den nedan istället för att bara ersättas av den —
+  // se estimateBurnedKcalForDay.
+  const manualActivityCaloriesToday = activitiesToday
+    .filter(a => a.source === 'manual')
     .reduce((s, a) => s + (a.calories ?? 0), 0)
   const yazioHistoryRaw = (yazioHistoryRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
   const yazioHistory: YazioDay[] = yazioHistoryRaw ? (() => {
@@ -266,15 +273,21 @@ export default async function DashboardPage() {
     birthYear: profile?.birth_year ?? null,
     biologicalSex: profile?.biological_sex ?? null,
   }, now)
-  const burnedSoFar = Math.round(bmrResult.bmr * stockholmDayElapsedFraction(now)) + activityCaloriesToday
   // Garmin's own daily total already accounts for real movement/heart rate
-  // (not a flat BMR ramp), so it replaces the schablon estimate above
+  // (not a flat BMR ramp), so it replaces the schablon estimate below
   // whenever today's synced wellness row actually has it — same "prefer
   // real data, fall back to the estimate" pattern as the rest of this card.
   // Other watch sources can plug into this same DayWellness field later,
-  // as long as their sync populates totalCalories.
+  // as long as their sync populates totalCalories. A manually logged pass
+  // is added on top regardless (see estimateBurnedKcalForDay) since it's
+  // guaranteed not already inside whatever the watch measured.
   const garminCaloriesToday = wellness?.date === todayKey ? (wellness.totalCalories ?? null) : null
-  const burnedForNet = garminCaloriesToday ?? burnedSoFar
+  const burnedForNet = estimateBurnedKcalForDay(
+    bmrResult.bmr * stockholmDayElapsedFraction(now),
+    activityCaloriesToday,
+    manualActivityCaloriesToday,
+    garminCaloriesToday
+  ).kcal
   const netCalories = eatenToday - burnedForNet
   // Viktmåls uträknade budget vinner över det fristående manuella fältet i
   // Profil när båda finns (Daniel: "man bör väl säga vilken som är

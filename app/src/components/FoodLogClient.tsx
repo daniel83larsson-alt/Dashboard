@@ -123,6 +123,7 @@ export default function FoodLogClient({
   dayNotes: initialDayNotes,
   bmrKcal,
   activityKcalByDate,
+  manualActivityKcalByDate,
   garminTotalCaloriesByDate,
   garminActiveCaloriesByDate,
   garminCorrection,
@@ -140,6 +141,7 @@ export default function FoodLogClient({
   dayNotes: DayNote[]
   bmrKcal: number
   activityKcalByDate: Record<string, number>
+  manualActivityKcalByDate: Record<string, number>
   garminTotalCaloriesByDate: Record<string, number>
   garminActiveCaloriesByDate: Record<string, number>
   garminCorrection: number
@@ -621,7 +623,12 @@ export default function FoodLogClient({
   // totalt förbränt loggades där med") — Garmins uppmätta dygnstotal när
   // den finns, annars BMR + den dagens loggade träning.
   function burnedKcalForDate(dateKey: string): number {
-    return estimateBurnedKcalForDay(bmrKcal, activityKcalByDate[dateKey] ?? 0, garminTotalCaloriesByDate[dateKey] ?? null).kcal
+    return estimateBurnedKcalForDay(
+      bmrKcal,
+      activityKcalByDate[dateKey] ?? 0,
+      manualActivityKcalByDate[dateKey] ?? 0,
+      garminTotalCaloriesByDate[dateKey] ?? null
+    ).kcal
   }
 
   // Samma sak, fast bara för grön/gul/röd-bedömningen (dayCalorieStatus) —
@@ -633,6 +640,7 @@ export default function FoodLogClient({
     return estimateBurnedKcalForStatus(
       bmrKcal,
       activityKcalByDate[dateKey] ?? 0,
+      manualActivityKcalByDate[dateKey] ?? 0,
       { totalCalories: garminTotalCaloriesByDate[dateKey] ?? null, activeCalories: garminActiveCaloriesByDate[dateKey] ?? null },
       garminCorrection
     )

@@ -104,9 +104,17 @@ export default async function MatPage() {
   type ActivityForCalories = { start_date: string; calories: number | null; id: string; strava_id: number; source?: string; sport_type: string; distance: number; moving_time: number }
   const dedupedActivities = dedupeForStats((recentActivitiesRaw ?? []) as ActivityForCalories[])
   const activityKcalByDate: Record<string, number> = {}
+  // Manuellt loggade pass (source='manual', t.ex. "Logga pass" — kettlebell
+  // är svårt att ha klockan på för) är per definition inte med i Garmins
+  // dygnstotal, så de läggs alltid ovanpå den istället för att ersättas av
+  // den — se estimateBurnedKcalForDay/estimateBurnedKcalForStatus.
+  const manualActivityKcalByDate: Record<string, number> = {}
   for (const a of dedupedActivities) {
     const key = a.start_date.slice(0, 10)
     activityKcalByDate[key] = (activityKcalByDate[key] ?? 0) + (a.calories ?? 0)
+    if (a.source === 'manual') {
+      manualActivityKcalByDate[key] = (manualActivityKcalByDate[key] ?? 0) + (a.calories ?? 0)
+    }
   }
 
   type DayWellness = { date: string; totalCalories: number | null; activeCalories: number | null }
@@ -183,6 +191,7 @@ export default async function MatPage() {
       dayNotes={dayNotes}
       bmrKcal={bmrKcal}
       activityKcalByDate={activityKcalByDate}
+      manualActivityKcalByDate={manualActivityKcalByDate}
       garminTotalCaloriesByDate={garminTotalCaloriesByDate}
       garminActiveCaloriesByDate={garminActiveCaloriesByDate}
       garminCorrection={garminCorrection}
