@@ -56,6 +56,14 @@ export function usesDistance(sport: string): boolean {
   return DISTANCE_SPORTS.has(sport)
 }
 
+// "Strength" for adherence-tracking purposes (MCP get_training_adherence) —
+// the two sport_types LoggaPassForm.tsx offers a sets/reps exercise picker
+// for that aren't also a cardio modality in their own right.
+const STRENGTH_SPORTS = new Set(['Kettlebell', 'WeightTraining'])
+export function isStrengthSport(sport: string): boolean {
+  return STRENGTH_SPORTS.has(sport)
+}
+
 // Rounds to whole seconds and carries into minutes so e.g. 119.6s renders as
 // "2:00" rather than "1:60".
 export function fmtMinSec(totalSeconds: number): string {

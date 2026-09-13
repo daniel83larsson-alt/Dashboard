@@ -17,6 +17,7 @@ export type McpProfile = {
   daily_calorie_goal: number | null
   protein_goal_g: number | null
   kost_tracked_meals: string[] | null
+  daily_step_goal: number
 }
 
 export type McpMeasurement = { date: string; weightKg: number | null; waistCm: number | null }
@@ -42,7 +43,7 @@ export async function fetchMcpUserData(
 ): Promise<McpUserData> {
   const { data: profileRow } = await supabase
     .from('profiles')
-    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, daily_calorie_goal, protein_goal_g, kost_tracked_meals')
+    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, daily_calorie_goal, protein_goal_g, kost_tracked_meals, daily_step_goal')
     .eq('id', userId)
     .single()
   const profile = (profileRow ?? null) as McpProfile | null

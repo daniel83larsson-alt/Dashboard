@@ -18,6 +18,7 @@ function baseData(overrides: Partial<McpUserData> = {}): McpUserData {
     deficit_tracking_enabled: true, deficit_start_weight_kg: 108, deficit_start_date: '2026-08-30',
     deficit_target_weight_kg: 85, deficit_target_date: '2027-07-01', deficit_tdee_kcal: 2680,
     deficit_budget_kcal: 2160, daily_calorie_goal: null, protein_goal_g: 185, kost_tracked_meals: ['breakfast'],
+    daily_step_goal: 10000,
   }
   return {
     profile, yazioByDate: new Map(), manualByDate: new Map(), dayOverrides: new Set(),

@@ -25,6 +25,7 @@ function baseData(overrides: Partial<McpUserData> = {}): McpUserData {
     daily_calorie_goal: null,
     protein_goal_g: 185,
     kost_tracked_meals: ['breakfast'],
+    daily_step_goal: 10000,
   }
   return {
     profile,
