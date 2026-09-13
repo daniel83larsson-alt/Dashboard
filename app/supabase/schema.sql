@@ -1536,3 +1536,23 @@ as $$
 $$;
 revoke all on function public.friend_activity_feed() from public;
 grant execute on function public.friend_activity_feed() to authenticated;
+
+-- activities.calories was null for virtually every Garmin/Concept2-synced
+-- row despite the real value already sitting unused in raw_data (Concept2:
+-- top-level "calories_total", a real watt-based device measurement, not a
+-- guess; Garmin: top-level "calories", which for a Concept2-linked device
+-- is literally the same Concept2-computed number Garmin just relays) —
+-- discovered via Daniel's Viktmål TDEE mysteriously collapsing once his
+-- rolling 28-day window crossed 14 "active" days and started averaging a
+-- column of mostly nulls instead of falling back to a flat estimate (see
+-- lib/deficit.ts's daysWithRealTrainingCalories). Backfills every existing
+-- row from the raw payload already stored; garmin.ts/concept2.ts now
+-- extract it going forward for new syncs. Idempotent — only touches rows
+-- still null.
+update public.activities
+set calories = (raw_data->>'calories_total')::integer
+where source = 'concept2' and calories is null and raw_data ? 'calories_total';
+
+update public.activities
+set calories = round((raw_data->>'calories')::numeric)
+where source = 'garmin' and calories is null and raw_data ? 'calories';

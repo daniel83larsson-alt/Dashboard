@@ -155,6 +155,11 @@ export function garminActivityToRow(a: IActivity, userId: string) {
     max_heartrate: a.maxHR ?? null,
     average_watts: null,
     max_watts: null,
+    // Garmin's own per-activity calorie total — already present in every
+    // fetched activity, just never extracted before (only the whole-day
+    // wellness total was read, via fetchGarminCalories below). See
+    // lib/deficit-budget-refreeze.ts's daysWithRealTrainingCalories.
+    calories: a.calories ?? null,
     start_date: new Date(a.startTimeLocal).toISOString(),
     description: `Garmin · ${a.activityType?.typeKey ?? 'activity'}`,
     raw_data: a,

@@ -112,6 +112,12 @@ export type Concept2Result = {
     }[]
   }
   watts?: number
+  // Concept2's own device-measured calorie total for the whole workout
+  // (from actual watt output, not a heart-rate guess) — already present in
+  // every result the API has ever returned, just never extracted before.
+  // See lib/deficit-budget-refreeze.ts's daysWithRealTrainingCalories for
+  // why activities.calories being null for every synced row mattered.
+  calories_total?: number
 }
 
 export function concept2ResultToActivity(r: Concept2Result, userId: string) {
@@ -130,6 +136,7 @@ export function concept2ResultToActivity(r: Concept2Result, userId: string) {
     max_heartrate: r.heart_rate?.ending ?? null,
     average_watts: r.watts ?? null,
     max_watts: null,
+    calories: r.calories_total ?? null,
     start_date: new Date(r.date).toISOString(),
     description: `Concept2 · ${r.type}`,
     raw_data: r,
