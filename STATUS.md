@@ -527,6 +527,10 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Fix:** `concept2ResultToActivity()`/`garminActivityToRow()` extraherar nu de redan hämtade kalorifälten. SQL-migration (applicerad direkt på skarp databas) efterfyllde alla befintliga rader från redan lagrad `raw_data` — inga nya API-anrop, inga nya behörigheter. Verifierat mot Daniels konto: 733/733 Garmin- och 121/122 Concept2-rader fick ett riktigt kaloritvärde. Löser den kvarstående tekniska skulden från TDEE-kollaps-fixen på riktigt.
   **Verifierat:** typkontrollerat, lintat, 384/384 tester gröna, `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
 
+- ✅ **Daniel: "På den står de 6av7 dagar loggade, den går väl på vecko-dagarna bara? Borde inte de vara rullade 7 och kanske rullade 14, för att se trend."** Kollade koden innan något ändrades: 7-dagars snittet var redan ett rullande fönster som slutar idag (`weekDateKeysEndingToday`), inte kalenderveckans mån-sön — ingen bugg där, bara en missuppfattning. Den faktiska efterfrågan var ett andra, bredare fönster för en mindre bullrig trend.
+  **Fix:** `viktmal/page.tsx` hämtar nu ett 14-dagars fönster i en enda query (7-dagarslistan är bara sista skivan av samma data). Ny "14-dagars trend"-rad i samma kort som 7-dagars snittet — återanvänder `compute7DayAverage` rakt av (redan generisk över fönsterstorlek trots namnet) och samma grön/gul/röd-logik.
+  **Verifierat:** typkontrollerat, lintat, 384/384 tester gröna, `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
 ---
 
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
