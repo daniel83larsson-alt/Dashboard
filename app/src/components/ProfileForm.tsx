@@ -853,6 +853,7 @@ export default function ProfileForm({
               <label className="text-muted text-xs block mb-1.5">Måldatum</label>
               <input type="date" value={deficitTargetDate} onChange={e => setDeficitTargetDate(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors" />
             </div>
+            <p className="text-amber-400/90 text-xs -mt-1">Ändrar du start-/målvikt eller måldatum räknas din dagliga budget om automatiskt när du sparar — det syns direkt på Viktmål.</p>
 
             <div>
               <label className="text-muted text-xs block mb-2">Vardagsaktivitet (utöver träningen)</label>
