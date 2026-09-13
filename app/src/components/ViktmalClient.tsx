@@ -43,6 +43,7 @@ export type BudgetEvent = {
   kind: string
   old_budget_kcal: number | null
   new_budget_kcal: number | null
+  new_tdee_kcal: number | null
   budget_source: string | null
   override_active: boolean
   created_at: string
@@ -787,8 +788,16 @@ export default function ViktmalClient({
               { bmrKcal: ev.bmr_kcal, trainingKcal: ev.training_kcal, neatFactor: ev.neat_factor, garminCorrection: ev.garmin_correction },
               previous ? { bmrKcal: previous.bmr_kcal, trainingKcal: previous.training_kcal, neatFactor: previous.neat_factor, garminCorrection: previous.garmin_correction } : null
             )
+            // TDEE-raden bredvid budget-raden — Daniel: "bra du frågar och
+            // dubbelkollar mig... vill veta varför den sjunker. Speciellt
+            // om det är för att jag tränar sämre, eller jag går ner i
+            // vikt." Budget-kcal ensamt svarar inte på det (budgeten kan
+            // ändras även om TDEE står still, t.ex. när ett delmål
+            // upphör) — TDEE-förändringen + den detaljerade förklaringen
+            // nedanför är det som faktiskt visar varför.
+            const tdeeChanged = ev.new_tdee_kcal != null && previous?.new_tdee_kcal != null && previous.new_tdee_kcal !== ev.new_tdee_kcal
             return (
-              <div key={ev.id} className="flex flex-col gap-0.5">
+              <div key={ev.id} className="flex flex-col gap-0.5 py-1 first:pt-0 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-edge/60 [&:not(:last-child)]:pb-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="text-muted">{fmtDate(ev.created_at.slice(0, 10))} · {EVENT_KIND_LABEL[ev.kind] ?? ev.kind}</span>
                   <span className="font-mono text-fg">
@@ -798,7 +807,17 @@ export default function ViktmalClient({
                     {ev.override_active && <span className="text-amber-400"> · override</span>}
                   </span>
                 </div>
-                {explanation && <div className="text-muted text-[11px]">{explanation}</div>}
+                {tdeeChanged && (
+                  <div className="flex items-center justify-between text-[11px]">
+                    <span className="text-muted">TDEE</span>
+                    <span className="font-mono text-muted">{previous.new_tdee_kcal} → {ev.new_tdee_kcal} kcal</span>
+                  </div>
+                )}
+                {explanation ? (
+                  <div className="text-fg/80 text-xs mt-0.5">↳ {explanation}</div>
+                ) : (ev.bmr_kcal == null && (tdeeChanged || (ev.old_budget_kcal !== ev.new_budget_kcal))) ? (
+                  <div className="text-muted text-[11px] italic mt-0.5">Äldre ändring — ingen detaljerad orsak sparad.</div>
+                ) : null}
               </div>
             )
           })}

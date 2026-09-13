@@ -1168,6 +1168,15 @@ export default function FoodLogClient({
                   const kcal = kcalTotalForDay(dayEntries)
                   const diff = kostSettings.calorieGoal != null ? kcal - kostSettings.calorieGoal : null
                   const burned = !isFuture && completeness.status === 'complete' ? burnedKcalForDate(key) : null
+                  // Ätit vs förbränt den dagen — Daniel: "diff mot dagens
+                  // förbränning och mat... lär ju äta mer en dag man
+                  // tränar mycket". Skiljer sig från diff-mot-mål ovan (som
+                  // jämför mot Viktmål-budgeten) — den här visar rakt av om
+                  // dagen gav ett överskott eller underskott, oavsett
+                  // budget, samma modell (och färgkonvention: överskott =
+                  // amber, underskott/jämnt = grönt) som "Kalorier idag" på
+                  // Översikt.
+                  const netDiff = burned != null ? kcal - burned : null
                   const status = kostSettings.calorieGoal != null && burned != null
                     ? dayCalorieStatus(kcal, kostSettings.calorieGoal, burnedKcalForStatus(key)) : null
                   return (
@@ -1185,10 +1194,17 @@ export default function FoodLogClient({
                       ) : completeness.status === 'incomplete' ? (
                         <span className="text-amber-400">⚠ Saknar {completeness.missingMeals.map(kostMealLabel).join(', ')}</span>
                       ) : (
-                        <span className="flex items-center gap-2 font-mono">
-                          <span className="text-fg">{kcal} kcal</span>
-                          {burned != null && <span className="text-muted">/ {burned} bränt</span>}
-                          {diff != null && <span className={status ? DAY_CALORIE_STATUS_TEXT_COLOR[status] : 'text-accent'}>{diff > 0 ? '+' : ''}{diff}</span>}
+                        <span className="flex flex-col items-end gap-0.5">
+                          <span className="flex items-center gap-2 font-mono">
+                            <span className="text-fg">{kcal} kcal</span>
+                            {burned != null && <span className="text-muted">/ {burned} bränt</span>}
+                            {diff != null && <span className={status ? DAY_CALORIE_STATUS_TEXT_COLOR[status] : 'text-accent'}>{diff > 0 ? '+' : ''}{diff}</span>}
+                          </span>
+                          {netDiff != null && (
+                            <span className={`text-[10px] font-mono ${netDiff > 0 ? 'text-amber-500' : 'text-green-400'}`}>
+                              {netDiff > 0 ? '+' : ''}{netDiff} vs bränt
+                            </span>
+                          )}
                         </span>
                       )}
                     </button>
