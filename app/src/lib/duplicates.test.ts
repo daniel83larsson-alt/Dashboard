@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isFuzzyMatch, findDuplicateGroups, suggestKeepId, isMergeCandidate, splitMergedPairs, dedupeForStats, bestMergePartners, isCleanCrossSourceGroup, type ActivityRow } from './duplicates'
+import { isFuzzyMatch, findDuplicateGroups, suggestKeepId, isMergeCandidate, splitMergedPairs, dedupeForStats, bestMergePartners, isCleanCrossSourceGroup, preferredHr, type ActivityRow } from './duplicates'
 
 // Concept2 rows use a negative strava_id (source marker), Garmin rows a
 // positive one — same convention the real sync code uses.
@@ -231,6 +231,38 @@ describe('dedupeForStats', () => {
     const oldest = row({ id: 'b', strava_id: 501, start_date: '2026-07-01T08:00:00Z' })
     const result = dedupeForStats([newest, oldest])
     expect(result.map(a => a.id)).toEqual(['a', 'b'])
+  })
+
+  it('uses the Garmin partner\'s HR on the surviving Concept2 row, even when Concept2 already has a (less accurate) value', () => {
+    // Real incident: Daniel's rowing pass showed Max-HR 109 (Concept2)
+    // instead of Garmin's 127 for the identical session, because
+    // pickPrimary keeps Concept2 for distance/pace and nothing patched
+    // the HR fields the way hr_zones already got patched.
+    const c = row({ id: 'c', strava_id: -1, average_heartrate: 115, max_heartrate: 109 })
+    const g = row({ id: 'g', strava_id: 500, average_heartrate: 115, max_heartrate: 127 })
+    const result = dedupeForStats([c, g])
+    expect(result[0].average_heartrate).toBe(115)
+    expect(result[0].max_heartrate).toBe(127)
+  })
+})
+
+describe('preferredHr', () => {
+  it('prefers the Garmin row\'s HR over a Concept2 row\'s, even when both are present', () => {
+    const c = row({ id: 'c', strava_id: -1, average_heartrate: 115, max_heartrate: 109 })
+    const g = row({ id: 'g', strava_id: 500, average_heartrate: 118, max_heartrate: 127 })
+    expect(preferredHr([c, g])).toEqual({ averageHeartrate: 118, maxHeartrate: 127 })
+  })
+
+  it('falls back to whichever row has a value when there is no Garmin row', () => {
+    const c = row({ id: 'c', strava_id: -1, average_heartrate: null, max_heartrate: null })
+    const strava = row({ id: 's', strava_id: -2, source: 'strava', average_heartrate: 120, max_heartrate: 140 })
+    expect(preferredHr([c, strava])).toEqual({ averageHeartrate: 120, maxHeartrate: 140 })
+  })
+
+  it('returns null for both when nobody in the group has HR data', () => {
+    const c = row({ id: 'c', strava_id: -1 })
+    const g = row({ id: 'g', strava_id: 500 })
+    expect(preferredHr([c, g])).toEqual({ averageHeartrate: null, maxHeartrate: null })
   })
 })
 

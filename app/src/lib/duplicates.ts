@@ -185,6 +185,21 @@ function pickPrimary<T extends ActivityRow>(members: T[]): T {
   return members[0]
 }
 
+// Garmin's own HR reading wins over any other merged partner's, even when
+// the other row already has a non-null value — pickPrimary above prefers
+// Concept2 for distance/pace precision, but that same Concept2 row can
+// under-report heart rate for the identical session (real incident:
+// Concept2 max_heartrate 109 vs Garmin's 127 for one rowing pass — not a
+// missing-value case a plain `??` fallback would catch, both were
+// present). Falls back to whichever row in the group has a value when
+// there's no Garmin row at all (Concept2+Strava, Concept2+Polar, etc.).
+export function preferredHr<T extends ActivityRow>(members: T[]): { averageHeartrate: number | null; maxHeartrate: number | null } {
+  const garmin = members.find(m => rowSource(m) === 'garmin')
+  const averageHeartrate = garmin?.average_heartrate ?? members.map(m => m.average_heartrate).find(h => h != null) ?? null
+  const maxHeartrate = garmin?.max_heartrate ?? members.map(m => m.max_heartrate).find(h => h != null) ?? null
+  return { averageHeartrate, maxHeartrate }
+}
+
 // Splits activities into a) genuine cross-source groups for the SAME session
 // (two OR MORE of Garmin/Concept2/Strava/Polar all syncing one real workout —
 // see isMergeCandidate), which should be treated as one pass everywhere
@@ -305,16 +320,29 @@ export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
   const { groups } = splitMergedPairs(activities)
   const dropped = new Set(groups.flatMap(g => g.partners.map(p => p.id)))
   const zonesByPrimaryId = new Map<string, unknown>()
+  // The kept row (pickPrimary prefers Concept2 for distance/pace) isn't
+  // necessarily the right HR source too — patch in preferredHr's pick the
+  // same way hr_zones already gets patched in below, so every caller of
+  // dedupeForStats (dashboard's "Senaste pass", Rekord, TrainingCharts,
+  // weekly digest, Coach/Insikter context, MCP tools) gets Garmin's HR
+  // instead of silently keeping whichever source happened to be primary.
+  const hrByPrimaryId = new Map<string, { averageHeartrate: number | null; maxHeartrate: number | null }>()
   for (const g of groups) {
     if (g.primary.hr_zones) continue
     const withZones = g.partners.find(p => p.hr_zones)
     if (withZones) zonesByPrimaryId.set(g.primary.id, withZones.hr_zones)
+    hrByPrimaryId.set(g.primary.id, preferredHr([g.primary, ...g.partners]))
   }
   return activities
     .filter(a => !dropped.has(a.id) && a.moving_time >= MIN_REAL_SESSION_SECONDS)
     .map(a => {
       const zones = zonesByPrimaryId.get(a.id)
-      if (!zones) return a
-      return { ...a, hr_zones: zones } as T
+      const hr = hrByPrimaryId.get(a.id)
+      if (!zones && !hr) return a
+      return {
+        ...a,
+        ...(zones ? { hr_zones: zones } : null),
+        ...(hr ? { average_heartrate: hr.averageHeartrate, max_heartrate: hr.maxHeartrate } : null),
+      } as T
     })
 }

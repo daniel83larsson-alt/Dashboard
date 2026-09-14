@@ -3,7 +3,7 @@ import DuplicateCleanup from '@/components/DuplicateCleanup'
 import CopyTrainingLogButton from '@/components/CopyTrainingLogButton'
 import Link from 'next/link'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
-import { splitMergedPairs, dedupeForStats, rowSource, type KnownSource, type ActivityRow } from '@/lib/duplicates'
+import { splitMergedPairs, dedupeForStats, preferredHr, rowSource, type KnownSource, type ActivityRow } from '@/lib/duplicates'
 import { relativeDateLabel } from '@/lib/dates'
 
 const PAGE_SIZE = 20
@@ -121,7 +121,11 @@ export default async function PassloggPage({
             {displayItems.map(item => {
               const { a } = item
               const speedOrPace = fmtSpeedOrPace(a.sport_type, a.distance, a.moving_time)
-              const hr = a.average_heartrate ?? (item.kind === 'merged' ? item.partners.map(p => p.average_heartrate).find(h => h != null) ?? null : null)
+              // Same trust order as the detail page (preferredHr) — Garmin's
+              // own HR wins over a merged partner's when both exist, since
+              // Concept2/Strava/Polar can under-report vs the watch for the
+              // identical session.
+              const hr = preferredHr(item.kind === 'merged' ? [a, ...item.partners] : [a]).averageHeartrate
               return (
                 <Link key={a.id} href={`/dashboard/passlogg/${a.id}`} className="bg-card border border-edge rounded-xl p-4 block hover:border-accent/40 transition-colors">
                   <div className="flex items-start justify-between mb-3">

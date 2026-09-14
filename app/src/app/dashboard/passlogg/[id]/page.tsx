@@ -4,7 +4,7 @@ import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
-import { bestMergePartners, rowSource, type KnownSource } from '@/lib/duplicates'
+import { bestMergePartners, preferredHr, rowSource, type KnownSource } from '@/lib/duplicates'
 import { REGION_LABELS, Region } from '@/lib/mobility'
 
 function fmtKm(m: number) { return (m / 1000).toFixed(2) + ' km' }
@@ -132,10 +132,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
   const lng: number | null = isNum(rawLng) && rawLng !== 0 ? rawLng : null
   const hasCoords = lat !== null && lng !== null
 
-  // Concept2 doesn't always have a paired HR strap, and Strava/Polar rows
-  // sometimes lack it too — fall back to whichever merged partner has it.
-  const mergedAvgHr = activity.average_heartrate ?? partners.map(p => p.average_heartrate).find(h => h != null) ?? null
-  const mergedMaxHr = activity.max_heartrate ?? partners.map(p => p.max_heartrate).find(h => h != null) ?? null
+  // Garmin's own HR reading wins when it exists (preferredHr) — same trust
+  // order this page already gives Garmin for raw_data-derived fields
+  // (garminRow/garminRaw/garminExtras/route coords above). Real incident:
+  // Concept2 relays HR from the same chest strap but can under-report the
+  // peak — Daniel saw Max-HR 109 on a pass where Garmin's own row for the
+  // identical session had 127.
+  const { averageHeartrate: mergedAvgHr, maxHeartrate: mergedMaxHr } = preferredHr([activity, ...partners])
 
   const concept2Row = activity.source === 'concept2' ? activity : concept2Partner
   const garminActivityId = garminRow?.id
