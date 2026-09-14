@@ -13,8 +13,7 @@ import { dedupeForStats } from '@/lib/duplicates'
 import { sportLabel, sportIcon, usesDistance } from '@/lib/sport'
 import { computeAllSportPRs, longestSession, type Activity as RecordActivity } from '@/lib/records'
 import { currentHabitStreak, habitCompletionStats, intervalLabel, type Habit, type HabitLog } from '@/lib/habits'
-import { computeTrainingKcalTrend, type TrainingKcalTrendPoint } from '@/lib/training-load-trend'
-import { TRAINING_LOOKBACK_DAYS } from '@/lib/deficit-budget-refreeze'
+import { computeTrainingKcalTrend, CHART_WINDOW_DAYS, type TrainingKcalTrendPoint } from '@/lib/training-load-trend'
 import TrainingLoadTrendChart from '@/components/TrainingLoadTrendChartLoader'
 
 const VO2MAX_LOOKBACK_DAYS = 90
@@ -92,9 +91,9 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const yearStart = new Date(now.getFullYear(), 0, 1)
   const zoneQueryStart = weekStart < yearStart ? weekStart : yearStart
-  // Needs to cover the OLDEST week point's full 28-day rolling window, not
-  // just the 12 weekly anchors themselves.
-  const trainingTrendSince = new Date(now.getTime() - (TRAINING_TREND_WEEKS * 7 + TRAINING_LOOKBACK_DAYS) * 86400000)
+  // Needs to cover the OLDEST week point's full rolling window, not just
+  // the 12 weekly anchors themselves.
+  const trainingTrendSince = new Date(now.getTime() - (TRAINING_TREND_WEEKS * 7 + CHART_WINDOW_DAYS) * 86400000)
 
   const [
     { data: wellnessRow },
@@ -109,6 +108,7 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     { data: habits },
     { data: habitLogs },
     { data: trainingTrendActivities },
+    { data: trainingTrendDayTags },
   ] = await Promise.all([
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'health_insights').single(),
@@ -134,6 +134,11 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     // app (see route-invariants.test.ts).
     supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
       .eq('user_id', user.id).gte('start_date', trainingTrendSince.toISOString()),
+    // Daniel: "också då bra att veta hur den ändrats" — lets a dip in the
+    // training/TDEE trend above show WHY (sjuk, resa, skada...) instead of
+    // just a lower number with no context.
+    supabase.from('day_context_notes').select('date, tag')
+      .eq('user_id', user.id).gte('date', trainingTrendSince.toISOString().slice(0, 10)),
   ])
   const stepGoal = profile?.daily_step_goal ?? 10000
 
@@ -362,7 +367,8 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
         trainingTrendActivities ?? [],
         profile?.deficit_garmin_correction ?? 0.75,
         now,
-        TRAINING_TREND_WEEKS
+        TRAINING_TREND_WEEKS,
+        trainingTrendDayTags ?? []
       )
     : []
 

@@ -20,6 +20,20 @@ function shortDate(d: string) {
   return new Date(d).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
 }
 
+// Same seven tags as Kost/Viktmål's day-context notes — duplicated on
+// purpose rather than shared, same UI-only-constant convention already
+// used for EVENT_KIND_LABEL/DAY_TAGS elsewhere in this app.
+const TAG_LABELS: Record<string, string> = {
+  sick: 'sjuk', social: 'socialt', travel: 'resa', stress: 'stress', injury: 'skada', other: 'annat',
+}
+
+function describeTagCounts(counts: Record<string, number>): string | null {
+  const parts = Object.entries(counts)
+    .filter(([, n]) => n > 0)
+    .map(([tag, n]) => `${TAG_LABELS[tag] ?? tag} ${n} ${n === 1 ? 'dag' : 'dagar'}`)
+  return parts.length ? parts.join(', ') : null
+}
+
 // Daniel: "kunde jag se TDEE grundande från träning... är ju intressant
 // om den skulle droppa, motverkar ju att jag äter lite." Isolerad
 // träningsdel av TDEE (träningssnitt × Garmin-korrigering), en punkt per
@@ -37,6 +51,10 @@ export default function TrainingLoadTrendChart({ points }: Props) {
   const trendDeltaKcal = latest && earliestWithData && latest !== earliestWithData
     ? latest.correctedTrainingKcalPerDay! - earliestWithData.correctedTrainingKcalPerDay!
     : null
+  // Daniel: "också då bra att veta hur den ändrats" — only surfaced for
+  // the latest week (not every point) since that's the one someone's
+  // actually asking "why" about right now.
+  const latestTagSummary = latest ? describeTagCounts(latest.contextTagCounts) : null
 
   return (
     <div className="bg-card border border-edge rounded-2xl p-4">
@@ -47,7 +65,7 @@ export default function TrainingLoadTrendChart({ points }: Props) {
         )}
       </div>
       <p className="text-muted text-[11px] mb-3">
-        28-dagars rullande snitt, Garmin-korrigerat — samma siffra som styr din Viktmål-budget. Ett hål i linjen betyder för lite riktig träningsdata den perioden, inte noll.
+        7-dagars rullande snitt, Garmin-korrigerat — en snabbare, mer studsig bild än den 28-dagars siffran som styr din Viktmål-budget. Ett hål i linjen betyder för lite riktig träningsdata den veckan, inte noll.
       </p>
       <ResponsiveContainer width="100%" height={140}>
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
@@ -69,6 +87,9 @@ export default function TrainingLoadTrendChart({ points }: Props) {
           {trendDeltaKcal > 0 ? '+' : ''}{trendDeltaKcal} kcal/dag sedan {shortDate(earliestWithData!.weekEndDateKey)}
           {trendDeltaKcal < 0 && ' — du har tränat mindre den här perioden'}
         </div>
+      )}
+      {latestTagSummary && (
+        <div className="text-[11px] text-muted mt-1">Denna vecka: {latestTagSummary}</div>
       )}
     </div>
   )
