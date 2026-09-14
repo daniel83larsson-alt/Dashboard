@@ -16,6 +16,7 @@ export default async function ProfilPage({
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+  const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
   const [{ data: profile }, { data: c2token }, { data: stravaToken }, { data: polarToken }, { data: ctxRow }, { data: garminCredsRow }, { data: yazioCredsRow }, { data: yazioDebugRow }, { data: goals }, { data: overviewRow }, { data: concept2Activity }, { data: garminActivity }, { data: stravaActivity }, { data: polarActivity }, { data: pendingRequests }, { data: myFollows }] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
@@ -115,7 +116,7 @@ export default async function ProfilPage({
       <div className="mb-4">
         <NotificationSettings />
       </div>
-      {user.email === process.env.ADMIN_EMAIL && (
+      {isAdmin && (
         <div className="mb-4">
           <McpConnectorCard hasKey={!!profile?.mcp_api_key_hash} createdAt={profile?.mcp_api_key_created_at ?? null} />
         </div>
@@ -145,6 +146,7 @@ export default async function ProfilPage({
         yazioSynced={yazioSynced}
         savedContext={savedContext}
         avgTrainingKcalRaw={avgTrainingKcalRaw}
+        isAdmin={isAdmin}
       />
     </div>
   )

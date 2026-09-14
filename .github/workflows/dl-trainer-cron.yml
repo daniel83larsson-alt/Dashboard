@@ -23,13 +23,14 @@ on:
     - cron: '0 16 * * *'   # meal-reminders dinner (18:00 svensk sommartid) — matches vercel.json
     - cron: '5 18 * * *'   # meal-reminders supper (20:05 svensk sommartid, offset 5 min to not collide with streak-reminder's identical 0 18 * * *) — matches vercel.json
     - cron: '0 6 * * *'    # body-reminders (08:00 svensk sommartid) — matches vercel.json
+    - cron: '0 19 * * 0'   # weekly-tdee-recompute, söndag kväll (21:00 svensk sommartid / 20:00 vintertid) — matches vercel.json
   workflow_dispatch:
     inputs:
       route:
         description: 'Which route to call (for manual testing)'
         required: true
         type: choice
-        options: [sync-all, streak-reminder, isolation-check, prod-smoke, weekly-digest, meal-reminders-breakfast, meal-reminders-lunch, meal-reminders-dinner, meal-reminders-supper, body-reminders]
+        options: [sync-all, streak-reminder, isolation-check, prod-smoke, weekly-digest, meal-reminders-breakfast, meal-reminders-lunch, meal-reminders-dinner, meal-reminders-supper, body-reminders, weekly-tdee-recompute]
 
 jobs:
   call:
@@ -59,6 +60,7 @@ jobs:
               "0 16 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=dinner" >> "$GITHUB_OUTPUT" ;;
               "5 18 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=supper" >> "$GITHUB_OUTPUT" ;;
               "0 6 * * *") echo "path=body-reminders" >> "$GITHUB_OUTPUT" ;;
+              "0 19 * * 0") echo "path=weekly-tdee-recompute" >> "$GITHUB_OUTPUT" ;;
             esac
           fi
       - name: Call the cron endpoint

@@ -89,6 +89,7 @@ export default function ProfileForm({
   yazioSynced,
   savedContext,
   avgTrainingKcalRaw,
+  isAdmin,
 }: {
   profile: Profile | null
   userEmail: string
@@ -104,6 +105,7 @@ export default function ProfileForm({
   yazioSynced: boolean
   savedContext: string
   avgTrainingKcalRaw: number | null
+  isAdmin: boolean
 }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [apiKey, setApiKey] = useState('')
@@ -149,6 +151,8 @@ export default function ProfileForm({
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [testRefreezing, setTestRefreezing] = useState(false)
+  const [testRefreezeMsg, setTestRefreezeMsg] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [stravaSyncing, setStravaSyncing] = useState(false)
@@ -312,13 +316,16 @@ export default function ProfileForm({
       await supabase.from('profiles').update(updates).eq('id', profile?.id ?? '')
     }
 
-    if (goalSectionTouched && goalWillBeComplete) {
-      await fetch('/api/deficit/budget/refreeze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'settings_changed' }),
-      })
-    }
+    // No immediate refreeze here anymore — Daniel's trigger-schedule
+    // addendum: an ordinary Profil save waits for Sunday night's scheduled
+    // recompute instead of rewriting the budget on the spot. Deliberate
+    // actions (setting/cancelling a delmål, applying a check-in) still
+    // trigger immediately from their own routes; only the general goal-
+    // field edits in this big multi-purpose form got slower on purpose,
+    // since those are the ones easiest to touch by accident. The values
+    // ARE already saved above (updates.deficit_*), so Sunday's run reads
+    // the new target/date/etc. the moment it fires — nothing is lost,
+    // it's just not instant.
 
     if (apiKey.trim()) {
       await fetch('/api/profile/save-llm-key', {
@@ -340,6 +347,33 @@ export default function ProfileForm({
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     router.refresh()
+  }
+
+  // Admin-only — Daniel, as tester: "behöver jag som testare trigga igen
+  // på veckan så kör vi det här ifrån." Lets him force a recompute without
+  // waiting for Sunday, logged under its own honest 'manual_test' reason
+  // so it never looks like a real settings save or scheduled run in the
+  // history afterward.
+  async function triggerTestRefreeze() {
+    setTestRefreezing(true)
+    setTestRefreezeMsg('')
+    try {
+      const res = await fetch('/api/deficit/budget/refreeze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: 'manual_test' }),
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setTestRefreezeMsg(data.changed ? `Ny budget: ${data.after.budgetKcal} kcal (TDEE ${data.after.tdeeKcal})` : 'Ingen förändring')
+        router.refresh()
+      } else {
+        setTestRefreezeMsg(data.error ?? 'Något gick fel')
+      }
+    } catch {
+      setTestRefreezeMsg('Nätverksfel')
+    }
+    setTestRefreezing(false)
   }
 
   async function syncNow() {
@@ -625,18 +659,34 @@ export default function ProfileForm({
           />
           <p className="text-muted text-xs mt-1.5">Styr belastningsbaren på Översikt. Lämna tomt för att jämföra mot ditt eget snitt istället för ett fast mål.</p>
         </div>
-        <div>
-          <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={weightKg}
-            onChange={e => setWeightKg(normalizeDecimalInput(e.target.value))}
-            placeholder="t.ex. 78 eller 78,5"
-            className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
-          />
-          <p className="text-muted text-xs mt-1.5">Används för att räkna ut kalorier när du loggar ett pass manuellt.</p>
-        </div>
+        {deficitTrackingEnabled ? (
+          // Weight has a dedicated, history-keeping input on Viktmål once a
+          // goal is active — this field writes the exact same profiles.
+          // weight_kg column directly, with no history, so having both open
+          // is two disconnected paths to one value (Daniel: "bör det väl
+          // inte gå att ens uppdatera på profil"). Kept for accounts
+          // WITHOUT a goal, since that's their only way to set a weight for
+          // the calorie-burn estimate at all.
+          <div>
+            <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>
+            <p className="text-muted text-xs bg-bg border border-edge rounded-xl px-4 py-2.5">
+              Loggas via <a href="/dashboard/viktmal" className="text-accent hover:underline">Viktmål</a> nu när ett mål är aktivt — det håller koll på historiken också.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <label className="text-muted text-xs block mb-1.5">Vikt (kg)</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              value={weightKg}
+              onChange={e => setWeightKg(normalizeDecimalInput(e.target.value))}
+              placeholder="t.ex. 78 eller 78,5"
+              className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
+            />
+            <p className="text-muted text-xs mt-1.5">Används för att räkna ut kalorier när du loggar ett pass manuellt.</p>
+          </div>
+        )}
       </div>
 
       {/* Body & calories */}
@@ -854,7 +904,21 @@ export default function ProfileForm({
               <label className="text-muted text-xs block mb-1.5">Måldatum</label>
               <input type="date" value={deficitTargetDate} onChange={e => setDeficitTargetDate(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors" />
             </div>
-            <p className="text-amber-400/90 text-xs -mt-1">Ändrar du start-/målvikt eller måldatum räknas din dagliga budget om automatiskt när du sparar — det syns direkt på Viktmål.</p>
+            <p className="text-amber-400/90 text-xs -mt-1">Ändrar du start-/målvikt eller måldatum uppdateras din dagliga budget vid söndagens schemalagda omräkning, inte direkt när du sparar.</p>
+
+            {isAdmin && deficitTrackingEnabled && (
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={triggerTestRefreeze}
+                  disabled={testRefreezing}
+                  className="text-xs font-medium px-3 py-2 rounded-xl border border-edge text-fg hover:border-accent/30 disabled:opacity-50"
+                >
+                  {testRefreezing ? 'Räknar om...' : 'Räkna om nu (test)'}
+                </button>
+                {testRefreezeMsg && <span className="text-muted text-xs">{testRefreezeMsg}</span>}
+              </div>
+            )}
 
             <div>
               <label className="text-muted text-xs block mb-2">Vardagsaktivitet (utöver träningen)</label>

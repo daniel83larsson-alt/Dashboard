@@ -11,7 +11,7 @@ import { stockholmDateKey } from './dates'
 import {
   computeDeficitBudget, resolveActiveGoalSegment, computeRollingWeightAverage, deficitOverrideSignature,
   daysWithRealTrainingCalories,
-  type GoalSegment, type DeficitSafety, type GoalSegmentSource,
+  type GoalSegment, type DeficitSafety, type GoalSegmentSource, type BudgetChangeInputs,
 } from './deficit'
 
 // 14 days, not 28 — Daniel: "testa 14-dagarssnitt som kompromiss... då
@@ -32,11 +32,23 @@ export type RefreezeReason =
   | 'settings_changed' | 'checkin_applied' | 'milestone_set'
   | 'milestone_expired' | 'milestone_reached' | 'milestone_cancelled'
   | 'override_acknowledged' | 'override_voided' | 'stale_refresh'
+  // Admin-only manual test trigger (Profil's "Räkna om nu (test)" button) —
+  // Daniel, as tester: "behöver jag som testare trigga igen på veckan så
+  // kör vi det här ifrån." Kept distinct from 'settings_changed' so the
+  // history never misrepresents a deliberate test poke as a real settings
+  // save.
+  | 'manual_test'
 
 export type RefreezeResult = {
   changed: boolean
   before: { budgetKcal: number | null; dailyDeficitKcal: number | null; source: GoalSegmentSource } | null
-  after: { budgetKcal: number; dailyDeficitKcal: number; tdeeKcal: number; source: GoalSegmentSource; validUntilISO: string | null }
+  after: {
+    budgetKcal: number; dailyDeficitKcal: number; tdeeKcal: number; source: GoalSegmentSource; validUntilISO: string | null
+    // The exact inputs THIS computation used — lets a caller (the Sunday
+    // cron's notification) build a readable "why" via lib/deficit.ts's
+    // explainBudgetChange without a second round-trip to re-derive them.
+    explainInputs: BudgetChangeInputs
+  }
   segment: GoalSegment
   safety: DeficitSafety
   eventId: string | null
@@ -49,7 +61,19 @@ export type RefreezeResult = {
 // övergripande mål" silently fails (see the worked example in the plan).
 const MILESTONE_TRANSITION_REASONS: RefreezeReason[] = ['milestone_expired', 'milestone_reached']
 
-export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: string, reason: RefreezeReason): Promise<RefreezeResult> {
+export async function refreezeDeficitBudget(
+  supabase: SupabaseClient,
+  userId: string,
+  reason: RefreezeReason,
+  // The Sunday-night cron passes true — Daniel's addendum spec: "En post
+  // ska ALLTID skrivas i [historiken]... oavsett hur liten skillnaden är,
+  // för fullständig historik" for the scheduled weekly run specifically.
+  // Every other trigger (delmål, avstämning, en admin-testtryckning) keeps
+  // the old changed-only logging — those are rare, deliberate actions
+  // where a no-op row would just be noise, not history.
+  opts: { alwaysLog?: boolean } = {}
+): Promise<RefreezeResult> {
+  const { alwaysLog = false } = opts
   const { data: profile } = await supabase
     .from('profiles')
     .select(`
@@ -131,8 +155,18 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
     ? dedupedActs.reduce((s, a) => s + (a.calories ?? 0), 0) / TRAINING_LOOKBACK_DAYS
     : null
 
+  // Daniel's addendum spec: Sunday's recompute is "baserat på veckans
+  // rullande viktsnitt" — a single day's weigh-in (±0.5-1.5 kg of water/
+  // food/sodium noise) shouldn't move BMR on its own. Applies to every
+  // trigger, not just the Sunday cron, so a Profil save and a Sunday
+  // recompute on the same day can never silently disagree on which BMR to
+  // use. Falls back to the raw stored weight when there's no reading in
+  // the window at all (matches the graceful-degradation pattern the
+  // milestone-segment start weight above already uses).
+  const rollingWeightForBmr = computeRollingWeightAverage(weighIns, todayKey, { windowDays: 7, maxReadings: 7, minReadings: 1 })
+  const bmrWeightKg = rollingWeightForBmr.avgKg ?? profile.weight_kg
   const bmr = estimateBMR({
-    weightKg: profile.weight_kg, heightCm: profile.height_cm, birthYear: profile.birth_year, biologicalSex: profile.biological_sex,
+    weightKg: bmrWeightKg, heightCm: profile.height_cm, birthYear: profile.birth_year, biologicalSex: profile.biological_sex,
   }).bmr
 
   const allowUnsafe = segment.overrideAcknowledged
@@ -187,14 +221,23 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
     }
   }
 
+  // The effective inputs THIS computation actually used — stored so the UI
+  // can diff two consecutive events and say what moved (Daniel: "vad
+  // egentligen de var som triggade ett lägre TDEE") instead of just
+  // showing before/after kcal, and returned to the caller so the Sunday
+  // cron can build the same explanation for a push notification without a
+  // second round-trip. new_tdee_kcal doubles as the per-day TDEE
+  // reconstruction lib/deficit.ts's tdeeInForceOn needs.
+  const effectiveTrainingKcal = avgTrainingKcalRaw ?? (profile.deficit_activity_fallback_kcal ?? 300)
+  const explainInputs: BudgetChangeInputs = {
+    bmrKcal: Math.round(bmr),
+    trainingKcal: Math.round(effectiveTrainingKcal),
+    neatFactor: profile.deficit_neat_factor ?? 1.25,
+    garminCorrection: profile.deficit_garmin_correction ?? 0.75,
+  }
+
   let eventId: string | null = null
-  if (changed) {
-    // The effective inputs THIS computation actually used — stored so the
-    // UI can diff two consecutive events and say what moved (Daniel:
-    // "vad egentligen de var som triggade ett lägre TDEE") instead of just
-    // showing before/after kcal. new_tdee_kcal doubles as the per-day TDEE
-    // reconstruction lib/deficit.ts's tdeeInForceOn needs.
-    const effectiveTrainingKcal = avgTrainingKcalRaw ?? (profile.deficit_activity_fallback_kcal ?? 300)
+  if (changed || alwaysLog) {
     const { data: eventRow } = await supabase.from('deficit_budget_events').insert({
       user_id: userId,
       kind: reason,
@@ -206,10 +249,10 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
       budget_source: segment.source,
       override_active: budget.overrideActive,
       new_tdee_kcal: budget.tdeeKcal,
-      bmr_kcal: Math.round(bmr),
-      training_kcal: Math.round(effectiveTrainingKcal),
-      neat_factor: profile.deficit_neat_factor ?? 1.25,
-      garmin_correction: profile.deficit_garmin_correction ?? 0.75,
+      bmr_kcal: explainInputs.bmrKcal,
+      training_kcal: explainInputs.trainingKcal,
+      neat_factor: explainInputs.neatFactor,
+      garmin_correction: explainInputs.garminCorrection,
     }).select('id').single()
     eventId = eventRow?.id ?? null
   }
@@ -217,7 +260,7 @@ export async function refreezeDeficitBudget(supabase: SupabaseClient, userId: st
   return {
     changed,
     before,
-    after: { budgetKcal: budget.budgetKcal, dailyDeficitKcal: budget.dailyDeficitKcal, tdeeKcal: budget.tdeeKcal, source: segment.source, validUntilISO: segment.validUntilISO },
+    after: { budgetKcal: budget.budgetKcal, dailyDeficitKcal: budget.dailyDeficitKcal, tdeeKcal: budget.tdeeKcal, source: segment.source, validUntilISO: segment.validUntilISO, explainInputs },
     segment,
     safety: budget.safety,
     eventId,

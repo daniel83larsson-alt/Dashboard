@@ -74,7 +74,10 @@ const EVENT_KIND_LABEL: Record<string, string> = {
   milestone_cancelled: 'Delmål avbrutet',
   override_acknowledged: 'Override bekräftad',
   override_voided: 'Override upphävd',
-  stale_refresh: 'Omräknad',
+  // Var tidigare dött (aldrig triggad) — nu den faktiska veckovisa
+  // söndagskörningen, se lib/deficit-budget-refreeze.ts.
+  stale_refresh: 'Veckovis omräkning (söndag)',
+  manual_test: 'Test-omräkning (admin)',
 }
 
 type CheckinComputation =

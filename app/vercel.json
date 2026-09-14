@@ -48,6 +48,10 @@
     {
       "path": "/api/cron/body-reminders",
       "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-tdee-recompute",
+      "schedule": "0 19 * * 0"
     }
   ]
 }
