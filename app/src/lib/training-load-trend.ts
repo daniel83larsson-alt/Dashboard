@@ -8,15 +8,16 @@
 import { dedupeForStats, type ActivityRow } from './duplicates'
 import { daysWithRealTrainingCalories } from './deficit'
 
-// Deliberately a SEPARATE, shorter window than the budget's own 28-day
-// average (deficit-budget-refreeze.ts's TRAINING_LOOKBACK_DAYS, untouched
-// by this file) — Daniel: "7 dagar så är det i veckan... är man sjuk går
-// den ner, sen när man blir frisk ökar man." The budget deliberately wants
-// a smoothed, stable number; THIS chart's whole job is to show that
-// weekly rise-and-fall responsively, so a 28-day smoothing would work
-// against the point of looking at it.
+// Deliberately a SEPARATE, shorter window than the budget's own rolling
+// average (deficit-budget-refreeze.ts's TRAINING_LOOKBACK_DAYS — 14 days
+// as of writing, untouched by this file) — Daniel: "7 dagar så är det i
+// veckan... är man sjuk går den ner, sen när man blir frisk ökar man."
+// The budget deliberately wants a smoothed, stable number; THIS chart's
+// whole job is to show that weekly rise-and-fall responsively, so
+// matching the budget's own window would work against the point of
+// looking at it.
 export const CHART_WINDOW_DAYS = 7
-// Not a blind copy of the budget's 14-of-28 (50%) ratio — a 7-day window
+// Not a blind copy of the budget's own 50% ratio — a 7-day window
 // has so few days that requiring 4 (57%) made almost every normal
 // every-other-day training week come back null for Daniel's real
 // cadence. 3 of 7 (~43%) still refuses to average a near-empty week, just

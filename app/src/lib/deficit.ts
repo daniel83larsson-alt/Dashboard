@@ -466,8 +466,16 @@ export type BudgetChangeInputs = {
 export function explainBudgetChange(current: BudgetChangeInputs, previous: BudgetChangeInputs | null): string | null {
   if (!previous) return null
   const parts: string[] = []
+  // Narrative direction word, not just the raw numbers — Daniel: "en
+  // tydlig trigger_detail som 'Träningsvolymen ökade senaste veckorna
+  // efter uppehåll'... då får du full insyn i varför." Deliberately stops
+  // at "ökade"/"minskade" rather than inventing a specific cause like
+  // "efter uppehåll" — this function only ever sees two point-in-time
+  // snapshots, not the daily activity history, so it has no honest way to
+  // know WHY the average moved, only that it did and in which direction.
   if (previous.trainingKcal != null && current.trainingKcal != null && previous.trainingKcal !== current.trainingKcal) {
-    parts.push(`Träningssnitt ${previous.trainingKcal} → ${current.trainingKcal} kcal/dag`)
+    const direction = current.trainingKcal > previous.trainingKcal ? 'ökade' : 'minskade'
+    parts.push(`Träningsvolymen ${direction} (snitt ${previous.trainingKcal} → ${current.trainingKcal} kcal/dag)`)
   }
   if (previous.bmrKcal != null && current.bmrKcal != null && previous.bmrKcal !== current.bmrKcal) {
     parts.push(`Vilo-omsättning ${previous.bmrKcal} → ${current.bmrKcal} kcal`)

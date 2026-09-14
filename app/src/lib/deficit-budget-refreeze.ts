@@ -14,8 +14,19 @@ import {
   type GoalSegment, type DeficitSafety, type GoalSegmentSource,
 } from './deficit'
 
-const TRAINING_LOOKBACK_DAYS = 28
-const MIN_TRAINING_HISTORY_DAYS = 14
+// 14 days, not 28 — Daniel: "testa 14-dagarssnitt som kompromiss... då
+// får du snabbare anpassning" (between the old 28-day smoothing and the
+// Insikter chart's now-7-day window). Verified against his real data
+// before changing: the 28-day window was still being dragged down by a
+// 6-day illness gap (23-30 aug) that a 14-day window (from 1 sep onward)
+// completely avoids — with 14 days his real recent training (~193
+// kcal/dag raw) shows through instead of the blended, stale 28-day
+// figure (~158 kcal/dag). Threshold scaled to the same 50% ratio as
+// before (was 14 of 28). Exported so Profil's live budget preview
+// (app/dashboard/profil/page.tsx) uses the exact same numbers instead of
+// a second, independently-drifting copy of the same two constants.
+export const TRAINING_LOOKBACK_DAYS = 14
+export const MIN_TRAINING_HISTORY_DAYS = 7
 
 export type RefreezeReason =
   | 'settings_changed' | 'checkin_applied' | 'milestone_set'

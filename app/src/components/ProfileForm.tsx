@@ -8,6 +8,7 @@ import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
 import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
 import { estimateBMR } from '@/lib/bmr'
 import { computeDeficitBudget, deficitOverrideSignature, safetyBreachLabel } from '@/lib/deficit'
+import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -867,7 +868,7 @@ export default function ProfileForm({
             </div>
 
             <div>
-              <label className="text-muted text-xs block mb-2">Antagen träningsförbränning (tills du loggat 14 dagar)</label>
+              <label className="text-muted text-xs block mb-2">Antagen träningsförbränning (tills du loggat {MIN_TRAINING_HISTORY_DAYS} dagar)</label>
               <div className="flex flex-wrap gap-2">
                 {([{ label: 'Lätt (150 kcal)', v: 150 }, { label: 'Medel (300 kcal)', v: 300 }, { label: 'Hög (450 kcal)', v: 450 }] as const).map(chip => (
                   <button key={chip.label} type="button" onClick={() => setDeficitActivityFallbackKcal(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitActivityFallbackKcal === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
@@ -876,7 +877,7 @@ export default function ProfileForm({
                 ))}
               </div>
               {avgTrainingKcalRaw != null && (
-                <p className="text-muted text-xs mt-1.5">Byts automatiskt mot ditt eget snitt (~{Math.round(avgTrainingKcalRaw)} kcal/dag senaste 28 dagarna) eftersom du redan har tillräckligt med loggad träning.</p>
+                <p className="text-muted text-xs mt-1.5">Byts automatiskt mot ditt eget snitt (~{Math.round(avgTrainingKcalRaw)} kcal/dag senaste {TRAINING_LOOKBACK_DAYS} dagarna) eftersom du redan har tillräckligt med loggad träning.</p>
               )}
             </div>
 

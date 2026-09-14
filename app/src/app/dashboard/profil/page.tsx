@@ -5,9 +5,7 @@ import FriendsCard from '@/components/FriendsCard'
 import NotificationSettings from '@/components/NotificationSettings'
 import McpConnectorCard from '@/components/McpConnectorCard'
 import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
-
-const DEFICIT_TRAINING_LOOKBACK_DAYS = 28
-const DEFICIT_MIN_TRAINING_HISTORY_DAYS = 14
+import { TRAINING_LOOKBACK_DAYS as DEFICIT_TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS as DEFICIT_MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
 export default async function ProfilPage({
   searchParams,
@@ -54,11 +52,12 @@ export default async function ProfilPage({
   const polarSynced = !!polarActivity
   const savedOverview = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
 
-  // Live preview for the Viktmål card below — same 28-day-mean-including-
-  // rest-days definition lib/deficit.ts's real budget calc uses, deduped so
-  // a Concept2+Garmin pair of the same session isn't counted twice. null
-  // (not 0) below the minimum history so the card shows the fallback-
-  // estimate chips instead of a thin, noisy real average.
+  // Live preview for the Viktmål card below — same rolling-mean-including-
+  // rest-days definition lib/deficit-budget-refreeze.ts's real budget calc
+  // uses (imported constants, not a second copy), deduped so a Concept2+
+  // Garmin pair of the same session isn't counted twice. null (not 0)
+  // below the minimum history so the card shows the fallback-estimate
+  // chips instead of a thin, noisy real average.
   const trainingLookbackStart = new Date()
   trainingLookbackStart.setDate(trainingLookbackStart.getDate() - DEFICIT_TRAINING_LOOKBACK_DAYS)
   const { data: recentActs } = await supabase

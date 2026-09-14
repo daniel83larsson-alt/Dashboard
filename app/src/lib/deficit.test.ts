@@ -415,13 +415,19 @@ describe('explainBudgetChange', () => {
   it('describes a training-average drop, matching the real TDEE-collapse incident', () => {
     const previous = { bmrKcal: 1964, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
     const current = { bmrKcal: 1964, trainingKcal: 12, neatFactor: 1.25, garminCorrection: 0.75 }
-    expect(explainBudgetChange(current, previous)).toBe('Träningssnitt 300 → 12 kcal/dag')
+    expect(explainBudgetChange(current, previous)).toBe('Träningsvolymen minskade (snitt 300 → 12 kcal/dag)')
+  })
+
+  it('describes a training-average increase with the opposite direction word', () => {
+    const previous = { bmrKcal: 1964, trainingKcal: 12, neatFactor: 1.25, garminCorrection: 0.75 }
+    const current = { bmrKcal: 1964, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
+    expect(explainBudgetChange(current, previous)).toBe('Träningsvolymen ökade (snitt 12 → 300 kcal/dag)')
   })
 
   it('describes multiple simultaneous changes', () => {
     const previous = { bmrKcal: 1980, trainingKcal: 300, neatFactor: 1.25, garminCorrection: 0.75 }
     const current = { bmrKcal: 1964, trainingKcal: 12, neatFactor: 1.25, garminCorrection: 0.75 }
-    expect(explainBudgetChange(current, previous)).toBe('Träningssnitt 300 → 12 kcal/dag · Vilo-omsättning 1980 → 1964 kcal')
+    expect(explainBudgetChange(current, previous)).toBe('Träningsvolymen minskade (snitt 300 → 12 kcal/dag) · Vilo-omsättning 1980 → 1964 kcal')
   })
 
   it('returns null when nothing meaningful actually changed between the two events', () => {
