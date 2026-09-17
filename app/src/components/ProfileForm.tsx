@@ -5,7 +5,7 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
-import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
+import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, suggestProteinGoalG, type KostMetric, type KostMeal } from '@/lib/kost'
 import { estimateBMR } from '@/lib/bmr'
 import { computeDeficitBudget, deficitOverrideSignature, safetyBreachLabel } from '@/lib/deficit'
 import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
@@ -793,12 +793,28 @@ export default function ProfileForm({
               </div>
             </div>
 
-            {kostTrackedMetrics.includes('protein') && (
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Proteinmål (g/dag)</label>
-                <input type="number" min={0} step={5} inputMode="numeric" value={proteinGoalG} onChange={e => setProteinGoalG(e.target.value)} placeholder="t.ex. 150" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-              </div>
-            )}
+            {kostTrackedMetrics.includes('protein') && (() => {
+              const parsedWeightForSuggestion = parseFloat(normalizeDecimalInput(weightKg))
+              // Optional starting point, never forced (Daniel: "om man vill
+              // då") — hidden once the field already matches it, so it
+              // doesn't nag every time you open the form.
+              const proteinSuggestion = parsedWeightForSuggestion > 0
+                ? suggestProteinGoalG(parsedWeightForSuggestion, deficitTrackingEnabled)
+                : null
+              const showSuggestion = proteinSuggestion != null && proteinGoalG.trim() !== String(proteinSuggestion)
+              return (
+                <div>
+                  <label className="text-muted text-xs block mb-1.5">Proteinmål (g/dag)</label>
+                  <input type="number" min={0} step={5} inputMode="numeric" value={proteinGoalG} onChange={e => setProteinGoalG(e.target.value)} placeholder="t.ex. 150" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
+                  {showSuggestion && (
+                    <p className="text-muted text-xs mt-1.5">
+                      Förslag baserat på din vikt{deficitTrackingEnabled ? ' och ditt viktmål' : ''}: {proteinSuggestion} g/dag —{' '}
+                      <button type="button" onClick={() => setProteinGoalG(String(proteinSuggestion))} className="text-accent hover:underline">använd</button>
+                    </p>
+                  )}
+                </div>
+              )
+            })()}
             {kostTrackedMetrics.includes('carb') && (
               <div>
                 <label className="text-muted text-xs block mb-1.5">Kolhydratmål (g/dag)</label>

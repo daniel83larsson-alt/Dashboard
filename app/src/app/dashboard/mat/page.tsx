@@ -20,16 +20,12 @@ export default async function MatPage() {
 
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()
 
-  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: insightsRow }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }, { data: budgetEventRows }] = await Promise.all([
+  const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }, { data: budgetEventRows }] = await Promise.all([
     supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, deficit_garmin_correction, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
     supabase.rpc('food_quick_picks'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
     supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete'),
-    // Samma AI-genererade kost-granskning som visas på Hälsa & Insikter —
-    // återanvänds här istället för ett eget AI-anrop, så en sida inte
-    // tömmer kvoten som en annan sida redan betalat för.
-    supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'insights').single(),
     supabase.from('day_context_notes').select('date, tag, note').eq('user_id', user.id).gte('date', sinceIso.slice(0, 10)),
     // För "totalt förbränt"-kolumnen i dagslistorna nedan (Daniel: "smidigt
     // om totalt förbränt loggades där med"). Samma smala kolumnval och
@@ -174,15 +170,6 @@ export default async function MatPage() {
     if (weekAvg.avgDiffKcal != null) deficitSummary = { avgDiffKcal: weekAvg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal }
   }
 
-  const insightsRaw = (insightsRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
-  const kostReview = insightsRaw ? (() => {
-    try {
-      const parsed = JSON.parse(insightsRaw) as { generatedAt: string; agents?: { kostWeek?: string; kostGeneral?: string } }
-      if (!parsed.agents?.kostWeek && !parsed.agents?.kostGeneral) return null
-      return { generatedAt: parsed.generatedAt, kostWeek: parsed.agents.kostWeek ?? '', kostGeneral: parsed.agents.kostGeneral ?? '' }
-    } catch { return null }
-  })() : null
-
   return (
     <FoodLogClient
       dailyCalorieGoal={effectiveCalorieGoal.kcal}
@@ -194,7 +181,6 @@ export default async function MatPage() {
       kostSettings={kostSettings}
       dayOverrides={dayOverrides}
       deficitSummary={deficitSummary}
-      kostReview={kostReview}
       dayNotes={dayNotes}
       bmrKcal={bmrKcal}
       activityKcalByDate={activityKcalByDate}

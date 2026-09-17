@@ -21,7 +21,7 @@ import MilestoneBanner from '@/components/MilestoneBanner'
 import { currentHabitStreak } from '@/lib/habits'
 import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
-import { weeklyLoad, rollingBaselineLoad } from '@/lib/load'
+import { weeklyLoad, rollingBaselineLoad, weeklyMinutes, rollingBaselineMinutes } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
@@ -230,6 +230,15 @@ export default async function DashboardPage() {
   const weekLoad = weeklyLoad(activities, restingHRForLoad, personalMaxHR, weekStart, nextWeekStart)
   const loadGoal = profile?.weekly_load_goal ?? rollingBaselineLoad(activities, restingHRForLoad, personalMaxHR, now)
   const loadPct = loadGoal ? Math.round((weekLoad / loadGoal) * 100) : null
+  // Daniel: "veckobelastning står bara procent... borde stå snittid mm, så
+  // man kan följa och kanske öka framåt" — the load score above is
+  // intensity-weighted, not real minutes, so it can't itself answer "how
+  // much did I actually train". This is the literal training time,
+  // computed independently (own rolling baseline, not tied to
+  // weekly_load_goal — that field is denominated in load-score units, not
+  // minutes).
+  const weekMinutes = weeklyMinutes(activities, weekStart, nextWeekStart)
+  const baselineMinutes = rollingBaselineMinutes(activities, now)
 
   // Daniel: streak-kortet kändes tomt med bara "53 veckor i rad" — snittet
   // räknat över samma period som streaken själv täcker ger sammanhang utan
@@ -473,7 +482,7 @@ export default async function DashboardPage() {
             />
           </div>
           <div className="text-muted text-xs mt-1.5">
-            {loadPct}% denna vecka
+            {loadPct}% denna vecka · {fmtDur(weekMinutes * 60)}{baselineMinutes != null ? ` (snitt ${fmtDur(baselineMinutes * 60)})` : ''}
             {loadPct !== null && loadPct > 130 && ' · klart mer än vanligt, tänk på återhämtning'}
           </div>
         </div>

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
-  computeDayCompleteness, kcalTotalForDay, metricTotalForDay, groupEntriesByMeal,
+  computeDayCompleteness, kcalTotalForDay, metricTotalForDay, groupEntriesByMeal, suggestProteinGoalG,
+  guessMealForHour,
   type KostFoodEntry, type KostMeal,
 } from './kost'
 
@@ -88,5 +89,43 @@ describe('groupEntriesByMeal', () => {
     const entries = [entry({ meal: null })]
     const groups = groupEntriesByMeal(entries)
     expect(Object.values(groups).every(g => g.length === 0)).toBe(true)
+  })
+})
+
+describe('suggestProteinGoalG', () => {
+  it('uses 1.6 g/kg, rounded to the nearest 5g, when no deficit goal is active', () => {
+    expect(suggestProteinGoalG(80, false)).toBe(Math.round((80 * 1.6) / 5) * 5)
+  })
+
+  it('uses a higher 2.0 g/kg when a deficit goal is active, to help preserve muscle', () => {
+    expect(suggestProteinGoalG(80, true)).toBe(Math.round((80 * 2.0) / 5) * 5)
+    expect(suggestProteinGoalG(80, true)).toBeGreaterThan(suggestProteinGoalG(80, false))
+  })
+
+  it('rounds to the nearest 5g, matching the input field\'s own step', () => {
+    const suggestion = suggestProteinGoalG(83, true)
+    expect(suggestion % 5).toBe(0)
+  })
+})
+
+describe('guessMealForHour', () => {
+  const allMeals: KostMeal[] = ['breakfast', 'lunch', 'dinner', 'supper', 'snack']
+
+  it('picks the meal whose reminder hour most recently started', () => {
+    expect(guessMealForHour(8, allMeals)).toBe('snack') // before breakfast's 9:00
+    expect(guessMealForHour(10, allMeals)).toBe('breakfast')
+    expect(guessMealForHour(14, allMeals)).toBe('lunch')
+    expect(guessMealForHour(19, allMeals)).toBe('dinner') // not still lunch
+    expect(guessMealForHour(21, allMeals)).toBe('supper')
+  })
+
+  it('skips a meal the user does not track', () => {
+    // At 19:00 dinner would normally win, but it isn't tracked here — lunch
+    // (still tracked, and its hour has passed) should win instead.
+    expect(guessMealForHour(19, ['breakfast', 'lunch', 'snack'])).toBe('lunch')
+  })
+
+  it('falls back to the first tracked meal when snack isn\'t tracked and nothing else matches', () => {
+    expect(guessMealForHour(8, ['lunch'])).toBe('lunch')
   })
 })

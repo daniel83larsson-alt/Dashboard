@@ -11,7 +11,7 @@ import type { YazioDay } from '@/lib/yazio-history'
 import { stockholmDateKey } from '@/lib/dates'
 import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel, currentWeekDateKeys } from '@/lib/yazio-history'
 import {
-  KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, metricTotalForDay, kostMealLabel, kostMetricLabel,
+  KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, metricTotalForDay, kostMealLabel, kostMetricLabel, guessMealForHour,
   type KostMeal, type KostMetric, type KostFoodEntry,
 } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
@@ -19,6 +19,15 @@ import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
 import { estimateBurnedKcalForDay, estimateBurnedKcalForStatus } from '@/lib/burned-calories'
 import type { CalorieGoalSource } from '@/lib/calorie-goal'
 import { dayCalorieStatus, DAY_CALORIE_STATUS_TEXT_COLOR, DAY_CALORIE_STATUS_BG } from '@/lib/day-calorie-status'
+
+// Same fix as ProfileForm.tsx's copy — native number inputs can silently
+// reject a Swedish decimal comma ("1,5"), so decimal fields here use
+// type="text" and normalize "," to "." themselves before parseFloat.
+// Duplicated rather than shared, same small-UI-helper convention already
+// used for the palette constants below.
+function normalizeDecimalInput(raw: string): string {
+  return raw.replace(',', '.')
+}
 
 // Same palette/tooltip convention as the other chart components in the app
 // (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
@@ -119,7 +128,6 @@ export default function FoodLogClient({
   kostSettings,
   dayOverrides: initialDayOverrides,
   deficitSummary,
-  kostReview,
   dayNotes: initialDayNotes,
   bmrKcal,
   activityKcalByDate,
@@ -137,7 +145,6 @@ export default function FoodLogClient({
   kostSettings: KostSettings
   dayOverrides: string[]
   deficitSummary: { avgDiffKcal: number; budgetKcal: number } | null
-  kostReview: { generatedAt: string; kostWeek: string; kostGeneral: string } | null
   dayNotes: DayNote[]
   bmrKcal: number
   activityKcalByDate: Record<string, number>
@@ -147,7 +154,6 @@ export default function FoodLogClient({
   garminCorrection: number
 }) {
   const router = useRouter()
-  const [kostReviewScope, setKostReviewScope] = useState<'week' | 'general'>('week')
   const hasYazio = yazioHistory.length > 0
   const yazioToday = hasYazio ? yazioHistory[0] : null
 
@@ -556,20 +562,25 @@ export default function FoodLogClient({
     setLogging(false)
   }
 
-  // Idé #7 — kvällsloggning-vakten. Ett snabbval postar alltid en otaggad
-  // post, så när flera tappas snabbt på kvällen är det lätt att råka
-  // logga samma mellanmål två gånger. Bara ett förslag, aldrig en spärr —
-  // "lägg till ändå" fungerar precis som innan.
-  const [pendingQuickPick, setPendingQuickPick] = useState<QuickPick | null>(null)
+  // Ett snabbval postade tidigare alltid en OTAGGAD post (ingen måltid
+  // alls) — Daniel: "väljer man ur den listan så ska man direkt få popup
+  // att fylla i typ av måltid och om man vill justera något." Nu öppnar
+  // varje tryck den här bekräftelserutan istället för att logga direkt.
+  // eveningGuard slås fortfarande på (idé #7 — lätt att råka dubbellogga
+  // ett snabbt tappat kvällsmellanmål) men visas som ett extra val INUTI
+  // samma popup istället för en andra, separat dialog.
+  type QuickPickConfirm = { pick: QuickPick; meal: KostMeal; grams: string; multiplier: string; eveningGuard: boolean }
+  const [quickPickConfirm, setQuickPickConfirm] = useState<QuickPickConfirm | null>(null)
 
-  async function logQuickPick(pick: QuickPick, options?: { replaceEntryId?: string }) {
+  async function logQuickPick(pick: QuickPick, opts: { meal: KostMeal | null; grams?: number; multiplier?: number; replaceEntryId?: string }) {
     setLogging(true)
     setError('')
     try {
-      if (options?.replaceEntryId) await deleteEntry(options.replaceEntryId)
-      const body = pick.source === 'database' && pick.off_id && pick.quantity
-        ? { name: pick.name, source: 'database', offId: pick.off_id, grams: pick.quantity }
-        : { name: pick.name, source: pick.source, baseKcal: pick.calories, baseProteinG: pick.protein_g, multiplier: 1 }
+      if (opts.replaceEntryId) await deleteEntry(opts.replaceEntryId)
+      const isDatabase = pick.source === 'database' && !!pick.off_id
+      const body = isDatabase
+        ? { name: pick.name, source: 'database', offId: pick.off_id, grams: opts.grams ?? pick.quantity, meal: opts.meal }
+        : { name: pick.name, source: pick.source, baseKcal: pick.calories, baseProteinG: pick.protein_g, multiplier: opts.multiplier ?? 1, meal: opts.meal }
       const res = await fetch('/api/food/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -582,13 +593,18 @@ export default function FoodLogClient({
       setError('Nätverksfel')
     }
     setLogging(false)
-    setPendingQuickPick(null)
+    setQuickPickConfirm(null)
   }
 
   function handleQuickPickTap(pick: QuickPick) {
-    const guardActive = kostSettings.eveningGuardEnabled && new Date().getHours() >= kostSettings.eveningGuardHour
-    if (guardActive && todayEntries.length > 0) setPendingQuickPick(pick)
-    else logQuickPick(pick)
+    const eveningGuard = kostSettings.eveningGuardEnabled && new Date().getHours() >= kostSettings.eveningGuardHour && todayEntries.length > 0
+    setQuickPickConfirm({
+      pick,
+      meal: guessMealForHour(new Date().getHours(), kostSettings.trackedMeals),
+      grams: pick.source === 'database' && pick.quantity ? String(pick.quantity) : '',
+      multiplier: '1',
+      eveningGuard,
+    })
   }
 
   const previewKcal = selectedCandidate
@@ -659,45 +675,6 @@ export default function FoodLogClient({
           </a>
         )}
       </div>
-
-      {/* Kost-granskning — samma AI-genererade text som Kostcoachen på Hälsa
-          & Insikter, bara återgiven här så man slipper byta sida. */}
-      {kostReview && (kostReview.kostWeek || kostReview.kostGeneral) ? (
-        <div className="bg-card border border-edge rounded-2xl p-4">
-          <div className="flex items-center justify-between gap-2 mb-2">
-            <span className="text-xs text-muted uppercase tracking-wider">🍽️ Kost-granskning</span>
-            <div className="flex gap-1 bg-bg border border-edge rounded-lg p-0.5">
-              <button
-                type="button"
-                onClick={() => setKostReviewScope('week')}
-                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'week' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
-              >
-                Vecka
-              </button>
-              <button
-                type="button"
-                onClick={() => setKostReviewScope('general')}
-                className={`text-xs px-2.5 py-1 rounded-md transition-colors ${kostReviewScope === 'general' ? 'bg-accent text-bg font-semibold' : 'text-muted'}`}
-              >
-                Allmänt
-              </button>
-            </div>
-          </div>
-          <p className="text-sm text-fg/90 leading-relaxed">
-            {kostReviewScope === 'week' ? kostReview.kostWeek : kostReview.kostGeneral}
-          </p>
-          <a href="/dashboard/halsa?tab=insikter" className="text-xs text-accent hover:underline mt-2 inline-block">
-            Se hela tränarteamets analys →
-          </a>
-        </div>
-      ) : (
-        <a
-          href="/dashboard/halsa?tab=insikter"
-          className="bg-card border border-edge rounded-2xl p-4 text-xs text-muted hover:border-accent transition-colors block"
-        >
-          🍽️ Hämta en AI-granskning av dina matvanor under Hälsa & Insikter →
-        </a>
-      )}
 
       {/* Upplägg-förslag — Daniel: "kanske få upp ett tips eller något på
           minimalt kcal upplägg... och ett maxat, men ändå under plan.
@@ -1700,19 +1677,83 @@ export default function FoodLogClient({
         </div>
       )}
 
-      {pendingQuickPick && (
-        <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setPendingQuickPick(null)}>
-          <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
-            <p className="text-fg text-sm mb-1">Logga &quot;{pendingQuickPick.name}&quot; nu på kvällen?</p>
-            <p className="text-muted text-xs mb-4">Du har redan loggat något idag — ersätt din senaste post eller lägg till en till?</p>
-            <div className="flex flex-col gap-2">
-              <button type="button" onClick={() => logQuickPick(pendingQuickPick, { replaceEntryId: todayEntries[0]?.id })} disabled={!todayEntries[0]} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">Ersätt senaste post</button>
-              <button type="button" onClick={() => logQuickPick(pendingQuickPick)} className="w-full text-fg border border-edge rounded-xl py-2.5 text-sm">Lägg till ändå</button>
-              <button type="button" onClick={() => setPendingQuickPick(null)} className="text-muted text-xs mt-1">Avbryt</button>
+      {quickPickConfirm && (() => {
+        const { pick, meal, grams, multiplier, eveningGuard } = quickPickConfirm
+        const isDatabase = pick.source === 'database' && !!pick.off_id
+        const parsedGrams = parseFloat(normalizeDecimalInput(grams))
+        const parsedMultiplier = parseFloat(normalizeDecimalInput(multiplier))
+        const previewKcal = isDatabase
+          ? (pick.kcal_per_100g && parsedGrams > 0 ? Math.round(pick.kcal_per_100g * parsedGrams / 100) : pick.calories)
+          : (parsedMultiplier > 0 ? Math.round(pick.calories * parsedMultiplier) : pick.calories)
+        const canConfirm = isDatabase ? parsedGrams > 0 : parsedMultiplier > 0
+
+        function confirm(replaceEntryId?: string) {
+          logQuickPick(pick, {
+            meal,
+            grams: isDatabase ? parsedGrams : undefined,
+            multiplier: !isDatabase ? parsedMultiplier : undefined,
+            replaceEntryId,
+          })
+        }
+
+        return (
+          <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setQuickPickConfirm(null)}>
+            <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+              <p className="text-fg text-sm font-medium mb-3">{pick.name} <span className="text-muted font-normal">· {previewKcal} kcal</span></p>
+
+              <label className="text-muted text-xs block mb-1.5">Måltid</label>
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {kostSettings.trackedMeals.map(m => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => setQuickPickConfirm(prev => prev ? { ...prev, meal: m } : prev)}
+                    className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${meal === m ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
+                  >
+                    {kostMealLabel(m)}
+                  </button>
+                ))}
+              </div>
+
+              {isDatabase ? (
+                <div className="mb-3">
+                  <label className="text-muted text-xs block mb-1.5">Mängd (g)</label>
+                  <input
+                    type="text" inputMode="decimal" value={grams}
+                    onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, grams: normalizeDecimalInput(e.target.value) } : prev)}
+                    className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+              ) : (
+                <div className="mb-3">
+                  <label className="text-muted text-xs block mb-1.5">Portion (× {pick.calories} kcal)</label>
+                  <input
+                    type="text" inputMode="decimal" value={multiplier}
+                    onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, multiplier: normalizeDecimalInput(e.target.value) } : prev)}
+                    className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                  />
+                </div>
+              )}
+
+              {eveningGuard ? (
+                <>
+                  <p className="text-muted text-xs mb-3">Du har redan loggat något idag och det är kväll — ersätt din senaste post eller lägg till en till?</p>
+                  <div className="flex flex-col gap-2">
+                    <button type="button" onClick={() => confirm(todayEntries[0]?.id)} disabled={!todayEntries[0] || !canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">Ersätt senaste post</button>
+                    <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full text-fg border border-edge rounded-xl py-2.5 text-sm disabled:opacity-50">Lägg till ändå</button>
+                    <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">{logging ? 'Loggar...' : 'Logga'}</button>
+                  <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
       </>
       )}
     </div>

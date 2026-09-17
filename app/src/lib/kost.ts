@@ -25,6 +25,19 @@ export function kostMetricLabel(metric: KostMetric): string {
   return METRIC_LABELS[metric]
 }
 
+// Optional starting point, never forced — Daniel: "kanske appen borde
+// räkna ut en mängd som är bra för en. Om man vill då." Standard sports-
+// nutrition range for muscle retention: ~1.6 g/kg generally, up towards
+// 2.0 g/kg when actively cutting (a calorie deficit makes muscle loss more
+// likely, protein is the main lever against that). No activity/training-
+// volume signal is used here — just weight + whether a deficit goal is
+// active — so this stays an honest, simple starting point rather than a
+// falsely precise number dressed up with inputs it doesn't really weigh.
+export function suggestProteinGoalG(weightKg: number, deficitTrackingEnabled: boolean): number {
+  const gramsPerKg = deficitTrackingEnabled ? 2.0 : 1.6
+  return Math.round((weightKg * gramsPerKg) / 5) * 5 // nearest 5g, matches the input's own step
+}
+
 // Meals that realistically happen more than once a day — a day only needs
 // AT LEAST ONE entry in these categories to count as covered, never
 // "exactly one" (real incident this fixes: Daniel pointed out multiple
@@ -35,6 +48,22 @@ export const MULTI_ENTRY_MEALS: ReadonlySet<KostMeal> = new Set(['snack', 'suppe
 // fixed slot (by definition flexible/repeatable) so it's never reminded.
 export const MEAL_REMINDER_HOUR: Partial<Record<KostMeal, number>> = {
   breakfast: 9, lunch: 13, dinner: 18, supper: 20,
+}
+
+// A sensible default meal to pre-select when logging something without
+// saying which meal it's for (a Snabbval tap) — Daniel: "väljer man ur den
+// listan så ska man direkt få popup att fylla i typ av måltid." Walks the
+// day's meals latest-first so the current hour "belongs" to whichever meal
+// most recently started (19:00 reads as dinner, not still lunch), only
+// considering meals this user actually tracks. Falls back to 'snack' (or
+// the first tracked meal) before the day's first tracked reminder hour.
+export function guessMealForHour(hour: number, trackedMeals: KostMeal[]): KostMeal {
+  const latestFirst: KostMeal[] = ['supper', 'dinner', 'lunch', 'breakfast']
+  for (const meal of latestFirst) {
+    const reminderHour = MEAL_REMINDER_HOUR[meal]
+    if (reminderHour != null && hour >= reminderHour && trackedMeals.includes(meal)) return meal
+  }
+  return trackedMeals.includes('snack') ? 'snack' : (trackedMeals[0] ?? 'snack')
 }
 
 export type KostFoodEntry = { id: string; name: string; calories: number; protein_g: number | null; carb_g: number | null; fat_g: number | null; meal: KostMeal | null; source: 'database' | 'ai_text' | 'photo'; logged_at: string }
