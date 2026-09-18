@@ -277,6 +277,57 @@ export function computeRollingWeightAverage(
   }
 }
 
+// Real, MEASURED weight-loss pace — a recent RATE_WINDOW_DAYS average
+// against the window right before it — never a theoretical rate implied by
+// logged calories. Daniel: "Med denna hastighet... när du målet redan då"
+// but explicitly wants it to warn rather than cheer on an unsafe pace
+// ("Kör A" — always show the honest projection, flag it in red if it's
+// faster than we recommend, instead of hiding it or capping it silently).
+// Shared by the Viktmål page and the MCP get_goal_progress tool so the two
+// surfaces can never quietly disagree about the same pace — this used to be
+// duplicated logic living only in lib/mcp/goal-progress.ts.
+export type WeightTrendProjection = {
+  lossRatePerDayKg: number | null
+  projectedDateISO: string | null
+  onTrack: boolean | null // vs targetDateISO — null if no projection or no target date to compare against
+  tooFast: boolean // pace implies a bigger daily deficit than MAX_SAFE_DEFICIT_KCAL
+}
+
+const RATE_WINDOW_DAYS = 7
+const MIN_MEANINGFUL_LOSS_RATE_KG_PER_DAY = 0.01 // ~70g/week — below this, "current pace" can't honestly project a date
+
+function avgWeightInRange(weighIns: { date: string; weightKg: number }[], startKey: string, endKeyInclusive: string): number | null {
+  const vals = weighIns.filter(w => w.date >= startKey && w.date <= endKeyInclusive).map(w => w.weightKg)
+  return vals.length ? vals.reduce((s, v) => s + v, 0) / vals.length : null
+}
+
+export function computeWeightTrendProjection(
+  weighIns: { date: string; weightKg: number }[],
+  currentWeightKg: number | null,
+  targetWeightKg: number | null,
+  targetDateISO: string | null,
+  todayKey: string,
+): WeightTrendProjection {
+  const recentAvg = avgWeightInRange(weighIns, addDays(todayKey, -(RATE_WINDOW_DAYS - 1)), todayKey)
+  const priorAvg = avgWeightInRange(weighIns, addDays(todayKey, -(2 * RATE_WINDOW_DAYS - 1)), addDays(todayKey, -RATE_WINDOW_DAYS))
+  // Positive = losing weight per day (this app only supports loss goals today).
+  const lossRatePerDayKg = recentAvg != null && priorAvg != null ? (priorAvg - recentAvg) / RATE_WINDOW_DAYS : null
+
+  let projectedDateISO: string | null = null
+  if (targetWeightKg != null && currentWeightKg != null) {
+    const remainingKg = currentWeightKg - targetWeightKg
+    if (remainingKg <= 0) {
+      projectedDateISO = todayKey
+    } else if (lossRatePerDayKg != null && lossRatePerDayKg >= MIN_MEANINGFUL_LOSS_RATE_KG_PER_DAY) {
+      projectedDateISO = addDays(todayKey, Math.ceil(remainingKg / lossRatePerDayKg))
+    }
+  }
+  const onTrack = projectedDateISO != null && targetDateISO != null ? projectedDateISO <= targetDateISO : null
+  const tooFast = lossRatePerDayKg != null && lossRatePerDayKg * KCAL_PER_KG > MAX_SAFE_DEFICIT_KCAL
+
+  return { lossRatePerDayKg, projectedDateISO, onTrack, tooFast }
+}
+
 export type GoalSegmentSource = 'overall' | 'milestone'
 
 export type MilestoneInput = {

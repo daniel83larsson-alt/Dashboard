@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, computeWeightTrendProjection, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
@@ -276,6 +276,35 @@ export default function ViktmalClient({
     ? Math.min(100, Math.max(0, Math.round(((startWeightKg - currentWeightKg) / (startWeightKg - targetWeightKg)) * 100)))
     : null
 
+  // Same math, against the nearer delmål instead of the overall goal —
+  // Daniel: "visas progress mot de långa målet men inte mot delmålet."
+  const milestoneProgressPct = activeMilestone != null && currentWeightKg != null && activeMilestone.start_weight_kg !== activeMilestone.target_weight_kg
+    ? Math.min(100, Math.max(0, Math.round(((activeMilestone.start_weight_kg - (rollingWeight.avgKg ?? currentWeightKg)) / (activeMilestone.start_weight_kg - activeMilestone.target_weight_kg)) * 100)))
+    : null
+
+  // "Med denna hastighet, när når du målet" (Daniel, "Kör A"): projects
+  // toward whichever goal is actually live right now — the nearer delmål
+  // while one's active, otherwise the overall goal — using REAL measured
+  // weight trend (computeWeightTrendProjection), never a theoretical
+  // calorie-implied rate. Always shown honestly even at an unsafe pace,
+  // flagged in red instead of hidden or silently capped.
+  const projectionTarget = activeMilestone != null
+    ? { kg: activeMilestone.target_weight_kg, dateISO: activeMilestone.target_date, label: 'delmålet' }
+    : (targetWeightKg != null && targetDate != null ? { kg: targetWeightKg, dateISO: targetDate, label: 'målet' } : null)
+  const weightTrend = useMemo(
+    () => projectionTarget
+      ? computeWeightTrendProjection(
+          weightHistory.map(m => ({ date: m.date, weightKg: m.weightKg })),
+          rollingWeight.avgKg ?? currentWeightKg,
+          projectionTarget.kg,
+          projectionTarget.dateISO,
+          todayKey,
+        )
+      : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [projectionTarget?.kg, projectionTarget?.dateISO, weightHistory, rollingWeight.avgKg, currentWeightKg, todayKey]
+  )
+
   const chartData = weightHistory.map(m => ({ date: fmtDate(m.date), Vikt: m.weightKg }))
   const modelBKcal = budgetKcal != null ? Math.round(budgetKcal + todayTrainingKcalRaw * garminCorrection) : null
 
@@ -510,6 +539,19 @@ export default function ViktmalClient({
               </div>
             )}
             {progressPct != null && <p className="text-muted text-xs">{progressPct}% mot målet</p>}
+            {weightTrend && projectionTarget && (
+              weightTrend.projectedDateISO != null ? (
+                <p className={`text-xs mt-2 pt-2 border-t border-edge ${
+                  weightTrend.tooFast ? 'text-red-400' : weightTrend.onTrack === false ? 'text-amber-400' : 'text-green-400'
+                }`}>
+                  Med nuvarande takt når du {projectionTarget.label} {fmtDate(weightTrend.projectedDateISO)}
+                  {weightTrend.onTrack === false && ` (senare än ${fmtDate(projectionTarget.dateISO)})`}
+                  {weightTrend.tooFast && ' — snabbare än vi rekommenderar, överväg att äta lite mer.'}
+                </p>
+              ) : (
+                <p className="text-muted text-xs mt-2 pt-2 border-t border-edge">Logga några vägningar till så kan vi räkna ut en prognos för {projectionTarget.label}.</p>
+              )
+            )}
           </>
         ) : (
           <p className="text-muted text-xs">Sätt startvikt och målvikt i Profil för att se din resa här.</p>
@@ -579,6 +621,12 @@ export default function ViktmalClient({
                 <span className="font-mono text-fg">{activeMilestone.start_weight_kg.toFixed(1)} kg</span>
                 <span className="font-mono text-[#f59e0b] font-bold">{activeMilestone.target_weight_kg.toFixed(1)} kg</span>
               </div>
+              {milestoneProgressPct != null && (
+                <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all" style={{ width: `${milestoneProgressPct}%`, backgroundColor: '#f59e0b' }} />
+                </div>
+              )}
+              {milestoneProgressPct != null && <p className="text-muted text-xs">{milestoneProgressPct}% mot delmålet</p>}
               <p className="text-muted text-xs">
                 Till {fmtDate(activeMilestone.target_date)}
                 {activeMilestone.segment_budget_kcal != null && ` · ${activeMilestone.segment_budget_kcal} kcal/dag (underskott ${activeMilestone.segment_daily_deficit_kcal} kcal/dag)`}

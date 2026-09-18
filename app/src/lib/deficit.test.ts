@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin, selectCheckinPeriod,
   computeRollingWeightAverage, resolveActiveGoalSegment, deficitOverrideSignature, daysWithRealTrainingCalories,
-  budgetInForceOn, tdeeInForceOn, computeAvgDiffVsTdee, explainBudgetChange,
+  budgetInForceOn, tdeeInForceOn, computeAvgDiffVsTdee, explainBudgetChange, computeWeightTrendProjection,
 } from './deficit'
 
 describe('daysWithRealTrainingCalories', () => {
@@ -219,6 +219,70 @@ describe('computeRollingWeightAverage', () => {
     const result = computeRollingWeightAverage(weighIns, '2026-08-30', { windowDays: 10, maxReadings: 3, minReadings: 1 })
     expect(result.avgKg).toBe(106)
     expect(result.readings).toBe(1)
+  })
+})
+
+describe('computeWeightTrendProjection', () => {
+  const TODAY = '2026-09-13'
+
+  it('projects a date when the recent pace is meaningfully faster than the prior window', () => {
+    const weighIns = [
+      { date: '2026-08-31', weightKg: 105.7 },
+      { date: '2026-09-06', weightKg: 105.7 },
+      { date: '2026-09-07', weightKg: 105.0 },
+      { date: '2026-09-13', weightKg: 105.0 },
+    ]
+    const result = computeWeightTrendProjection(weighIns, 105.0, 90, '2027-06-01', TODAY)
+    expect(result.projectedDateISO).not.toBeNull()
+    expect(result.onTrack).toBe(true)
+  })
+
+  it('is immediately on track once the target weight is already reached', () => {
+    const result = computeWeightTrendProjection([{ date: TODAY, weightKg: 89 }], 89, 90, '2027-06-01', TODAY)
+    expect(result.projectedDateISO).toBe(TODAY)
+    expect(result.onTrack).toBe(true)
+  })
+
+  it('cannot project a date on a plateau (no meaningful loss rate)', () => {
+    const weighIns = [{ date: '2026-08-31', weightKg: 105 }, { date: TODAY, weightKg: 105 }]
+    const result = computeWeightTrendProjection(weighIns, 105, 90, '2027-06-01', TODAY)
+    expect(result.projectedDateISO).toBeNull()
+    expect(result.onTrack).toBeNull()
+    expect(result.tooFast).toBe(false)
+  })
+
+  // Daniel: "Kör A" — always show the honest projected date even when the
+  // pace is unsafe, but flag it, rather than hide it or quietly cap it.
+  it('flags tooFast when the measured pace implies more than MAX_SAFE_DEFICIT_KCAL/day', () => {
+    // ~0.2 kg/day lost (105.4kg avg -> 104.0kg avg over 7 days) implies
+    // 0.2 * 7700 = 1540 kcal/day, well above the 1000 kcal/day safe max.
+    const weighIns = [
+      { date: '2026-08-31', weightKg: 105.4 },
+      { date: '2026-09-06', weightKg: 105.4 },
+      { date: '2026-09-07', weightKg: 104.0 },
+      { date: '2026-09-13', weightKg: 104.0 },
+    ]
+    const result = computeWeightTrendProjection(weighIns, 104.0, 90, '2027-06-01', TODAY)
+    expect(result.tooFast).toBe(true)
+    expect(result.projectedDateISO).not.toBeNull() // still shown, just flagged
+  })
+
+  it('does not flag tooFast at a safe, moderate pace', () => {
+    const weighIns = [
+      { date: '2026-08-31', weightKg: 106.0 },
+      { date: '2026-09-06', weightKg: 106.0 },
+      { date: '2026-09-07', weightKg: 105.3 },
+      { date: '2026-09-13', weightKg: 105.3 },
+    ]
+    const result = computeWeightTrendProjection(weighIns, 105.3, 90, '2027-06-01', TODAY)
+    expect(result.tooFast).toBe(false)
+  })
+
+  it('returns no onTrack verdict without a target date to compare against', () => {
+    const weighIns = [{ date: '2026-08-31', weightKg: 106 }, { date: TODAY, weightKg: 105 }]
+    const result = computeWeightTrendProjection(weighIns, 105, 90, null, TODAY)
+    expect(result.projectedDateISO).not.toBeNull()
+    expect(result.onTrack).toBeNull()
   })
 })
 
