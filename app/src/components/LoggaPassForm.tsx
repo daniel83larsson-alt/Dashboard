@@ -21,6 +21,16 @@ const EXERCISES_BY_SPORT: Record<string, string[]> = {
   Yoga: ['Nedåtgående hund', 'Krigare I', 'Krigare II', 'Triangel', 'Katt-ko', 'Barnets position'],
 }
 
+// Daniel: "När man reggar kettlebell pass så skulle jag vilja ange vikt
+// också... och det är väl generellt på all typ av träning." Scoped to the
+// sports where external load actually applies — Yoga's poses are
+// bodyweight, so a weight field there wouldn't mean anything. Optional per
+// exercise rather than required, since even within these sports some
+// movements are bodyweight (Burpees, Pull-ups) while others use load
+// (Thrusters, Kettlebell Swings) — no need to hardcode which is which,
+// just leave it blank for the bodyweight ones.
+const WEIGHTED_SPORTS = new Set(['Kettlebell', 'HIIT', 'Crossfit', 'WeightTraining'])
+
 function nowForInput(): string {
   const d = new Date()
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
@@ -35,7 +45,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
-  const [exercises, setExercises] = useState<Record<string, { sets: string; reps: string }>>({})
+  const [exercises, setExercises] = useState<Record<string, { sets: string; reps: string; weightKg: string }>>({})
 
   const movingTime = (parseFloat(minutes) || 0) * 60
   const distance = (parseFloat(km) || 0) * 1000
@@ -45,7 +55,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
     setExercises(prev => {
       const next = { ...prev }
       if (next[name]) delete next[name]
-      else next[name] = { sets: '3', reps: '10' }
+      else next[name] = { sets: '3', reps: '10', weightKg: '' }
       return next
     })
   }
@@ -53,8 +63,23 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
   const exerciseSummary = useMemo(() => {
     return Object.entries(exercises)
       .filter(([, v]) => v.sets && v.reps)
-      .map(([name, v]) => `${v.sets}x${v.reps} ${name}`)
+      .map(([name, v]) => `${v.sets}x${v.reps} ${name}${v.weightKg.trim() ? ` @${v.weightKg.trim()}kg` : ''}`)
       .join(', ')
+  }, [exercises])
+
+  // Structured version of the same data, sent alongside the flattened text
+  // summary above so it can actually be queried later (progression per
+  // övning, PR-spårning) instead of only ever existing as free text baked
+  // into the pass-namnet.
+  const exercisePayload = useMemo(() => {
+    return Object.entries(exercises)
+      .filter(([, v]) => v.sets && v.reps)
+      .map(([name, v]) => ({
+        name,
+        sets: parseInt(v.sets, 10),
+        reps: parseInt(v.reps, 10),
+        weightKg: v.weightKg.trim() ? parseFloat(v.weightKg) : null,
+      }))
   }, [exercises])
 
   const estimatedCalories = useMemo(() => {
@@ -76,6 +101,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
           distance,
           startDate: new Date(startDate).toISOString(),
           name: sport && EXERCISES_BY_SPORT[sport] && exerciseSummary ? exerciseSummary : undefined,
+          exercises: sport && EXERCISES_BY_SPORT[sport] && exercisePayload.length ? exercisePayload : undefined,
         }),
       })
       const data = await res.json()
@@ -159,6 +185,21 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                           className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
                         />
                         <span className="text-muted text-xs">reps</span>
+                        {sport && WEIGHTED_SPORTS.has(sport) && (
+                          <>
+                            <input
+                              type="number"
+                              min={0}
+                              step={0.5}
+                              inputMode="decimal"
+                              value={picked.weightKg}
+                              onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], weightKg: e.target.value } }))}
+                              placeholder="kroppsvikt"
+                              className="w-20 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center placeholder:text-[10px] focus:outline-none focus:border-accent"
+                            />
+                            <span className="text-muted text-xs">kg</span>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>

@@ -655,4 +655,10 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+- ✅ **Daniel: "När man reggar kettlebell pass så skulle jag vilja ange vikt också på tyngden. Och det är väl generellt på all typ av träning."** Kollade koden innan bygget: "Logga pass"-formuläret (kettlebell/HIIT/Crossfit/Vikträning/Yoga har en övningslista med set×reps) sparade ingen vikt alls — allt platt till en textrad, samma gamla kända lucka som redan flaggats en gång i en tidigare MCP-audit. Ställde tre klargörande frågor innan bygget (per vikt/övning eller helt pass, vilka sporter, text eller strukturerat) — Daniel valde det rekommenderade på alla tre: **per övning, Kettlebell/HIIT/Crossfit/Vikträning (Yoga uteslutet — kroppsviktsövningar), strukturerad lagring för framtida PR-spårning.**
+  **Byggt:** `LoggaPassForm.tsx` får ett valfritt vikt(kg)-fält per ikryssad övning (tomt = kroppsviktsövning, inget krav). Textsammanfattningen (det som redan syns i passloggen) blir nu t.ex. "3x10 Svingar @24kg, 4x8 Goblet Squat" istället för att tappa vikten helt. **Sparas dessutom strukturerat** — ny ren funktion `sanitizeManualExercises` (`lib/manual-log.ts`) validerar det (namn/set/reps/vikt, gränser, cappat på 12 övningar) innan `/api/activities/log-manual` skriver det till `activities.raw_data.exercises` — samma redan befintliga JSON-fält som Garmin/Concept2 redan lagrar sina egna extra-data i (ingen databasmigrering behövdes), utan att kollidera med några av de nycklar (`hrZones`, `polyline` m.fl.) som redan används där, eftersom manuellt loggade pass aldrig rör Garmin-synken. Öppnar för en framtida "viktprogression per övning"-funktion utan att behöva tolka fritext i efterhand.
+  **Verifierat:** typkontrollerat, lintat, 498/498 tester gröna (10 nya för `sanitizeManualExercises`, inklusive gränsfall för klampning/cap/malformad input), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
