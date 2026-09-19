@@ -4,6 +4,7 @@ import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, computeWeightTrendProjection, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { explainProteinGoalChange } from '@/lib/kost'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
 
@@ -51,6 +52,9 @@ export type BudgetEvent = {
   training_kcal: number | null
   neat_factor: number | null
   garmin_correction: number | null
+  old_protein_goal_g: number | null
+  new_protein_goal_g: number | null
+  protein_goal_weight_kg: number | null
 }
 
 // Samma sju taggar som Kost-sidans dagsdetalj (FoodLogClient) — dupliceras
@@ -78,6 +82,7 @@ const EVENT_KIND_LABEL: Record<string, string> = {
   // söndagskörningen, se lib/deficit-budget-refreeze.ts.
   stale_refresh: 'Veckovis omräkning (söndag)',
   manual_test: 'Test-omräkning (admin)',
+  protein_goal_changed: 'Proteinmål omräknat',
 }
 
 type CheckinComputation =
@@ -835,6 +840,29 @@ export default function ViktmalClient({
           <div className="text-xs text-muted uppercase tracking-wider mb-1">Budgethistorik</div>
           {budgetEvents.map((ev, i) => {
             const previous = budgetEvents[i + 1] ?? null
+            // Protein events share this table (see lib/protein-goal-refreeze.ts's
+            // own comment on why) but carry none of the budget/TDEE columns —
+            // a completely separate rendering branch instead of trying to
+            // force them through explainBudgetChange, which would either
+            // show a confusing "– kcal" or crash on missing bmr_kcal etc.
+            if (ev.kind === 'protein_goal_changed') {
+              const proteinExplanation = ev.new_protein_goal_g != null && ev.protein_goal_weight_kg != null
+                ? explainProteinGoalChange({ oldGoalG: ev.old_protein_goal_g, newGoalG: ev.new_protein_goal_g, weightKg: ev.protein_goal_weight_kg })
+                : null
+              return (
+                <div key={ev.id} className="flex flex-col gap-0.5 py-1 first:pt-0 [&:not(:last-child)]:border-b [&:not(:last-child)]:border-edge/60 [&:not(:last-child)]:pb-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-muted">{fmtDate(ev.created_at.slice(0, 10))} · {EVENT_KIND_LABEL[ev.kind] ?? ev.kind}</span>
+                    <span className="font-mono text-fg">
+                      {ev.old_protein_goal_g != null && ev.new_protein_goal_g != null
+                        ? `${ev.old_protein_goal_g} → ${ev.new_protein_goal_g} g`
+                        : ev.new_protein_goal_g != null ? `${ev.new_protein_goal_g} g` : '–'}
+                    </span>
+                  </div>
+                  {proteinExplanation && <div className="text-fg/80 text-xs mt-0.5">↳ {proteinExplanation}</div>}
+                </div>
+              )
+            }
             const explanation = explainBudgetChange(
               { bmrKcal: ev.bmr_kcal, trainingKcal: ev.training_kcal, neatFactor: ev.neat_factor, garminCorrection: ev.garmin_correction },
               previous ? { bmrKcal: previous.bmr_kcal, trainingKcal: previous.training_kcal, neatFactor: previous.neat_factor, garminCorrection: previous.garmin_correction } : null

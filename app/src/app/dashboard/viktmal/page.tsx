@@ -112,7 +112,7 @@ export default async function ViktmalPage() {
       .select('id, target_weight_kg, target_date, start_weight_kg, start_date, segment_budget_kcal, segment_daily_deficit_kcal')
       .eq('user_id', user.id).eq('status', 'active').maybeSingle(),
     supabase.from('deficit_budget_events')
-      .select('id, kind, old_budget_kcal, new_budget_kcal, new_tdee_kcal, budget_source, override_active, created_at, bmr_kcal, training_kcal, neat_factor, garmin_correction')
+      .select('id, kind, old_budget_kcal, new_budget_kcal, new_tdee_kcal, budget_source, override_active, created_at, bmr_kcal, training_kcal, neat_factor, garmin_correction, old_protein_goal_g, new_protein_goal_g, protein_goal_weight_kg')
       .eq('user_id', user.id).order('created_at', { ascending: false }).limit(10),
     // Separate, unlimited, ascending fetch for reconstructing which
     // budget/TDEE was actually in force on each day of the trend window

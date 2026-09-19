@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   computeDayCompleteness, kcalTotalForDay, metricTotalForDay, groupEntriesByMeal, suggestProteinGoalG,
-  guessMealForHour,
+  guessMealForHour, explainProteinGoalChange,
   type KostFoodEntry, type KostMeal,
 } from './kost'
 
@@ -105,6 +105,28 @@ describe('suggestProteinGoalG', () => {
   it('rounds to the nearest 5g, matching the input field\'s own step', () => {
     const suggestion = suggestProteinGoalG(83, true)
     expect(suggestion % 5).toBe(0)
+  })
+})
+
+describe('explainProteinGoalChange', () => {
+  it('matches Daniel\'s own example wording exactly for a decrease', () => {
+    expect(explainProteinGoalChange({ oldGoalG: 180, newGoalG: 175, weightKg: 97.2 }))
+      .toBe('Proteinmål sänktes till 175g efter ny vikt 97,2 kg (snitt)')
+  })
+
+  it('says höjdes for an increase', () => {
+    expect(explainProteinGoalChange({ oldGoalG: 150, newGoalG: 160, weightKg: 90 }))
+      .toContain('höjdes till 160g')
+  })
+
+  it('uses "satt till" wording the first time (no prior goal)', () => {
+    expect(explainProteinGoalChange({ oldGoalG: null, newGoalG: 187, weightKg: 104 }))
+      .toBe('Proteinmål satt till 187g baserat på vikt 104,0 kg (snitt)')
+  })
+
+  it('also uses "satt till" wording when the value did not actually change', () => {
+    expect(explainProteinGoalChange({ oldGoalG: 187, newGoalG: 187, weightKg: 104 }))
+      .toContain('satt till 187g')
   })
 })
 

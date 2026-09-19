@@ -25,17 +25,34 @@ export function kostMetricLabel(metric: KostMetric): string {
   return METRIC_LABELS[metric]
 }
 
-// Optional starting point, never forced — Daniel: "kanske appen borde
-// räkna ut en mängd som är bra för en. Om man vill då." Standard sports-
-// nutrition range for muscle retention: ~1.6 g/kg generally, up towards
-// 2.0 g/kg when actively cutting (a calorie deficit makes muscle loss more
-// likely, protein is the main lever against that). No activity/training-
-// volume signal is used here — just weight + whether a deficit goal is
-// active — so this stays an honest, simple starting point rather than a
-// falsely precise number dressed up with inputs it doesn't really weigh.
+// Standard sports-nutrition range for muscle retention: ~1.6 g/kg
+// generally, up towards 2.0 g/kg when actively cutting (a calorie deficit
+// makes muscle loss more likely, protein is the main lever against that).
+// No activity/training-volume signal is used here — just weight + whether
+// a deficit goal is active — so this stays an honest, simple formula
+// rather than a falsely precise number dressed up with inputs it doesn't
+// really weigh. Originally a one-off optional suggestion in Profil
+// (Daniel: "kanske appen borde räkna ut en mängd som är bra för en"), now
+// also the weekly auto-mode formula (lib/protein-goal-refreeze.ts) —
+// Daniel: "kör vi på det vi har men att den blir automatiskt."
 export function suggestProteinGoalG(weightKg: number, deficitTrackingEnabled: boolean): number {
   const gramsPerKg = deficitTrackingEnabled ? 2.0 : 1.6
   return Math.round((weightKg * gramsPerKg) / 5) * 5 // nearest 5g, matches the input's own step
+}
+
+// Readable "why" for an auto-mode protein-goal change, matching Daniel's
+// own example wording exactly ("Proteinmål sänktes till 175g efter ny vikt
+// 97,2 kg") — same narrative-over-raw-numbers principle as
+// deficit.ts's explainBudgetChange, just for the simpler one-input case
+// (protein only depends on weight + the deficit-tracking flag, never
+// training/BMR/NEAT like TDEE does).
+export function explainProteinGoalChange(input: { oldGoalG: number | null; newGoalG: number; weightKg: number }): string {
+  const weightStr = input.weightKg.toFixed(1).replace('.', ',')
+  if (input.oldGoalG == null || input.oldGoalG === input.newGoalG) {
+    return `Proteinmål satt till ${input.newGoalG}g baserat på vikt ${weightStr} kg (snitt)`
+  }
+  const direction = input.newGoalG > input.oldGoalG ? 'höjdes' : 'sänktes'
+  return `Proteinmål ${direction} till ${input.newGoalG}g efter ny vikt ${weightStr} kg (snitt)`
 }
 
 // Meals that realistically happen more than once a day — a day only needs

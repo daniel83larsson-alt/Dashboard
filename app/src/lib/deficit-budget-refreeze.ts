@@ -238,7 +238,7 @@ export async function refreezeDeficitBudget(
 
   let eventId: string | null = null
   if (changed || alwaysLog) {
-    const { data: eventRow } = await supabase.from('deficit_budget_events').insert({
+    const { data: eventRow, error: eventError } = await supabase.from('deficit_budget_events').insert({
       user_id: userId,
       kind: reason,
       milestone_id: milestoneRow?.id ?? null,
@@ -254,6 +254,14 @@ export async function refreezeDeficitBudget(
       neat_factor: explainInputs.neatFactor,
       garmin_correction: explainInputs.garminCorrection,
     }).select('id').single()
+    // Never silently drop a failed log write again — same real incident as
+    // the Garmin activity upsert (see STATUS.md): an unchecked insert error
+    // here means the budget itself still updates correctly, but the "why"
+    // is silently missing from the history forever. Caught live: the
+    // admin's 'manual_test' reason was shipped without ever being added to
+    // this table's kind CHECK constraint in production, so every click
+    // silently failed to log (found while auditing this exact code path).
+    if (eventError) throw new Error(`deficit_budget_events insert failed: ${eventError.message}`)
     eventId = eventRow?.id ?? null
   }
 

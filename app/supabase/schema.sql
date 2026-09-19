@@ -1436,7 +1436,8 @@ create table if not exists public.deficit_budget_events (
   user_id uuid references public.profiles(id) on delete cascade not null,
   kind text not null check (kind in (
     'settings_changed','checkin_applied','milestone_set','milestone_expired',
-    'milestone_reached','milestone_cancelled','override_acknowledged','override_voided','stale_refresh')),
+    'milestone_reached','milestone_cancelled','override_acknowledged','override_voided','stale_refresh',
+    'manual_test','protein_goal_changed')),
   milestone_id uuid references public.deficit_milestones(id) on delete set null,
   old_budget_kcal integer,
   new_budget_kcal integer,
@@ -1447,6 +1448,17 @@ create table if not exists public.deficit_budget_events (
   acknowledged_at timestamptz,
   created_at timestamptz default now()
 );
+-- 'kind' CHECK constraint kept in sync via an explicit ALTER below, not
+-- just the inline list above — a real incident this closes: 'manual_test'
+-- was added to that inline list (and to the code) in an earlier session,
+-- but on an ALREADY-CREATED table `create table if not exists` never re-
+-- applies it, so production silently kept rejecting every 'manual_test'
+-- insert until this was audited and caught live.
+alter table public.deficit_budget_events drop constraint if exists deficit_budget_events_kind_check;
+alter table public.deficit_budget_events add constraint deficit_budget_events_kind_check check (kind in (
+  'settings_changed','checkin_applied','milestone_set','milestone_expired',
+  'milestone_reached','milestone_cancelled','override_acknowledged','override_voided','stale_refresh',
+  'manual_test','protein_goal_changed'));
 alter table public.deficit_budget_events enable row level security;
 drop policy if exists "Users see own deficit budget events" on public.deficit_budget_events;
 create policy "Users see own deficit budget events" on public.deficit_budget_events
