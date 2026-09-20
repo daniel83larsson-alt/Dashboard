@@ -7,22 +7,18 @@
 // Pure computation, no I/O — same contract as lib/deficit.ts.
 import { dedupeForStats, type ActivityRow } from './duplicates'
 import { daysWithRealTrainingCalories } from './deficit'
+import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from './deficit-budget-refreeze'
 
-// Deliberately a SEPARATE, shorter window than the budget's own rolling
-// average (deficit-budget-refreeze.ts's TRAINING_LOOKBACK_DAYS — 14 days
-// as of writing, untouched by this file) — Daniel: "7 dagar så är det i
-// veckan... är man sjuk går den ner, sen när man blir frisk ökar man."
-// The budget deliberately wants a smoothed, stable number; THIS chart's
-// whole job is to show that weekly rise-and-fall responsively, so
-// matching the budget's own window would work against the point of
-// looking at it.
-export const CHART_WINDOW_DAYS = 7
-// Not a blind copy of the budget's own 50% ratio — a 7-day window
-// has so few days that requiring 4 (57%) made almost every normal
-// every-other-day training week come back null for Daniel's real
-// cadence. 3 of 7 (~43%) still refuses to average a near-empty week, just
-// slightly more lenient to fit a week-sized window.
-const MIN_REAL_DAYS_FOR_CHART = 3
+// Was a deliberately SEPARATE, shorter 7-day window for a while (Daniel:
+// "7 dagar så är det i veckan... är man sjuk går den ner, sen när man blir
+// frisk ökar man") so the chart would react faster than the budget's own
+// smoothed number. Reverted back to matching the budget's own window
+// (Daniel: "Byt till 14... [7 dagar] blir så rörig") — same constants as
+// deficit-budget-refreeze.ts now, imported rather than a second locally-
+// tuned copy, so the two can never drift apart again the way this exact
+// window has already been retuned twice (28→7→14).
+export const CHART_WINDOW_DAYS = TRAINING_LOOKBACK_DAYS
+const MIN_REAL_DAYS_FOR_CHART = MIN_TRAINING_HISTORY_DAYS
 
 export type TrainingKcalTrendPoint = {
   weekEndDateKey: string // YYYY-MM-DD, Stockholm-agnostic (calendar date only — a weekly trend doesn't need day-boundary precision)

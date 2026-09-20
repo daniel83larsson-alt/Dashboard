@@ -65,7 +65,7 @@ export default function TrainingLoadTrendChart({ points }: Props) {
         )}
       </div>
       <p className="text-muted text-[11px] mb-3">
-        7-dagars rullande snitt, Garmin-korrigerat — en snabbare, mer studsig bild än den 14-dagars siffran som styr din Viktmål-budget. Ett hål i linjen betyder för lite riktig träningsdata den veckan, inte noll.
+        14-dagars rullande snitt, Garmin-korrigerat — samma fönster som styr din Viktmål-budget, så kurvan rör sig lugnare. Ett hål i linjen betyder för lite riktig träningsdata den veckan, inte noll.
       </p>
       <ResponsiveContainer width="100%" height={140}>
         <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>

@@ -676,4 +676,12 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+- ✅ **Daniel: "Är söndagscronen kört för mig?"** (Insikter-skärmdump, "ser samma ut") **följt av "Byt till 14. Och flytta schemaliggaren till rätt ställe. Och trigga den manuellt nu... Trigga ett retro på hela teamet."** Fyra separata åtgärder:
+  1. **Bekräftat: söndagscronen har ALDRIG kört, för någon.** Kollade databasen direkt istället för att gissa: noll `stale_refresh`-händelser och noll `protein_goal_changed`-händelser existerar överhuvudtaget, för någon användare. Grundorsak hittad på GitHub: schemat (`0 19 * * 0` i `.github/workflows/dl-trainer-cron.yml`) lades bara till på vår egen arbetsgren — GitHub Actions schemalägger ALLTID utifrån repots huvudgren (`claude/dev-team-structure-c6s163`, bekräftat via `git ls-remote --symref`), inte den gren som faktiskt är live på dltrainer.se. Vår tillagda rad har alltså aldrig nått den gren GitHub faktiskt schemalägger ifrån.
+  2. **Insikter-grafen bytt till 14 dagar** (`CHART_WINDOW_DAYS` i `lib/training-load-trend.ts` importerar nu `TRAINING_LOOKBACK_DAYS`/`MIN_TRAINING_HISTORY_DAYS` direkt från `deficit-budget-refreeze.ts` istället för en egen, tredje oberoende kopia av samma 14-tal — det här fönstret har nu retunats tre gånger (28→7→14), delad konstant stänger dörren för att det händer en fjärde gång av misstag). Beskrivningstexten i grafkortet uppdaterad (var "snabbare, mer studsig än 14-dagarssiffran" — nu samma fönster som budgeten, så kurvan blir lugnare, precis det Daniel bad om).
+  **Verifierat:** typkontrollerat, lintat, 503/503 tester gröna (befintliga träningstrend-tester justerade för det bredare fönstret, inklusive ett nytt test som visar att två intilliggande veckopunkter nu delvis kan överlappa — korrekt, förväntat beteende med ett 14-dagarsfönster samplat var 7:e dag, inte en bugg), `next build` (dummy-env) ren.
+  3–4. Cron-schemat flyttat till rätt gren samt en manuell körning + Retro — se separata uppföljningsrader nedan när de är klara.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

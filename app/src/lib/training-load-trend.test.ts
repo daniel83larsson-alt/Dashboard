@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { computeTrainingKcalTrend, CHART_WINDOW_DAYS } from './training-load-trend'
+import { MIN_TRAINING_HISTORY_DAYS } from './deficit-budget-refreeze'
 import type { ActivityRow } from './duplicates'
 
 const NOW = new Date('2026-09-13T12:00:00Z')
@@ -19,22 +20,25 @@ function dateKeyDaysAgo(daysAgo: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-// One activity per day for the last 7 days (today back through 6 days
-// ago) — a full CHART_WINDOW_DAYS of real data, each 200 kcal.
+// One activity per day for the full CHART_WINDOW_DAYS window (today back
+// through CHART_WINDOW_DAYS-1 days ago), each 200 kcal — dynamically sized
+// so this test file doesn't need updating the next time the window itself
+// is retuned (already happened twice: 28→7→14).
 function denseRecentActivities(): (ActivityRow & { calories: number | null })[] {
   return Array.from({ length: CHART_WINDOW_DAYS }, (_, i) => act(`recent-${i}`, i, 200))
 }
 
 describe('computeTrainingKcalTrend', () => {
-  it('computes the corrected 7-day rolling average for the latest week when there is enough real data', () => {
+  it('computes the corrected rolling average for the latest week when there is enough real data', () => {
     const points = computeTrainingKcalTrend(denseRecentActivities(), 0.75, NOW, 1)
     expect(points).toHaveLength(1)
-    // 7 activities × 200 kcal = 1400 kcal over 7 days = 200/day → 150 corrected.
-    expect(points[0].correctedTrainingKcalPerDay).toBe(Math.round((1400 / 7) * 0.75))
+    // CHART_WINDOW_DAYS activities × 200 kcal = 200/day average → corrected by 0.75.
+    const totalKcal = CHART_WINDOW_DAYS * 200
+    expect(points[0].correctedTrainingKcalPerDay).toBe(Math.round((totalKcal / CHART_WINDOW_DAYS) * 0.75))
   })
 
-  it('returns null for a week whose 7-day window has fewer than 3 days of real calorie data', () => {
-    const sparse = [act('a', 0, 200), act('b', 1, 200)]
+  it(`returns null for a week whose window has fewer than ${MIN_TRAINING_HISTORY_DAYS} days of real calorie data`, () => {
+    const sparse = Array.from({ length: MIN_TRAINING_HISTORY_DAYS - 1 }, (_, i) => act(`sparse-${i}`, i, 200))
     const points = computeTrainingKcalTrend(sparse, 0.75, NOW, 1)
     expect(points[0].correctedTrainingKcalPerDay).toBeNull()
   })
@@ -45,22 +49,28 @@ describe('computeTrainingKcalTrend', () => {
     expect(points[0].correctedTrainingKcalPerDay).toBeNull()
   })
 
-  it('produces one point per week, oldest first, each with its own correct 7-day window', () => {
-    // Dense real data only in the most recent 7 days — older weeks (whose
-    // window falls entirely outside that range) must come back null,
-    // proving each point uses its OWN window, not one shared range.
-    const points = computeTrainingKcalTrend(denseRecentActivities(), 0.75, NOW, 3)
-    expect(points).toHaveLength(3)
+  it('produces one point per week, oldest first, each with its own correct window', () => {
+    // Dense real data only in the most recent CHART_WINDOW_DAYS — points
+    // whose window falls entirely outside that range must come back null,
+    // proving each point uses its OWN window, not one shared range. With a
+    // 14-day window sampled every 7 days, adjacent windows legitimately
+    // overlap by 7 days — so the two most recent points both see enough
+    // real data once the window reaches CHART_WINDOW_DAYS=14 (not just the
+    // very latest one, unlike the old 7-day window where each point's
+    // window was fully disjoint from its neighbors).
+    const points = computeTrainingKcalTrend(denseRecentActivities(), 0.75, NOW, 4)
+    expect(points).toHaveLength(4)
     expect(points.map(p => p.weekEndDateKey)).toEqual([
-      '2026-08-30', '2026-09-06', '2026-09-13',
+      '2026-08-23', '2026-08-30', '2026-09-06', '2026-09-13',
     ])
     expect(points[0].correctedTrainingKcalPerDay).toBeNull()
     expect(points[1].correctedTrainingKcalPerDay).toBeNull()
     expect(points[2].correctedTrainingKcalPerDay).not.toBeNull()
+    expect(points[3].correctedTrainingKcalPerDay).not.toBeNull()
   })
 
   it('applies the garmin correction factor multiplicatively', () => {
-    const rawAvgPerDay = 1400 / 7
+    const rawAvgPerDay = (CHART_WINDOW_DAYS * 200) / CHART_WINDOW_DAYS
     const uncorrected = computeTrainingKcalTrend(denseRecentActivities(), 1, NOW, 1)[0].correctedTrainingKcalPerDay
     const corrected = computeTrainingKcalTrend(denseRecentActivities(), 0.5, NOW, 1)[0].correctedTrainingKcalPerDay
     expect(uncorrected).toBe(Math.round(rawAvgPerDay))
