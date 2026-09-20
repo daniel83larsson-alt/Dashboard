@@ -661,4 +661,14 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+- ✅ **Daniel: "Längst ner på huvudmenyn... vänner total tid och km vecka. Så man kan matcha mot sitt egna. Senaste pass listan kan man ju minska ner lite för utrymme. Är de vettigt?"** följt av **"Liten per vän. Så man kan se, hur länge och långt, någon tränat."** Innan bygget: verifierade att den befintliga `friend_activity_feed()`-funktionen (som redan visar vänners senaste pass) bara returnerar de senaste 40 passen totalt, ingen tidsgräns — kollade mot riktig data och två av de fyra vännerna (Fredrik, Marie) har TILLSAMMANS redan 50 pass på 14 dagar, så en vecko-summering byggd ovanpå den listan hade riskerat att tyst tappa data redan denna vecka. Byggde en riktig vecko-aggregering istället för att återanvända den begränsade listan.
+  **Byggt:**
+  1. **Två nya databasfunktioner** (`friend_roster()`, `friend_weekly_activities(week_start, week_end)`) — medvetet TVÅ separata anrop istället för en färdigsummerad SQL-aggregering: roster:en listar alla vänner oavsett om de tränat denna vecka (så en inaktiv vän visar "0 min" istället för att bara försvinna ur listan), och aktivitetsfunktionen returnerar RÅA rader (inte försummerade) så samma `dedupeForStats`-logik som redan skyddar Daniels EGNA siffror mot Garmin+Concept2-dubbelräkning kan köras per vän i TypeScript — en SQL-summering direkt hade riskerat att dubbelräkna en väns ihopslagna roddpass, exakt den bugg `dedupeForStats` redan finns för att lösa.
+  2. **Ny ren funktion `summarizeFriendWeek`** (`lib/friend-week.ts`) — grupperar per vän, kör dedup, summerar tid/distans, nollfyller vänner utan pass denna vecka, sorterar mest aktiv först.
+  3. **Nytt kort "Vänner denna vecka"** längst ner på Översikt (efter vänners aktivitetsflöde, samma plats Daniel pekade på) — en rad per vän: namn, tid, km.
+  4. **"Senaste pass"-kortet krympt** — samma information kvar (distans/tid/fart/puls/watt), bara tightare padding och något mindre typsnitt på siffrorna, för att göra plats.
+  **Verifierat:** typkontrollerat, lintat, 503/503 tester gröna (5 nya för `summarizeFriendWeek`, inklusive ett specifikt dedup-testfall för ett Garmin+Concept2-ihopslaget pass), `next build` (dummy-env) ren, båda de nya databasfunktionerna applicerade och verifierade direkt mot produktionsdatabasen, samt kollade riktig aktivitetsdata för alla fyra vänner denna vecka för att bekräfta att uträkningen ger rimliga tal. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

@@ -23,6 +23,7 @@ import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
 import { weeklyLoad, rollingBaselineLoad, weeklyMinutes, rollingBaselineMinutes } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
+import { summarizeFriendWeek } from '@/lib/friend-week'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
 import InstallAppButton from '@/components/InstallAppButton'
@@ -115,8 +116,14 @@ export default async function DashboardPage() {
   const prevWeekStartDate = new Date(weekStartDate)
   prevWeekStartDate.setDate(prevWeekStartDate.getDate() - 7)
   const prevWeekStartStr = prevWeekStartDate.toISOString().slice(0, 10)
+  // Same Monday-start week as weekStart/nextWeekStart further down (both
+  // derive from startOfWeek(new Date()) a few lines apart — negligible
+  // clock drift, never a different calendar week) — computed here too so
+  // the friend-week RPC calls below can run inside this same Promise.all.
+  const nextWeekStartDate = new Date(weekStartDate)
+  nextWeekStartDate.setDate(nextWeekStartDate.getDate() + 7)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -153,6 +160,11 @@ export default async function DashboardPage() {
     // needed, same reasoning as goals above.
     supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
+    // Daniel: "vänner total tid och km vecka... liten per vän" — see
+    // lib/friend-week.ts for why this is two separate fetches (roster +
+    // raw activity rows) rather than one SQL-side aggregate.
+    supabase.rpc('friend_roster'),
+    supabase.rpc('friend_weekly_activities', { week_start: weekStartDate.toISOString(), week_end: nextWeekStartDate.toISOString() }),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -215,6 +227,22 @@ export default async function DashboardPage() {
   }
 
   const wk = totals(thisWeek)
+
+  // Daniel: "vänner total tid och km vecka... liten per vän. Så man kan
+  // se, hur länge och långt, någon tränat." — mapped from the RPC's
+  // activity_id column to `id` (what dedupeForStats/ActivityRow expects),
+  // not just cast, since a cast wouldn't actually rename the field and
+  // every row would silently end up with the same undefined id.
+  type FriendWeekActivityRpcRow = {
+    activity_id: string; owner_id: string; owner_name: string; sport_type: string
+    distance: number; moving_time: number; start_date: string; source: string | null; strava_id: number
+  }
+  const friendWeekActivityRows = ((friendWeekActivities ?? []) as FriendWeekActivityRpcRow[]).map(a => ({
+    id: a.activity_id, strava_id: a.strava_id, start_date: a.start_date, distance: a.distance,
+    moving_time: a.moving_time, sport_type: a.sport_type, source: a.source ?? undefined,
+    owner_id: a.owner_id, owner_name: a.owner_name,
+  }))
+  const friendWeekSummary = summarizeFriendWeek(friendWeekActivityRows, (friendRoster ?? []) as { owner_id: string; owner_name: string }[])
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -638,9 +666,12 @@ export default async function DashboardPage() {
       <div className="lg:grid lg:grid-cols-3 lg:gap-6 lg:[grid-auto-flow:dense] space-y-6 lg:space-y-0">
 
       {/* ── Senaste pass ────────────────────────────────────────────────────── */}
+      {/* Daniel: "Senaste pass listan kan man ju minska ner lite för
+          utrymme" (för att göra plats åt Vänner-kortet längst ner) — samma
+          information kvar, bara tightare padding/marginaler/typsnitt. */}
       {latest ? (
-        <div className="bg-card border border-edge rounded-2xl p-5 lg:col-span-2 lg:order-1">
-          <div className="flex items-start justify-between mb-4">
+        <div className="bg-card border border-edge rounded-2xl p-4 lg:col-span-2 lg:order-1">
+          <div className="flex items-start justify-between mb-3">
             <div>
               <div className="text-xs text-muted uppercase tracking-wider mb-1">Senaste pass</div>
               <div className="font-medium text-fg">{latest.name}</div>
@@ -671,40 +702,40 @@ export default async function DashboardPage() {
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-accent text-lg font-bold leading-none">{fmtKm(latest.distance)}</div>
+          <div className="grid grid-cols-3 gap-2 mb-2">
+            <div className="bg-bg rounded-xl p-2.5">
+              <div className="font-mono text-accent text-base font-bold leading-none">{fmtKm(latest.distance)}</div>
               <div className="text-muted text-xs mt-1">Distans</div>
             </div>
-            <div className="bg-bg rounded-xl p-3">
-              <div className="font-mono text-accent text-lg font-bold leading-none">{fmtDur(latest.moving_time)}</div>
+            <div className="bg-bg rounded-xl p-2.5">
+              <div className="font-mono text-accent text-base font-bold leading-none">{fmtDur(latest.moving_time)}</div>
               <div className="text-muted text-xs mt-1">Tid</div>
             </div>
             {latestSpeedOrPace && (
-              <div className="bg-bg rounded-xl p-3">
-                <div className="font-mono text-lcd text-lg font-bold leading-none">{latestSpeedOrPace.value}</div>
+              <div className="bg-bg rounded-xl p-2.5">
+                <div className="font-mono text-lcd text-base font-bold leading-none">{latestSpeedOrPace.value}</div>
                 <div className="text-muted text-xs mt-1">{latestSpeedOrPace.label}</div>
               </div>
             )}
           </div>
 
           {(latest.average_heartrate || latest.average_watts) && (
-            <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="grid grid-cols-3 gap-2 mb-3">
               {latest.average_heartrate && (
-                <div className="bg-bg rounded-xl p-3">
-                  <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(latest.average_heartrate)}</div>
+                <div className="bg-bg rounded-xl p-2.5">
+                  <div className="font-mono text-lcd text-base font-bold leading-none">{Math.round(latest.average_heartrate)}</div>
                   <div className="text-muted text-xs mt-1">Snitt-HR</div>
                 </div>
               )}
               {latest.max_heartrate && (
-                <div className="bg-bg rounded-xl p-3">
-                  <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(latest.max_heartrate)}</div>
+                <div className="bg-bg rounded-xl p-2.5">
+                  <div className="font-mono text-lcd text-base font-bold leading-none">{Math.round(latest.max_heartrate)}</div>
                   <div className="text-muted text-xs mt-1">Max-HR</div>
                 </div>
               )}
               {latest.average_watts && (
-                <div className="bg-bg rounded-xl p-3">
-                  <div className="font-mono text-lcd text-lg font-bold leading-none">{Math.round(latest.average_watts)}W</div>
+                <div className="bg-bg rounded-xl p-2.5">
+                  <div className="font-mono text-lcd text-base font-bold leading-none">{Math.round(latest.average_watts)}W</div>
                   <div className="text-muted text-xs mt-1">Snitt-watt</div>
                 </div>
               )}
@@ -863,6 +894,29 @@ export default async function DashboardPage() {
 
       {/* ── Vänners träningspass ──────────────────────────────────────────────── */}
       <FriendFeed feed={dedupeFriendFeed(friendFeed)} userId={user.id} />
+
+      {/* ── Vänner denna vecka ─────────────────────────────────────────────────
+          Daniel: "vänner total tid och km vecka. Så man kan matcha mot sitt
+          egna... liten per vän. Så man kan se, hur länge och långt, någon
+          tränat." Zero-filled (a friend with no activity this week still
+          shows 0 min, see summarizeFriendWeek) rather than just omitted —
+          the point is seeing who's active, not just who happened to log
+          something. */}
+      {friendWeekSummary.length > 0 && (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <div className="text-xs text-muted uppercase tracking-wider mb-3">Vänner denna vecka</div>
+          <div className="flex flex-col gap-2">
+            {friendWeekSummary.map(f => (
+              <div key={f.ownerId} className="flex items-center justify-between text-sm">
+                <span className="text-fg">{f.ownerName}</span>
+                <span className="font-mono text-muted text-xs">
+                  {fmtDur(f.totalMovingTimeSec)}{f.totalDistanceM > 0 ? ` · ${fmtKm(f.totalDistanceM)}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -1562,6 +1562,67 @@ $$;
 revoke all on function public.friend_activity_feed() from public;
 grant execute on function public.friend_activity_feed() to authenticated;
 
+-- Daniel: "vänner total tid och km vecka... liten per vän. Så man kan se,
+-- hur länge och långt, någon tränat." Two functions rather than one
+-- aggregate: friend_roster() lists everyone regardless of whether they
+-- trained this week (so an inactive friend still shows "0 min", not
+-- silently disappears), friend_weekly_activities() returns RAW rows (not
+-- pre-summed) so the caller can run the same dedupeForStats() dedup logic
+-- already used for the current user's own stats — summing in SQL directly
+-- would double-count a friend's Garmin+Concept2-merged sessions, the exact
+-- bug dedupeForStats already exists to fix for the logged-in user.
+create or replace function public.friend_roster()
+returns table(owner_id uuid, owner_name text)
+language sql
+security definer
+set search_path = public
+as $$
+  select p.id, coalesce(p.name, split_part(p.email, '@', 1))
+  from public.profiles p
+  where exists (
+    select 1 from public.follows f
+    where f.status = 'accepted' and (
+      (f.follower_id = auth.uid() and f.followee_id = p.id) or
+      (f.followee_id = auth.uid() and f.follower_id = p.id)
+    )
+  );
+$$;
+revoke all on function public.friend_roster() from public;
+grant execute on function public.friend_roster() to authenticated;
+
+create or replace function public.friend_weekly_activities(week_start timestamptz, week_end timestamptz)
+returns table(
+  activity_id uuid,
+  owner_id uuid,
+  owner_name text,
+  sport_type text,
+  distance numeric,
+  moving_time integer,
+  start_date timestamptz,
+  source text,
+  strava_id bigint
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    a.id, a.user_id, coalesce(p.name, split_part(p.email, '@', 1)), a.sport_type, a.distance, a.moving_time, a.start_date, a.source, a.strava_id
+  from public.activities a
+  join public.profiles p on p.id = a.user_id
+  where a.start_date >= week_start and a.start_date < week_end
+  and exists (
+    select 1 from public.follows f
+    where f.status = 'accepted' and (
+      (f.follower_id = auth.uid() and f.followee_id = a.user_id) or
+      (f.followee_id = auth.uid() and f.follower_id = a.user_id)
+    )
+  )
+  order by a.user_id, a.start_date desc;
+$$;
+revoke all on function public.friend_weekly_activities(timestamptz, timestamptz) from public;
+grant execute on function public.friend_weekly_activities(timestamptz, timestamptz) to authenticated;
+
 -- activities.calories was null for virtually every Garmin/Concept2-synced
 -- row despite the real value already sitting unused in raw_data (Concept2:
 -- top-level "calories_total", a real watt-based device measurement, not a
