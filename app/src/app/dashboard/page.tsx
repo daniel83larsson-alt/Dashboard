@@ -243,6 +243,17 @@ export default async function DashboardPage() {
     owner_id: a.owner_id, owner_name: a.owner_name,
   }))
   const friendWeekSummary = summarizeFriendWeek(friendWeekActivityRows, (friendRoster ?? []) as { owner_id: string; owner_name: string }[])
+  // Daniel: "skulle vilja att ens egna siffror (Du) syns med som referens."
+  // wk (from totals(thisWeek) above) is already deduped — thisWeek is
+  // filtered straight from `activities`, which ran through dedupeForStats
+  // at the top of this function — so this reuses the exact same numbers
+  // the rest of the page already shows, not a second computation. Sorted
+  // into the same ranked list (not pinned to the top) so "how do I compare"
+  // is visible at a glance — highlighted in the JSX below instead.
+  const friendWeekSummaryWithSelf = [
+    { ownerId: user.id, ownerName: 'Du', totalMovingTimeSec: wk.time, totalDistanceM: wk.dist, activityCount: wk.count, isSelf: true },
+    ...friendWeekSummary.map(f => ({ ...f, isSelf: false })),
+  ].sort((a, b) => b.totalMovingTimeSec - a.totalMovingTimeSec)
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -901,15 +912,19 @@ export default async function DashboardPage() {
           tränat." Zero-filled (a friend with no activity this week still
           shows 0 min, see summarizeFriendWeek) rather than just omitted —
           the point is seeing who's active, not just who happened to log
-          something. */}
+          something. Gated on having any FRIENDS, not on the always-present
+          "Du" row — no friends yet means nothing to compare against. Own
+          row ("skulle vilja att ens egna siffror (Du)... syns med som
+          referens") sorted into the same ranked list rather than pinned to
+          the top, so where you actually land is visible at a glance. */}
       {friendWeekSummary.length > 0 && (
         <div className="bg-card border border-edge rounded-2xl p-4">
           <div className="text-xs text-muted uppercase tracking-wider mb-3">Vänner denna vecka</div>
           <div className="flex flex-col gap-2">
-            {friendWeekSummary.map(f => (
+            {friendWeekSummaryWithSelf.map(f => (
               <div key={f.ownerId} className="flex items-center justify-between text-sm">
-                <span className="text-fg">{f.ownerName}</span>
-                <span className="font-mono text-muted text-xs">
+                <span className={f.isSelf ? 'text-accent font-semibold' : 'text-fg'}>{f.ownerName}</span>
+                <span className={`font-mono text-xs ${f.isSelf ? 'text-accent' : 'text-muted'}`}>
                   {fmtDur(f.totalMovingTimeSec)}{f.totalDistanceM > 0 ? ` · ${fmtKm(f.totalDistanceM)}` : ''}
                 </span>
               </div>

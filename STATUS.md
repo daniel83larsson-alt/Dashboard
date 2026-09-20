@@ -671,4 +671,9 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+- ✅ **Daniel: "Ser bra ut, skulle vilja att ens egna siffror (Du). Och syns med som referens."** Egen rad tillagd i "Vänner denna vecka" — märkt "Du", accentfärgad för att sticka ut, sorterad in i SAMMA rankade lista (inte fastnålad överst) så man faktiskt ser var man själv landar jämfört med vännerna, inte bara sina egna tal isolerat. Återanvänder `wk.time`/`wk.dist` (samma redan uträknade, redan dedupade veckosiffror som resten av sidan visar) — ingen ny uträkning, bara samma tal tillagt i listan. Kortet visas fortfarande bara om man faktiskt har vänner (annars inget att jämföra mot).
+  **Verifierat:** typkontrollerat, lintat, 503/503 tester gröna (oförändrat — ren sidkoppling, ingen ny logik att testa), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
