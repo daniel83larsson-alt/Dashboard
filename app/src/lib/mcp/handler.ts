@@ -24,6 +24,11 @@ import { computeRowingTrends } from './rowing-trends'
 import { computeRecoveryData } from './recovery-data'
 import { computeLatestMeasurements } from './latest-measurements'
 import { computeGoalProgress } from './goal-progress'
+import { computeDailyLog } from './daily-log'
+import { computeCalorieBalance } from './calorie-balance'
+import { fetchMcpBudgetHistory } from './fetch-budget-history'
+import { computeBudgetHistory } from './budget-history'
+import { computeTdeeTrend } from './tdee-trend'
 
 // How far back activity history is fetched for the training tools — matches
 // garmin-sync.ts's own ACTIVITY_HISTORY_MAX_DAYS retention cap, so "last
@@ -232,6 +237,117 @@ export function buildMcpHandler(auth: { userId: string } | null) {
         ])
         const payload = computeGoalProgress(data.profile, data.measurements, activeMilestone, todayKey)
         logApiCall(supabase, auth.userId, 'mcp/get_goal_progress')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_daily_log',
+      {
+        title: 'Get daily log',
+        description:
+          'Every logged meal entry for one specific date — a food name for a manually logged entry, or a per-meal-' +
+          'category total with no item name for a YAZIO-synced day (YAZIO never exposes individual food names) — ' +
+          'plus that day\'s total kcal/protein vs budget/target and any context tag (e.g. sick, travel). Use this to ' +
+          'check whether a SPECIFIC day was logged fully/correctly, unlike get_weekly_summary\'s rolling average.',
+        inputSchema: z.object({
+          date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD'),
+        }),
+      },
+      async ({ date }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const [data, noteRow] = await Promise.all([
+          fetchMcpUserData(supabase, auth.userId, date, date),
+          supabase.from('day_context_notes').select('tag').eq('user_id', auth.userId).eq('date', date).maybeSingle(),
+        ])
+        const contextTag = (noteRow.data?.tag as string | undefined) ?? null
+        const payload = computeDailyLog(data, date, contextTag)
+        logApiCall(supabase, auth.userId, 'mcp/get_daily_log')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_calorie_balance',
+      {
+        title: 'Get calorie balance',
+        description:
+          'Average calories eaten, TDEE, the training-burn component of TDEE, and budget as separate figures over ' +
+          'the last N days — a complement to get_weekly_summary\'s single already-combined diff, for telling apart ' +
+          '"ate too little" from "TDEE/training estimate is off".',
+        inputSchema: z.object({
+          days: z.number().int().min(1).max(90).optional().default(7),
+        }),
+      },
+      async ({ days }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const todayKey = stockholmDateKey()
+        const windowStart = dateKeysEndingToday(todayKey, days)[0]
+        const [data, activities, budgetEvents, profileRow] = await Promise.all([
+          fetchMcpUserData(supabase, auth.userId, todayKey, windowStart),
+          // +1 day of margin — dateKeysEndingToday's window starts at exact
+          // midnight of the earliest day, while isoDaysAgo(days) is "now
+          // minus days days" (time-of-day-relative), which would otherwise
+          // under-fetch that earliest day's activities depending on what
+          // time of day this runs.
+          fetchMcpActivities(supabase, auth.userId, isoDaysAgo(days + 1)),
+          fetchMcpBudgetEvents(supabase, auth.userId),
+          supabase.from('profiles').select('deficit_garmin_correction').eq('id', auth.userId).single(),
+        ])
+        const garminCorrection = (profileRow.data?.deficit_garmin_correction as number | undefined) ?? 0.75
+        const payload = computeCalorieBalance(data, activities, budgetEvents, garminCorrection, todayKey, days)
+        logApiCall(supabase, auth.userId, 'mcp/get_calorie_balance')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_budget_history',
+      {
+        title: 'Get budget history',
+        description:
+          'Every budget/TDEE change event in the last N days with a readable reason (what actually moved — training ' +
+          'volume, resting metabolism, everyday-activity factor, or the Garmin correction), same as the ' +
+          'Budgethistorik card on the Viktmål page. Excludes protein-goal changes — see get_protein_trend for protein.',
+        inputSchema: z.object({
+          days: z.number().int().min(1).max(365).optional().default(30),
+        }),
+      },
+      async ({ days }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const todayKey = stockholmDateKey()
+        const events = await fetchMcpBudgetHistory(supabase, auth.userId)
+        const payload = computeBudgetHistory(events, days, todayKey)
+        logApiCall(supabase, auth.userId, 'mcp/get_budget_history')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_tdee_trend',
+      {
+        title: 'Get TDEE trend',
+        description:
+          'The actual whole-TDEE value in force at the end of each of the last N weeks, reconstructed from budget ' +
+          'history rather than assuming today\'s current TDEE applied retroactively — a curve separate from the ' +
+          'weight curve, so a dropping TDEE (less training vs a lighter body) can be told apart.',
+        inputSchema: z.object({
+          weeks: z.number().int().min(1).max(52).optional().default(12),
+        }),
+      },
+      async ({ weeks }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const todayKey = stockholmDateKey()
+        const [data, budgetEvents] = await Promise.all([
+          fetchMcpUserData(supabase, auth.userId, todayKey, todayKey),
+          fetchMcpBudgetEvents(supabase, auth.userId),
+        ])
+        const payload = computeTdeeTrend(data.profile?.deficit_tdee_kcal ?? null, budgetEvents, todayKey, weeks)
+        logApiCall(supabase, auth.userId, 'mcp/get_tdee_trend')
         return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
       }
     )
