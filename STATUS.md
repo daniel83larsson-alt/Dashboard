@@ -699,4 +699,10 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+- ✅ **Daniel (skärmdump av Viktmål): "Skulle vilja ha start på viktresan och sen hur mycket man gått ner i vikt, hur många dagar och cm... kopplat runt progressbaren som visar procent."** Ny liten stat-rad direkt under "X% mot målet": vikt nedgången totalt (kg), midjeförändring (cm, döljs om ingen midjedata finns än — 2 kolumner istället för 3), och antal dagar sedan startdatumet. Återanvänder samma viktbas som procent-baren redan räknar på (`currentWeightKg`, senaste enskilda vägningen — inte det rullande snittet) så baren och sifferraden aldrig kan antyda två olika "nuvarande vikter".
+  **Verifierat mot Daniels riktiga data:** startvikt 108 kg, startdatum 2026-08-30 — 23 dagar sedan idag (2026-09-22), matchar skärmdumpens "Startade 30 aug." exakt.
+  **Verifierat:** typkontrollerat, lintat, 528/528 tester oförändrat gröna (enkla härledda värden inline, samma mönster som `progressPct` redan använder i samma fil, ingen ny testbar logik), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

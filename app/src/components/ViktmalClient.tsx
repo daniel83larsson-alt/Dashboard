@@ -281,6 +281,17 @@ export default function ViktmalClient({
     ? Math.min(100, Math.max(0, Math.round(((startWeightKg - currentWeightKg) / (startWeightKg - targetWeightKg)) * 100)))
     : null
 
+  // Daniel: "hur mycket man gått ner i vikt, hur många dagar och cm...
+  // kopplat runt progressbaren." Same weight basis as progressPct itself
+  // (raw currentWeightKg, not the rolling average) so the summary and the
+  // % bar right above it can never imply two different "current" weights.
+  const weightLostKg = startWeightKg != null && currentWeightKg != null
+    ? Math.round((startWeightKg - currentWeightKg) * 10) / 10
+    : null
+  const daysSinceStart = startDate
+    ? Math.round((new Date(`${todayKey}T00:00:00`).getTime() - new Date(`${startDate}T00:00:00`).getTime()) / 86400000)
+    : null
+
   // Same math, against the nearer delmål instead of the overall goal —
   // Daniel: "visas progress mot de långa målet men inte mot delmålet."
   const milestoneProgressPct = activeMilestone != null && currentWeightKg != null && activeMilestone.start_weight_kg !== activeMilestone.target_weight_kg
@@ -544,6 +555,28 @@ export default function ViktmalClient({
               </div>
             )}
             {progressPct != null && <p className="text-muted text-xs">{progressPct}% mot målet</p>}
+            {(weightLostKg != null || daysSinceStart != null) && (
+              <div className={`grid ${waistDeltaCm != null ? 'grid-cols-3' : 'grid-cols-2'} gap-2 mt-2`}>
+                {weightLostKg != null && (
+                  <div className="bg-bg rounded-xl p-2.5">
+                    <div className="font-mono text-accent text-base font-bold leading-none">{Math.abs(weightLostKg)} kg</div>
+                    <div className="text-muted text-xs mt-1">{weightLostKg >= 0 ? 'Ner totalt' : 'Upp totalt'}</div>
+                  </div>
+                )}
+                {waistDeltaCm != null && (
+                  <div className="bg-bg rounded-xl p-2.5">
+                    <div className="font-mono text-accent text-base font-bold leading-none">{Math.abs(waistDeltaCm)} cm</div>
+                    <div className="text-muted text-xs mt-1">Midja</div>
+                  </div>
+                )}
+                {daysSinceStart != null && (
+                  <div className="bg-bg rounded-xl p-2.5">
+                    <div className="font-mono text-fg text-base font-bold leading-none">{daysSinceStart}</div>
+                    <div className="text-muted text-xs mt-1">Dagar sedan start</div>
+                  </div>
+                )}
+              </div>
+            )}
             {weightTrend && projectionTarget && (
               weightTrend.projectedDateISO != null ? (
                 <p className={`text-xs mt-2 pt-2 border-t border-edge ${
