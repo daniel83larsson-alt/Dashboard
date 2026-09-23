@@ -713,4 +713,14 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "Ibland segt att klicka vidare från startsidan till vikt och mat menyn... har vi koll?"** Kollade direkt mot skarpa systemet (Supabase prestandarapport + Vercel driftloggar), inte bara gissade:
+  1. **Störst fynd: 37 RLS-säkerhetspolicyer (i princip varenda tabell Vikt/Mat-sidorna läser) räknade om `auth.uid()`/`auth.jwt()` PER RAD istället för en gång per fråga** — ett välkänt Supabase-fel som blir mätbart segare ju fler rader tabellerna får, dvs. precis nu när det finns riktig data och användare. **Daniel: "ja"** på att köra fixen. Alla 37 policyer omskrivna (`auth.uid()` → `(select auth.uid())` osv.) — mekanisk ändring, identisk behörighetslogik, bara hur den räknas ut. **Verifierat direkt mot databasen:** kollade `pg_policies` för exakt nuvarande `qual`/`with_check` på alla 37 innan ändring (för att garantera att bara beräkningssättet ändrades, inte vem som får se vad), körde migreringen, och kollade Supabase-advisorn igen efteråt — `auth_rls_initplan`-varningen är nu helt borta (0 kvar, var 37).
+  2. **Viktmål-sidan gjorde 12 databasfrågor i två separata omgångar efter varandra**, fast den andra omgången aldrig berodde på resultatet av den första — bara en historisk uppdelning som kostade en extra nätverkstur tur-och-retur vid varje sidladdning. Slagits ihop till en enda `Promise.all` med alla 12 frågor samtidigt.
+  **Sidonotering (teknisk skuld, inte åtgärdat nu):** `app/supabase/schema.sql` (bygg-från-scratch-referensen) hade redan innan detta drivit isär från den skarpa databasen på minst ett ställe (annat policynamn på `activity_kudos`, en policy som finns i filen men inte längre live) — inte rört nu eftersom det är en separat, större uppstädning än det Daniel bad om.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 528/528 tester gröna (ren refaktorering av frågeordning, ingen ny logik att testa), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
