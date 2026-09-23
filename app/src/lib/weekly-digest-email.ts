@@ -1,8 +1,7 @@
-// "Veckans Recap" email — reuses renderNewsletterHtml's chrome (dark header
-// bar, white card, footer+unsubscribe) so the two emails read as one
-// product, but NOT its content model: this has a full narrative + stats +
-// adherence + look-ahead instead of one personalLine(), so it gets its own
-// render function rather than overloading the newsletter one.
+// "Veckans Recap" email — shares the same brand chrome (dark header bar,
+// white card, footer+unsubscribe) as the other transactional emails so they
+// all read as one product, but has its own full narrative + stats +
+// adherence + look-ahead content model, so it gets its own render function.
 import type { WeeklyDigestRecord } from './weekly-digest-generate'
 
 function fmtDateRange(startISO: string, endISO: string) {

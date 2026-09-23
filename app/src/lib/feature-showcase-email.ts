@@ -1,7 +1,9 @@
-// "Vad är nytt i DL Trainer" — kampanjmejl med riktiga skärmdumpar av appen,
-// separat mall från den vanliga fria-text-nyhetsbrevet (renderNewsletterHtml)
-// eftersom den här har en helt annan struktur (hjälte + rutnät av bildkort,
-// inte fritext). Design efter Daniels referens (apple.com/se/iphone-17):
+// "Vad är nytt i DL Trainer" — kampanjmejl med riktiga skärmdumpar av appen.
+// Skräddarsys om från grunden inför varje utskick (HERO/GRID nedan bytts ut
+// helt, inte en admin-redigerbar mall) — Daniel: "vi kommer inte skriva ihop
+// en text så och skicka ut, utan vi vill som tidigare bygga en HTML layout
+// med snygg design över alla nya funktioner." Design efter Daniels referens
+// (apple.com/se/iphone-17):
 // stora, djärva flerfärgade rubriker och skärmdumpar beskurna till att se ut
 // som de "läcker" ur en telefon (rundade hörn i skärm-radie + en liten
 // dynamic-island-pill inbränt ovanpå hjälte-bilden), inte platta skärmdumpar
@@ -14,50 +16,46 @@
 
 type Feature = { image: string; eyebrow: string; title: string; body: string }
 
-// Ledande funktion — den nya veckoplaneraren — får en egen, större
-// hjälte-sektion med Apple-stil flerfärgad rubrik istället för att stå i
-// ledet med de andra.
+// Uppdaterad 2026-09-23 — föregående version (Veckoplan-hero + Översikt/
+// Vänner/Hälsa/Mat/Rekord-rutnät) gick ut till alla 11 riktiga mottagare
+// 2026-07-19 (verifierat i newsletter_log innan denna omskrivning), så den
+// räknas som redan sedd. Byts nu ut helt mot vad som faktiskt är nytt sedan
+// dess, samma mönster: en ledande hjälte-funktion + ett rutnät med resten.
 const HERO = {
-  image: 'veckoplan.png',
-  eyebrow: 'Veckoplan.',
+  image: 'viktmal.png',
+  eyebrow: 'Viktmål.',
   titleParts: [
-    { text: 'Din tränare ', color: '#0e1113' },
-    { text: 'planerar veckan', color: '#ccd400' },
-    { text: ' åt dig.', color: '#0e1113' },
+    { text: 'Din kaloribudget, ', color: '#0e1113' },
+    { text: 'uträknad åt dig', color: '#ccd400' },
+    { text: '.', color: '#0e1113' },
   ],
-  body: 'Sätt ett mål tillsammans med AI-coachen, så får du "kör dessa denna veckan" istället för ett stelt schema månader framåt. Bocka av passen du kör — se svart på vitt hur väl du följer planen, vecka för vecka.',
+  body: 'Sätt en målvikt och ett datum — vi räknar ut en daglig kaloribudget och ett proteinmål som uppdateras automatiskt varje vecka utifrån hur det faktiskt går, med inbyggda säkerhetsgränser så budgeten aldrig blir orimlig.',
 }
 
 const GRID: Feature[] = [
   {
-    image: 'oversikt.png',
-    eyebrow: 'Översikt.',
-    title: 'Allt på ett ställe.',
-    body: 'Streak och veckobelastning mot ditt mål, sammanfattat varje gång du öppnar appen.',
-  },
-  {
-    image: 'vanner.png',
-    eyebrow: 'Vänner.',
-    title: 'Träna tillsammans, på distans.',
-    body: 'Följ vänner, ge kudos på deras pass och se deras träning dyka upp i ditt eget flöde.',
-  },
-  {
-    image: 'halsa.png',
-    eyebrow: 'Hälsa.',
-    title: 'Se din form utvecklas.',
-    body: 'VO2max, vilopuls, sömn och HRV — alltid märkt med källa, aldrig gissningar.',
-  },
-  {
-    image: 'mat.png',
+    image: 'yazio.png',
     eyebrow: 'Mat.',
-    title: 'Logga mat på tre sekunder.',
-    body: 'Sök, fota eller välj bland dina vanligaste — se direkt ätit mot bränt.',
+    title: 'Maten synkas av sig själv.',
+    body: 'Koppla YAZIO så fylls matdagboken i automatiskt varje natt — måltider, vatten och fasta, redo på Mat-sidan.',
   },
   {
-    image: 'rekord.png',
-    eyebrow: 'Rekord.',
-    title: 'Dina personbästa.',
-    body: 'Snabbaste 1/3/5/10 km, längsta pass, längsta streak — per sport.',
+    image: 'vanor.png',
+    eyebrow: 'Vanor.',
+    title: 'Bygg en streak som räknas.',
+    body: 'Kryssa av dagliga vanor som kreatin eller stretching, och få en riktig eloge vid 5 veckor, ett halvår eller ett helt år i rad.',
+  },
+  {
+    image: 'vanner-vecka.png',
+    eyebrow: 'Vänner.',
+    title: 'Se hur veckan går — för alla.',
+    body: 'Jämför din egen tid och sträcka denna vecka mot vännernas, rakt på Översikt.',
+  },
+  {
+    image: 'mcp.png',
+    eyebrow: 'Claude.',
+    title: 'Fråga din egen AI om din data.',
+    body: 'Koppla din egen Claude direkt till DL Trainer med en personlig nyckel — kaloriunderskott, TDEE-trend, träningshistorik, på begäran.',
   },
 ]
 
@@ -105,11 +103,9 @@ function gridRowsHtml(items: Feature[], appUrl: string, v: number): string {
 
 export function renderFeatureShowcaseHtml({
   name,
-  wrongVersionNote,
   unsubscribeUrl,
 }: {
   name: string
-  wrongVersionNote: boolean
   unsubscribeUrl: string
 }): string {
   const appUrl = process.env.NEXT_PUBLIC_APP_URL!
@@ -163,19 +159,6 @@ export function renderFeatureShowcaseHtml({
             Logga in och se vad som är nytt
           </a>
         </td></tr>
-
-        <tr><td style="padding:20px 32px 4px;" align="center">
-          <p style="margin:0;color:#ccd400;font-size:12px;font-weight:600;letter-spacing:0.02em;">
-            🌐 Nu på vår egen adress — dltrainer.se
-          </p>
-        </td></tr>
-
-        ${wrongVersionNote ? `
-        <tr><td style="padding:12px 32px 4px;">
-          <p style="margin:0;color:#999;font-size:12px;line-height:1.6;">
-            PS: Om du (eller någon du tipsat om appen) registrerade sig nyligen och landade på en gammal testversion av sidan — det är åtgärdat nu. Logga in via knappen ovan så hamnar du garanterat på rätt ställe.
-          </p>
-        </td></tr>` : ''}
 
         <tr><td style="padding:24px 32px 20px;border-top:1px solid #eee;">
           <p style="margin:0;color:#999;font-size:11px;">

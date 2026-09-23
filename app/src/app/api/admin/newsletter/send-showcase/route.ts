@@ -34,7 +34,6 @@ export async function POST(request: NextRequest) {
   for (const r of recipients as Recipient[]) {
     const html = renderFeatureShowcaseHtml({
       name: r.name ?? r.email.split('@')[0],
-      wrongVersionNote: true,
       unsubscribeUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/newsletter/unsubscribe?uid=${r.id}`,
     })
 

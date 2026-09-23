@@ -6,11 +6,9 @@
 // gets rubber-stamped, which defeats the point of a regression test here).
 import { describe, it, expect } from 'vitest'
 import { renderWeeklyDigestHtml } from './weekly-digest-email'
-import { renderNewsletterHtml } from './newsletter'
 import { renderFeatureShowcaseHtml } from './feature-showcase-email'
 import { renderResetPasswordHtml } from './reset-password-email'
 import type { WeeklyDigestRecord } from './weekly-digest-generate'
-import type { PersonalStats } from './newsletter'
 
 function expectDarkModeSafe(html: string) {
   expect(html.toLowerCase()).toContain('<!doctype html')
@@ -82,23 +80,9 @@ describe('renderWeeklyDigestHtml', () => {
   })
 })
 
-describe('renderNewsletterHtml', () => {
-  const stats: PersonalStats = { weekCount: 3, weekDistance: 21500, weekTime: 10800, dailyStreak: 4, weeklyStreak: 2 }
-
-  it('renders a valid, dark-mode-safe HTML document', () => {
-    const html = renderNewsletterHtml({ name: 'Jessica', appNews: 'Vi har lagt till en ny funktion.', stats, unsubscribeUrl: 'https://dltrainer.se/api/newsletter/unsubscribe?uid=1' })
-    expectDarkModeSafe(html)
-  })
-})
-
 describe('renderFeatureShowcaseHtml', () => {
   it('renders a valid, dark-mode-safe HTML document', () => {
-    const html = renderFeatureShowcaseHtml({ name: 'Fredrik', wrongVersionNote: false, unsubscribeUrl: 'https://dltrainer.se/api/newsletter/unsubscribe?uid=1' })
-    expectDarkModeSafe(html)
-  })
-
-  it('still renders dark-mode-safe with the wrongVersionNote branch on', () => {
-    const html = renderFeatureShowcaseHtml({ name: 'Fredrik', wrongVersionNote: true, unsubscribeUrl: 'https://dltrainer.se/api/newsletter/unsubscribe?uid=1' })
+    const html = renderFeatureShowcaseHtml({ name: 'Fredrik', unsubscribeUrl: 'https://dltrainer.se/api/newsletter/unsubscribe?uid=1' })
     expectDarkModeSafe(html)
   })
 })
