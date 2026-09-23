@@ -723,4 +723,13 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "1. Ta fram exempel och maila mig eller bygg mall. 2. Bygg ut startsidan med mer reklam om funktioner snyggt."** (uppföljning på Alex prestanda/marknadsförings-genomgång — nyhetsbrev sist skickat 19 juli, startsidan senast uppdaterad 10 aug, båda hunnit bli inaktuella mot allt som byggts sedan dess).
+  1. **Nyhetsbrevs-mallen uppdaterad** (`NewsletterSender.tsx`) — nytt förifyllt utkast som täcker allt sedan 19 juli: YAZIO-koppling, Viktmåls kaloribudget/proteinmål-uppgradering, viktresa-sammanfattningen, Vanor & milstolpar, vän-jämförelsen, matfoto-tillförlitligheten, och den nya MCP/Claude-kopplingen. Skickat som riktigt mejl till Daniel för granskning (samma adress som admin-kontot), redigerbart fritt i adminpanelen innan ett riktigt utskick till användarna.
+  2. **Startsidan utökad med tre nya funktionskort** (`LandingPage.tsx`): Viktmål & kaloribudget, Vanor & milstolpar, Fråga Claude om din träning (MCP) — samma design (FeatureCard/grid) som redan fanns, ingen ny stil introducerad. Hittade och fixade samtidigt en verklig sakfel: sidan påstod fortfarande "4 klockor/appar" och listade bara Garmin/Concept2/Strava/Polar — YAZIO (byggt för flera veckor sedan) saknades helt i reklamen, trots att det är en lika djup koppling som de andra fyra. Rättat till 5 överallt (hero-text, statistik-siffra, "Så funkar det"-steg 1, utrustningslistan) samt i sidans meta-description/Open Graph-text.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 528/528 tester gröna (textinnehåll, ingen ny logik), `next build` (dummy-env) ren. Startsidan dessutom faktiskt renderad och skärmdumpad lokalt (headless Chrome) för att bekräfta att det nya 9-korts-rutnätet fyller ut snyggt utan luckor eller överlapp — inte bara antaget från koden. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

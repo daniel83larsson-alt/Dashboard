@@ -112,7 +112,7 @@ export default function LandingPage() {
                 </Link>
               </div>
               <p className="text-muted text-xs mt-3.5">
-                <span className="text-fg font-medium">Ingen bindningstid</span> — koppla Garmin, Concept2, Strava eller Polar på under en minut.
+                <span className="text-fg font-medium">Ingen bindningstid</span> — koppla Garmin, Concept2, Strava, Polar eller YAZIO på under en minut.
               </p>
             </div>
 
@@ -171,7 +171,7 @@ export default function LandingPage() {
         <section className="border-y border-edge/60">
           <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
             <div><div className="font-mono font-bold text-accent text-3xl leading-none">9</div><div className="text-muted text-[13px] mt-2">AI-coacher, en per sportgren</div></div>
-            <div><div className="font-mono font-bold text-accent text-3xl leading-none">4</div><div className="text-muted text-[13px] mt-2">Klockor &amp; appar som synkas direkt</div></div>
+            <div><div className="font-mono font-bold text-accent text-3xl leading-none">5</div><div className="text-muted text-[13px] mt-2">Klockor &amp; appar som synkas direkt</div></div>
             <div><div className="font-mono font-bold text-accent text-3xl leading-none">24/7</div><div className="text-muted text-[13px] mt-2">Coachning tillgänglig dygnet runt</div></div>
             <div><div className="font-mono font-bold text-accent text-3xl leading-none">1</div><div className="text-muted text-[13px] mt-2">Dashboard för hela din träning</div></div>
           </div>
@@ -196,13 +196,22 @@ export default function LandingPage() {
               AI-genererad plan som räknar om sig när du missar ett pass, istället för att strunta i det.
             </FeatureCard>
             <FeatureCard icon="🍽️" title="Mat & kalorier">
-              Fota, sök eller snabbval — se vad du ätit mot vad du bränt, utan att räkna för hand.
+              Fota, sök, snabbval — eller synka automatiskt från YAZIO. Se vad du ätit mot vad du bränt, utan att räkna för hand.
+            </FeatureCard>
+            <FeatureCard icon="🎯" title="Viktmål & kaloribudget">
+              Sätt en målvikt och ett datum — din dagliga kaloribudget och ditt proteinmål räknas ut åt dig och uppdateras automatiskt varje vecka utifrån hur det faktiskt går.
             </FeatureCard>
             <FeatureCard icon="🏅" title="Rekord & pulszoner">
               Personbästa uppdateras automatiskt efter varje pass. Inga fler egna Excel-ark.
             </FeatureCard>
             <FeatureCard icon="👥" title="Community" wide>
               Se vännernas pass, heja med en tumme upp, håll koll på gemensamma streaks — träningen blir lättare att hålla igång när någon annan ser den.
+            </FeatureCard>
+            <FeatureCard icon="🔥" title="Vanor & milstolpar">
+              Kryssa av dagliga vanor som kreatin eller stretching och bygg en streak — få en riktig eloge när du når 5 veckor, ett halvår eller ett helt år i rad.
+            </FeatureCard>
+            <FeatureCard icon="🤖" title="Fråga Claude om din träning">
+              Koppla din egen Claude direkt till din data med en personlig nyckel — kaloriunderskott, TDEE-trend, träningshistorik. Fråga precis vad du vill.
             </FeatureCard>
           </div>
         </section>
@@ -215,7 +224,7 @@ export default function LandingPage() {
           </div>
           <div className="grid sm:grid-cols-3 gap-4">
             <Step n="01 — ANSLUT" title="Koppla din klocka">
-              Garmin, Concept2, Strava eller Polar — dina pass och din hälsodata börjar synka direkt, ingen manuell inmatning.
+              Garmin, Concept2, Strava, Polar eller YAZIO — dina pass, din mat och din hälsodata börjar synka direkt, ingen manuell inmatning.
             </Step>
             <Step n="02 — BERÄTTA" title="Sätt ett mål">
               Ett lopp, ett antal pass i veckan, eller bara &quot;må bättre&quot; — tränarteamet planerar utifrån det du faktiskt vill.
@@ -233,7 +242,7 @@ export default function LandingPage() {
             <h2 className="text-[1.8rem] sm:text-[2.1rem] font-bold mt-3 text-balance">Du har redan en klocka. Nu kopplar vi ihop den med resten av din träning.</h2>
           </div>
           <div className="flex flex-wrap gap-3">
-            {['Garmin', 'Concept2 PM5', 'Strava', 'Polar'].map(w => (
+            {['Garmin', 'Concept2 PM5', 'Strava', 'Polar', 'YAZIO'].map(w => (
               <span key={w} className="font-mono text-[13px] bg-card border border-edge rounded-full px-4 py-2.5 flex items-center gap-2">
                 <span className="w-1.5 h-1.5 rounded-full bg-lcd" />{w}
               </span>

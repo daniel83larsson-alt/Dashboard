@@ -4,17 +4,18 @@ import { useState } from 'react'
 
 // Förifyllt utkast med de senaste användarvända nyheterna — admin kan
 // redigera fritt innan utskick, det här är bara en startpunkt så man slipper
-// skriva ihop en sammanfattning från noll varje gång.
-const DRAFT_SUBJECT = 'Nytt i DL Trainer — VO2max, belastning, rörlighet och mer'
+// skriva ihop en sammanfattning från noll varje gång. Uppdaterat 2026-09-23
+// (föregående utskick var 2026-07-19) med allt som hänt sedan dess.
+const DRAFT_SUBJECT = 'Nytt i DL Trainer — kaloribudget, YAZIO, vanor och Claude-koppling'
 const DRAFT_NEWS = [
-  'Nu kan du se ditt VO2max på Hälsa-sidan — antingen hämtat direkt från Garmin eller ett eget beräknat estimat, alltid tydligt märkt med källa och datum.',
-  'Ny "Belastning"-ruta på Översikt visar hur din veckoträning ligger till mot ditt veckomål (eller ett rullande snitt om du inte satt något mål än).',
-  'Rörlighet — en ny sida där du sätter ihop ett stretch-/mobilitetspass för valfri kroppsdel, loggas som ett vanligt pass.',
-  'Rutter — sök löp-, cykel- och vandringsleder nära dig eller en valfri plats, med karta.',
-  'Roddpass från Concept2 visar nu riktiga delsträckor (split-tider) på passdetaljsidan.',
-  'Kettlebell är nu en egen träningstyp i "Logga pass", med snabbval för de vanligaste övningarna.',
-  'Insikter är omarbetat — nu med egna specialister för sömn, steg, mental träning, styrka och rörlighet, inte bara en generell sammanfattning.',
-  'Rekord har flyttat till en egen sida i menyn, med snabbaste 1/3/5/10 km för alla dina sporter.',
+  'YAZIO kan nu kopplas ihop med DL Trainer — din matdagbok synkas automatiskt varje natt, med måltidsuppdelning, vatten, fasta och viktresa direkt på Mat-sidan. Ingen manuell inmatning behövs längre om du redan använder YAZIO.',
+  'Viktmål har fått en rejäl uppgradering: sätt en målvikt och ett datum, så räknar vi ut en daglig kaloribudget och ett proteinmål som uppdateras automatiskt varje vecka utifrån hur det faktiskt går — med inbyggda säkerhetsgränser så budgeten aldrig blir orimlig.',
+  'Nytt på Viktmål: en liten sammanfattning direkt under procentbaren — hur mycket du gått ner, hur många dagar och cm sedan starten.',
+  'Vanor — kryssa av dagliga eller egna-intervall-vanor (kreatin, stretching, vad du vill), bygg en streak, och få en riktig eloge när du når 5 veckor, ett halvår eller ett helt år i rad.',
+  '"Vänner denna vecka" på Översikt — se hur länge och långt dina vänner tränat den här veckan, med dina egna siffror med som referens.',
+  'Ny AI-assisterad matbild-analys blev pålitligare — färre "nätverksfel" när du fotar mat, bilder komprimeras nu innan de skickas.',
+  'Nytt: koppla din egen Claude direkt till din träningsdata via en personlig nyckel på Profil-sidan. Fråga om ditt kaloriunderskott, din TDEE-trend, ett specifikt datums matlogg eller din träningshistorik — svaret kommer från dina egna, riktiga siffror.',
+  'Logga pass i efterhand med automatiskt uträknade kalorier, push-notiser för streaks och nya synkade pass, och en rad mindre buggfixar (bl.a. stegsnitt och pulszoner för ihopslagna Garmin+Concept2-pass).',
 ].join('\n')
 
 export default function NewsletterSender({ recipientCount }: { recipientCount: number }) {

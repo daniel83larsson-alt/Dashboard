@@ -5,11 +5,11 @@ import LandingPage from '@/components/LandingPage'
 
 export const metadata: Metadata = {
   title: 'DL Trainer — Din AI-tränare, dygnet runt',
-  description: 'Samla dina pass, sömn, mat och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava och Polar. Gratis att komma igång.',
+  description: 'Samla dina pass, sömn, mat, kaloribudget och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava, Polar och YAZIO. Gratis att komma igång.',
   alternates: { canonical: '/' },
   openGraph: {
     title: 'DL Trainer — Din AI-tränare, dygnet runt',
-    description: 'Samla dina pass, sömn, mat och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava och Polar.',
+    description: 'Samla dina pass, sömn, mat, kaloribudget och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava, Polar och YAZIO.',
     url: '/',
     siteName: 'DL Trainer',
     locale: 'sv_SE',
