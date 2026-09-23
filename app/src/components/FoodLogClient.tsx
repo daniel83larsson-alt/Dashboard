@@ -109,12 +109,31 @@ function fmtTime(iso: string) {
 function fmtDateLabel(dateKey: string) {
   return new Date(`${dateKey}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
 }
-function fileToBase64(file: File): Promise<string> {
+// Resizes+recompresses to JPEG before upload — a raw phone photo (often
+// several MB) times up to MAX_LOG_PHOTOS would otherwise blow past
+// Vercel's ~4.5MB request-body limit for this route's serverless function,
+// which the client then misreports as "Nätverksfel" (see FoodLogClient's
+// generic catch blocks) instead of the real payload-too-large cause.
+function resizeImageFile(file: File, maxDim = 1800, quality = 0.85): Promise<PendingPhoto> {
   return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1] ?? '')
-    reader.onerror = reject
-    reader.readAsDataURL(file)
+    const url = URL.createObjectURL(file)
+    const img = new Image()
+    img.onload = () => {
+      const scale = Math.min(1, maxDim / Math.max(img.width, img.height))
+      const w = Math.round(img.width * scale)
+      const h = Math.round(img.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      const ctx = canvas.getContext('2d')
+      URL.revokeObjectURL(url)
+      if (!ctx) { reject(new Error('Kunde inte skapa canvas-kontext')); return }
+      ctx.drawImage(img, 0, 0, w, h)
+      const dataUrl = canvas.toDataURL('image/jpeg', quality)
+      resolve({ data: dataUrl.split(',')[1] ?? '', mimeType: 'image/jpeg' })
+    }
+    img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Kunde inte läsa bilden')) }
+    img.src = url
   })
 }
 
@@ -454,7 +473,7 @@ export default function FoodLogClient({
     const remaining = MAX_LOG_PHOTOS - logPhotos.length
     const toAdd = Array.from(files).slice(0, Math.max(0, remaining))
     try {
-      const encoded = await Promise.all(toAdd.map(async f => ({ data: await fileToBase64(f), mimeType: f.type })))
+      const encoded = await Promise.all(toAdd.map(f => resizeImageFile(f)))
       setLogPhotos(prev => [...prev, ...encoded])
     } catch {
       setError('Kunde inte läsa bilden')

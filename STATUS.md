@@ -705,4 +705,12 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "Får ofta nätverksfel när jag försöker bildsöka efter mat. Varför?"** Grundorsak: `fileToBase64` i `FoodLogClient.tsx` läste in fotot rakt av, i full upplösning, utan komprimering — och upp till 4 sådana foton (`MAX_LOG_PHOTOS`) skickas i samma anrop till `/api/food/estimate`. Vercels serverless-funktioner (Node.js-runtime, det denna route kör på) har en hård gräns på ~4,5 MB per request-body på plattformsnivå — går INTE att höja via `vercel.json`, till skillnad från appens egna gränser (`MAX_IMAGE_BASE64_LENGTH`/`MAX_IMAGES` i routen). Redan ETT fullupplöst mobilfoto ligger ofta över den gränsen, och när plattformen avvisar requesten kommer svaret inte som JSON — vilket får klientens `res.json()` att kasta ett fel, som fångas av det generella `catch { setError('Nätverksfel') }`. Alltså: inte ett nätverksproblem, utan för stora bilder som aldrig ens når vår egen kod.
+  **Fix:** `fileToBase64` ersatt med `resizeImageFile` — skalar ner varje bild till max 1800px (canvas) och komprimerar till JPEG kvalitet 0,85 innan uppladdning. Gott om skärpa kvar för Gemini att känna igen en maträtt eller läsa en näringsvärdesetikett, men en bråkdel av filstorleken (typiskt några hundra KB istället för flera MB) — håller sig gott och väl under både Vercels plattformsgräns och appens egna gränser även med alla 4 bilder samtidigt.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 528/528 tester gröna (ren klient-sidig ändring, ingen ny testbar ren funktion — beteendet beror på canvas/Image, inte meningsfullt att enhetstesta), `next build` (dummy-env) ren. Committat och pushat till arbetsgrenen.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
