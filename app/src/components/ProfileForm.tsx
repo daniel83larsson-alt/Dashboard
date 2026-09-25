@@ -5,7 +5,6 @@ import { createSupabaseClient } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
-import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -38,16 +37,8 @@ type Profile = {
   coach_tone?: string | null
   kost_tracking_enabled?: boolean | null
   kost_tracked_metrics?: string[] | null
-  kost_tracked_meals?: string[] | null
-  kost_reminders_enabled?: boolean | null
-  kost_evening_guard_enabled?: boolean | null
-  kost_evening_guard_hour?: number | null
-  protein_goal_g?: number | null
   protein_goal_mode?: 'auto' | 'manual' | null
-  carb_goal_g?: number | null
-  fat_goal_g?: number | null
   deficit_tracking_enabled?: boolean | null
-  deficit_budget_kcal?: number | null
 }
 
 
@@ -103,28 +94,16 @@ export default function ProfileForm({
   const [birthYear, setBirthYear] = useState(profile?.birth_year?.toString() ?? '')
   const [biologicalSex, setBiologicalSex] = useState(profile?.biological_sex ?? '')
   const [calorieGoal, setCalorieGoal] = useState(profile?.daily_calorie_goal?.toString() ?? '')
+  // Everything about vad som spåras (mått, måltider, proteinmål, kvällsvakt
+  // m.m.) lever på Kost-sidan nu (KostSettingsCard) — this on/off toggle is
+  // the only Kost-related state left here, same pilot pattern as Viktmål
+  // (Daniel: "slå på funktionen där, sen ställer man in allt annat från
+  // sidan"). The "turn both on together → auto-check protein" behavior
+  // (Daniel: "Kör man viktmål och mat, så ska den automatiskt kryssa i och
+  // använda korrekt protein") now happens at save time instead — see the
+  // bothTrackingNewlyActive block in save() below, since kost_tracked_metrics
+  // itself is no longer edited in this component.
   const [kostTrackingEnabled, setKostTrackingEnabled] = useState(profile?.kost_tracking_enabled ?? false)
-  // Daniel: "Kör man viktmål och mat, så ska den automatiskt kryssa i och
-  // använda korrekt protein." — a one-time check at mount (not a render-time
-  // invariant) so a later, deliberate uncheck of the protein chip actually
-  // sticks instead of being fought back on every re-render. The two toggle
-  // buttons below do the equivalent one-time check for whichever flag gets
-  // turned on DURING this session.
-  const [kostTrackedMetrics, setKostTrackedMetrics] = useState<KostMetric[]>(() => {
-    const stored = (profile?.kost_tracked_metrics as KostMetric[] | null) ?? ['kcal']
-    const bothActive = (profile?.deficit_tracking_enabled ?? false) && (profile?.kost_tracking_enabled ?? false)
-    return bothActive && !stored.includes('protein') ? [...stored, 'protein'] : stored
-  })
-  const [kostTrackedMeals, setKostTrackedMeals] = useState<KostMeal[]>((profile?.kost_tracked_meals as KostMeal[] | null) ?? ['breakfast', 'lunch', 'dinner'])
-  const [kostRemindersEnabled, setKostRemindersEnabled] = useState(profile?.kost_reminders_enabled ?? true)
-  const [eveningGuardEnabled, setEveningGuardEnabled] = useState(profile?.kost_evening_guard_enabled ?? false)
-  const [eveningGuardHour, setEveningGuardHour] = useState(profile?.kost_evening_guard_hour ?? 20)
-  const [proteinGoalG, setProteinGoalG] = useState(profile?.protein_goal_g?.toString() ?? '')
-  const [proteinGoalMode, setProteinGoalMode] = useState<'auto' | 'manual'>(profile?.protein_goal_mode ?? 'auto')
-  const [proteinRefreezing, setProteinRefreezing] = useState(false)
-  const [proteinRefreezeMsg, setProteinRefreezeMsg] = useState('')
-  const [carbGoalG, setCarbGoalG] = useState(profile?.carb_goal_g?.toString() ?? '')
-  const [fatGoalG, setFatGoalG] = useState(profile?.fat_goal_g?.toString() ?? '')
   // Everything about WHAT the goal actually is (startvikt, målvikt,
   // måldatum, vardagsaktivitet, avstämning m.m.) lives on Viktmål now
   // (ViktmalSettingsCard) — this on/off toggle is the only Viktmål-related
@@ -163,43 +142,6 @@ export default function ProfileForm({
   const [pwSaved, setPwSaved] = useState(false)
   const router = useRouter()
 
-  function toggleKostMetric(m: KostMetric) {
-    setKostTrackedMetrics(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
-  }
-  function toggleKostMeal(m: KostMeal) {
-    setKostTrackedMeals(prev => prev.includes(m) ? prev.filter(x => x !== m) : [...prev, m])
-  }
-
-  // Checking the box back ON is a deliberate, rare action — same "manuell
-  // ändring triggar direkt" principle as delmål/admin-testknappen, so it
-  // recomputes right away instead of waiting for söndag. Unchecking it is
-  // just a local mode switch (Daniel: "vill man inte ha det utan ett eget
-  // så får man kryssa ut det") — the manual value only persists on Spara,
-  // same as any other field.
-  async function handleProteinModeToggle(nextAuto: boolean) {
-    if (!nextAuto) {
-      setProteinGoalMode('manual')
-      setProteinRefreezeMsg('')
-      return
-    }
-    setProteinGoalMode('auto')
-    setProteinRefreezing(true)
-    setProteinRefreezeMsg('')
-    try {
-      const res = await fetch('/api/protein/refreeze', { method: 'POST' })
-      const data = await res.json().catch(() => null)
-      if (res.ok && data?.result?.newGoalG != null) {
-        setProteinGoalG(String(data.result.newGoalG))
-        setProteinRefreezeMsg(`Uppdaterat: ${data.result.newGoalG} g/dag`)
-      } else {
-        setProteinRefreezeMsg('Kunde inte räkna om ännu — logga en vägning på Viktmål först.')
-      }
-    } catch {
-      setProteinRefreezeMsg('Nätverksfel')
-    }
-    setProteinRefreezing(false)
-  }
-
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
@@ -210,9 +152,6 @@ export default function ProfileForm({
     const parsedHeight = parseFloat(heightCm)
     const parsedBirthYear = parseInt(birthYear, 10)
     const parsedCalorieGoal = parseInt(calorieGoal, 10)
-    const parsedProteinGoal = parseFloat(proteinGoalG)
-    const parsedCarbGoal = parseFloat(carbGoalG)
-    const parsedFatGoal = parseFloat(fatGoalG)
 
     // Only fields actually touched in this form get written back — Daniel:
     // "känns som inställningar och de specifika sidorna kan krocka med
@@ -246,20 +185,26 @@ export default function ProfileForm({
     setIfChanged('weekly_digest_opt_out', !weeklyDigestEnabled, !!profile?.weekly_digest_opt_out)
     setIfChanged('coach_tone', coachTone, (profile?.coach_tone as CoachTone) ?? 'neutral')
     setIfChanged('kost_tracking_enabled', kostTrackingEnabled, profile?.kost_tracking_enabled ?? false)
-    setIfChanged('kost_tracked_metrics', kostTrackedMetrics.length ? kostTrackedMetrics : ['kcal'], (profile?.kost_tracked_metrics as KostMetric[] | null) ?? ['kcal'])
-    setIfChanged('kost_tracked_meals', kostTrackedMeals, (profile?.kost_tracked_meals as KostMeal[] | null) ?? ['breakfast', 'lunch', 'dinner'])
-    setIfChanged('kost_reminders_enabled', kostRemindersEnabled, profile?.kost_reminders_enabled ?? true)
-    setIfChanged('kost_evening_guard_enabled', eveningGuardEnabled, profile?.kost_evening_guard_enabled ?? false)
-    setIfChanged('kost_evening_guard_hour', eveningGuardHour, profile?.kost_evening_guard_hour ?? 20)
-    setIfChanged('protein_goal_g', proteinGoalG.trim() && !Number.isNaN(parsedProteinGoal) ? parsedProteinGoal : null, profile?.protein_goal_g ?? null)
-    setIfChanged('protein_goal_mode', proteinGoalMode, profile?.protein_goal_mode ?? 'auto')
-    setIfChanged('carb_goal_g', carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null, profile?.carb_goal_g ?? null)
-    setIfChanged('fat_goal_g', fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null, profile?.fat_goal_g ?? null)
     // The goal itself (start/target weight, target date, vardagsaktivitet,
     // avstämning m.m.) is set up on Viktmål now (ViktmalSettingsCard) — this
     // is just the on/off switch, same setIfChanged pattern as any other
     // simple field here.
     setIfChanged('deficit_tracking_enabled', deficitTrackingEnabled, profile?.deficit_tracking_enabled ?? false)
+
+    // Daniel: "Kör man viktmål och mat, så ska den automatiskt kryssa i och
+    // använda korrekt protein." kost_tracked_metrics itself is edited on
+    // Kost's own settings card now, not here, so this only needs to run the
+    // moment BOTH flags become active together in THIS save — a direct
+    // merge against the server's current metrics rather than local UI state
+    // that no longer exists in this component.
+    const bothTrackingWillBeActive = kostTrackingEnabled && deficitTrackingEnabled
+    const bothTrackingWereActiveBefore = (profile?.kost_tracking_enabled ?? false) && (profile?.deficit_tracking_enabled ?? false)
+    if (bothTrackingWillBeActive && !bothTrackingWereActiveBefore) {
+      const currentMetrics = (profile?.kost_tracked_metrics as string[] | null) ?? ['kcal']
+      if (!currentMetrics.includes('protein')) {
+        updates.kost_tracked_metrics = [...currentMetrics, 'protein']
+      }
+    }
 
     if (Object.keys(updates).length > 0) {
       await supabase.from('profiles').update(updates).eq('id', profile?.id ?? '')
@@ -267,20 +212,18 @@ export default function ProfileForm({
 
     // Narrow, deliberate exception to "Profil saves defer to Sunday" below:
     // protein just got auto-checked-in as part of turning on Viktmål+Kost
-    // together (see the two toggle onClick handlers above) — a real,
-    // rare bootstrap moment, not a casual field edit, so it's worth
-    // computing a real number right away instead of leaving "– g" showing
-    // for up to a week. Only fires the FIRST time protein becomes tracked
-    // this save, and only in auto mode (a manual value the user is about
-    // to type shouldn't be clobbered by a server round-trip).
+    // together above — a real, rare bootstrap moment, not a casual field
+    // edit, so it's worth computing a real number right away instead of
+    // leaving "– g" showing on Kost for up to a week. Only fires the FIRST
+    // time protein becomes tracked this save, and only in auto mode (a
+    // manual value the user has already set shouldn't be clobbered by a
+    // server round-trip).
     const proteinNewlyTracked = Array.isArray(updates.kost_tracked_metrics)
       && (updates.kost_tracked_metrics as string[]).includes('protein')
       && !((profile?.kost_tracked_metrics as string[] | null) ?? []).includes('protein')
-    if (proteinNewlyTracked && proteinGoalMode === 'auto') {
+    if (proteinNewlyTracked && (profile?.protein_goal_mode ?? 'auto') === 'auto') {
       try {
-        const res = await fetch('/api/protein/refreeze', { method: 'POST' })
-        const data = await res.json().catch(() => null)
-        if (res.ok && data?.result?.newGoalG != null) setProteinGoalG(String(data.result.newGoalG))
+        await fetch('/api/protein/refreeze', { method: 'POST' })
       } catch { /* Sunday's cron will pick it up regardless */ }
     }
 
@@ -697,11 +640,15 @@ export default function ProfileForm({
         </div>
       </div>
 
-      {/* Kost-mål */}
+      {/* Kost-mål — bara av/på-växeln bor kvar här. Allt om VAD som spåras
+          (mått, måltider, proteinmål, kvällsvakt m.m.) ställs in på
+          Kost-sidan själv nu (Daniel: "slå på funktionen där, sen ställer
+          man in allt annat från sidan") — se KostSettingsCard, samma
+          pilotmönster som Viktmål. */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Kost-mål</div>
-          <p className="text-muted text-xs">Frivillig spårning på Kost-sidan — kalender, dagliga mål och påminnelser om du glömmer logga en måltid. Av som standard.</p>
+          <p className="text-muted text-xs">Frivillig spårning på Kost-sidan — kalender, dagliga mål och påminnelser om du glömmer logga en måltid. Av som standard. Resten av inställningarna hittar du på Kost-sidan när den är på.</p>
         </div>
         <label className="flex items-center justify-between">
           <span className="text-sm text-fg">Spåra mål på Kost-sidan</span>
@@ -709,134 +656,16 @@ export default function ProfileForm({
             type="button"
             role="switch"
             aria-checked={kostTrackingEnabled}
-            onClick={() => {
-              setKostTrackingEnabled(v => {
-                const next = !v
-                // Daniel: "Kör man viktmål och mat, så ska den automatiskt
-                // kryssa i och använda korrekt protein" — one-time check at
-                // the moment this becomes the SECOND of the two flags to
-                // turn on, not a standing invariant (so a later, deliberate
-                // uncheck of the protein chip sticks).
-                if (next && deficitTrackingEnabled) setKostTrackedMetrics(prev => prev.includes('protein') ? prev : [...prev, 'protein'])
-                return next
-              })
-            }}
+            onClick={() => setKostTrackingEnabled(v => !v)}
             className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${kostTrackingEnabled ? 'bg-accent' : 'bg-edge'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-bg transition-transform ${kostTrackingEnabled ? 'translate-x-5' : ''}`} />
           </button>
         </label>
-
         {kostTrackingEnabled && (
-          <>
-            <div>
-              <label className="text-muted text-xs block mb-2">Vad vill du hålla koll på?</label>
-              <div className="flex flex-wrap gap-2">
-                {KOST_METRICS.map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => toggleKostMetric(m)}
-                    className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${kostTrackedMetrics.includes(m) ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
-                  >
-                    {kostMetricLabel(m)}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {kostTrackedMetrics.includes('protein') && (
-              <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="text-muted text-xs">Proteinmål (g/dag)</label>
-                  <label className="flex items-center gap-1.5 text-[11px] text-muted cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={proteinGoalMode === 'auto'}
-                      onChange={e => handleProteinModeToggle(e.target.checked)}
-                      className="w-3.5 h-3.5 accent-accent"
-                    />
-                    Räkna automatiskt
-                  </label>
-                </div>
-                {proteinGoalMode === 'auto' ? (
-                  <div className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm flex items-center justify-between">
-                    <span className="font-mono text-fg">{proteinGoalG.trim() ? `${proteinGoalG} g` : '– g'}</span>
-                    <span className="text-muted text-[11px]">beräknas varje söndag utifrån ditt viktsnitt</span>
-                  </div>
-                ) : (
-                  <input type="number" min={0} step={5} inputMode="numeric" value={proteinGoalG} onChange={e => setProteinGoalG(e.target.value)} placeholder="t.ex. 150" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-                )}
-                {proteinRefreezeMsg && <p className="text-muted text-xs mt-1.5">{proteinRefreezing ? 'Räknar om...' : proteinRefreezeMsg}</p>}
-              </div>
-            )}
-            {kostTrackedMetrics.includes('carb') && (
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Kolhydratmål (g/dag)</label>
-                <input type="number" min={0} step={5} inputMode="numeric" value={carbGoalG} onChange={e => setCarbGoalG(e.target.value)} placeholder="t.ex. 250" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-              </div>
-            )}
-            {kostTrackedMetrics.includes('fat') && (
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Fettmål (g/dag)</label>
-                <input type="number" min={0} step={5} inputMode="numeric" value={fatGoalG} onChange={e => setFatGoalG(e.target.value)} placeholder="t.ex. 70" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-              </div>
-            )}
-            {kostTrackedMetrics.includes('kcal') && !calorieGoal.trim() && !(deficitTrackingEnabled && profile?.deficit_budget_kcal != null) && (
-              <p className="text-amber-400 text-xs -mt-2">Ange ett dagligt kalorimål ovan under &quot;Kropp &amp; kalorier&quot; (eller sätt upp ett viktmål) för att kalorier ska räknas med i kalendern.</p>
-            )}
-
-            <div>
-              <label className="text-muted text-xs block mb-2">Vilka måltider vill du logga?</label>
-              <div className="flex flex-wrap gap-2">
-                {KOST_MEALS.map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => toggleKostMeal(m)}
-                    className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${kostTrackedMeals.includes(m) ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
-                  >
-                    {kostMealLabel(m)}
-                  </button>
-                ))}
-              </div>
-              <p className="text-muted text-xs mt-1.5">Kvällsmat och mellanmål går att logga flera gånger per dag — resten räknas som klara efter första loggningen.</p>
-            </div>
-
-            <label className="flex items-center gap-2.5 text-sm text-fg">
-              <input
-                type="checkbox"
-                checked={kostRemindersEnabled}
-                onChange={e => setKostRemindersEnabled(e.target.checked)}
-                className="w-4 h-4 accent-accent"
-              />
-              Påminn mig om jag glömmer logga en måltid
-            </label>
-
-            <div>
-              <label className="flex items-center gap-2.5 text-sm text-fg">
-                <input
-                  type="checkbox"
-                  checked={eveningGuardEnabled}
-                  onChange={e => setEveningGuardEnabled(e.target.checked)}
-                  className="w-4 h-4 accent-accent"
-                />
-                Fråga innan snabbval loggas sent på kvällen
-              </label>
-              <p className="text-muted text-xs mt-1.5 ml-6">Förhindrar att samma mellanmål råkar loggas två gånger vid snabb tapping på kvällen — frågar om du vill ersätta senaste posten eller lägga till en till.</p>
-              {eveningGuardEnabled && (
-                <div className="ml-6 mt-2 flex items-center gap-2">
-                  <span className="text-muted text-xs">Från klockan</span>
-                  <input
-                    type="number" min={0} max={23} step={1} inputMode="numeric"
-                    value={eveningGuardHour}
-                    onChange={e => setEveningGuardHour(Math.min(23, Math.max(0, parseInt(e.target.value, 10) || 0)))}
-                    className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
-                  />
-                </div>
-              )}
-            </div>
-          </>
+          <p className="text-muted text-xs">
+            <a href="/dashboard/mat" className="text-accent hover:underline">Gå till Kost</a> för att ställa in vad du vill hålla koll på, måltider och påminnelser.
+          </p>
         )}
       </div>
 
@@ -856,13 +685,7 @@ export default function ProfileForm({
             type="button"
             role="switch"
             aria-checked={deficitTrackingEnabled}
-            onClick={() => {
-              setDeficitTrackingEnabled(v => {
-                const next = !v
-                if (next && kostTrackingEnabled) setKostTrackedMetrics(prev => prev.includes('protein') ? prev : [...prev, 'protein'])
-                return next
-              })
-            }}
+            onClick={() => setDeficitTrackingEnabled(v => !v)}
             className={`relative w-11 h-6 rounded-full transition-colors flex-shrink-0 ${deficitTrackingEnabled ? 'bg-accent' : 'bg-edge'}`}
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-bg transition-transform ${deficitTrackingEnabled ? 'translate-x-5' : ''}`} />

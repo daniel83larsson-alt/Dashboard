@@ -19,6 +19,7 @@ import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
 import { estimateBurnedKcalForDay, estimateBurnedKcalForStatus } from '@/lib/burned-calories'
 import type { CalorieGoalSource } from '@/lib/calorie-goal'
 import { dayCalorieStatus, DAY_CALORIE_STATUS_TEXT_COLOR, DAY_CALORIE_STATUS_BG } from '@/lib/day-calorie-status'
+import KostSettingsCard from '@/components/KostSettingsCard'
 
 // Same fix as ProfileForm.tsx's copy — native number inputs can silently
 // reject a Swedish decimal comma ("1,5"), so decimal fields here use
@@ -64,8 +65,10 @@ export type KostSettings = {
   trackedMeals: KostMeal[]
   calorieGoal: number | null
   proteinGoalG: number | null
+  proteinGoalMode: 'auto' | 'manual'
   carbGoalG: number | null
   fatGoalG: number | null
+  remindersEnabled: boolean
   eveningGuardEnabled: boolean
   eveningGuardHour: number
 }
@@ -154,6 +157,7 @@ export default function FoodLogClient({
   garminTotalCaloriesByDate,
   garminActiveCaloriesByDate,
   garminCorrection,
+  userId,
 }: {
   dailyCalorieGoal: number | null
   calorieGoalSource: CalorieGoalSource | null
@@ -171,6 +175,7 @@ export default function FoodLogClient({
   garminTotalCaloriesByDate: Record<string, number>
   garminActiveCaloriesByDate: Record<string, number>
   garminCorrection: number
+  userId: string
 }) {
   const router = useRouter()
   const hasYazio = yazioHistory.length > 0
@@ -190,6 +195,14 @@ export default function FoodLogClient({
   const trendGoals = trendDays.map(d => d.kcalGoal).filter((g): g is number => g != null)
   const trendAvgGoal = trendGoals.length ? Math.round(trendGoals.reduce((s, g) => s + g, 0) / trendGoals.length) : null
   const [manualOpen, setManualOpen] = useState(!hasYazio)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Forces KostSettingsCard to remount with fresh server values whenever a
+  // field it owns changes from elsewhere (Sunday's cron recomputes
+  // protein_goal_g in auto mode independently of this page being open) —
+  // otherwise the card's own local state, seeded once on mount, would go
+  // stale and its next Spara would silently overwrite that change. Same
+  // pattern as ViktmalSettingsCard's resync key on Viktmål.
+  const settingsResyncKey = [kostSettings.trackedMetrics.join(','), kostSettings.trackedMeals.join(','), kostSettings.remindersEnabled, kostSettings.eveningGuardEnabled, kostSettings.eveningGuardHour, kostSettings.proteinGoalG, kostSettings.proteinGoalMode, kostSettings.carbGoalG, kostSettings.fatGoalG].join('|')
   const [yazioSyncing, setYazioSyncing] = useState(false)
   const [yazioSyncMsg, setYazioSyncMsg] = useState('')
   const [feedback, setFeedback] = useState('')
@@ -694,6 +707,39 @@ export default function FoodLogClient({
           </a>
         )}
       </div>
+
+      {/* Inställningar — flyttat hit från Profil, samma pilotmönster som
+          Viktmål (Daniel: "slå på funktionen där, sen ställer man in allt
+          annat från sidan"). Endast av/på-växeln ("Spåra mål på
+          Kost-sidan") bor kvar i Profil. Ihopfälld som standard eftersom
+          Kost, till skillnad från Viktmål, inte kräver någon obligatorisk
+          uppsättning innan sidan är användbar. */}
+      {kostSettings.trackingEnabled && (
+        <div className="bg-card border border-edge rounded-2xl p-4">
+          <button type="button" onClick={() => setSettingsOpen(v => !v)} className="flex items-center justify-between w-full">
+            <span className="text-xs text-muted uppercase tracking-wider">Inställningar</span>
+            <span className="text-muted text-xs">{settingsOpen ? '▾' : '▸'}</span>
+          </button>
+          {settingsOpen && (
+            <div className="mt-4 pt-4 border-t border-edge">
+              <KostSettingsCard
+                key={settingsResyncKey}
+                userId={userId}
+                trackedMetrics={kostSettings.trackedMetrics}
+                trackedMeals={kostSettings.trackedMeals}
+                remindersEnabled={kostSettings.remindersEnabled}
+                eveningGuardEnabled={kostSettings.eveningGuardEnabled}
+                eveningGuardHour={kostSettings.eveningGuardHour}
+                proteinGoalG={kostSettings.proteinGoalG}
+                proteinGoalMode={kostSettings.proteinGoalMode}
+                carbGoalG={kostSettings.carbGoalG}
+                fatGoalG={kostSettings.fatGoalG}
+                hasCalorieGoal={dailyCalorieGoal != null}
+              />
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Upplägg-förslag — Daniel: "kanske få upp ett tips eller något på
           minimalt kcal upplägg... och ett maxat, men ändå under plan.

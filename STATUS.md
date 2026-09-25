@@ -798,4 +798,15 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "Snyggt! Kör på kost-sidan med."** Samma flytt som Viktmål-piloten, applicerad på Kost/Mat: bara "Spåra mål på Kost-sidan"-växeln bor kvar i Profil, allt om vad som faktiskt spåras (mått, proteinmål med auto/manuellt läge, kolhydrat-/fettmål, vilka måltider, påminnelser, kvällsvakten) flyttat till en ny `KostSettingsCard` direkt på Kost-sidan, ihopfälld som standard (Kost har till skillnad från Viktmål inget obligatoriskt uppsättningssteg, så en uppfälld variant behövdes aldrig).
+  **En verklig cross-toggle-komplikation hittad och löst under flytten:** koden hade sedan tidigare en regel (Daniel: "Kör man viktmål och mat, så ska den automatiskt kryssa i och använda korrekt protein") som kryssade i proteinspårning automatiskt när båda växlarna blev på samtidigt — implementerad som att båda växlarnas onClick direkt manipulerade `kost_tracked_metrics`-state. Efter flytten finns det state:t inte längre i Profil (det bor på Kost-sidan), så samma regel byggdes om till en sparningstidpunkts-kontroll: vid Spara i Profil jämförs det NYA slutresultatet av båda växlarna mot vad de VAR innan sparningen, och bara om båda precis blivit på tillsammans läggs protein till direkt mot servern (mot profilens faktiska sparade mått, inte lokalt state) — samma beteende, men mer robust (spelar ingen roll i vilken ordning eller hur många gånger man klickat före Spara, bara slutresultatet räknas).
+  **En andra stale-data-risk hittad proaktivt** (samma mönster som Viktmål-piloten, samma regel: hittar man en gång, leta överallt): söndagscronen räknar om `protein_goal_g` automatiskt i auto-läge oavsett om någon har Kost-sidan öppen — precis som Viktmåls Garmin-korrigering. `KostSettingsCard` fick samma resync-nyckel-lösning så en öppen flik alltid tvingas montera om med färska värden innan nästa sparning, istället för att riskera att skriva över en nyss omräknad söndagssiffra.
+  **Verifierat bortom tsc/lint/tester:** renderade Kost-sidan (ihopfälld och uppfälld, med alla mått/måltider/proteinläge/kvällsvakt ifyllda) och det nedbantade Profil-kortet med realistiska data på tillfälliga, oindexerade förhandsgranskningssidor och skärmdumpade allt — bekräftade befintlig visuell stil bevarad rakt av. Sidorna borttagna igen efteråt.
+  **Ärligt om vad som inte är livetestat:** samma begränsning som Viktmål-piloten — själva formulärsparningen i en riktig inloggad session (ingen service-role-token i den här sandlådan). Verifierat genom att läsa igenom hela det nya sparflödet steg för steg mot det gamla.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 534/534 tester oförändrat gröna (ren UI-omstrukturering), `next build` (dummy-env) ren. Committat och pushat.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
