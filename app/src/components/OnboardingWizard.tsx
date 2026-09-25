@@ -76,11 +76,21 @@ export default function OnboardingWizard({
     }
   }
 
+  // Same staleness guard as ProfileForm.tsx's own save() (setIfChanged) —
+  // both write these exact two columns, and this wizard's local state is a
+  // one-time snapshot from whenever it mounted. Without this check, opening
+  // the wizard and then finishing it after also saving different equipment/
+  // sports from Profil in another tab would silently revert that edit —
+  // the same bug class as "Mitt dygnsmål gick från 2150 till 2049".
   async function saveEquipmentStep() {
+    const updates: Record<string, unknown> = {}
+    if (JSON.stringify(equipment) !== JSON.stringify(initialEquipment)) updates.home_equipment = equipment
+    if (JSON.stringify(sports) !== JSON.stringify(initialSports)) updates.selected_sports = sports
+    if (Object.keys(updates).length === 0) return
     const supabase = createSupabaseClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return
-    await supabase.from('profiles').update({ home_equipment: equipment, selected_sports: sports }).eq('id', user.id)
+    await supabase.from('profiles').update(updates).eq('id', user.id)
   }
 
   async function goNext() {
