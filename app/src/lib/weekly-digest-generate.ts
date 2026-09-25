@@ -233,7 +233,7 @@ export async function generateWeeklyDigestForUser(
   ] = await Promise.all([
     supabase.from('profiles').select('llm_api_key_encrypted, coach_tone, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
-    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate')
+    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate, calories')
       .eq('user_id', userId).lt('start_date', nextWeekStart.toISOString()),
     supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('training_plans').select('id, plan_sessions(planned_date, is_rest, sport_type, title)')

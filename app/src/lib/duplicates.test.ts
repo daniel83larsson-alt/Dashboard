@@ -226,6 +226,29 @@ describe('dedupeForStats', () => {
     expect(result.map(a => a.id)).toEqual(['real'])
   })
 
+  it('rescues a real short "Workout" with substantial calories despite a near-zero moving_time', () => {
+    // Real incident (Conny, reported by Daniel): Garmin's generic "Workout"
+    // type doesn't track continuous movement, so a real 345 kcal strength
+    // session logged moving_time=26s and vanished from his calendar.
+    const realWorkout = row({ id: 'w', strava_id: 500, sport_type: 'Workout', moving_time: 26, calories: 345 })
+    const result = dedupeForStats([realWorkout])
+    expect(result.map(a => a.id)).toEqual(['w'])
+  })
+
+  it('still drops a genuine sync fragment even when calories is present but negligible', () => {
+    // Real production examples: Concept2 fragments with moving_time 14-42s
+    // all sat at 1-4 kcal — nowhere near a real session's calorie count.
+    const fragment = row({ id: 'frag', strava_id: 500, moving_time: 22, calories: 4 })
+    const result = dedupeForStats([fragment])
+    expect(result).toHaveLength(0)
+  })
+
+  it('treats a missing calories field the same as before this rescue existed (no rescue)', () => {
+    const fragment = row({ id: 'frag', strava_id: 500, moving_time: 8 })
+    const result = dedupeForStats([fragment])
+    expect(result).toHaveLength(0)
+  })
+
   it('preserves input ordering (callers rely on index 0 being the latest pass)', () => {
     const newest = row({ id: 'a', strava_id: 500, start_date: '2026-07-15T08:00:00Z' })
     const oldest = row({ id: 'b', strava_id: 501, start_date: '2026-07-01T08:00:00Z' })

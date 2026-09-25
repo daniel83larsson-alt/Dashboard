@@ -59,7 +59,7 @@ export default async function PassloggPage({
     // `source` behövs av samma anledning som ovan.
     supabase
       .from('activities')
-      .select('id, strava_id, source, sport_type, distance, moving_time, start_date')
+      .select('id, strava_id, source, sport_type, distance, moving_time, start_date, calories')
       .eq('user_id', user.id),
   ])
 

@@ -26,6 +26,11 @@ export type ActivityRow = {
   // forced to add it to every select() just to satisfy the type. See
   // rowSource() below for what happens when it's omitted.
   source?: string
+  // Optional — only read by dedupeForStats' sub-60s-fragment filter below, as
+  // a rescue signal for callers whose select() includes it. Omitted entirely
+  // (undefined) behaves exactly like 0: no rescue, same as before this field
+  // existed.
+  calories?: number | null
 }
 
 // The sync sources that can legitimately be the SAME real session arriving
@@ -314,7 +319,20 @@ export function isCleanCrossSourceGroup(group: ActivityRow[]): boolean {
 // "singles" and inflate every pass count downstream. Filtered only here, not
 // in splitMergedPairs, so the raw Passlogg list still shows every synced row
 // for manual cleanup — only the derived counts/totals exclude junk.
+//
+// Real incident (Conny, reported by Daniel): a real strength "Workout" —
+// 345 kcal logged — sat at moving_time=26s and got silently dropped here,
+// so it never showed as a trained day on his calendar. Garmin's generic
+// "Workout" type doesn't track continuous movement the way a run does (lots
+// of standing still between sets), so moving_time alone badly undercounts a
+// real session for that sport. Checked every activity under the 60s floor
+// in production: genuine sync fragments (a few Concept2 strokes, a GPS
+// blip) all sit at 0-8 kcal; every real short "Workout" found sits at 47+
+// kcal — a wide, clean gap. calories rescues a real session moving_time
+// alone would wrongly discard; a caller whose select() omits calories keeps
+// the exact old moving_time-only behavior (undefined ?? 0 never rescues).
 const MIN_REAL_SESSION_SECONDS = 60
+const MIN_REAL_SESSION_CALORIES = 20
 
 export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
   const { groups } = splitMergedPairs(activities)
@@ -334,7 +352,7 @@ export function dedupeForStats<T extends ActivityRow>(activities: T[]): T[] {
     hrByPrimaryId.set(g.primary.id, preferredHr([g.primary, ...g.partners]))
   }
   return activities
-    .filter(a => !dropped.has(a.id) && a.moving_time >= MIN_REAL_SESSION_SECONDS)
+    .filter(a => !dropped.has(a.id) && (a.moving_time >= MIN_REAL_SESSION_SECONDS || (a.calories ?? 0) >= MIN_REAL_SESSION_CALORIES))
     .map(a => {
       const zones = zonesByPrimaryId.get(a.id)
       const hr = hrByPrimaryId.get(a.id)
