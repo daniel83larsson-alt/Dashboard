@@ -775,4 +775,14 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "För Conny så står det ange vikt, men han har gjort det. Bugg?"** Kollade Connys riktiga profildata: `weight_kg` var faktiskt `null` — bannern ("Denna info saknas: Vikt") stämde alltså mot databasen, ingen falsk varning i sig. Men Conny HADE fyllt i en vikt: han satte upp ett Viktmål samma dag (startvikt 91 kg, målvikt 85 kg) — den vikten hamnar i `deficit_start_weight_kg`, ett helt separat fält från det allmänna `weight_kg` som bannern kollar. Profilsidans egna "Vikt (kg)"-fält blir dessutom skrivskyddat och byts mot en "loggas via Viktmål"-notis så fort ett mål är aktivt — så det fanns aldrig något kvarvarande fält att fylla i det allmänna värdet med. En helt begriplig fälla att gå i, inte ett misstag från Conny.
+  **Samma princip Daniel redan bestämt en gång** (`/api/body/log`: en riktig vägning uppdaterar alltid `profiles.weight_kg` också, "annars driver BMR/kaloriuträkning stale") gällde bara den dagliga vägningsrutan — inte det här andra stället en vikt faktiskt matas in (Viktmål-målsättningen). Fixat i `ProfileForm.tsx`: när målsektionen sparas och en startvikt finns, backfyller den nu `profiles.weight_kg` — men BARA om `weight_kg` var genuint tomt sedan innan och inte redan satts explicit i samma sparning, så en redan aktivt underhållen vikt (från riktiga Viktmål-vägningar) aldrig skrivs över av ett gammalt startvärde bara för att man senare ändrar målvikt eller datum.
+  **Rättade Connys befintliga data direkt** (samma regel: kod som är rätt löser inget förrän det som redan gick fel i produktion också är rättat) — `weight_kg` satt till 91 för hans konto, bekräftat i databasen efteråt. **Sökte igenom hela användarbasen** efter samma mönster (aktivt Viktmål + satt startvikt men `weight_kg` fortfarande null) — ingen annan användare påverkad just nu.
+  **Ärligt om vad som inte är livetestat:** själva formulär-sparningen i webbläsaren (kräver en inloggad session jag inte har i den här sandlådan) — fixen är verifierad genom att läsa igenom hela sparflödet steg för steg och genom att direkt rätta Connys redan-sparade data, inte genom att klicka igenom formuläret. Ingen ny automatisk test skriven — `ProfileForm.tsx` har inget testramverk sedan tidigare i den här kodbasen (stora, tillståndsfulla formulär testas inte här, bara rena funktioner i `lib/`), och att bygga ett enbart för den här raden kändes som fel avvägning.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 534/534 tester oförändrat gröna, `next build` ren. Committat och pushat.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

@@ -355,6 +355,23 @@ export default function ProfileForm({
         updates.deficit_override_signature = null
         updates.deficit_override_deficit_kcal = null
       }
+
+      // Real incident (Conny, reported by Daniel): he set up a Viktmål goal
+      // (startvikt 91 kg) but the dashboard kept nagging "Vikt saknas" —
+      // profiles.weight_kg stayed null because the general Vikt-fältet
+      // above is a separate input from Startvikt here, and once a goal is
+      // active that general field turns into a read-only "loggas via
+      // Viktmål"-notis (see the comment above it) so there was never a
+      // control left to fill it in with. A brand new goal's start weight
+      // genuinely IS your current weight at that moment, so it backfills
+      // profiles.weight_kg — but only when it's genuinely still unset and
+      // this same save didn't already set it explicitly, so an existing,
+      // properly-tracked weight (kept current by real Viktmål weigh-ins via
+      // /api/body/log) is never silently overwritten by an old start value
+      // when someone just edits their target weight or date later.
+      if (profile?.weight_kg == null && updates.weight_kg === undefined && deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight)) {
+        updates.weight_kg = parsedDeficitStartWeight
+      }
     }
 
     if (Object.keys(updates).length > 0) {
