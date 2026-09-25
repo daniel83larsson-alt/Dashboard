@@ -756,4 +756,11 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel: "Ny användare Conny säger att hans pass bakåt i tiden som är synkade inte visas i hans kalender, som gula. Kan du se hybriden-biten fungerar, så inget missas."** Kollade Connys riktiga data direkt i databasen istället för att gissa: 182 riktiga Garmin-pass, spridda jämnt över exakt ett år (2025-09-25 till 2026-09-24 — precis vid den kända 1-års-backfillgränsen för andra användare än Daniel, dvs. gränsen fungerar som den ska). **Kritiskt fynd:** hans Garmin-koppling skapades 2026-09-24 19:25 — bara timmar innan Daniel hörde av sig. **Verifierade den faktiska "hybrid"-koden** (aktivitets- + vane-prickar i samma kalendercell) genom att rendera den riktiga `ActivityCalendar`-komponenten med Connys exakta riktiga aktivitets- OCH vanedata på en tillfällig sida, och skärmdumpa september, augusti och juli var för sig (klickade faktiskt "föregående månad" i en riktig webbläsare, gissade inte) — alla tre månader visade prickarna helt korrekt, perfekt matchning mot databasen, aktivitets- och vane-prickar samexisterar rätt på samma dag. **Slutsats: ingen kodbugg hittad i kalenderlogiken.** Mest sannolika förklaringen: Conny kollade sin kalender precis efter att ha kopplat Garmin, innan hela årets bakåt-synk hunnit skrivas klart i databasen (vilket den nu har, bekräftat) — en förlegad vy, inte ett fel i koden. **Rekommendation till Conny:** stäng och öppna appen helt på nytt (inte bara byta sida i appen) — datan finns där och är verifierat korrekt nu. Hör av dig igen om det kvarstår efter det, då är det något annat.
+  **Verifierat:** ingen kodändring gjord (inget att fixa), städat bort testsidan efteråt, `git status` bekräftat rent.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".
