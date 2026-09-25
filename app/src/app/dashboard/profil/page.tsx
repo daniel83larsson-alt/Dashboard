@@ -4,8 +4,6 @@ import GoalsCard from '@/components/GoalsCard'
 import FriendsCard from '@/components/FriendsCard'
 import NotificationSettings from '@/components/NotificationSettings'
 import McpConnectorCard from '@/components/McpConnectorCard'
-import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
-import { TRAINING_LOOKBACK_DAYS as DEFICIT_TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS as DEFICIT_MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
 export default async function ProfilPage({
   searchParams,
@@ -52,25 +50,6 @@ export default async function ProfilPage({
   const stravaSynced = !!stravaActivity
   const polarSynced = !!polarActivity
   const savedOverview = (overviewRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content ?? ''
-
-  // Live preview for the Viktmål card below — same rolling-mean-including-
-  // rest-days definition lib/deficit-budget-refreeze.ts's real budget calc
-  // uses (imported constants, not a second copy), deduped so a Concept2+
-  // Garmin pair of the same session isn't counted twice. null (not 0)
-  // below the minimum history so the card shows the fallback-estimate
-  // chips instead of a thin, noisy real average.
-  const trainingLookbackStart = new Date()
-  trainingLookbackStart.setDate(trainingLookbackStart.getDate() - DEFICIT_TRAINING_LOOKBACK_DAYS)
-  const { data: recentActs } = await supabase
-    .from('activities')
-    .select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
-    .eq('user_id', user.id)
-    .gte('start_date', trainingLookbackStart.toISOString())
-  const dedupedRecentActs = dedupeForStats((recentActs ?? []) as (ActivityRow & { calories?: number | null })[])
-  const trainingDaysWithActivity = new Set(dedupedRecentActs.map(a => a.start_date.slice(0, 10))).size
-  const avgTrainingKcalRaw = trainingDaysWithActivity >= DEFICIT_MIN_TRAINING_HISTORY_DAYS
-    ? dedupedRecentActs.reduce((s, a) => s + (a.calories ?? 0), 0) / DEFICIT_TRAINING_LOOKBACK_DAYS
-    : null
 
   return (
     <div className="p-4 md:p-8 max-w-lg w-full mx-auto">
@@ -145,8 +124,6 @@ export default async function ProfilPage({
         polarSynced={polarSynced}
         yazioSynced={yazioSynced}
         savedContext={savedContext}
-        avgTrainingKcalRaw={avgTrainingKcalRaw}
-        isAdmin={isAdmin}
       />
     </div>
   )

@@ -6,9 +6,6 @@ import { useRouter } from 'next/navigation'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 import { COACH_TONE_LABELS, type CoachTone } from '@/lib/coach-tone'
 import { KOST_METRICS, KOST_MEALS, kostMetricLabel, kostMealLabel, type KostMetric, type KostMeal } from '@/lib/kost'
-import { estimateBMR } from '@/lib/bmr'
-import { computeDeficitBudget, deficitOverrideSignature, safetyBreachLabel } from '@/lib/deficit'
-import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
 type FlagEntry = { at: string; reason: string; snippet: string }
 
@@ -51,17 +48,6 @@ type Profile = {
   fat_goal_g?: number | null
   deficit_tracking_enabled?: boolean | null
   deficit_budget_kcal?: number | null
-  deficit_start_weight_kg?: number | null
-  deficit_start_date?: string | null
-  deficit_target_weight_kg?: number | null
-  deficit_target_date?: string | null
-  deficit_neat_factor?: number | null
-  deficit_activity_fallback_kcal?: number | null
-  deficit_garmin_correction?: number | null
-  deficit_weigh_in_weekday?: number | null
-  deficit_reminders_enabled?: boolean | null
-  deficit_override_acknowledged_at?: string | null
-  deficit_override_signature?: string | null
 }
 
 
@@ -89,8 +75,6 @@ export default function ProfileForm({
   polarSynced,
   yazioSynced,
   savedContext,
-  avgTrainingKcalRaw,
-  isAdmin,
 }: {
   profile: Profile | null
   userEmail: string
@@ -105,8 +89,6 @@ export default function ProfileForm({
   polarSynced: boolean
   yazioSynced: boolean
   savedContext: string
-  avgTrainingKcalRaw: number | null
-  isAdmin: boolean
 }) {
   const [name, setName] = useState(profile?.name ?? '')
   const [apiKey, setApiKey] = useState('')
@@ -143,30 +125,16 @@ export default function ProfileForm({
   const [proteinRefreezeMsg, setProteinRefreezeMsg] = useState('')
   const [carbGoalG, setCarbGoalG] = useState(profile?.carb_goal_g?.toString() ?? '')
   const [fatGoalG, setFatGoalG] = useState(profile?.fat_goal_g?.toString() ?? '')
+  // Everything about WHAT the goal actually is (startvikt, målvikt,
+  // måldatum, vardagsaktivitet, avstämning m.m.) lives on Viktmål now
+  // (ViktmalSettingsCard) — this on/off toggle is the only Viktmål-related
+  // state left here (Daniel: "slå på funktionen där, sen ställer man in
+  // allt annat från sidan").
   const [deficitTrackingEnabled, setDeficitTrackingEnabled] = useState(profile?.deficit_tracking_enabled ?? false)
-  const [deficitStartWeightKg, setDeficitStartWeightKg] = useState(profile?.deficit_start_weight_kg?.toString() ?? profile?.weight_kg?.toString() ?? '')
-  const [deficitTargetWeightKg, setDeficitTargetWeightKg] = useState(profile?.deficit_target_weight_kg?.toString() ?? '')
-  const [deficitTargetDate, setDeficitTargetDate] = useState(profile?.deficit_target_date ?? '')
-  const [deficitNeatFactor, setDeficitNeatFactor] = useState(profile?.deficit_neat_factor ?? 1.25)
-  const [deficitActivityFallbackKcal, setDeficitActivityFallbackKcal] = useState(profile?.deficit_activity_fallback_kcal ?? 300)
-  const [deficitGarminCorrection, setDeficitGarminCorrection] = useState(profile?.deficit_garmin_correction?.toString() ?? '0.75')
-  const [deficitWeighInWeekday, setDeficitWeighInWeekday] = useState(profile?.deficit_weigh_in_weekday ?? 0)
-  const [deficitRemindersEnabled, setDeficitRemindersEnabled] = useState(profile?.deficit_reminders_enabled ?? true)
-  const [deficitAdvancedOpen, setDeficitAdvancedOpen] = useState(false)
-  // The signature of the goal the last "jag förstår riskerna, använd ändå"
-  // click applied to — null means not confirmed. Comparing this against
-  // the CURRENT goal's signature (rather than storing a plain boolean) is
-  // what makes the confirmation void itself the moment start/target/date
-  // changes, with no separate reset logic needed.
-  const [confirmedOverrideSignature, setConfirmedOverrideSignature] = useState<string | null>(
-    profile?.deficit_override_acknowledged_at ? (profile?.deficit_override_signature ?? null) : null,
-  )
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
-  const [testRefreezing, setTestRefreezing] = useState(false)
-  const [testRefreezeMsg, setTestRefreezeMsg] = useState('')
   const [syncing, setSyncing] = useState(false)
   const [syncMsg, setSyncMsg] = useState('')
   const [stravaSyncing, setStravaSyncing] = useState(false)
@@ -246,10 +214,6 @@ export default function ProfileForm({
     const parsedCarbGoal = parseFloat(carbGoalG)
     const parsedFatGoal = parseFloat(fatGoalG)
 
-    const parsedDeficitStartWeight = parseFloat(deficitStartWeightKg)
-    const parsedDeficitTargetWeight = parseFloat(deficitTargetWeightKg)
-    const parsedDeficitCorrection = parseFloat(deficitGarminCorrection)
-
     // Only fields actually touched in this form get written back — Daniel:
     // "känns som inställningar och de specifika sidorna kan krocka med
     // varandra... Mitt dygnsmål gick från 2150 till 2049 helt plötsligt."
@@ -291,88 +255,11 @@ export default function ProfileForm({
     setIfChanged('protein_goal_mode', proteinGoalMode, profile?.protein_goal_mode ?? 'auto')
     setIfChanged('carb_goal_g', carbGoalG.trim() && !Number.isNaN(parsedCarbGoal) ? parsedCarbGoal : null, profile?.carb_goal_g ?? null)
     setIfChanged('fat_goal_g', fatGoalG.trim() && !Number.isNaN(parsedFatGoal) ? parsedFatGoal : null, profile?.fat_goal_g ?? null)
-    setIfChanged('deficit_neat_factor', deficitNeatFactor, profile?.deficit_neat_factor ?? 1.25)
-    setIfChanged('deficit_activity_fallback_kcal', deficitActivityFallbackKcal, profile?.deficit_activity_fallback_kcal ?? 300)
-    setIfChanged('deficit_garmin_correction', deficitGarminCorrection.trim() && !Number.isNaN(parsedDeficitCorrection) ? parsedDeficitCorrection : 0.75, profile?.deficit_garmin_correction ?? 0.75)
-    setIfChanged('deficit_weigh_in_weekday', deficitWeighInWeekday, profile?.deficit_weigh_in_weekday ?? 0)
-    setIfChanged('deficit_reminders_enabled', deficitRemindersEnabled, profile?.deficit_reminders_enabled ?? true)
-
-    // The goal (start/target weight, target date, tracking on/off) is
-    // handled as one cohesive unit rather than diffed field-by-field —
-    // they're genuinely interdependent (the override signature covers all
-    // three together, the budget-clearing logic needs to know the goal as
-    // a whole is incomplete). If NONE of the four changed, none of this
-    // block runs at all — no stale goal fields get rewritten, and no
-    // refreeze fires off the back of an unrelated save.
-    const goalOriginalTrackingEnabled = profile?.deficit_tracking_enabled ?? false
-    const goalOriginalStartWeightKg = profile?.deficit_start_weight_kg?.toString() ?? profile?.weight_kg?.toString() ?? ''
-    const goalOriginalTargetWeightKg = profile?.deficit_target_weight_kg?.toString() ?? ''
-    const goalOriginalTargetDate = profile?.deficit_target_date ?? ''
-    const goalSectionTouched =
-      deficitTrackingEnabled !== goalOriginalTrackingEnabled ||
-      deficitStartWeightKg !== goalOriginalStartWeightKg ||
-      deficitTargetWeightKg !== goalOriginalTargetWeightKg ||
-      deficitTargetDate !== goalOriginalTargetDate
-
-    // The frozen budget snapshot itself is no longer computed here — it's
-    // recomputed server-side (lib/deficit-budget-refreeze.ts, called right
-    // after this update lands) so it can account for an active delmål and
-    // an acknowledged above-safe override, neither of which this form
-    // knows about. Only the "goal turned off/incomplete → clear it" case
-    // stays here, since the refreeze route requires a goal to already be
-    // saved and won't touch these fields when there isn't one.
-    const goalWillBeComplete = deficitTrackingEnabled && deficitStartWeightKg.trim() && deficitTargetWeightKg.trim() && deficitTargetDate
-
-    if (goalSectionTouched) {
-      // Start date freezes the first time the goal is ever saved with a
-      // target — later edits to other settings never move it, so the
-      // "starting point" of the goal stays meaningful.
-      const deficitStartDateToSave = profile?.deficit_start_date
-        ?? (deficitTrackingEnabled && deficitTargetWeightKg.trim() ? new Date().toISOString().slice(0, 10) : null)
-
-      updates.deficit_tracking_enabled = deficitTrackingEnabled
-      updates.deficit_start_weight_kg = deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight) ? parsedDeficitStartWeight : null
-      updates.deficit_start_date = deficitStartDateToSave
-      updates.deficit_target_weight_kg = deficitTargetWeightKg.trim() && !Number.isNaN(parsedDeficitTargetWeight) ? parsedDeficitTargetWeight : null
-      updates.deficit_target_date = deficitTargetDate || null
-
-      if (!goalWillBeComplete) {
-        Object.assign(updates, { deficit_tdee_kcal: null, deficit_budget_kcal: null, deficit_budget_computed_at: null, deficit_budget_source: 'overall', deficit_budget_valid_until: null, deficit_budget_daily_deficit_kcal: null })
-      }
-
-      // Written BEFORE the refreeze call below runs, since refreezeDeficitBudget
-      // reads these back to decide allowUnsafe — an unconfirmed or stale
-      // (goal-changed) signature always saves as voided, never carried over.
-      const currentOverrideSignature = goalWillBeComplete
-        ? deficitOverrideSignature({ startWeightKg: parsedDeficitStartWeight, targetWeightKg: parsedDeficitTargetWeight, targetDateISO: deficitTargetDate })
-        : null
-      const overrideConfirmedNow = goalWillBeComplete && confirmedOverrideSignature === currentOverrideSignature
-      if (overrideConfirmedNow) {
-        updates.deficit_override_acknowledged_at = new Date().toISOString()
-        updates.deficit_override_signature = currentOverrideSignature
-      } else {
-        updates.deficit_override_acknowledged_at = null
-        updates.deficit_override_signature = null
-        updates.deficit_override_deficit_kcal = null
-      }
-
-      // Real incident (Conny, reported by Daniel): he set up a Viktmål goal
-      // (startvikt 91 kg) but the dashboard kept nagging "Vikt saknas" —
-      // profiles.weight_kg stayed null because the general Vikt-fältet
-      // above is a separate input from Startvikt here, and once a goal is
-      // active that general field turns into a read-only "loggas via
-      // Viktmål"-notis (see the comment above it) so there was never a
-      // control left to fill it in with. A brand new goal's start weight
-      // genuinely IS your current weight at that moment, so it backfills
-      // profiles.weight_kg — but only when it's genuinely still unset and
-      // this same save didn't already set it explicitly, so an existing,
-      // properly-tracked weight (kept current by real Viktmål weigh-ins via
-      // /api/body/log) is never silently overwritten by an old start value
-      // when someone just edits their target weight or date later.
-      if (profile?.weight_kg == null && updates.weight_kg === undefined && deficitStartWeightKg.trim() && !Number.isNaN(parsedDeficitStartWeight)) {
-        updates.weight_kg = parsedDeficitStartWeight
-      }
-    }
+    // The goal itself (start/target weight, target date, vardagsaktivitet,
+    // avstämning m.m.) is set up on Viktmål now (ViktmalSettingsCard) — this
+    // is just the on/off switch, same setIfChanged pattern as any other
+    // simple field here.
+    setIfChanged('deficit_tracking_enabled', deficitTrackingEnabled, profile?.deficit_tracking_enabled ?? false)
 
     if (Object.keys(updates).length > 0) {
       await supabase.from('profiles').update(updates).eq('id', profile?.id ?? '')
@@ -428,33 +315,6 @@ export default function ProfileForm({
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
     router.refresh()
-  }
-
-  // Admin-only — Daniel, as tester: "behöver jag som testare trigga igen
-  // på veckan så kör vi det här ifrån." Lets him force a recompute without
-  // waiting for Sunday, logged under its own honest 'manual_test' reason
-  // so it never looks like a real settings save or scheduled run in the
-  // history afterward.
-  async function triggerTestRefreeze() {
-    setTestRefreezing(true)
-    setTestRefreezeMsg('')
-    try {
-      const res = await fetch('/api/deficit/budget/refreeze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: 'manual_test' }),
-      })
-      const data = await res.json()
-      if (res.ok) {
-        setTestRefreezeMsg(data.changed ? `Ny budget: ${data.after.budgetKcal} kcal (TDEE ${data.after.tdeeKcal})` : 'Ingen förändring')
-        router.refresh()
-      } else {
-        setTestRefreezeMsg(data.error ?? 'Något gick fel')
-      }
-    } catch {
-      setTestRefreezeMsg('Nätverksfel')
-    }
-    setTestRefreezing(false)
   }
 
   async function syncNow() {
@@ -980,11 +840,15 @@ export default function ProfileForm({
         )}
       </div>
 
-      {/* Viktmål */}
+      {/* Viktmål — bara av/på-växeln bor kvar här. Allt om VAD målet
+          faktiskt är (startvikt, målvikt, måldatum, vardagsaktivitet,
+          avstämning m.m.) ställs in på Viktmål-sidan själv nu (Daniel:
+          "slå på funktionen där, sen ställer man in allt annat från
+          sidan") — se ViktmalSettingsCard. */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-4">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Viktmål</div>
-          <p className="text-muted text-xs">Sätt en målvikt och ett datum — appen räknar ut en fast daglig kaloribudget istället för att lägga till vad du tränat bort. Av som standard.</p>
+          <p className="text-muted text-xs">Sätt en målvikt och ett datum — appen räknar ut en fast daglig kaloribudget istället för att lägga till vad du tränat bort. Av som standard. Resten av inställningarna hittar du på Viktmål-sidan när den är på.</p>
         </div>
         <label className="flex items-center justify-between">
           <span className="text-sm text-fg">Följ ett viktmål</span>
@@ -1004,154 +868,10 @@ export default function ProfileForm({
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-bg transition-transform ${deficitTrackingEnabled ? 'translate-x-5' : ''}`} />
           </button>
         </label>
-
         {deficitTrackingEnabled && (
-          <>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Startvikt (kg)</label>
-                <input type="text" inputMode="decimal" value={deficitStartWeightKg} onChange={e => setDeficitStartWeightKg(normalizeDecimalInput(e.target.value))} placeholder="t.ex. 105 eller 105,2" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-              </div>
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Målvikt (kg)</label>
-                <input type="text" inputMode="decimal" value={deficitTargetWeightKg} onChange={e => setDeficitTargetWeightKg(normalizeDecimalInput(e.target.value))} placeholder="t.ex. 90" className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors" />
-              </div>
-            </div>
-            <div>
-              <label className="text-muted text-xs block mb-1.5">Måldatum</label>
-              <input type="date" value={deficitTargetDate} onChange={e => setDeficitTargetDate(e.target.value)} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors" />
-            </div>
-            <p className="text-amber-400/90 text-xs -mt-1">Ändrar du start-/målvikt eller måldatum uppdateras din dagliga budget vid söndagens schemalagda omräkning, inte direkt när du sparar.</p>
-
-            {isAdmin && deficitTrackingEnabled && (
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={triggerTestRefreeze}
-                  disabled={testRefreezing}
-                  className="text-xs font-medium px-3 py-2 rounded-xl border border-edge text-fg hover:border-accent/30 disabled:opacity-50"
-                >
-                  {testRefreezing ? 'Räknar om...' : 'Räkna om nu (test)'}
-                </button>
-                {testRefreezeMsg && <span className="text-muted text-xs">{testRefreezeMsg}</span>}
-              </div>
-            )}
-
-            <div>
-              <label className="text-muted text-xs block mb-2">Vardagsaktivitet (utöver träningen)</label>
-              <div className="flex flex-wrap gap-2">
-                {([{ label: 'Stillasittande', v: 1.15 }, { label: 'Normal', v: 1.25 }, { label: 'Rörlig', v: 1.4 }] as const).map(chip => (
-                  <button key={chip.label} type="button" onClick={() => setDeficitNeatFactor(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitNeatFactor === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <label className="text-muted text-xs block mb-2">Antagen träningsförbränning (tills du loggat {MIN_TRAINING_HISTORY_DAYS} dagar)</label>
-              <div className="flex flex-wrap gap-2">
-                {([{ label: 'Lätt (150 kcal)', v: 150 }, { label: 'Medel (300 kcal)', v: 300 }, { label: 'Hög (450 kcal)', v: 450 }] as const).map(chip => (
-                  <button key={chip.label} type="button" onClick={() => setDeficitActivityFallbackKcal(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitActivityFallbackKcal === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-              {avgTrainingKcalRaw != null && (
-                <p className="text-muted text-xs mt-1.5">Byts automatiskt mot ditt eget snitt (~{Math.round(avgTrainingKcalRaw)} kcal/dag senaste {TRAINING_LOOKBACK_DAYS} dagarna) eftersom du redan har tillräckligt med loggad träning.</p>
-              )}
-            </div>
-
-            <div>
-              <label className="text-muted text-xs block mb-2">Vägningsdag</label>
-              <div className="flex flex-wrap gap-2">
-                {[{ label: 'Sön', v: 0 }, { label: 'Mån', v: 1 }, { label: 'Tis', v: 2 }, { label: 'Ons', v: 3 }, { label: 'Tors', v: 4 }, { label: 'Fre', v: 5 }, { label: 'Lör', v: 6 }].map(chip => (
-                  <button key={chip.v} type="button" onClick={() => setDeficitWeighInWeekday(chip.v)} className={`text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${deficitWeighInWeekday === chip.v ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}>
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
-              <p className="text-muted text-xs mt-1.5">Väg dig samma veckodag och tid (gärna morgon, före frukost) — det ger den mest tillförlitliga kurvan.</p>
-            </div>
-
-            <label className="flex items-center gap-2.5 text-sm text-fg">
-              <input type="checkbox" checked={deficitRemindersEnabled} onChange={e => setDeficitRemindersEnabled(e.target.checked)} className="w-4 h-4 accent-accent" />
-              Påminn mig om vägning, midjemått och avstämning
-            </label>
-
-            {(() => {
-              const bmr = estimateBMR({
-                weightKg: weightKg.trim() ? parseFloat(weightKg) : null,
-                heightCm: heightCm.trim() ? parseFloat(heightCm) : null,
-                birthYear: birthYear.trim() ? parseInt(birthYear, 10) : null,
-                biologicalSex: (biologicalSex || null) as 'male' | 'female' | null,
-              }).bmr
-              const startW = parseFloat(deficitStartWeightKg)
-              const targetW = parseFloat(deficitTargetWeightKg)
-              if (Number.isNaN(startW) || Number.isNaN(targetW) || !deficitTargetDate) {
-                return <p className="text-muted text-xs">Fyll i startvikt, målvikt och måldatum för att se din budget.</p>
-              }
-              const currentSignature = deficitOverrideSignature({ startWeightKg: startW, targetWeightKg: targetW, targetDateISO: deficitTargetDate })
-              const overrideConfirmed = confirmedOverrideSignature === currentSignature
-              const correction = parseFloat(deficitGarminCorrection)
-              const budget = computeDeficitBudget({
-                bmr,
-                goal: { startWeightKg: startW, targetWeightKg: targetW, targetDateISO: deficitTargetDate, neatFactor: deficitNeatFactor, garminCorrection: Number.isNaN(correction) ? 0.75 : correction },
-                avgTrainingKcalRaw,
-                activityFallbackKcal: deficitActivityFallbackKcal,
-                now: new Date(),
-                allowUnsafe: overrideConfirmed,
-              })
-              const { safety } = budget
-              return (
-                <div className="flex flex-col gap-2">
-                  <div className="bg-bg rounded-xl p-3 flex flex-col gap-1">
-                    <div className="flex items-baseline justify-between">
-                      <span className="text-muted text-xs">Din dagliga budget blir</span>
-                      <span className="font-mono text-accent text-lg font-bold">{budget.budgetKcal} kcal</span>
-                    </div>
-                    <div className="text-muted text-xs">TDEE ~{budget.tdeeKcal} kcal · underskott {budget.dailyDeficitKcal} kcal/dag</div>
-                  </div>
-
-                  {safety.breaches.length > 0 && (
-                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-3 flex flex-col gap-2">
-                      <p className="text-amber-400 text-xs font-medium">Det här måldatumet är mer aggressivt än vi normalt rekommenderar:</p>
-                      <ul className="text-amber-400/90 text-xs list-disc list-inside flex flex-col gap-0.5">
-                        {safety.breaches.map(b => <li key={b}>{safetyBreachLabel(b)}</li>)}
-                      </ul>
-                      <p className="text-muted text-xs">
-                        En säkrare budget vore <span className="font-mono">{safety.safeBudgetKcal} kcal</span> (underskott {safety.safeDailyDeficitKcal} kcal/dag)
-                        {safety.suggestedTargetDateISO && `, vilket når målet ${new Date(`${safety.suggestedTargetDateISO}T00:00:00`).toLocaleDateString('sv-SE')} istället`}.
-                      </p>
-                      <label className="flex items-start gap-2.5 text-xs text-fg pt-1 border-t border-amber-500/20">
-                        <input
-                          type="checkbox"
-                          checked={overrideConfirmed}
-                          onChange={e => setConfirmedOverrideSignature(e.target.checked ? currentSignature : null)}
-                          className="w-4 h-4 accent-amber-500 mt-0.5 flex-shrink-0"
-                        />
-                        <span>Jag förstår riskerna och vill använda {safety.breaches.includes('below_hard_floor') ? 'den snabbare' : 'det här'} takten ändå.</span>
-                      </label>
-                      {overrideConfirmed && safety.breaches.includes('below_hard_floor') && (
-                        <p className="text-muted text-xs">Budgeten klamras ändå till en absolut säkerhetsgräns på minst {safety.hardFloorKcal} kcal — den kan inte gå lägre än så oavsett bekräftelse.</p>
-                      )}
-                    </div>
-                  )}
-                </div>
-              )
-            })()}
-
-            <button type="button" onClick={() => setDeficitAdvancedOpen(v => !v)} className="text-xs text-muted hover:text-fg transition-colors self-start flex items-center gap-1.5">
-              {deficitAdvancedOpen ? '▾' : '▸'} Avancerat
-            </button>
-            {deficitAdvancedOpen && (
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Korrigeringsfaktor på Garmins träningskalorier</label>
-                <input type="text" inputMode="decimal" value={deficitGarminCorrection} onChange={e => setDeficitGarminCorrection(normalizeDecimalInput(e.target.value))} className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg font-mono focus:outline-none focus:border-accent transition-colors" />
-                <p className="text-muted text-xs mt-1.5">Garmin överskattar ofta träningsförbränning, särskilt för rodd. 0,75 är en rimlig startpunkt — sköts normalt av avstämningen var 3–4:e vecka istället för att ändras för hand. Påverkar bara den här budgeten, aldrig kalorirutan på Översikt eller andra sidor.</p>
-              </div>
-            )}
-          </>
+          <p className="text-muted text-xs">
+            <a href="/dashboard/viktmal" className="text-accent hover:underline">Gå till Viktmål</a> för att ställa in startvikt, målvikt, måldatum och resten.
+          </p>
         )}
       </div>
 

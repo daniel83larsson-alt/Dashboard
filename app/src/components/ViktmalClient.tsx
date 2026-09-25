@@ -7,6 +7,7 @@ import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudge
 import { explainProteinGoalChange } from '@/lib/kost'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
+import ViktmalSettingsCard from '@/components/ViktmalSettingsCard'
 
 const ACCENT = '#ccd400'
 const MUTED = '#6b7280'
@@ -132,6 +133,18 @@ export default function ViktmalClient({
   budgetEvents,
   recentlyResolvedMilestone,
   todayNote,
+  userId,
+  currentProfileWeightKg,
+  neatFactor,
+  activityFallbackKcal,
+  remindersEnabled,
+  overrideAcknowledgedAt,
+  overrideSignature,
+  avgTrainingKcalRaw,
+  bmrHeightCm,
+  bmrBirthYear,
+  bmrBiologicalSex,
+  isAdmin,
 }: {
   todayKey: string
   days: DayEntry[]
@@ -154,6 +167,18 @@ export default function ViktmalClient({
   budgetEvents: BudgetEvent[]
   recentlyResolvedMilestone: { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null
   todayNote: { tag: string | null; note: string | null } | null
+  userId: string
+  currentProfileWeightKg: number | null
+  neatFactor: number
+  activityFallbackKcal: number
+  remindersEnabled: boolean
+  overrideAcknowledgedAt: string | null
+  overrideSignature: string | null
+  avgTrainingKcalRaw: number | null
+  bmrHeightCm: number | null
+  bmrBirthYear: number | null
+  bmrBiologicalSex: 'male' | 'female' | null
+  isAdmin: boolean
 }) {
   const router = useRouter()
   const [checkin, setCheckin] = useState<CheckinComputation | null>(null)
@@ -180,6 +205,14 @@ export default function ViktmalClient({
   const [milestoneError, setMilestoneError] = useState('')
   const [resolvedBannerDismissed, setResolvedBannerDismissed] = useState(false)
   const [todayNoteTag, setTodayNoteTag] = useState<string | null>(todayNote?.tag ?? null)
+  const hasGoal = startWeightKg != null && targetWeightKg != null && targetDate != null
+  const [settingsOpen, setSettingsOpen] = useState(!hasGoal)
+  // Forces ViktmalSettingsCard to remount with fresh server values whenever
+  // any field it owns changes from elsewhere on this same page (e.g. an
+  // avstämning-korrigering rewrites garminCorrection) — otherwise the
+  // card's own local state, seeded once on mount, would go stale and its
+  // next Spara would silently overwrite that change with the old value.
+  const settingsResyncKey = [startWeightKg, startDate, targetWeightKg, targetDate, neatFactor, activityFallbackKcal, garminCorrection, weighInWeekday, remindersEnabled, overrideAcknowledgedAt].join('|')
 
   async function saveTodayNote(tag: string | null) {
     setTodayNoteTag(tag)
@@ -456,6 +489,76 @@ export default function ViktmalClient({
         </div>
       )}
 
+      {/* Inställningar — flyttat hit från Profil (Daniel: "slå på funktionen
+          där, sen ställer man in allt annat från sidan"). Endast av/på-
+          växeln bor kvar i Profil; allt om VAD målet faktiskt är hör hemma
+          här, bredvid dashboarden som använder det. Öppet som standard tills
+          ett mål är satt, ihopfällt (men nåbart) därefter så det inte
+          konkurrerar med det dagliga innehållet ovan. */}
+      <div className="bg-card border border-edge rounded-2xl p-4">
+        {hasGoal ? (
+          <>
+            <button type="button" onClick={() => setSettingsOpen(v => !v)} className="flex items-center justify-between w-full">
+              <span className="text-xs text-muted uppercase tracking-wider">Inställningar</span>
+              <span className="text-muted text-xs">{settingsOpen ? '▾' : '▸'}</span>
+            </button>
+            {settingsOpen && (
+              <div className="mt-4 pt-4 border-t border-edge">
+                <ViktmalSettingsCard
+                  key={settingsResyncKey}
+                  userId={userId}
+                  currentProfileWeightKg={currentProfileWeightKg}
+                  startWeightKg={startWeightKg}
+                  startDate={startDate}
+                  targetWeightKg={targetWeightKg}
+                  targetDate={targetDate}
+                  neatFactor={neatFactor}
+                  activityFallbackKcal={activityFallbackKcal}
+                  garminCorrection={garminCorrection}
+                  weighInWeekday={weighInWeekday}
+                  remindersEnabled={remindersEnabled}
+                  overrideAcknowledgedAt={overrideAcknowledgedAt}
+                  overrideSignature={overrideSignature}
+                  avgTrainingKcalRaw={avgTrainingKcalRaw}
+                  bmrWeightKg={currentProfileWeightKg}
+                  bmrHeightCm={bmrHeightCm}
+                  bmrBirthYear={bmrBirthYear}
+                  bmrBiologicalSex={bmrBiologicalSex}
+                  isAdmin={isAdmin}
+                />
+              </div>
+            )}
+          </>
+        ) : (
+          <>
+            <div className="text-xs text-muted uppercase tracking-wider mb-1">Sätt upp ditt viktmål</div>
+            <p className="text-muted text-xs mb-3">Fyll i startvikt, målvikt och måldatum så räknar vi ut en fast daglig kaloribudget.</p>
+            <ViktmalSettingsCard
+              key={settingsResyncKey}
+              userId={userId}
+              currentProfileWeightKg={currentProfileWeightKg}
+              startWeightKg={startWeightKg}
+              startDate={startDate}
+              targetWeightKg={targetWeightKg}
+              targetDate={targetDate}
+              neatFactor={neatFactor}
+              activityFallbackKcal={activityFallbackKcal}
+              garminCorrection={garminCorrection}
+              weighInWeekday={weighInWeekday}
+              remindersEnabled={remindersEnabled}
+              overrideAcknowledgedAt={overrideAcknowledgedAt}
+              overrideSignature={overrideSignature}
+              avgTrainingKcalRaw={avgTrainingKcalRaw}
+              bmrWeightKg={currentProfileWeightKg}
+              bmrHeightCm={bmrHeightCm}
+              bmrBirthYear={bmrBirthYear}
+              bmrBiologicalSex={bmrBiologicalSex}
+              isAdmin={isAdmin}
+            />
+          </>
+        )}
+      </div>
+
       {/* Lager 1: idag */}
       <div className="bg-card border border-edge rounded-2xl p-4">
         <div className="flex items-center justify-between mb-1">
@@ -475,7 +578,7 @@ export default function ViktmalClient({
             )}
           </>
         ) : (
-          <p className="text-muted text-xs mt-2">Ingen budget uträknad än — fyll i startvikt, målvikt och måldatum i Profil.</p>
+          <p className="text-muted text-xs mt-2">Ingen budget uträknad än — fyll i startvikt, målvikt och måldatum under Inställningar ovan.</p>
         )}
         <p className="text-muted text-xs mt-2">Dagssiffran är en uppskattning och svänger mycket. Titta på snittet nedan.</p>
         <div className="flex flex-wrap gap-1.5 mt-3 pt-3 border-t border-edge">
@@ -592,7 +695,7 @@ export default function ViktmalClient({
             )}
           </>
         ) : (
-          <p className="text-muted text-xs">Sätt startvikt och målvikt i Profil för att se din resa här.</p>
+          <p className="text-muted text-xs">Sätt startvikt och målvikt under Inställningar ovan för att se din resa här.</p>
         )}
 
         {bodyTrendNote && (

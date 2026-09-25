@@ -4,6 +4,8 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { budgetInForceOn, tdeeInForceOn } from '@/lib/deficit'
+import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
+import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
 const ROLLING_WINDOW_DAYS = 7
 // Daniel: "vi har ju datat, onödigt att bara räkna på veckan" — ett andra,
@@ -27,10 +29,11 @@ export default async function ViktmalPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return null
+  const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
   const { data: profile } = await supabase
     .from('profiles')
-    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, deficit_budget_computed_at, deficit_budget_source, deficit_budget_valid_until, deficit_weigh_in_weekday, deficit_garmin_correction, kost_tracked_meals')
+    .select('deficit_tracking_enabled, deficit_start_weight_kg, deficit_start_date, deficit_target_weight_kg, deficit_target_date, deficit_tdee_kcal, deficit_budget_kcal, deficit_budget_computed_at, deficit_budget_source, deficit_budget_valid_until, deficit_weigh_in_weekday, deficit_garmin_correction, deficit_neat_factor, deficit_activity_fallback_kcal, deficit_reminders_enabled, deficit_override_acknowledged_at, deficit_override_signature, weight_kg, height_cm, birth_year, biological_sex, kost_tracked_meals')
     .eq('id', user.id)
     .single()
 
@@ -42,14 +45,35 @@ export default async function ViktmalPage() {
           <p className="text-muted text-sm mt-1">Sätt en målvikt och ett datum så räknar vi ut en fast daglig kaloribudget.</p>
         </div>
         <div className="bg-card border border-edge rounded-2xl p-4">
-          <p className="text-fg text-sm mb-3">Du har inte satt något viktmål än.</p>
-          <a href="/dashboard/profil" className="inline-block bg-accent text-bg font-semibold text-sm px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity">Sätt upp i Profil</a>
+          <p className="text-fg text-sm mb-3">Funktionen är inte påslagen än — resten av inställningarna (startvikt, målvikt, måldatum m.m.) ställer du in här på sidan när den är på.</p>
+          <a href="/dashboard/profil" className="inline-block bg-accent text-bg font-semibold text-sm px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity">Slå på i Profil</a>
         </div>
       </div>
     )
   }
 
   const todayKey = stockholmDateKey()
+
+  // Live preview for the settings card below — same rolling-mean-including-
+  // rest-days definition lib/deficit-budget-refreeze.ts's real budget calc
+  // uses (imported constants, not a second copy), deduped so a Concept2+
+  // Garmin pair of the same session isn't counted twice. null (not 0) below
+  // the minimum history so the card shows the fallback-estimate chips
+  // instead of a thin, noisy real average. Moved here from profil/page.tsx
+  // along with the rest of the Viktmål settings.
+  const trainingLookbackStart = new Date()
+  trainingLookbackStart.setDate(trainingLookbackStart.getDate() - TRAINING_LOOKBACK_DAYS)
+  const { data: recentActs } = await supabase
+    .from('activities')
+    .select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
+    .eq('user_id', user.id)
+    .gte('start_date', trainingLookbackStart.toISOString())
+  const dedupedRecentActs = dedupeForStats((recentActs ?? []) as (ActivityRow & { calories?: number | null })[])
+  const trainingDaysWithActivity = new Set(dedupedRecentActs.map(a => a.start_date.slice(0, 10))).size
+  const avgTrainingKcalRaw = trainingDaysWithActivity >= MIN_TRAINING_HISTORY_DAYS
+    ? dedupedRecentActs.reduce((s, a) => s + (a.calories ?? 0), 0) / TRAINING_LOOKBACK_DAYS
+    : null
+
   // Fetched wide enough to cover the trend window — the 7-day window used
   // everywhere else below is just the most recent slice of the same data,
   // one query instead of two.
@@ -204,6 +228,18 @@ export default async function ViktmalPage() {
       budgetEvents={(budgetEventRows ?? []) as BudgetEvent[]}
       recentlyResolvedMilestone={recentlyResolvedRow as { target_weight_kg: number; status: 'passed' | 'reached'; resolved_at: string } | null}
       todayNote={todayNoteRow as { tag: string | null; note: string | null } | null}
+      userId={user.id}
+      currentProfileWeightKg={profile.weight_kg ?? null}
+      neatFactor={profile.deficit_neat_factor ?? 1.25}
+      activityFallbackKcal={profile.deficit_activity_fallback_kcal ?? 300}
+      remindersEnabled={profile.deficit_reminders_enabled ?? true}
+      overrideAcknowledgedAt={profile.deficit_override_acknowledged_at ?? null}
+      overrideSignature={profile.deficit_override_signature ?? null}
+      avgTrainingKcalRaw={avgTrainingKcalRaw}
+      bmrHeightCm={profile.height_cm ?? null}
+      bmrBirthYear={profile.birth_year ?? null}
+      bmrBiologicalSex={(profile.biological_sex ?? null) as 'male' | 'female' | null}
+      isAdmin={isAdmin}
     />
   )
 }
