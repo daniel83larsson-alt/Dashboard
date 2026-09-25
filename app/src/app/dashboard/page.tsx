@@ -18,6 +18,7 @@ import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 import { currentDailyStreak, currentWeeklyStreak, averageSessionsPerWeek } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
 import MilestoneBanner from '@/components/MilestoneBanner'
+import StreakBadge from '@/components/StreakBadge'
 import { currentHabitStreak } from '@/lib/habits'
 import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
@@ -483,9 +484,12 @@ export default async function DashboardPage() {
               "veckor i rad" bredvid siffran säger redan vad det är,
               en rubrik ovanpå bara upprepade samma sak en gång till. */}
           <div className="bg-card border border-edge rounded-2xl p-4">
-            <div className="flex items-baseline gap-1.5">
-              <span className="font-mono text-accent text-2xl font-bold">🔥 {weeklyStreak}</span>
-              <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</span>
+            <div className="flex items-center gap-2">
+              <StreakBadge value={weeklyStreak} />
+              <div className="flex items-baseline gap-1.5">
+                <span className="font-mono text-accent text-2xl font-bold">{weeklyStreak}</span>
+                <span className="text-muted text-xs">{weeklyStreak === 1 ? 'vecka i rad' : 'veckor i rad'}</span>
+              </div>
             </div>
             {avgSessionsPerWeek != null && (
               <div className="text-muted text-xs mt-2">snitt {avgSessionsPerWeek} pass/vecka</div>
