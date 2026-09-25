@@ -742,4 +742,18 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
 
 ---
 
+---
+
+- ✅ **Daniel (skärmdump av Viktmål): "mätningen av midja listad som 1 till flera. När man klickar på en mätpunkt, istället för vikten som har ett datum."** Verktygstipset på midje-grafen visade radens indexnummer ("9") istället för datumet ("24 sep."). Grundorsak: vikt-grafen har en `<XAxis dataKey="date">` som talar om för Recharts vilket fält som hör till varje punkt i verktygstipset — midje-grafen saknade `<XAxis>` helt, så Recharts föll tillbaka på tabellindex. Fixat: samma `dataKey="date"`, dold (`hide`) så det kompakta utseendet inte ändras. **Sökte igenom alla andra grafer i kodbasen** (Mat, Insikter, Hälsa, Träningsbelastning) efter samma mönster — alla andra hade redan sin `XAxis`, bara midje-grafen saknade den.
+  **Verifierat:** typkontrollerat, lintat, 523/523 tester gröna (ren markup-fix, ingen ny logik). Committat och pushat.
+
+---
+
+- ✅ **Daniel: "På första sidan veckor på raken... lite olika pokaler... vid olika jämna tal får man något nytt finare märke... Vill ju iallafall att man ska få uppmärksamhet när man slår nya rekord."** Skiljde ut det som redan fanns (den guldiga banderollen som firar en ny milstolpe en gång — orörd) från det nya: den *ständigt synliga* badgen bredvid "veckor i rad" var bara en fast 🔥 oavsett nivå. Skissade tre riktningar i en Design-artifact (B: egna pokal-ikoner, C: ren CSS-nivåbadge) — Daniel valde en fjärde, hybrid: B:s ikon men med C:s "laddar upp"-ring, godkänd efter en andra skiss som visade själva laddningsförloppet.
+  **Byggt:** `lib/streak-badge.ts` — ren funktion som slår upp vilken av fyra nivåer (ring/medalj/pokal/krona) ett streak-värde ligger i, plus hur långt "laddad" ringen är mot nästa nivå (gränser 0/25/100/365, fyra av talen som redan finns i `lib/milestones.ts` MILESTONES — mellanliggande milstolpar som 5/7/50/52 fortsätter fira med den befintliga banderollen precis som innan). `components/StreakBadge.tsx` — ritar ringen (CSS `conic-gradient`, fylls efter laddningsgrad) runt en liten SVG-ikon per nivå, som värms mot guld när du närmar dig nästa nivå (samma "nästan där"-känsla som i skissen). Kopplad in på Översikt istället för den fasta 🔥.
+  **Verifierat bortom tsc/lint/testsvit:** 8 nya tester för `computeStreakBadge` (nivågränser, laddningsprocent, negativt värde). Renderade badgen på en tillfällig, oindexerad sida vid 13 olika streak-värden (0 → 700) och skärmdumpade den — bekräftade att ringen fylls på synligt, att den värms mot guld strax innan en ny nivå, och att alla fyra ikoner (ring/medalj/pokal/krona) syns tydligt i den lilla storleken. Sidan borttagen igen efteråt.
+  **Verifierat:** typkontrollerat, lintat (0 nya varningar), 531/531 tester gröna, `next build` (dummy-env) ren. Committat och pushat.
+
+---
+
 **Regel framåt:** varje nytt önskemål från Daniel läggs till här innan arbetet börjar. Inget markeras ✅ förrän det faktiskt är verifierat (kört, testat eller kontrollerat mot systemet) — inte bara "borde fungera".

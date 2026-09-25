@@ -626,6 +626,7 @@ export default function ViktmalClient({
             {waistChartData.length > 2 && (
               <ResponsiveContainer width="100%" height={90}>
                 <LineChart data={waistChartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+                  <XAxis dataKey="date" hide />
                   <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
                   <Tooltip {...chartTooltip} formatter={(v) => [`${v} cm`, 'Midja']} />
                   <Line type="monotone" dataKey="Midja" stroke={MUTED} strokeWidth={2} dot={{ r: 2 }} connectNulls />
