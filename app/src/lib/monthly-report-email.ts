@@ -21,9 +21,11 @@ function insightBlock(label: string, text: string) {
 export function renderMonthlyReportHtml({
   name,
   record,
+  unsubscribeUrl,
 }: {
   name: string
   record: MonthlyReportRecord
+  unsubscribeUrl: string
 }): string {
   const { data, kost, deficit, insights } = record
 
@@ -131,7 +133,7 @@ export function renderMonthlyReportHtml({
         </td></tr>
         <tr><td style="padding:16px 32px;border-top:1px solid #eee;">
           <p style="margin:0;color:#999;font-size:11px;">
-            Din månad — just nu i admin-test, går bara till dig.
+            Vill du inte längre få Din månad? <a href="${unsubscribeUrl}" style="color:#999;">Avsluta prenumeration</a>.
           </p>
         </td></tr>
       </table>
@@ -142,24 +144,27 @@ export function renderMonthlyReportHtml({
 }
 
 export async function sendMonthlyReportEmail({
+  userId,
   toEmail,
   name,
   record,
   subjectPrefix = '',
 }: {
+  userId: string
   toEmail: string
   name: string
   record: MonthlyReportRecord
   subjectPrefix?: string
 }): Promise<boolean> {
   if (!process.env.RESEND_API_KEY) return false
-  // No unsubscribe link yet on purpose — this is the admin-only test phase
-  // (see STATUS.md), so there's no real subscriber to opt out. Reusing
-  // Veckans Recap's unsubscribe route here would have been actively
-  // misleading (it flips weekly_digest_opt_out and its confirmation page
-  // says "Veckans Recap", not "Din månad") — a real monthly opt-out needs
-  // its own column before this graduates beyond admin-only sends.
-  const html = renderMonthlyReportHtml({ name, record })
+  // Own dedicated unsubscribe route/column (monthly_report_opt_out) — never
+  // reuses Veckans Recap's, which would silently opt someone out of the
+  // wrong email and say the wrong product name on its confirmation page.
+  const html = renderMonthlyReportHtml({
+    name,
+    record,
+    unsubscribeUrl: `${process.env.NEXT_PUBLIC_APP_URL}/api/monthly-report/unsubscribe?uid=${userId}`,
+  })
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${process.env.RESEND_API_KEY}`, 'Content-Type': 'application/json' },

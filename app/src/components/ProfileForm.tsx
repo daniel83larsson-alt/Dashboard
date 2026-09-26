@@ -34,6 +34,7 @@ type Profile = {
   biological_sex?: 'male' | 'female' | null
   daily_calorie_goal?: number | null
   weekly_digest_opt_out?: boolean | null
+  monthly_report_opt_out?: boolean | null
   coach_tone?: string | null
   kost_tracking_enabled?: boolean | null
   kost_tracked_metrics?: string[] | null
@@ -111,6 +112,7 @@ export default function ProfileForm({
   // allt annat från sidan").
   const [deficitTrackingEnabled, setDeficitTrackingEnabled] = useState(profile?.deficit_tracking_enabled ?? false)
   const [weeklyDigestEnabled, setWeeklyDigestEnabled] = useState(!profile?.weekly_digest_opt_out)
+  const [monthlyReportEnabled, setMonthlyReportEnabled] = useState(!profile?.monthly_report_opt_out)
   const [coachTone, setCoachTone] = useState<CoachTone>((profile?.coach_tone as CoachTone) ?? 'neutral')
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -183,6 +185,7 @@ export default function ProfileForm({
     setIfChanged('biological_sex', biologicalSex || null, profile?.biological_sex ?? null)
     setIfChanged('daily_calorie_goal', calorieGoal.trim() && !Number.isNaN(parsedCalorieGoal) ? parsedCalorieGoal : null, profile?.daily_calorie_goal ?? null)
     setIfChanged('weekly_digest_opt_out', !weeklyDigestEnabled, !!profile?.weekly_digest_opt_out)
+    setIfChanged('monthly_report_opt_out', !monthlyReportEnabled, !!profile?.monthly_report_opt_out)
     setIfChanged('coach_tone', coachTone, (profile?.coach_tone as CoachTone) ?? 'neutral')
     setIfChanged('kost_tracking_enabled', kostTrackingEnabled, profile?.kost_tracking_enabled ?? false)
     // The goal itself (start/target weight, target date, vardagsaktivitet,
@@ -698,7 +701,8 @@ export default function ProfileForm({
         )}
       </div>
 
-      {/* Veckans Recap */}
+      {/* Veckans Recap & Din månad — två separata mail-sammanfattningar, av/på
+          oberoende av varandra och av nyhetsbrevet. */}
       <div className="bg-card border border-edge rounded-2xl p-4 flex flex-col gap-3">
         <div>
           <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Veckans Recap</div>
@@ -723,6 +727,20 @@ export default function ProfileForm({
             {sendingTest ? 'Skickar...' : 'Skicka testmail till mig'}
           </button>
           {testMsg && <p className="text-muted text-xs mt-1.5">{testMsg}</p>}
+        </div>
+
+        <div className="pt-3 mt-1 border-t border-edge">
+          <div className="text-xs text-muted uppercase tracking-wider mb-0.5">Din månad</div>
+          <p className="text-muted text-xs mb-2">En större sammanfattning av hela månaden — träning, vikt, kost/viktmål, sömn/steg och vanor — skickas på mail den 1:a varje månad.</p>
+          <label className="flex items-center gap-2.5 text-sm text-fg">
+            <input
+              type="checkbox"
+              checked={monthlyReportEnabled}
+              onChange={e => setMonthlyReportEnabled(e.target.checked)}
+              className="w-4 h-4 accent-accent"
+            />
+            Skicka Din månad på mail den 1:a varje månad
+          </label>
         </div>
       </div>
 

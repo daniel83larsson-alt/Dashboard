@@ -52,6 +52,10 @@
     {
       "path": "/api/cron/weekly-tdee-recompute",
       "schedule": "0 19 * * 0"
+    },
+    {
+      "path": "/api/cron/monthly-report",
+      "schedule": "0 6 1 * *"
     }
   ]
 }

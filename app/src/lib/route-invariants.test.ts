@@ -50,7 +50,9 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     'app/api/cron/meal-reminders/route.ts',
     'app/api/cron/body-reminders/route.ts',
     'app/api/cron/weekly-tdee-recompute/route.ts',
+    'app/api/cron/monthly-report/route.ts',
     'app/api/weekly-digest/unsubscribe/route.ts',
+    'app/api/monthly-report/unsubscribe/route.ts',
     'app/api/webhooks/new-signup/route.ts',
     'app/api/newsletter/unsubscribe/route.ts',
     // The forgot-password flow itself — by definition reachable by someone

@@ -4,9 +4,9 @@ import { generateMonthlyReportForUser } from '@/lib/monthly-report-generate'
 import { sendMonthlyReportEmail } from '@/lib/monthly-report-email'
 
 // Admin-only, generate-AND-send in one step (no dashboard "generate" card
-// exists yet, unlike Veckans Recap) — Daniel: "vill testa på mig själv
-// först" innan detta går till alla ~11 användare. No cron wired up yet;
-// see STATUS.md for what's left before a real monthly send exists.
+// exists yet, unlike Veckans Recap) — kept around as a manual preview/test
+// tool now that /api/cron/monthly-report handles the real monthly send to
+// everyone.
 export async function POST() {
   try {
     const supabase = await createSupabaseServerClient()
@@ -23,6 +23,7 @@ export async function POST() {
 
     const record = await generateMonthlyReportForUser(supabase, user.id)
     const sent = await sendMonthlyReportEmail({
+      userId: user.id,
       toEmail: user.email,
       name: profile?.name ?? user.email.split('@')[0],
       record,
