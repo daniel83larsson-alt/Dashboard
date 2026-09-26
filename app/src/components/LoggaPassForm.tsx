@@ -194,7 +194,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                               inputMode="decimal"
                               value={picked.weightKg}
                               onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], weightKg: e.target.value } }))}
-                              placeholder="kroppsvikt"
+                              placeholder="vikt"
                               className="w-20 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center placeholder:text-[10px] focus:outline-none focus:border-accent"
                             />
                             <span className="text-muted text-xs">kg</span>
