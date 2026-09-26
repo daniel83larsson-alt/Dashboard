@@ -29,6 +29,8 @@ import { computeCalorieBalance } from './calorie-balance'
 import { fetchMcpBudgetHistory } from './fetch-budget-history'
 import { computeBudgetHistory } from './budget-history'
 import { computeTdeeTrend } from './tdee-trend'
+import { computeRestingHrTrend } from './resting-hr-trend'
+import { computePaceAtEffort } from './pace-at-effort'
 
 // How far back activity history is fetched for the training tools — matches
 // garmin-sync.ts's own ACTIVITY_HISTORY_MAX_DAYS retention cap, so "last
@@ -348,6 +350,64 @@ export function buildMcpHandler(auth: { userId: string } | null) {
         ])
         const payload = computeTdeeTrend(data.profile?.deficit_tdee_kcal ?? null, budgetEvents, todayKey, weeks)
         logApiCall(supabase, auth.userId, 'mcp/get_tdee_trend')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_resting_hr_trend',
+      {
+        title: 'Get resting heart rate trend',
+        description:
+          'Resting heart rate as a weekly time series over the last N weeks (one averaged point per week, oldest ' +
+          'first), synced from Garmin — the same daily wellness history get_recovery_data/get_rowing_trends already ' +
+          'read, just broken out per week instead of one flat period average. Answers "has my resting HR actually ' +
+          'trended down over months", which a single period average hides.',
+        inputSchema: z.object({
+          weeks: z.number().int().min(1).max(52).optional().default(26),
+        }),
+      },
+      async ({ weeks }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const todayKey = stockholmDateKey()
+        const wellnessHistory = await fetchMcpWellnessHistory(supabase, auth.userId)
+        const payload = computeRestingHrTrend(wellnessHistory, todayKey, weeks)
+        logApiCall(supabase, auth.userId, 'mcp/get_resting_hr_trend')
+        return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
+      }
+    )
+
+    server.registerTool(
+      'get_pace_at_effort',
+      {
+        title: 'Get pace/performance at a given heart-rate effort level',
+        description:
+          'Groups logged sessions of a given activity type (any type the app already tracks — e.g. "rodd"/"Rowing", ' +
+          '"löpning"/"Run", "cykling"/"Ride", either the Swedish label or the internal name works) into 10bpm average-' +
+          'heart-rate bands over the last N weeks, and reports the aggregated pace/speed within each band — this is ' +
+          'how "did my pace at a similar effort level actually improve" gets answered instead of a whole-period ' +
+          'average that mixes easy and hard sessions together. Optionally compares against an equal-length period ' +
+          'starting compare_to_weeks_ago weeks ago (e.g. 26 for "vs six months ago"). ' +
+          'Important limitation: banding is per WHOLE SESSION (a session\'s own average heart rate places it in a ' +
+          'band), not per split/interval within a session — true per-split HR-banded pace only exists for Concept2-' +
+          'sourced rowing sessions the user has already individually opened, and isn\'t cached in bulk across a ' +
+          'period. Strength/kettlebell activity types are reported as unsupported (no effort/RPE field exists for ' +
+          'them yet), never guessed at.',
+        inputSchema: z.object({
+          activity_type: z.string(),
+          weeks: z.number().int().min(1).max(26).optional().default(8),
+          compare_to_weeks_ago: z.number().int().min(1).max(104).optional(),
+        }),
+      },
+      async ({ activity_type, weeks, compare_to_weeks_ago }) => {
+        if (!auth) return unauthenticatedResult()
+        const supabase = createSupabaseAdminClient()
+        const todayKey = stockholmDateKey()
+        const lookbackWeeks = compare_to_weeks_ago != null ? compare_to_weeks_ago + weeks : weeks
+        const activities = await fetchMcpActivities(supabase, auth.userId, isoDaysAgo(lookbackWeeks * 7))
+        const payload = computePaceAtEffort(activities, activity_type, weeks, todayKey, compare_to_weeks_ago ?? null)
+        logApiCall(supabase, auth.userId, 'mcp/get_pace_at_effort')
         return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
       }
     )

@@ -34,6 +34,26 @@ export function sportLabel(sport: string): string {
   return SPORT_LABELS[sport] ?? sport
 }
 
+// Reverse of sportLabel() — resolves a free-text activity type (either the
+// internal sport_type key like "Rowing", or its Swedish label like "rodd",
+// case-insensitively) back to the canonical sport_type. Used by MCP tools
+// that take an activity type as a free string parameter rather than a
+// fixed enum (Daniel: "vilken loggad aktivitetstyp som helst appen redan
+// känner till, inte hårdkodat"). Returns null when nothing matches, so the
+// caller can report an honest "unknown activity type" rather than silently
+// returning empty data.
+export function resolveSportType(input: string): string | null {
+  const needle = input.trim().toLowerCase()
+  if (!needle) return null
+  for (const key of Object.keys(SPORT_LABELS)) {
+    if (key.toLowerCase() === needle) return key
+  }
+  for (const [key, label] of Object.entries(SPORT_LABELS)) {
+    if (label.toLowerCase() === needle) return key
+  }
+  return null
+}
+
 export function sportIcon(sport: string): string {
   return SPORT_ICONS[sport] ?? '🏅'
 }
