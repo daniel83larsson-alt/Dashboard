@@ -105,7 +105,12 @@ async function remindUnfinishedHabits(supabase: SupabaseClient, now: Date) {
 // who already trained today.
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get('authorization')
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Two valid secrets: CRON_SECRET (GitHub Actions) and SCHEDULER_SECRET
+  // (Supabase pg_cron, added after GitHub's schedule trigger was found
+  // running hours late — see STATUS.md). Either one authorizes the call.
+  const validCron = process.env.CRON_SECRET && authHeader === `Bearer ${process.env.CRON_SECRET}`
+  const validScheduler = process.env.SCHEDULER_SECRET && authHeader === `Bearer ${process.env.SCHEDULER_SECRET}`
+  if (!validCron && !validScheduler) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
