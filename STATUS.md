@@ -877,7 +877,7 @@ Daniel fick upprepade "Failed preview deployments"-mejl för **bokforing**-appen
   **Två riktiga buggar hittade genom att faktiskt testa innan jobben slogs på igen, inte bara anta att det fungerade:**
   1. Hjälpfunktionen använde `net.http_post`, men alla 9 routes exporterar bara `GET` — varje anrop gav `405 Method Not Allowed`. Bekräftat live (request-id 617), fixat till `net.http_get`.
   2. `SCHEDULER_SECRET` sattes först bara för Vercel-miljön "production", men `dltrainer.se` (se raden ovan om domänen) serveras av deployer vars Vercel-`target` är `null`, inte bokstavligen "production" — samma lucka som gjorde att riktiga Vercel Cron aldrig fungerat. En produktions-skopad variabel nådde alltså aldrig den körande koden: `401 Unauthorized` trots att koden var rätt. Fixat genom att bredda till alla tre targets (samma skopning som `CRON_SECRET` redan hade) — kräver en ny driftsättning innan den ändringen slår igenom, pågår.
-  **Pågår:** väntar på att den nya driftsättningen (efter env-var-fixen) blir klar, sen ett sista live-test av `isolation-check` innan de 9 pg_cron-jobben slås på igen. Uppdaterar den här raden när det är klart och verifierat, inte innan.
+  **Klart, verifierat live efter alla fixar:** anropade `isolation-check` direkt via Supabase efter den slutgiltiga driftsättningen — `200 OK`, `{"ok":true,"violations":[]}`, båda disponibla testkontona skapades, kördes och städades bort korrekt. Slog på alla 9 pg_cron-jobb igen (`active = true`). Bekräftat i den pushade koden att GitHub Actions gamla schemarader för samma 9 rutiner verkligen är borta — bara sync-all/weekly-digest/monthly-report kvar där, inga dubbla schemaläggare. Committat och pushat (`62badfc`, `8557025`, `3aaf45e`).
 
 ---
 
