@@ -920,7 +920,11 @@ export default async function DashboardPage() {
           "Du" row — no friends yet means nothing to compare against. Own
           row ("skulle vilja att ens egna siffror (Du)... syns med som
           referens") sorted into the same ranked list rather than pinned to
-          the top, so where you actually land is visible at a glance. */}
+          the top, so where you actually land is visible at a glance.
+
+          Antal pass tillagt (Daniel: "Per persons [antal pass] säger ju
+          lite om hur aktiva de är") — activityCount fanns redan uträknad
+          i summarizeFriendWeek, bara inte visad. */}
       {friendWeekSummary.length > 0 && (
         <div className="bg-card border border-edge rounded-2xl p-4">
           <div className="text-xs text-muted uppercase tracking-wider mb-3">Vänner denna vecka</div>
@@ -929,7 +933,7 @@ export default async function DashboardPage() {
               <div key={f.ownerId} className="flex items-center justify-between text-sm">
                 <span className={f.isSelf ? 'text-accent font-semibold' : 'text-fg'}>{f.ownerName}</span>
                 <span className={`font-mono text-xs ${f.isSelf ? 'text-accent' : 'text-muted'}`}>
-                  {fmtDur(f.totalMovingTimeSec)}{f.totalDistanceM > 0 ? ` · ${fmtKm(f.totalDistanceM)}` : ''}
+                  {f.activityCount} pass · {fmtDur(f.totalMovingTimeSec)}{f.totalDistanceM > 0 ? ` · ${fmtKm(f.totalDistanceM)}` : ''}
                 </span>
               </div>
             ))}
