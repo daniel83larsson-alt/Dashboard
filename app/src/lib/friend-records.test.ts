@@ -37,6 +37,16 @@ describe('friendRecordBadges', () => {
     expect(badges.size).toBe(0)
   })
 
+  it('gives no badge for a hairline improvement (<1 %) — e.g. a repeated commute a few metres better', () => {
+    const longBase = row({ start_date: '2026-08-01T08:00:00Z', distance: 21000, moving_time: 7200 })
+    const prior = row({ sport_type: 'Ride', distance: 8000, moving_time: 1290, start_date: '2026-09-01T08:00:00Z' })
+    const hairline = row({ sport_type: 'Ride', distance: 8030, moving_time: 1290, start_date: '2026-09-08T08:00:00Z' }) // +0.4 %
+    const real = row({ sport_type: 'Ride', distance: 8120, moving_time: 1290, start_date: '2026-09-15T08:00:00Z' }) // +1.1 % over the 8030 best
+    const badges = friendRecordBadges([longBase, prior, hairline, real], [hairline, real])
+    expect(badges.has(hairline.activity_id)).toBe(false)
+    expect(badges.get(real.activity_id)).toEqual(['Bäst 20 min'])
+  })
+
   it('does not treat a person\'s first pass in a category as a broken record', () => {
     const only = row({ moving_time: 1200 })
     expect(friendRecordBadges([only], [only]).size).toBe(0)

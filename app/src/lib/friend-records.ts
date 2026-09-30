@@ -11,8 +11,9 @@ import { newRecordsForLatest } from './records'
 //
 // "Rekord" means exactly what it already means for your OWN latest pass on
 // Översikt (records.ts's newRecordsForLatest: fastest 1/3/5/10 km, best
-// 20/30/45 min, longest session ever) — reused, not re-implemented, so a
-// friend's badge and your own medal can never disagree about what counts.
+// 20/30/45 min, longest session ever, each needing to beat the previous best
+// by at least RECORD_MARGIN_PCT) — reused, not re-implemented, so a friend's
+// badge and your own medal can never disagree about what counts.
 //
 // Each pass is compared only against THAT SAME PERSON's earlier passes: it
 // answers "was this a personal best when they did it", never "is it the

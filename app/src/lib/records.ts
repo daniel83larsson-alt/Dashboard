@@ -101,6 +101,19 @@ export function longestSession(acts: Activity[]): Activity | null {
 // passet. Compares the latest activity against every PRIOR activity only —
 // a category with no prior qualifying activity has nothing to "break", so
 // it's deliberately excluded (a first-ever 5km isn't a broken record).
+//
+// A pass only counts as "breaking" a record if it beats the previous best by
+// at least RECORD_MARGIN_PCT percent (Daniel: "Ja" to a 1 % minimum). Without
+// it, a repeated commute could "break" Bäst 20 min by a few dozen metres week
+// after week, and a new friend's first few rides each set "Längsta passet"
+// by seconds — real, but not worth a medal or a cheer. Compared with integer
+// arithmetic (x * 100 vs prior * (100 ± pct)) so a pass that is EXACTLY 1 %
+// better isn't lost to binary floating-point rounding (5000 * 1.01 is not
+// exactly 5050). Same function feeds the Översikt medal, the friend feed's
+// 🏅 badge, the weekly digest and the monthly report, so all of them share
+// one definition.
+export const RECORD_MARGIN_PCT = 1
+
 export function newRecordsForLatest(latest: Activity, priorActivities: Activity[]): string[] {
   const hits: string[] = []
   const sport = latest.sport_type
@@ -112,14 +125,14 @@ export function newRecordsForLatest(latest: Activity, priorActivities: Activity[
       const priorInWindow = priorSameSport.filter(a => a.moving_time >= w.minSec && a.moving_time <= w.maxSec && a.distance >= 200)
       if (!priorInWindow.length) continue
       const priorBest = Math.max(...priorInWindow.map(a => a.distance))
-      if (latest.distance > priorBest) hits.push(`Bäst ${w.label}`)
+      if (latest.distance * 100 >= priorBest * (100 + RECORD_MARGIN_PCT)) hits.push(`Bäst ${w.label}`)
     }
     for (const bench of benchmarksForSport(sport)) {
       if (latest.distance < bench.meters * 0.96 || latest.distance > bench.meters * 1.04) continue
       const priorNear = priorSameSport.filter(a => a.distance >= bench.meters * 0.96 && a.distance <= bench.meters * 1.04)
       if (!priorNear.length) continue
       const priorBest = Math.min(...priorNear.map(a => a.moving_time))
-      if (latest.moving_time < priorBest) hits.push(`Snabbaste ${bench.label}`)
+      if (latest.moving_time * 100 <= priorBest * (100 - RECORD_MARGIN_PCT)) hits.push(`Snabbaste ${bench.label}`)
     }
   }
 
@@ -127,7 +140,7 @@ export function newRecordsForLatest(latest: Activity, priorActivities: Activity[
     const priorLongest = priorActivities.filter(a => a.moving_time >= 60)
     if (priorLongest.length) {
       const priorBest = Math.max(...priorLongest.map(a => a.moving_time))
-      if (latest.moving_time > priorBest) hits.push('Längsta passet någonsin')
+      if (latest.moving_time * 100 >= priorBest * (100 + RECORD_MARGIN_PCT)) hits.push('Längsta passet någonsin')
     }
   }
 

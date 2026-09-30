@@ -108,6 +108,36 @@ describe('newRecordsForLatest', () => {
     expect(newRecordsForLatest(latest, [prior])).toContain('Längsta passet någonsin')
   })
 
+  // Daniel: "Ja" to a 1 % minimum margin — a few dozen metres on a repeated
+  // commute isn't a record worth a medal or a cheer. Each pair below sits just
+  // under / exactly at 1 % so the boundary itself is pinned down, not just
+  // "clearly better" vs "clearly worse".
+  describe('1 % minimum margin', () => {
+    it('"Bäst X min" needs ≥1 % more distance: +0.6 % is not enough, exactly +1 % is', () => {
+      const prior = act({ id: 'old', moving_time: 1650, distance: 8000 }) // 30-min window
+      const tooClose = act({ id: 'a', moving_time: 1650, distance: 8048 }) // +0.6 %
+      const exactly = act({ id: 'b', moving_time: 1650, distance: 8080 }) // +1.0 %
+      expect(newRecordsForLatest(tooClose, [prior])).not.toContain('Bäst 30 min')
+      expect(newRecordsForLatest(exactly, [prior])).toContain('Bäst 30 min')
+    })
+
+    it('"Snabbaste X km" needs ≥1 % less time: −0.77 % is not enough, exactly −1 % is', () => {
+      const prior = act({ id: 'old', distance: 5000, moving_time: 1300 })
+      const tooClose = act({ id: 'a', distance: 5000, moving_time: 1290 }) // −0.77 %
+      const exactly = act({ id: 'b', distance: 5000, moving_time: 1287 }) // −1.0 %
+      expect(newRecordsForLatest(tooClose, [prior])).not.toContain('Snabbaste 5 km')
+      expect(newRecordsForLatest(exactly, [prior])).toContain('Snabbaste 5 km')
+    })
+
+    it('"Längsta passet någonsin" needs ≥1 % more time: +0.67 % is not enough, exactly +1 % is', () => {
+      const prior = act({ id: 'old', sport_type: 'WeightTraining', distance: 0, moving_time: 3000 })
+      const tooClose = act({ id: 'a', sport_type: 'WeightTraining', distance: 0, moving_time: 3020 }) // +0.67 %
+      const exactly = act({ id: 'b', sport_type: 'WeightTraining', distance: 0, moving_time: 3030 }) // +1.0 %
+      expect(newRecordsForLatest(tooClose, [prior])).not.toContain('Längsta passet någonsin')
+      expect(newRecordsForLatest(exactly, [prior])).toContain('Längsta passet någonsin')
+    })
+  })
+
   it('only compares distance/pace PRs against prior activities of the same sport', () => {
     // Same moving_time on both sides so the (deliberately sport-agnostic)
     // "longest session ever" check stays neutral — isolates just the
