@@ -16,6 +16,9 @@ type FeedEntry = {
   start_date: string
   kudos_count: number
   liked_by_me: boolean
+  // What this pass was a personal record in (e.g. "Snabbaste 5 km") — see
+  // lib/friend-records.ts. Empty/absent = not a record.
+  records?: string[]
 }
 
 function fmtKm(m: number) { return (m / 1000).toFixed(1) + ' km' }
@@ -93,6 +96,31 @@ export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId
                     <div className="text-muted text-xs mt-0.5 truncate">
                       {sportIcon(e.sport_type)} {e.activity_name} · {sportLabel(e.sport_type)}
                     </div>
+                    {e.records && e.records.length > 0 && (
+                      // Same amber 🏅 look as the "Nytt rekord" medal on the
+                      // user's own latest pass (Översikt) — one visual
+                      // language for "a record was broken here".
+                      <div
+                        // Wraps instead of truncating: a pass can break several
+                        // records at once, and on a phone there's no hover to
+                        // reveal a clipped label — everything must be readable.
+                        className="mt-1.5 flex w-fit max-w-full min-w-0 items-start gap-1 rounded-lg border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium leading-snug text-amber-400"
+                        title={`Personligt rekord: ${e.records.join(', ')}`}
+                      >
+                        <span aria-hidden="true">🏅</span>
+                        <span>
+                          Rekord ·
+                          {/* nowrap per label, with the SPACE between labels outside the nowrap span so it stays a
+                              legal line-break point: a line may break BETWEEN records, never inside "Snabbaste 5 km" */}
+                          {e.records.map((r, i) => (
+                            <span key={r}>
+                              {' '}
+                              <span className="whitespace-nowrap">{r}{i < e.records!.length - 1 ? ' ·' : ''}</span>
+                            </span>
+                          ))}
+                        </span>
+                      </div>
+                    )}
                   </button>
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <div className="text-right">

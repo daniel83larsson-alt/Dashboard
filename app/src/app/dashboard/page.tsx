@@ -22,6 +22,8 @@ import StreakBadge from '@/components/StreakBadge'
 import { currentHabitStreak } from '@/lib/habits'
 import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
+import { friendRecordBadges } from '@/lib/friend-records'
+import { fetchFriendHistory } from '@/lib/friend-history'
 import { weeklyLoad, rollingBaselineLoad, weeklyMinutes, rollingBaselineMinutes } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
 import { summarizeFriendWeek } from '@/lib/friend-week'
@@ -124,7 +126,7 @@ export default async function DashboardPage() {
   const nextWeekStartDate = new Date(weekStartDate)
   nextWeekStartDate.setDate(nextWeekStartDate.getDate() + 7)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }, { data: friendHistory, complete: friendHistoryComplete }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -166,6 +168,11 @@ export default async function DashboardPage() {
     // raw activity rows) rather than one SQL-side aggregate.
     supabase.rpc('friend_roster'),
     supabase.rpc('friend_weekly_activities', { week_start: weekStartDate.toISOString(), week_end: nextWeekStartDate.toISOString() }),
+    // Daniel: rekordmärke på en väns pass i vänlistan — needs each friend's
+    // EARLIER passes to know whether a pass broke their own record. Same RPC
+    // as the line above with an unbounded range, run in this same batch so
+    // it adds no extra round-trip; see lib/friend-history.ts.
+    fetchFriendHistory(supabase),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -244,6 +251,17 @@ export default async function DashboardPage() {
     owner_id: a.owner_id, owner_name: a.owner_name,
   }))
   const friendWeekSummary = summarizeFriendWeek(friendWeekActivityRows, (friendRoster ?? []) as { owner_id: string; owner_name: string }[])
+
+  // Daniel: "När en använder slår rekord, ska dens pass taggas med en
+  // rekordmärke i 'vän' listan ... Så att man ännu mer kan peppa och lika
+  // någons prestation." Only computed from a COMPLETE history — a truncated
+  // one would make a mediocre pass look like a personal best, so on any
+  // fetch problem no badges show at all (see lib/friend-history.ts).
+  const friendFeedDeduped = dedupeFriendFeed(friendFeed)
+  const friendRecords = friendHistoryComplete
+    ? friendRecordBadges(friendHistory, friendFeedDeduped)
+    : new Map<string, string[]>()
+  const friendFeedWithRecords = friendFeedDeduped.map(e => ({ ...e, records: friendRecords.get(e.activity_id) ?? [] }))
   // Daniel: "skulle vilja att ens egna siffror (Du) syns med som referens."
   // wk (from totals(thisWeek) above) is already deduped — thisWeek is
   // filtered straight from `activities`, which ran through dedupeForStats
@@ -908,7 +926,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* ── Vänners träningspass ──────────────────────────────────────────────── */}
-      <FriendFeed feed={dedupeFriendFeed(friendFeed)} userId={user.id} />
+      <FriendFeed feed={friendFeedWithRecords} userId={user.id} />
 
       {/* ── Vänner denna vecka ─────────────────────────────────────────────────
           Daniel: "vänner total tid och km vecka. Så man kan matcha mot sitt
