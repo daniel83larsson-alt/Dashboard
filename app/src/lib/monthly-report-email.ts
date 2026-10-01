@@ -3,6 +3,7 @@
 // one product, but its own content model since it summarizes a whole month
 // across training/vikt/kost/vanor instead of one week.
 import type { MonthlyReportRecord } from './monthly-report-generate'
+import { effortEmailHtml } from './effort-email'
 
 function statBox(value: string, label: string, width = '33%') {
   return `<td style="padding:12px;background:#f4f4f2;border-radius:12px;text-align:center;" width="${width}">
@@ -124,6 +125,7 @@ export function renderMonthlyReportHtml({
           ${bestSessionHtml}
           ${newRecordsHtml}
           ${insightsHtml}
+          ${effortEmailHtml(record.effort, insights?.effort, '💪 Intensitet denna månad')}
           ${kostHtml}
           ${habitsHtml}
           ${funFactHtml}

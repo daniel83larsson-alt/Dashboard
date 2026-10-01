@@ -14,6 +14,7 @@ import { stockholmDateKey } from './dates'
 import type { KostFoodEntry, KostMeal } from './kost'
 import { compute7DayAverage, countableDays } from './deficit'
 import { fetchFirstLoggedKey } from './first-logged-day'
+import { computeEffortSummary, effortPromptLines, fetchEffortRows, type EffortSummary } from './effort-summary'
 import { resolveDayNutrition } from './day-nutrition-source'
 import { decryptMaybeLegacy } from './encrypt'
 import { sportLabel } from './sport'
@@ -40,6 +41,10 @@ export type WeeklyDigestInsights = {
   // all (computeWeeklyKost returned null) — there's nothing to comment on,
   // not a failed AI call.
   nutrition: string | null
+  // Short comment on the zone distribution + Garmin Training Effect of the
+  // week's passes (Daniel: "vilka zoner mm som varit dominerande"). null when
+  // no pass had zone/effect data. Descriptive only — no 80/20 verdict.
+  effort?: string | null
 }
 
 export type WeeklyDigestRecord = {
@@ -55,6 +60,9 @@ export type WeeklyDigestRecord = {
   // see lib/deficit.ts). null when the user hasn't opted into deficit
   // tracking, or has no budget computed, or too few complete days this week.
   deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null
+  // Zone distribution + training effect for the week; null when no pass has
+  // that data. Older stored records don't have the field at all.
+  effort?: EffortSummary | null
   // null means the AI call failed — the record still holds real computed
   // numbers, so the card/email fall back to showing those without written
   // insights rather than skipping the user entirely.
@@ -134,7 +142,7 @@ function kostLine(kost: WeeklyKostData): string {
   return parts.join('\n')
 }
 
-function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null): string {
+function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, effort: EffortSummary | null): string {
   const w = data.thisWeek
   const p = data.prevWeek
   const fmtAvg = (v: number | null, unit: string, decimals = 0) => v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
@@ -147,6 +155,10 @@ function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], 
   // One extra line, no extra AI call — the full 3-4-week calibration lives
   // in Viktmål's own check-in flow, this is just the weekly direction.
   const deficitLine = deficit ? `\nVIKTMÅL DENNA VECKA: snitt ${deficit.avgDiffKcal > 0 ? '+' : ''}${deficit.avgDiffKcal} kcal/dag mot budgeten på ${deficit.budgetKcal} kcal (${deficit.completeDays} av ${deficit.countedDays} dagar färdigloggade)` : ''
+  const effortBlock = effort ? `\n${effortPromptLines(effort).join('\n')}` : ''
+  const effortInstruction = effort
+    ? `\n\neffort: En kort, beskrivande kommentar (MAX 1 mening) om vilken träningsintensitet som dominerat veckan, utifrån ZONFÖRDELNING och/eller TRÄNINGSEFFEKT ovan — nämn en konkret siffra (t.ex. andel i en zon eller hårdaste passets effekt). Ingen dom mot något facit som 80/20; beskriv bara vad som kördes. Nämn att underlaget är X av Y pass om det är färre än alla.`
+    : ''
   const nutritionInstruction = kost
     ? `\n\nnutrition: Ett konkret, personligt perspektiv på KOST DENNA VECKA ovan${deficit ? ' (nämn även VIKTMÅL DENNA VECKA om det finns — hur ligger veckan till mot budgeten)' : ''} — nämn en specifik siffra (kcal, ett makromått, loggningsgrad eller mönster), aldrig en generisk kommentar. Om personen mest bara loggar mat och knappt tränar (få/inga pass denna vecka), gör det HÄR till huvudinsikten för veckan istället för en biinsikt. MAX 2 meningar.`
     : ''
@@ -164,7 +176,7 @@ STEG: snitt ${fmtAvg(w.wellness.avgSteps, '')}/dag (förra veckan ${fmtAvg(p.wel
 SÖMN: snitt ${fmtAvg(w.wellness.avgSleepHours, 'h', 1)} (förra veckan ${fmtAvg(p.wellness.avgSleepHours, 'h', 1)})
 VILOPULS: snitt ${fmtAvg(w.wellness.avgRestingHR, ' bpm')} (förra veckan ${fmtAvg(p.wellness.avgRestingHR, ' bpm')})
 MÅL: ${goalTitle ?? 'inget aktivt mål satt'}
-${lookAheadLine}${kostBlock}${deficitLine}
+${lookAheadLine}${effortBlock}${kostBlock}${deficitLine}
 
 Ge korta coach-perspektiv på veckan ovan, ett fält per roll. Skriv som en coach som faktiskt känner atleten, inte en generisk statistik-referat — peppigt och personligt, men alltid förankrat i en konkret siffra eller detalj från datan ovan, aldrig floskler som "bra jobbat" utan att säga varför.
 
@@ -172,10 +184,10 @@ sessions: Jämför VECKANS PLAN mot passen som faktiskt kördes. Om mängden/spo
 
 wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (jämför med förra veckan om det säger något intressant). MAX 2 meningar.
 
-motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.${nutritionInstruction}`
+motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.${effortInstruction}${nutritionInstruction}`
 }
 
-async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null): Promise<WeeklyDigestInsights> {
+async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, effort: EffortSummary | null): Promise<WeeklyDigestInsights> {
   const system = `Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -188,15 +200,19 @@ ${coachToneInstruction(coachTone)}`
     properties.nutrition = { type: 'STRING' }
     required.push('nutrition')
   }
+  if (effort) {
+    properties.effort = { type: 'STRING' }
+    required.push('effort')
+  }
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, planSessionsThisWeek, goalTitle, kost, deficit) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, thisWeekActivities, planSessionsThisWeek, goalTitle, kost, deficit, effort) }] }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
-        maxOutputTokens: 600,
+        maxOutputTokens: 700,
         thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT', properties, required },
@@ -210,7 +226,7 @@ ${coachToneInstruction(coachTone)}`
   // kost=null means we never asked for `nutrition` in the schema/prompt —
   // force it to null regardless of what the model returned, rather than
   // trust it followed an instruction it was never given.
-  return { ...parsed, nutrition: kost ? (parsed.nutrition ?? null) : null }
+  return { ...parsed, nutrition: kost ? (parsed.nutrition ?? null) : null, effort: effort ? (parsed.effort ?? null) : null }
 }
 
 export async function generateWeeklyDigestForUser(
@@ -337,9 +353,14 @@ export async function generateWeeklyDigestForUser(
     }
   }
 
+  const effort = computeEffortSummary(
+    await fetchEffortRows(supabase, userId, weekStart.toISOString(), nextWeekStart.toISOString()),
+    thisWeekActivities.length,
+  )
+
   let insights: WeeklyDigestInsights | null = null
   try {
-    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit)
+    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit, effort)
   } catch (err) {
     console.error('Weekly digest insights failed for user', userId, err)
   }
@@ -351,6 +372,7 @@ export async function generateWeeklyDigestForUser(
     data: digestData,
     kost: weeklyKost,
     deficit,
+    effort,
     insights,
     viewedAt: null,
   }

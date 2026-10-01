@@ -1,5 +1,6 @@
 'use client'
 
+import EffortBlock from '@/components/EffortBlock'
 import { useState } from 'react'
 import type { WeeklyDigestRecord } from '@/lib/weekly-digest-generate'
 
@@ -87,6 +88,8 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
         <p className="text-muted text-xs italic">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>
       )}
       {error && <p className="text-red-400 text-xs">{error}</p>}
+
+      {record.effort && <EffortBlock effort={record.effort} sentence={record.insights?.effort} title="💪 Intensitet denna vecka" />}
 
       {record.kost && (
         <div className="bg-bg rounded-xl p-3 space-y-2">

@@ -3,6 +3,7 @@
 // all read as one product, but has its own full narrative + stats +
 // adherence + look-ahead content model, so it gets its own render function.
 import type { WeeklyDigestRecord } from './weekly-digest-generate'
+import { effortEmailHtml } from './effort-email'
 
 function fmtDateRange(startISO: string, endISO: string) {
   const start = new Date(`${startISO}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
@@ -82,6 +83,8 @@ export function renderWeeklyDigestHtml({
       </div>`
     : ''
 
+  const effortHtml = effortEmailHtml(record.effort, record.insights?.effort, '💪 Intensitet denna vecka')
+
   const lookAheadHtml = lookAhead.kind === 'plan'
     ? `<div style="margin:0 0 16px;">
         <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">Nästa veckas plan</p>
@@ -124,6 +127,7 @@ export function renderWeeklyDigestHtml({
           ${bestSessionHtml}
           ${newRecordsHtml}
           ${insightsHtml}
+          ${effortHtml}
           ${kostHtml}
           ${motivationHtml}
           ${lookAheadHtml}

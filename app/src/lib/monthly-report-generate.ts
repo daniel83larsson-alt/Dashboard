@@ -6,13 +6,14 @@
 // själv först" — no cron wired up yet, see STATUS.md).
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
-  computeMonthlyReport, recapMonthStart, monthDateKeys, summarizeMonthlyKost,
+  computeMonthlyReport, recapMonthStart, monthDateKeys, summarizeMonthlyKost, activitiesInMonth,
   type MonthlyReportData, type MonthlyKostData,
 } from './monthly-report'
 import { normalizeYazioDay, type YazioDay } from './yazio-history'
 import { resolveDayNutrition, resolveDayProteinG } from './day-nutrition-source'
 import { compute7DayAverage, countableDays } from './deficit'
 import { fetchFirstLoggedKey } from './first-logged-day'
+import { computeEffortSummary, effortPromptLines, fetchEffortRows, type EffortSummary } from './effort-summary'
 import { stockholmDateKey } from './dates'
 import { decryptMaybeLegacy } from './encrypt'
 import { coachToneInstruction } from './coach-tone'
@@ -30,6 +31,7 @@ export type MonthlyReportInsights = {
   nutrition: string | null // null när ingen kost loggats alls denna månad
   habits: string | null // null när inga vanor loggats denna månad
   funFact: string // en rolig, konkret jämförelse byggd på FUNFACTS-siffrorna
+  effort?: string | null // kort kommentar om zonfördelning/träningseffekt; null/saknas utan zon-/effektdata
 }
 
 export type MonthlyReportRecord = {
@@ -41,6 +43,8 @@ export type MonthlyReportRecord = {
   // historiskt varje dag — rimligt för ett summerande mejl som skickas i
   // efterhand, se weekly-digest-generate.ts's egen kommentar om samma val.
   deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null
+  // Zonfördelning + träningseffekt för månaden (null utan data; saknas i äldre sparade rapporter).
+  effort?: EffortSummary | null
   insights: MonthlyReportInsights | null
 }
 
@@ -48,7 +52,7 @@ function fmtAvg(v: number | null, unit: string, decimals = 0): string {
   return v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
 }
 
-function buildPrompt(data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null): string {
+function buildPrompt(data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, effort: EffortSummary | null): string {
   const t = data.thisMonth
   const p = data.prevMonth
 
@@ -75,7 +79,7 @@ NYA REKORD: ${newRecordsLine}
 STEG: snitt ${fmtAvg(t.wellness.avgSteps, '')}/dag (förra månaden ${fmtAvg(p.wellness.avgSteps, '')})
 SÖMN: snitt ${fmtAvg(t.wellness.avgSleepHours, 'h', 1)} (förra månaden ${fmtAvg(p.wellness.avgSleepHours, 'h', 1)})
 VILOPULS: snitt ${fmtAvg(t.wellness.avgRestingHR, ' bpm')} (förra månaden ${fmtAvg(p.wellness.avgRestingHR, ' bpm')})
-MÅL: ${goalTitle ?? 'inget aktivt mål satt'}${weightLine}${kostBlock}${deficitLine}${habitsBlock}
+MÅL: ${goalTitle ?? 'inget aktivt mål satt'}${effort ? `\n${effortPromptLines(effort).join('\n')}` : ''}${weightLine}${kostBlock}${deficitLine}${habitsBlock}
 
 FUNFACTS (använd EXAKT dessa siffror, hitta inte på egna): totalt ${data.funFacts.totalActiveMinutes} aktiva minuter, längsta passet ${data.funFacts.longestSessionKm ?? 0} km, mest aktiva veckodag var ${data.funFacts.mostActiveWeekday ?? 'ingen tydlig'}.
 
@@ -87,12 +91,12 @@ training: 2-3 meningar om träningsmånaden — volym, fördelning mellan sporte
 
 wellnessAndSleep: 1-2 meningar om steg/sömn/vilopuls-mönstret och hur det jämför mot förra månaden.
 
-funFact: EN rolig, konkret jämförelse byggd på FUNFACTS-siffrorna ovan (t.ex. omvandla totalt antal aktiva minuter eller längsta passet till något vardagligt och roligt att jämföra med — en filmlängd, en bilresa, ett välkänt avstånd). Hitta ALDRIG på egna siffror, använd bara de som givits.${kost ? '\n\nnutrition: 1-2 meningar om kost-månaden ovan — nämn en konkret siffra (kcal, protein, loggningsgrad).' : ''}${data.habits.length ? '\n\nhabits: 1 mening som lyfter fram den vana som hölls bäst denna månad.' : ''}
+funFact: EN rolig, konkret jämförelse byggd på FUNFACTS-siffrorna ovan (t.ex. omvandla totalt antal aktiva minuter eller längsta passet till något vardagligt och roligt att jämföra med — en filmlängd, en bilresa, ett välkänt avstånd). Hitta ALDRIG på egna siffror, använd bara de som givits.${kost ? '\n\nnutrition: 1-2 meningar om kost-månaden ovan — nämn en konkret siffra (kcal, protein, loggningsgrad).' : ''}${effort ? '\n\neffort: EN kort, beskrivande mening om vilken träningsintensitet som dominerat månaden, utifrån ZONFÖRDELNING och/eller TRÄNINGSEFFEKT ovan — nämn en konkret siffra (andel i en zon eller hårdaste passets effekt). Ingen dom mot något facit som 80/20; beskriv bara vad som kördes. Nämn att underlaget är X av Y pass om det är färre än alla.' : ''}${data.habits.length ? '\n\nhabits: 1 mening som lyfter fram den vana som hölls bäst denna månad.' : ''}
 
 ${coachToneInstruction(undefined)}`
 }
 
-async function generateInsights(apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined): Promise<MonthlyReportInsights> {
+async function generateInsights(apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined, effort: EffortSummary | null): Promise<MonthlyReportInsights> {
   const system = `Du är atletens huvudcoach som skriver en större månadssammanfattning. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -103,16 +107,17 @@ ${coachToneInstruction(coachTone)}`
   }
   const required = ['headline', 'training', 'wellnessAndSleep', 'funFact']
   if (kost) { properties.nutrition = { type: 'STRING' }; required.push('nutrition') }
+  if (effort) { properties.effort = { type: 'STRING' }; required.push('effort') }
   if (data.habits.length) { properties.habits = { type: 'STRING' }; required.push('habits') }
 
   const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, kost, deficit, goalTitle) }] }],
+      contents: [{ role: 'user', parts: [{ text: buildPrompt(data, kost, deficit, goalTitle, effort) }] }],
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
-        maxOutputTokens: 800,
+        maxOutputTokens: 900,
         thinkingConfig: { thinkingBudget: 0 },
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT', properties, required },
@@ -127,6 +132,7 @@ ${coachToneInstruction(coachTone)}`
     ...parsed,
     nutrition: kost ? (parsed.nutrition ?? null) : null,
     habits: data.habits.length ? (parsed.habits ?? null) : null,
+    effort: effort ? (parsed.effort ?? null) : null,
   }
 }
 
@@ -225,9 +231,15 @@ export async function generateMonthlyReportForUser(
     if (avg.avgDiffKcal != null) deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays, countedDays: avg.completeDays + avg.incompleteDays }
   }
 
+  const monthActs = activitiesInMonth(activities, monthStart)
+  const effort = computeEffortSummary(
+    await fetchEffortRows(supabase, userId, monthStart.toISOString(), monthEndExclusive.toISOString()),
+    monthActs.length,
+  )
+
   let insights: MonthlyReportInsights | null = null
   try {
-    insights = await generateInsights(apiKey, reportData, kost, deficit, goalTitle, profile?.coach_tone)
+    insights = await generateInsights(apiKey, reportData, kost, deficit, goalTitle, profile?.coach_tone, effort)
   } catch (err) {
     console.error('Monthly report insights failed for user', userId, err)
   }
@@ -237,6 +249,7 @@ export async function generateMonthlyReportForUser(
     data: reportData,
     kost,
     deficit,
+    effort,
     insights,
   }
 
