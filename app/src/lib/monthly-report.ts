@@ -215,6 +215,9 @@ export function summarizeMonthlyKost(
   dayProteins: (DayProtein | null)[],
   calorieGoal: number | null,
   proteinGoalG: number | null,
+  // Days that could fairly have been logged (not before the first-ever log,
+  // not in the future). Omitted = every day of the month counts.
+  countableDayCount?: number,
 ): MonthlyKostData | null {
   const logged = dayNutritions.filter((d): d is DayNutrition => !!d && d.isComplete)
   if (!logged.length) return null
@@ -223,7 +226,7 @@ export function summarizeMonthlyKost(
   const avg = (v: number[]) => v.length ? v.reduce((s, x) => s + x, 0) / v.length : null
   return {
     daysWithData: logged.length,
-    totalDaysInMonth: dayNutritions.length,
+    totalDaysInMonth: Math.max(countableDayCount ?? dayNutritions.length, logged.length),
     avgKcal: avg(kcalPerDay),
     kcalGoal: calorieGoal,
     avgProteinG: avg(proteinPerDay),

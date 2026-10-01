@@ -3,7 +3,7 @@
 import { useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
-import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, computeWeightTrendProjection, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, countableDays, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, computeWeightTrendProjection, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 import { explainProteinGoalChange } from '@/lib/kost'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
@@ -113,6 +113,7 @@ function fmtDate(dateKey: string) {
 
 export default function ViktmalClient({
   todayKey,
+  firstLoggedKey,
   days,
   trendDays,
   measurements: initialMeasurements,
@@ -147,6 +148,7 @@ export default function ViktmalClient({
   isAdmin,
 }: {
   todayKey: string
+  firstLoggedKey: string | null
   days: DayEntry[]
   trendDays: DayEntry[]
   measurements: Measurement[]
@@ -231,9 +233,12 @@ export default function ViktmalClient({
   // reconstructed historically), since this is a forward-looking "what are
   // you aiming for right now" figure, not a record of a past day.
   const targetDeficitKcal = tdeeKcal != null && budgetKcal != null ? tdeeKcal - budgetKcal : null
+  // Only days that could fairly have been logged count (see countableDays).
+  const countedDays = useMemo(() => countableDays(days, todayKey, firstLoggedKey), [days, todayKey, firstLoggedKey])
+  const countedTrendDays = useMemo(() => countableDays(trendDays, todayKey, firstLoggedKey), [trendDays, todayKey, firstLoggedKey])
   const weekAvg = useMemo(
-    () => compute7DayAverage(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
-    [days]
+    () => compute7DayAverage(countedDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
+    [countedDays]
   )
   // The actual deficit achieved vs TDEE (not vs budget) — Daniel found the
   // raw eaten-vs-budget number confusing next to "mål" (which IS a TDEE
@@ -245,8 +250,8 @@ export default function ViktmalClient({
   // retroaktivt"). Also flags both directions ("går man massa under målet
   // är väl det heller inte bra"), not just "any minus is green".
   const weekTdeeAvg = useMemo(
-    () => computeAvgDiffVsTdee(days.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
-    [days]
+    () => computeAvgDiffVsTdee(countedDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
+    [countedDays]
   )
   const weekActualDeficitKcal = weekTdeeAvg.avgDiffKcal != null ? -weekTdeeAvg.avgDiffKcal : null
   // A real green for "on track", not the app's usual accent color — Daniel
@@ -264,12 +269,12 @@ export default function ViktmalClient({
   // 14-dagarsfönster för en trendsiffra bredvid 7-dagars snittet, inte i
   // stället för det.
   const trendAvg = useMemo(
-    () => compute7DayAverage(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
-    [trendDays]
+    () => compute7DayAverage(countedTrendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: d.budgetKcal }))),
+    [countedTrendDays]
   )
   const trendTdeeAvg = useMemo(
-    () => computeAvgDiffVsTdee(trendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
-    [trendDays]
+    () => computeAvgDiffVsTdee(countedTrendDays.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, tdeeKcal: d.tdeeKcal }))),
+    [countedTrendDays]
   )
   const trendActualDeficitKcal = trendTdeeAvg.avgDiffKcal != null ? -trendTdeeAvg.avgDiffKcal : null
   const trendAvgColor = trendActualDeficitKcal == null
@@ -611,7 +616,7 @@ export default function ViktmalClient({
               </span>
               {targetDeficitKcal != null && <span className="text-muted text-xs">mål −{targetDeficitKcal} kcal/dag</span>}
             </div>
-            <p className="text-muted text-xs mt-1">{weekAvg.completeDays} av 7 dagar färdigloggade{weekAvg.incompleteDays > 0 ? ` · ${weekAvg.incompleteDays} räknas inte med` : ''}</p>
+            <p className="text-muted text-xs mt-1">{weekAvg.completeDays} av {weekAvg.completeDays + weekAvg.incompleteDays} dagar färdigloggade{weekAvg.incompleteDays > 0 ? ` · ${weekAvg.incompleteDays} räknas inte med` : ''}</p>
             {weekActualDeficitKcal != null && weekActualDeficitKcal > MAX_SAFE_DEFICIT_KCAL && (
               <p className="text-red-400 text-xs mt-2 pt-2 border-t border-edge">Snabbare takt än vad vi rekommenderar (max {MAX_SAFE_DEFICIT_KCAL} kcal/dag). Överväg att äta lite mer.</p>
             )}
@@ -629,7 +634,7 @@ export default function ViktmalClient({
               {trendActualDeficitKcal != null
                 ? (trendActualDeficitKcal >= 0 ? `−${trendActualDeficitKcal}` : `+${Math.abs(trendActualDeficitKcal)}`)
                 : (trendAvg.avgDiffKcal > 0 ? '+' : '') + trendAvg.avgDiffKcal} kcal/dag
-              <span className="text-muted font-normal"> · {trendAvg.completeDays} av 14 dagar</span>
+              <span className="text-muted font-normal"> · {trendAvg.completeDays} av {trendAvg.completeDays + trendAvg.incompleteDays} dagar</span>
             </span>
           </div>
         )}

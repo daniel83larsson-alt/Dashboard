@@ -78,15 +78,37 @@ describe('computeWeeklyKost', () => {
   it('flags past days this week with no logged data, but never counts future days as flagged', () => {
     const yazioHistory = [yazioDay({ date: '2026-08-24', kcalEaten: 2000 })]
     // todayKey is the last day of the week (Sunday), so all 7 days are "past" —
-    // 1 has data, the other 6 should be flagged.
+    // 1 has data, the other 6 are unlogged — but Sunday is today and still
+    // unlogged, which isn't a miss yet (Daniel: "6 av 7"), so 5 flagged of 6.
     const result = computeWeeklyKost({ ...base, yazioHistory, manualEntries: [] })
-    expect(result!.daysFlagged).toBe(6)
+    expect(result!.daysFlagged).toBe(5)
+    expect(result!.daysCountable).toBe(6)
   })
 
   it('does not flag days beyond todayKey (mid-week digest generation)', () => {
     const yazioHistory = [yazioDay({ date: '2026-08-24', kcalEaten: 2000 })]
     const result = computeWeeklyKost({ ...base, yazioHistory, manualEntries: [], todayKey: '2026-08-25' })
-    // Only Mon (has data) and Tue (past, no data) have happened yet — 1 flagged, not 6.
+    // Mon has data; Tue is today and still unlogged, so it isn't a miss yet — 0 flagged, 1 countable.
+    expect(result!.daysFlagged).toBe(0)
+    expect(result!.daysCountable).toBe(1)
+  })
+
+  it('does not count days before the first-ever logged day as missed (new user mid-week)', () => {
+    // Started logging Thursday 2026-08-27; Sunday (today) is also logged.
+    const yazioHistory = [
+      yazioDay({ date: '2026-08-27', kcalEaten: 2000 }), yazioDay({ date: '2026-08-28', kcalEaten: 2100 }),
+      yazioDay({ date: '2026-08-30', kcalEaten: 1900 }),
+    ]
+    const result = computeWeeklyKost({ ...base, yazioHistory, manualEntries: [], firstLoggedKey: '2026-08-27' })
+    expect(result!.daysWithData).toBe(3)
+    expect(result!.daysCountable).toBe(4) // Thu, Fri, Sat (missed), Sun
+    expect(result!.daysFlagged).toBe(1) // only Saturday was really missed
+  })
+
+  it('counts today when it is already logged', () => {
+    const yazioHistory = [yazioDay({ date: '2026-08-25', kcalEaten: 2000 })]
+    const result = computeWeeklyKost({ ...base, yazioHistory, manualEntries: [], todayKey: '2026-08-25', firstLoggedKey: '2026-08-24' })
+    expect(result!.daysCountable).toBe(2) // Mon (missed) + Tue (logged today)
     expect(result!.daysFlagged).toBe(1)
   })
 
@@ -104,8 +126,8 @@ describe('computeWeeklyKost', () => {
     expect(result!.avgKcal).toBeCloseTo((1000 + 350) / 2)
     // todayKey is the week's Sunday, so all 7 days are "past": 2 days logged
     // but incomplete (missing dinner), and the other 5 days have zero data —
-    // all 7 count as flagged.
-    expect(result!.daysFlagged).toBe(7)
+    // all 7 would be flagged, except Sunday is today with no data (not a miss yet).
+    expect(result!.daysFlagged).toBe(6)
   })
 
   it('detects a consistently skipped meal across the week', () => {

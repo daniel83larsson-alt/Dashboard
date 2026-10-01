@@ -97,7 +97,7 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
               <div className="text-muted text-[11px]">kcal/dag{record.kost.kcalGoal != null ? ` / ${Math.round(record.kost.kcalGoal)}` : ''}</div>
             </div>
             <div>
-              <div className="text-sm font-mono text-fg">{record.kost.daysWithData}/7</div>
+              <div className="text-sm font-mono text-fg">{record.kost.daysWithData}/{Math.max(record.kost.daysCountable ?? 7, record.kost.daysWithData)}</div>
               <div className="text-muted text-[11px]">dagar loggade</div>
             </div>
             <div>

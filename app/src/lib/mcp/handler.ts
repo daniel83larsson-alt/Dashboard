@@ -12,6 +12,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { logApiCall } from '@/lib/log-api-call'
 import { fetchMcpUserData } from './fetch-user-data'
 import { computeWeeklySummary } from './weekly-summary'
+import { fetchFirstLoggedKey } from '@/lib/first-logged-day'
 import { computeProteinTrend } from './protein-trend'
 import { dateKeysEndingToday } from './window'
 import { fetchMcpActivities, fetchMcpStrengthGoal } from './fetch-training-data'
@@ -69,7 +70,8 @@ export function buildMcpHandler(auth: { userId: string } | null) {
           fetchMcpUserData(supabase, auth.userId, todayKey, windowStart),
           fetchMcpBudgetEvents(supabase, auth.userId),
         ])
-        const payload = computeWeeklySummary(data, todayKey, budgetEvents)
+        const firstLoggedKey = await fetchFirstLoggedKey(supabase, auth.userId, [...data.yazioByDate.values()])
+        const payload = computeWeeklySummary(data, todayKey, budgetEvents, firstLoggedKey)
         logApiCall(supabase, auth.userId, 'mcp/get_weekly_summary')
         return { content: [{ type: 'text' as const, text: JSON.stringify(payload) }] }
       }

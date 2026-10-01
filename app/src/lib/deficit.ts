@@ -428,6 +428,23 @@ export type WeeklyDeficitAverage = {
 
 const MIN_COMPLETE_DAYS_FOR_AVERAGE = 4
 
+// Daniel: "6 av 7 loggade dagar ... räknar med idag som ej loggad än. Mer
+// rimligt vore ... inga missade logg dagar sedan man startade logga. Kommer
+// ju aldrig logga i framtiden." Which days of a window can fairly count as
+// "possible to have logged" — everything else must not show up as a miss:
+//  - days after today (never loggable yet),
+//  - days before the user's first-ever logged day (they hadn't started),
+//  - today while it isn't complete (the day isn't over; a complete today
+//    still counts, it's real data).
+// Genuinely missed days between the first logged day and yesterday still
+// count against the total. firstLoggedKey null = never logged → nothing counts.
+export function countableDays<T extends { date: string; isComplete: boolean }>(days: T[], todayKey: string, firstLoggedKey: string | null): T[] {
+  if (firstLoggedKey == null) return []
+  return days.filter(d =>
+    d.date <= todayKey && d.date >= firstLoggedKey && !(d.date === todayKey && !d.isComplete),
+  )
+}
+
 // Each day carries its OWN budget rather than one shared value for the
 // whole window — Daniel: "bara för de ändrades så ändrades siffrorna
 // längst ner över veckodagen... egentligen ska inte de ändras retroaktivt."

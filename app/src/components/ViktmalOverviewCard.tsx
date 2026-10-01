@@ -3,7 +3,8 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { compute7DayAverage, computeAvgDiffVsTdee, budgetInForceOn, tdeeInForceOn, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
+import { fetchFirstLoggedKey } from '@/lib/first-logged-day'
+import { compute7DayAverage, computeAvgDiffVsTdee, countableDays, budgetInForceOn, tdeeInForceOn, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 
 const ROLLING_WINDOW_DAYS = 7
 
@@ -82,15 +83,20 @@ export default async function ViktmalOverviewCard() {
   const dayOverrides = new Set((dayStatusRows ?? []).map(r => r.date as string))
   const trackedMeals = ((profile.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
 
-  const dayEntries = days.map(dateKey => {
+  const firstLoggedKey = await fetchFirstLoggedKey(supabase, user.id, yazioHistory)
+  const allDayEntries = days.map(dateKey => {
     const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides)
     return {
+      date: dateKey,
       eatenKcal: day.eatenKcal,
       isComplete: day.isComplete,
       budgetKcal: budgetInForceOn(dateKey, profile.deficit_budget_kcal!, budgetEvents),
       tdeeKcal: tdeeInForceOn(dateKey, profile.deficit_tdee_kcal ?? 0, budgetEvents),
     }
   })
+  // Only days that could fairly have been logged count (not today until it's
+  // complete, not days before the first-ever log) — see countableDays.
+  const dayEntries = countableDays(allDayEntries, todayKey, firstLoggedKey)
   const weekAvg = compute7DayAverage(dayEntries)
 
   // Same conversion as the full Viktmål page (ViktmalClient) — the raw
@@ -126,7 +132,7 @@ export default async function ViktmalOverviewCard() {
             <span className="text-muted text-xs">kcal/dag, 7-dagars snitt</span>
           </div>
           <div className="text-muted text-xs mt-2">
-            {weekAvg.completeDays} av 7 dagar färdigloggade
+            {weekAvg.completeDays} av {weekAvg.completeDays + weekAvg.incompleteDays} dagar färdigloggade
             {targetDeficitKcal != null ? ` · mål −${targetDeficitKcal} kcal/dag` : ` mot budgeten på ${profile.deficit_budget_kcal} kcal`}
           </div>
         </>

@@ -4,6 +4,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { budgetInForceOn, tdeeInForceOn } from '@/lib/deficit'
+import { fetchFirstLoggedKey } from '@/lib/first-logged-day'
 import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
 import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
@@ -153,6 +154,7 @@ export default async function ViktmalPage() {
     } catch { return [] }
   })() : []
   const yazioByDate = new Map(yazioHistory.map(d => [d.date, d]))
+  const firstLoggedKey = await fetchFirstLoggedKey(supabase, user.id, yazioHistory)
 
   const manualByDate = new Map<string, KostFoodEntry[]>()
   for (const e of (foodLog ?? []) as KostFoodEntry[]) {
@@ -208,6 +210,7 @@ export default async function ViktmalPage() {
   return (
     <ViktmalClient
       todayKey={todayKey}
+      firstLoggedKey={firstLoggedKey}
       days={days}
       trendDays={trendDayEntries}
       measurements={measurements}

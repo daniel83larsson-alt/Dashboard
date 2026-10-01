@@ -69,7 +69,7 @@ export function renderWeeklyDigestHtml({
         <table width="100%" cellpadding="0" cellspacing="6">
           <tr>
             ${statBox(kost.avgKcal != null ? String(Math.round(kost.avgKcal)) : '–', kost.kcalGoal != null ? `kcal/dag (mål ${Math.round(kost.kcalGoal)})` : 'kcal/dag')}
-            ${statBox(`${kost.daysWithData}/7`, 'dagar loggade')}
+            ${statBox(`${kost.daysWithData}/${Math.max(kost.daysCountable ?? 7, kost.daysWithData)}`, 'dagar loggade')}
             ${statBox(kost.avgProteinG != null ? `${Math.round(kost.avgProteinG)}g` : '–', 'protein/dag')}
           </tr>
         </table>

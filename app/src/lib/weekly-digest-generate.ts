@@ -12,7 +12,8 @@ import { computeWeeklyKost, weekDateKeys, type WeeklyKostData } from './weekly-k
 import { normalizeYazioDay, type YazioDay } from './yazio-history'
 import { stockholmDateKey } from './dates'
 import type { KostFoodEntry, KostMeal } from './kost'
-import { compute7DayAverage } from './deficit'
+import { compute7DayAverage, countableDays } from './deficit'
+import { fetchFirstLoggedKey } from './first-logged-day'
 import { resolveDayNutrition } from './day-nutrition-source'
 import { decryptMaybeLegacy } from './encrypt'
 import { sportLabel } from './sport'
@@ -53,7 +54,7 @@ export type WeeklyDigestRecord = {
   // cadence rather than a separate recap for a 3-4-week check-in cadence —
   // see lib/deficit.ts). null when the user hasn't opted into deficit
   // tracking, or has no budget computed, or too few complete days this week.
-  deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null
+  deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null
   // null means the AI call failed — the record still holds real computed
   // numbers, so the card/email fall back to showing those without written
   // insights rather than skipping the user entirely.
@@ -118,7 +119,7 @@ function kostLine(kost: WeeklyKostData): string {
     v == null ? 'saknas' : goal != null ? `${Math.round(v)}${unit} (mål ${Math.round(goal)}${unit})` : `${Math.round(v)}${unit} (inget mål satt)`
   const parts = [
     `KÄLLA: ${kost.source === 'yazio' ? 'synkat från YAZIO' : 'manuellt loggat i appen'}`,
-    `LOGGADE DAGAR: ${kost.daysWithData} av 7${kost.daysFlagged > 0 ? ` (${kost.daysFlagged} dag${kost.daysFlagged === 1 ? '' : 'ar'} utan/ofullständig loggning)` : ''}`,
+    `LOGGADE DAGAR: ${kost.daysWithData} av ${Math.max(kost.daysCountable, kost.daysWithData)}${kost.daysFlagged > 0 ? ` (${kost.daysFlagged} dag${kost.daysFlagged === 1 ? '' : 'ar'} utan/ofullständig loggning)` : ''}`,
     `KALORIER: snitt ${goalPart(kost.avgKcal, kost.kcalGoal, ' kcal')}${kost.daysWithinKcalGoal != null ? `, inom mål ${kost.daysWithinKcalGoal} av ${kost.daysWithData} dagar` : ''}${kost.prevWeekAvgKcal != null ? ` (förra veckan snitt ${Math.round(kost.prevWeekAvgKcal)} kcal)` : ''}`,
   ]
   if (kost.avgProteinG != null) parts.push(`PROTEIN: snitt ${goalPart(kost.avgProteinG, kost.proteinGoalG, 'g')}`)
@@ -133,7 +134,7 @@ function kostLine(kost: WeeklyKostData): string {
   return parts.join('\n')
 }
 
-function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null): string {
+function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null): string {
   const w = data.thisWeek
   const p = data.prevWeek
   const fmtAvg = (v: number | null, unit: string, decimals = 0) => v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
@@ -145,7 +146,7 @@ function buildPrompt(data: WeeklyDigestData, thisWeekActivities: ActivityRow[], 
   const kostBlock = kost ? `\n\nKOST DENNA VECKA:\n${kostLine(kost)}` : ''
   // One extra line, no extra AI call — the full 3-4-week calibration lives
   // in Viktmål's own check-in flow, this is just the weekly direction.
-  const deficitLine = deficit ? `\nVIKTMÅL DENNA VECKA: snitt ${deficit.avgDiffKcal > 0 ? '+' : ''}${deficit.avgDiffKcal} kcal/dag mot budgeten på ${deficit.budgetKcal} kcal (${deficit.completeDays} av 7 dagar färdigloggade)` : ''
+  const deficitLine = deficit ? `\nVIKTMÅL DENNA VECKA: snitt ${deficit.avgDiffKcal > 0 ? '+' : ''}${deficit.avgDiffKcal} kcal/dag mot budgeten på ${deficit.budgetKcal} kcal (${deficit.completeDays} av ${deficit.countedDays} dagar färdigloggade)` : ''
   const nutritionInstruction = kost
     ? `\n\nnutrition: Ett konkret, personligt perspektiv på KOST DENNA VECKA ovan${deficit ? ' (nämn även VIKTMÅL DENNA VECKA om det finns — hur ligger veckan till mot budgeten)' : ''} — nämn en specifik siffra (kcal, ett makromått, loggningsgrad eller mönster), aldrig en generisk kommentar. Om personen mest bara loggar mat och knappt tränar (få/inga pass denna vecka), gör det HÄR till huvudinsikten för veckan istället för en biinsikt. MAX 2 meningar.`
     : ''
@@ -174,7 +175,7 @@ wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (
 motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.${nutritionInstruction}`
 }
 
-async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null): Promise<WeeklyDigestInsights> {
+async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null): Promise<WeeklyDigestInsights> {
   const system = `Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -284,10 +285,13 @@ export async function generateWeeklyDigestForUser(
     } catch { return [] }
   })() : []
 
+  const firstLoggedKey = await fetchFirstLoggedKey(supabase, userId, yazioHistory)
+  const todayKey = stockholmDateKey(opts?.now ?? new Date())
   const weeklyKost = computeWeeklyKost({
+    firstLoggedKey,
     weekStart,
     prevWeekStart,
-    todayKey: stockholmDateKey(opts?.now ?? new Date()),
+    todayKey,
     yazioHistory,
     manualEntries: (manualFoodLog ?? []) as KostFoodEntry[],
     trackedMeals: (profile?.kost_tracked_meals as KostMeal[] | null) ?? [],
@@ -306,7 +310,7 @@ export async function generateWeeklyDigestForUser(
   // rather than a separate recap — see WeeklyDigestRecord.deficit's
   // comment. Costs no extra AI call: it's fed as one more line of context
   // into the same generateInsights prompt below.
-  let deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null = null
+  let deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null = null
   if (profile?.deficit_tracking_enabled && profile.deficit_budget_kcal != null) {
     const trackedMeals = (profile.kost_tracked_meals as KostMeal[] | null) ?? []
     const dayOverrides = new Set((dayStatusRows ?? []).map(r => r.date as string))
@@ -323,13 +327,13 @@ export async function generateWeeklyDigestForUser(
     // the user keeps on screen and watches change, so the retroactive-
     // change bug the Viktmål/Kost UI surfaces were fixed for doesn't apply
     // here the same way.
-    const weekDays = weekDateKeys(weekStart).map(dateKey => {
+    const weekDays = countableDays(weekDateKeys(weekStart).map(dateKey => {
       const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides)
-      return { eatenKcal: day.eatenKcal, isComplete: day.isComplete, budgetKcal: profile.deficit_budget_kcal! }
-    })
+      return { date: dateKey, eatenKcal: day.eatenKcal, isComplete: day.isComplete, budgetKcal: profile.deficit_budget_kcal! }
+    }), todayKey, firstLoggedKey)
     const avg = compute7DayAverage(weekDays)
     if (avg.avgDiffKcal != null) {
-      deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays }
+      deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays, countedDays: avg.completeDays + avg.incompleteDays }
     }
   }
 

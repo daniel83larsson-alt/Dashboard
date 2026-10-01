@@ -15,7 +15,8 @@ export type WeeklyKostSource = 'yazio' | 'manual' | 'none'
 export type WeeklyKostData = {
   source: WeeklyKostSource
   daysWithData: number // out of 7
-  daysFlagged: number // past days this week with no/incomplete logging
+  daysFlagged: number // countable days this week with no/incomplete logging
+  daysCountable: number // days that could fairly have been logged: not future, not before the first-ever log, not today unless complete (Daniel: "6 av 7" bug)
   avgKcal: number | null
   kcalGoal: number | null
   daysWithinKcalGoal: number | null // among daysWithData
@@ -49,15 +50,18 @@ function avg(vals: (number | null)[]): number | null {
   return nums.length ? nums.reduce((s, v) => s + v, 0) / nums.length : null
 }
 
-function computeFromYazio(days: string[], history: YazioDay[], todayKey: string): WeeklyKostData {
+function computeFromYazio(days: string[], history: YazioDay[], todayKey: string, firstLoggedKey: string | null): WeeklyKostData {
   const byDate = new Map(history.map(d => [d.date, d]))
   const weekDays = days.map(k => byDate.get(k) ?? null)
   const loggedDays = weekDays.filter((d): d is YazioDay => !!d && d.kcalEaten != null)
-  const pastDays = days.filter(k => k <= todayKey)
-  const daysFlagged = pastDays.filter(k => {
+  const isFlagged = (k: string) => {
     const d = byDate.get(k)
     return !d || d.kcalEaten == null
-  }).length
+  }
+  // Today while still unlogged isn't a miss, and days before the user's
+  // first-ever log (or after today) aren't either.
+  const countableKeys = days.filter(k => k <= todayKey && (!firstLoggedKey || k >= firstLoggedKey) && !(k === todayKey && isFlagged(k)))
+  const daysFlagged = countableKeys.filter(isFlagged).length
 
   // Which meal slot has the fewest logged entries among days that DID log
   // something — a day with zero data everywhere shouldn't count as "always
@@ -84,6 +88,7 @@ function computeFromYazio(days: string[], history: YazioDay[], todayKey: string)
     source: 'yazio',
     daysWithData: loggedDays.length,
     daysFlagged,
+    daysCountable: countableKeys.length,
     avgKcal: avg(loggedDays.map(d => d.kcalEaten)),
     kcalGoal: loggedDays.find(d => d.kcalGoal != null)?.kcalGoal ?? null,
     daysWithinKcalGoal: (() => {
@@ -109,6 +114,7 @@ function computeFromManual(
   days: string[],
   entriesByDate: Map<string, KostFoodEntry[]>,
   todayKey: string,
+  firstLoggedKey: string | null,
   trackedMeals: KostMeal[],
   dayOverrides: Set<string>,
   calorieGoal: number | null,
@@ -123,7 +129,9 @@ function computeFromManual(
     return { key: k, entries, completeness }
   })
   const loggedDays = dayInfos.filter(d => d.entries.length > 0)
-  const daysFlagged = dayInfos.filter(d => d.completeness.status === 'no_data' || d.completeness.status === 'incomplete').length
+  const isFlagged = (d: (typeof dayInfos)[number]) => d.completeness.status === 'no_data' || d.completeness.status === 'incomplete'
+  const countableInfos = dayInfos.filter(d => (!firstLoggedKey || d.key >= firstLoggedKey) && !(d.key === todayKey && isFlagged(d)))
+  const daysFlagged = countableInfos.filter(isFlagged).length
 
   const missingCounts = new Map<KostMeal, number>()
   for (const d of dayInfos) {
@@ -150,6 +158,7 @@ function computeFromManual(
     source: 'manual',
     daysWithData: loggedDays.length,
     daysFlagged,
+    daysCountable: countableInfos.length,
     avgKcal: kcalPerDay.length ? avg(kcalPerDay) : null,
     kcalGoal: calorieGoal,
     daysWithinKcalGoal: calorieGoal != null && kcalPerDay.length ? kcalPerDay.filter(k => k <= calorieGoal).length : null,
@@ -180,6 +189,7 @@ export function computeWeeklyKost({
   proteinGoalG,
   carbGoalG,
   fatGoalG,
+  firstLoggedKey = null,
 }: {
   weekStart: Date
   prevWeekStart: Date
@@ -192,6 +202,7 @@ export function computeWeeklyKost({
   proteinGoalG: number | null
   carbGoalG: number | null
   fatGoalG: number | null
+  firstLoggedKey?: string | null // user's first-ever logged day; null/omitted = don't exclude pre-start days
 }): WeeklyKostData | null {
   const days = weekDateKeys(weekStart)
   const prevDays = weekDateKeys(prevWeekStart)
@@ -202,7 +213,7 @@ export function computeWeeklyKost({
   if (!hasYazioThisWeek && !hasManualThisWeek) return null
 
   if (hasYazioThisWeek) {
-    const result = computeFromYazio(days, yazioHistory, todayKey)
+    const result = computeFromYazio(days, yazioHistory, todayKey, firstLoggedKey)
     const prevLogged = yazioHistory.filter(d => prevDays.includes(d.date) && d.kcalEaten != null)
     result.prevWeekAvgKcal = avg(prevLogged.map(d => d.kcalEaten))
     return result
@@ -214,7 +225,7 @@ export function computeWeeklyKost({
     if (!entriesByDate.has(key)) entriesByDate.set(key, [])
     entriesByDate.get(key)!.push(e)
   }
-  const result = computeFromManual(days, entriesByDate, todayKey, trackedMeals.length ? trackedMeals : KOST_MEALS, dayOverrides, calorieGoal, proteinGoalG, carbGoalG, fatGoalG)
+  const result = computeFromManual(days, entriesByDate, todayKey, firstLoggedKey, trackedMeals.length ? trackedMeals : KOST_MEALS, dayOverrides, calorieGoal, proteinGoalG, carbGoalG, fatGoalG)
   const prevDaysWithData = prevDays.filter(k => (entriesByDate.get(k) ?? []).length > 0)
   const prevKcal = prevDaysWithData.map(k => kcalTotalForDay(entriesByDate.get(k) ?? []))
   result.prevWeekAvgKcal = prevKcal.length ? avg(prevKcal) : null

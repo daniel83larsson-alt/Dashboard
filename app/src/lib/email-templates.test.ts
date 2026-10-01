@@ -65,7 +65,7 @@ describe('renderWeeklyDigestHtml', () => {
         newRecords: [],
       },
       kost: {
-        source: 'yazio', daysWithData: 6, daysFlagged: 1, avgKcal: 2100, kcalGoal: 2200, daysWithinKcalGoal: 5, prevWeekAvgKcal: 2300,
+        source: 'yazio', daysWithData: 6, daysFlagged: 1, daysCountable: 7, avgKcal: 2100, kcalGoal: 2200, daysWithinKcalGoal: 5, prevWeekAvgKcal: 2300,
         avgProteinG: 110, proteinGoalG: 120, avgCarbG: 220, carbGoalG: null, avgFatG: 70, fatGoalG: null,
         weightStartKg: 82.4, weightEndKg: 81.9, avgWaterMl: 1800, waterGoalMl: 2000, mostSkippedMeal: 'Kvällsmat',
       },

@@ -1,7 +1,7 @@
 // Pure: builds get_weekly_summary()'s exact JSON payload from already-
 // fetched data (lib/mcp/fetch-user-data.ts). No I/O here, same contract as
 // the rest of this app's lib/ modules.
-import { computeAvgDiffVsTdee, computeRollingWeightAverage, tdeeInForceOn, type BudgetEvent } from '@/lib/deficit'
+import { computeAvgDiffVsTdee, countableDays, computeRollingWeightAverage, tdeeInForceOn, type BudgetEvent } from '@/lib/deficit'
 import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 import { resolveDayNutrition, resolveDayProteinG } from '@/lib/day-nutrition-source'
 import { dateKeysEndingToday } from './window'
@@ -25,7 +25,10 @@ export type WeeklySummary = {
   budget_kcal: number | null
 }
 
-export function computeWeeklySummary(data: McpUserData, todayKey: string, budgetEvents: BudgetEvent[] = []): WeeklySummary {
+// firstLoggedKey: user's first-ever logged day. When given, days before it,
+// after today, and today-while-incomplete don't count as "missed" (days_total
+// shrinks accordingly). Omitted = the legacy fixed 7-day denominator.
+export function computeWeeklySummary(data: McpUserData, todayKey: string, budgetEvents: BudgetEvent[] = [], firstLoggedKey?: string | null): WeeklySummary {
   const { profile, yazioByDate, manualByDate, dayOverrides, trackedMeals, measurements } = data
   const days = dateKeysEndingToday(todayKey, SUMMARY_WINDOW_DAYS)
 
@@ -37,7 +40,8 @@ export function computeWeeklySummary(data: McpUserData, todayKey: string, budget
   })
   const budgetKcal = effectiveGoal.kcal
 
-  const dayEntries = days.map(dateKey => resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides))
+  const allDayEntries = days.map(dateKey => ({ date: dateKey, ...resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides) }))
+  const dayEntries = firstLoggedKey === undefined ? allDayEntries : countableDays(allDayEntries, todayKey, firstLoggedKey)
   // Direct eaten-vs-TDEE average, each day against its own historically-
   // correct TDEE (tdeeInForceOn) rather than today's current one — a
   // budget/TDEE change mid-week must not retroactively change how an
@@ -46,10 +50,10 @@ export function computeWeeklySummary(data: McpUserData, todayKey: string, budget
   // broke once TDEE could vary within the window). Negative means a
   // deficit, matching the JSON example (-469).
   const tdeeAvg = tdeeKcal != null
-    ? computeAvgDiffVsTdee(dayEntries.map((d, i) => ({
+    ? computeAvgDiffVsTdee(dayEntries.map(d => ({
         eatenKcal: d.eatenKcal,
         isComplete: d.isComplete,
-        tdeeKcal: tdeeInForceOn(days[i], tdeeKcal, budgetEvents),
+        tdeeKcal: tdeeInForceOn(d.date, tdeeKcal, budgetEvents),
       })))
     : { avgDiffKcal: null, completeDays: dayEntries.filter(d => d.isComplete).length, incompleteDays: 0 }
 
@@ -84,7 +88,7 @@ export function computeWeeklySummary(data: McpUserData, todayKey: string, budget
     kcal_diff_avg_7d: kcalDiffAvg7d,
     kcal_diff_target: kcalDiffTarget,
     days_logged: tdeeAvg.completeDays,
-    days_total: SUMMARY_WINDOW_DAYS,
+    days_total: firstLoggedKey === undefined ? SUMMARY_WINDOW_DAYS : dayEntries.length,
     protein_avg_7d_g: proteinAvg7dG,
     weight_start_kg: profile?.deficit_start_weight_kg ?? null,
     weight_current_kg: weightCurrentKg,

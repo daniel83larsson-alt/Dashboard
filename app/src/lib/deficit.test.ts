@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   computeDeficitBudget, dailyDiffStatus, compute7DayAverage, computeDeficitCheckin, selectCheckinPeriod,
   computeRollingWeightAverage, resolveActiveGoalSegment, deficitOverrideSignature, daysWithRealTrainingCalories,
-  budgetInForceOn, tdeeInForceOn, computeAvgDiffVsTdee, explainBudgetChange, computeWeightTrendProjection,
+  budgetInForceOn, tdeeInForceOn, computeAvgDiffVsTdee, countableDays, explainBudgetChange, computeWeightTrendProjection,
 } from './deficit'
 
 describe('daysWithRealTrainingCalories', () => {
@@ -588,5 +588,36 @@ describe('computeDeficitCheckin', () => {
   it('treats a negligible predicted change as too small a sample to calibrate from', () => {
     const result = computeDeficitCheckin({ ...base, loggedDeficitKcal: 50 * 24, weightEndKg: 104.9 })
     expect(result.status).toBe('too_small_sample')
+  })
+})
+
+describe('countableDays', () => {
+  const mk = (date: string, isComplete: boolean) => ({ date, isComplete })
+  const week = [
+    mk('2026-09-24', false), mk('2026-09-25', true), mk('2026-09-26', true), mk('2026-09-27', false),
+    mk('2026-09-28', true), mk('2026-09-29', true), mk('2026-09-30', false),
+  ]
+  it('excludes today while it is not complete (the "6 av 7" case)', () => {
+    const r = countableDays(week, '2026-09-30', '2026-09-01')
+    expect(r.map(d => d.date)).not.toContain('2026-09-30')
+    expect(r).toHaveLength(6)
+  })
+  it('keeps today once it is complete', () => {
+    const logged = week.map(d => (d.date === '2026-09-30' ? { ...d, isComplete: true } : d))
+    expect(countableDays(logged, '2026-09-30', '2026-09-01')).toHaveLength(7)
+  })
+  it('keeps genuinely missed past days in the total', () => {
+    const r = countableDays(week, '2026-09-30', '2026-09-01')
+    expect(r.filter(d => !d.isComplete).map(d => d.date)).toEqual(['2026-09-24', '2026-09-27'])
+  })
+  it('excludes days before the first logged day', () => {
+    const r = countableDays(week, '2026-09-30', '2026-09-27')
+    expect(r.map(d => d.date)).toEqual(['2026-09-27', '2026-09-28', '2026-09-29'])
+  })
+  it('never counts future days', () => {
+    expect(countableDays(week, '2026-09-26', '2026-09-01').map(d => d.date)).toEqual(['2026-09-24', '2026-09-25', '2026-09-26'])
+  })
+  it('returns nothing if the user never logged', () => {
+    expect(countableDays(week, '2026-09-30', null)).toEqual([])
   })
 })

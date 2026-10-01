@@ -11,7 +11,9 @@ import {
 } from './monthly-report'
 import { normalizeYazioDay, type YazioDay } from './yazio-history'
 import { resolveDayNutrition, resolveDayProteinG } from './day-nutrition-source'
-import { compute7DayAverage } from './deficit'
+import { compute7DayAverage, countableDays } from './deficit'
+import { fetchFirstLoggedKey } from './first-logged-day'
+import { stockholmDateKey } from './dates'
 import { decryptMaybeLegacy } from './encrypt'
 import { coachToneInstruction } from './coach-tone'
 import type { ActivityRow } from './duplicates'
@@ -38,7 +40,7 @@ export type MonthlyReportRecord = {
   // för varje dag i månaden istället för att återskapa vad som gällde
   // historiskt varje dag — rimligt för ett summerande mejl som skickas i
   // efterhand, se weekly-digest-generate.ts's egen kommentar om samma val.
-  deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null
+  deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null
   insights: MonthlyReportInsights | null
 }
 
@@ -46,14 +48,14 @@ function fmtAvg(v: number | null, unit: string, decimals = 0): string {
   return v == null ? 'saknas' : `${v.toFixed(decimals)}${unit}`
 }
 
-function buildPrompt(data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null, goalTitle: string | null): string {
+function buildPrompt(data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null): string {
   const t = data.thisMonth
   const p = data.prevMonth
 
   const kostBlock = kost
     ? `\n\nKOST DENNA MÅNAD: ${kost.daysWithData} av ${kost.totalDaysInMonth} dagar loggade, snitt ${fmtAvg(kost.avgKcal, ' kcal')}${kost.kcalGoal != null ? ` (mål ${kost.kcalGoal} kcal)` : ''}${kost.avgProteinG != null ? `, protein snitt ${Math.round(kost.avgProteinG)}g${kost.proteinGoalG != null ? ` (mål ${kost.proteinGoalG}g)` : ''}` : ''}`
     : ''
-  const deficitLine = deficit ? `\nVIKTMÅL DENNA MÅNAD: snitt ${deficit.avgDiffKcal > 0 ? '+' : ''}${deficit.avgDiffKcal} kcal/dag mot budgeten på ${deficit.budgetKcal} kcal (${deficit.completeDays} av ${data.thisMonth.sessions.count > 0 ? 'månadens' : ''} dagar färdigloggade)` : ''
+  const deficitLine = deficit ? `\nVIKTMÅL DENNA MÅNAD: snitt ${deficit.avgDiffKcal > 0 ? '+' : ''}${deficit.avgDiffKcal} kcal/dag mot budgeten på ${deficit.budgetKcal} kcal (${deficit.completeDays} av ${deficit.countedDays} dagar färdigloggade)` : ''
   const weightLine = data.weight.startKg != null && data.weight.endKg != null
     ? `\nVIKT: ${data.weight.startKg.toFixed(1)} kg → ${data.weight.endKg.toFixed(1)} kg (${data.weight.changeKg! >= 0 ? '+' : ''}${data.weight.changeKg} kg denna månad)`
     : ''
@@ -90,7 +92,7 @@ funFact: EN rolig, konkret jämförelse byggd på FUNFACTS-siffrorna ovan (t.ex.
 ${coachToneInstruction(undefined)}`
 }
 
-async function generateInsights(apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined): Promise<MonthlyReportInsights> {
+async function generateInsights(apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined): Promise<MonthlyReportInsights> {
   const system = `Du är atletens huvudcoach som skriver en större månadssammanfattning. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -208,13 +210,19 @@ export async function generateMonthlyReportForUser(
     deficitTrackingEnabled: profile?.deficit_tracking_enabled ?? false,
     deficitBudgetKcal: profile?.deficit_budget_kcal ?? null,
   })
-  const kost = summarizeMonthlyKost(dayNutritions, dayProteins, effectiveCalorieGoal.kcal, profile?.protein_goal_g ?? null)
+  const firstLoggedKey = await fetchFirstLoggedKey(supabase, userId, yazioHistory)
+  const todayKey = stockholmDateKey()
+  const countableMonthKeys = monthKeys.filter(k => k <= todayKey && !!firstLoggedKey && k >= firstLoggedKey)
+  const kost = summarizeMonthlyKost(dayNutritions, dayProteins, effectiveCalorieGoal.kcal, profile?.protein_goal_g ?? null, countableMonthKeys.length)
 
-  let deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number } | null = null
+  let deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null = null
   if (profile?.deficit_tracking_enabled && profile.deficit_budget_kcal != null) {
-    const monthDays = dayNutritions.map(d => ({ eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: profile.deficit_budget_kcal! }))
+    const monthDays = countableDays(
+      dayNutritions.map((d, i) => ({ date: monthKeys[i], eatenKcal: d.eatenKcal, isComplete: d.isComplete, budgetKcal: profile.deficit_budget_kcal! })),
+      todayKey, firstLoggedKey,
+    )
     const avg = compute7DayAverage(monthDays)
-    if (avg.avgDiffKcal != null) deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays }
+    if (avg.avgDiffKcal != null) deficit = { avgDiffKcal: avg.avgDiffKcal, budgetKcal: profile.deficit_budget_kcal, completeDays: avg.completeDays, countedDays: avg.completeDays + avg.incompleteDays }
   }
 
   let insights: MonthlyReportInsights | null = null
