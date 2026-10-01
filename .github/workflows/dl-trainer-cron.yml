@@ -7,29 +7,36 @@ name: DL Trainer scheduled sync
 # attempt to change link.productionBranch is rejected) and the dashboard UI
 # (the Production Branch setting isn't present). vercel.json's three cron
 # definitions have therefore likely never fired automatically since they
-# were written. GitHub Actions' own scheduler is a complete substitute here
-# — the routes only check the CRON_SECRET header, not where the request
-# comes from, so this reaches the exact same endpoints Vercel Cron would
-# have called, just via a different scheduler.
+# were written. GitHub Actions' own scheduler was set up as a substitute —
+# but it turned out to have NO timing guarantee either: confirmed live
+# running 3-6 hours late throughout a single day (see STATUS.md), which is
+# actively harmful for things like a "breakfast" reminder arriving at
+# lunchtime. The 9 single-call, non-batched routes below (no deliberate
+# pacing between requests) have therefore moved to Supabase pg_cron+pg_net
+# instead (runs inside Postgres's own scheduler, not a shared external
+# queue — see the `add_pg_cron_scheduler_for_low_risk_crons` migration).
+# Only the 3 routes that need several sequential, DELIBERATELY-PACED calls
+# stay here: sync-all's 25s gaps between Garmin login batches exist
+# specifically to avoid re-tripping a real Cloudflare rate-limit incident,
+# and weekly-digest/monthly-report's batching exists for Vercel's 60s cap —
+# reproducing that pacing safely in pg_cron is a separate, more careful
+# follow-up, not done in the same sitting as the 9 simple ones.
+# workflow_dispatch below still lists all 12 routes (including the 9 that
+# moved) as a manual-testing/backup path — the routes accept either
+# CRON_SECRET (this workflow) or SCHEDULER_SECRET (Supabase), so both keep
+# working side by side.
 on:
   schedule:
     - cron: '0 5 * * *'    # sync-all — matches vercel.json
-    - cron: '0 18 * * *'   # streak-reminder — matches vercel.json
-    - cron: '30 5 * * *'   # isolation-check — matches vercel.json
-    - cron: '45 5 * * *'   # prod-smoke — matches vercel.json
     - cron: '0 16 * * 0'   # weekly-digest, Sunday only — matches vercel.json (18:00 svensk sommartid)
-    - cron: '0 7 * * *'    # meal-reminders breakfast (09:00 svensk sommartid) — matches vercel.json
-    - cron: '0 11 * * *'   # meal-reminders lunch (13:00 svensk sommartid) — matches vercel.json
-    - cron: '0 16 * * *'   # meal-reminders dinner (18:00 svensk sommartid) — matches vercel.json
-    - cron: '5 18 * * *'   # meal-reminders supper (20:05 svensk sommartid, offset 5 min to not collide with streak-reminder's identical 0 18 * * *) — matches vercel.json
-    - cron: '0 6 * * *'    # body-reminders (08:00 svensk sommartid) — matches vercel.json
+    - cron: '0 6 1 * *'    # monthly-report, den 1:a varje månad (08:00 svensk sommartid) — matches vercel.json
   workflow_dispatch:
     inputs:
       route:
         description: 'Which route to call (for manual testing)'
         required: true
         type: choice
-        options: [sync-all, streak-reminder, isolation-check, prod-smoke, weekly-digest, meal-reminders-breakfast, meal-reminders-lunch, meal-reminders-dinner, meal-reminders-supper, body-reminders]
+        options: [sync-all, streak-reminder, isolation-check, prod-smoke, weekly-digest, meal-reminders-breakfast, meal-reminders-lunch, meal-reminders-dinner, meal-reminders-supper, body-reminders, weekly-tdee-recompute, monthly-report]
 
 jobs:
   call:
@@ -50,15 +57,8 @@ jobs:
           else
             case "${{ github.event.schedule }}" in
               "0 5 * * *") echo "path=sync-all" >> "$GITHUB_OUTPUT" ;;
-              "0 18 * * *") echo "path=streak-reminder" >> "$GITHUB_OUTPUT" ;;
-              "30 5 * * *") echo "path=isolation-check" >> "$GITHUB_OUTPUT" ;;
-              "45 5 * * *") echo "path=prod-smoke" >> "$GITHUB_OUTPUT" ;;
               "0 16 * * 0") echo "path=weekly-digest" >> "$GITHUB_OUTPUT" ;;
-              "0 7 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=breakfast" >> "$GITHUB_OUTPUT" ;;
-              "0 11 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=lunch" >> "$GITHUB_OUTPUT" ;;
-              "0 16 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=dinner" >> "$GITHUB_OUTPUT" ;;
-              "5 18 * * *") echo "path=meal-reminders" >> "$GITHUB_OUTPUT"; echo "meal=supper" >> "$GITHUB_OUTPUT" ;;
-              "0 6 * * *") echo "path=body-reminders" >> "$GITHUB_OUTPUT" ;;
+              "0 6 1 * *") echo "path=monthly-report" >> "$GITHUB_OUTPUT" ;;
             esac
           fi
       - name: Call the cron endpoint
@@ -72,15 +72,17 @@ jobs:
               -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
               "$url"
           }
-          if [ "${{ steps.route.outputs.path }}" = "weekly-digest" ]; then
+          if [ "${{ steps.route.outputs.path }}" = "weekly-digest" ] || [ "${{ steps.route.outputs.path }}" = "monthly-report" ]; then
             # Batched — a single invocation only fits ~5 users inside Vercel's
-            # 60s cap (confirmed by a real timeout during testing), so this
-            # calls the route repeatedly. Each call only processes users who
-            # don't have this week's digest yet, so repeating past "everyone's
+            # 60s cap (confirmed by a real timeout during testing for
+            # weekly-digest; monthly-report does the same one-Gemini-call-
+            # per-user work, so it gets the same treatment), so this calls
+            # the route repeatedly. Each call only processes users who don't
+            # have this period's record yet, so repeating past "everyone's
             # done" is a safe no-op — just enough calls to drain a growing
             # user base without needing to hand-tune this number often.
             for i in 1 2 3 4 5 6; do
-              echo "weekly-digest batch $i"
+              echo "${{ steps.route.outputs.path }} batch $i"
               call
               echo
             done
