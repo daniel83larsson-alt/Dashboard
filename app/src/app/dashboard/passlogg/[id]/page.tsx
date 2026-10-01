@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { estimateAerobicTE } from '@/lib/effort-summary'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
 import ActivityEnrichment from '@/components/ActivityEnrichment'
@@ -125,6 +126,13 @@ export default async function ActivityDetailPage({ params }: { params: Promise<{
         .map(f => ({ ...f, value: garminRaw[f.key] }))
         .filter(f => isNum(f.value) && f.value !== 0)
     : []
+  // Daniel: show the training effect on passes where Garmin didn't give one
+  // (his watch can't). Estimated from the pass's cached pulszoner — clearly
+  // labelled as an estimate, never mixed up with Garmin's own value.
+  if (garminRaw && !isNum(garminRaw.aerobicTrainingEffect)) {
+    const est = estimateAerobicTE(garminRaw.hrZones)
+    if (est != null) garminExtras.push({ key: 'estimatedAerobicTE', label: 'Uppskattad aerob träningseffekt (från pulszoner)', unit: '', value: est })
+  }
 
   const rawLat = garminRaw?.startLatitude
   const rawLng = garminRaw?.startLongitude

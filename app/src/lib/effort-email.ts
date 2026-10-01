@@ -1,5 +1,5 @@
 import { ZONE_COLORS, ZONE_LABELS } from './zones'
-import type { EffortSummary } from './effort-summary'
+import { teSourceLabel, type EffortSummary } from './effort-summary'
 
 const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
@@ -18,7 +18,7 @@ export function effortEmailHtml(effort: EffortSummary | null | undefined, senten
          .join(' · ')} <span style="color:#999;">(${effort.zonePasses} av ${effort.totalPasses} pass)</span></p>`
     : ''
   const te = effort.tePasses > 0
-    ? `<p style="margin:0 0 6px;color:#555;font-size:12px;">Träningseffekt (Garmin, 0–5): aerob snitt ${effort.teAvgAerobic ?? '–'}, anaerob ${effort.teAvgAnaerobic ?? '–'}${effort.hardest ? ` · hårdast: ${esc(effort.hardest.label)} ${effort.hardest.startDate.slice(0, 10)} (aerob ${effort.hardest.aerobic ?? '–'})` : ''}</p>`
+    ? `<p style="margin:0 0 6px;color:#555;font-size:12px;">${(effort.teEstimatedPasses ?? 0) > 0 ? 'Uppskattad träningseffekt' : 'Träningseffekt'} (0–5): aerob snitt ${effort.teAvgAerobic ?? '–'}${effort.teAvgAnaerobic != null ? `, anaerob ${effort.teAvgAnaerobic}` : ''}${effort.hardest ? ` · hårdast: ${esc(effort.hardest.label)} ${effort.hardest.startDate.slice(0, 10)} (aerob ${effort.hardest.aerobic ?? '–'})` : ''} <span style="color:#999;">· källa: ${esc(teSourceLabel(effort))}</span></p>`
     : ''
   const text = sentence ? `<p style="margin:8px 0 0;color:#1a1a1a;line-height:1.5;font-size:13.5px;">${esc(sentence)}</p>` : ''
   return `<div style="margin:0 0 16px;padding:14px 16px;background:#f4f4f2;border-radius:12px;">

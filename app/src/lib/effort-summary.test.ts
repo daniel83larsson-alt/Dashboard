@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computeEffortSummary, effortPromptLines, type EffortRow } from './effort-summary'
+import { computeEffortSummary, effortPromptLines, estimateAerobicTE, type EffortRow } from './effort-summary'
 
 const zones = (...secs: number[]) => secs.map((s, i) => ({ zoneNumber: i + 1, secsInZone: s }))
 const row = (o: Partial<EffortRow> & { id: string }): EffortRow => ({ sport_type: 'Run', start_date: '2026-09-10T08:00:00Z', ...o })
@@ -54,5 +54,45 @@ describe('effortEmailHtml', () => {
     const html = effortEmailHtml(e, '<b>hej</b>', 'Intensitet')
     expect(html).toContain('&lt;b&gt;hej&lt;/b&gt;')
     expect(html).toContain('1 av 1 pass')
+  })
+})
+
+describe('estimateAerobicTE', () => {
+  // Real Garmin passes (friends' data) with Garmin's own aerobic value. Mean
+  // error over 218 passes is 0.37, but a single pass can be off by ~0.7, so
+  // these check the neighbourhood, not exact values.
+  it('lands close to Garmin on real passes', () => {
+    expect(estimateAerobicTE(zones(11.5, 33, 417, 1571, 102))).toBeGreaterThan(3.2) // Run, Garmin 3.4 (estimate 4.1)
+    expect(estimateAerobicTE(zones(165, 181, 0, 0, 0))).toBeLessThan(0.8) // short easy ride, Garmin 0.4
+    expect(estimateAerobicTE(zones(1544, 2151, 859, 992, 211))).toBeGreaterThan(3.3) // long mixed ride, Garmin 3.7
+    expect(estimateAerobicTE(zones(0, 0, 52, 2317, 1989))).toBeGreaterThan(4.5) // hard long run, Garmin 5.0
+  })
+  it('returns null without zones or for very short passes', () => {
+    expect(estimateAerobicTE(undefined)).toBeNull()
+    expect(estimateAerobicTE(zones(60, 60, 0, 0, 0))).toBeNull()
+  })
+  it('is capped below 5 and never negative', () => {
+    const v = estimateAerobicTE(zones(0, 0, 0, 0, 100000))!
+    expect(v).toBeLessThanOrEqual(5)
+    expect(v).toBeGreaterThanOrEqual(0)
+  })
+})
+
+describe('computeEffortSummary with estimated effect', () => {
+  it('estimates for a pass without Garmin value, keeps Garmin value when present, and labels the mix', () => {
+    const e = computeEffortSummary([
+      row({ id: 'a', hr_zones: zones(0, 600, 900, 300, 0) }),
+      row({ id: 'b', aerobic_te: 4, anaerobic_te: 1, hr_zones: zones(0, 0, 0, 600, 0) }),
+    ], 2)!
+    expect(e.tePasses).toBe(2)
+    expect(e.teEstimatedPasses).toBe(1)
+    expect(effortPromptLines(e).join(' ')).toContain('delvis Garmin, delvis uppskattad')
+  })
+  it('labels all-estimated as appens uppskattning and shows no anaerobic value', () => {
+    const e = computeEffortSummary([row({ id: 'a', hr_zones: zones(0, 900, 900, 0, 0) })], 1)!
+    expect(e.teAvgAnaerobic).toBeNull()
+    const text = effortPromptLines(e).join(' ')
+    expect(text).toContain('uppskattad av appen')
+    expect(text).not.toContain('anaerob')
   })
 })

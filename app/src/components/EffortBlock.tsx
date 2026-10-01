@@ -1,5 +1,5 @@
 import { ZONE_COLORS, ZONE_LABELS } from '@/lib/zones'
-import type { EffortSummary } from '@/lib/effort-summary'
+import { teSourceLabel, type EffortSummary } from '@/lib/effort-summary'
 
 // Zone distribution bar + Garmin Training Effect + the AI's one-sentence
 // comment — shared by the weekly and monthly recap cards.
@@ -21,8 +21,9 @@ export default function EffortBlock({ effort, sentence, title }: { effort: Effor
       )}
       {effort.tePasses > 0 && (
         <div className="text-sm text-fg">
-          Träningseffekt (Garmin, 0–5): aerob snitt <span className="font-mono">{effort.teAvgAerobic ?? '–'}</span>, anaerob <span className="font-mono">{effort.teAvgAnaerobic ?? '–'}</span>
+          {(effort.teEstimatedPasses ?? 0) > 0 ? 'Uppskattad träningseffekt' : 'Träningseffekt'} (0–5): aerob snitt <span className="font-mono">{effort.teAvgAerobic ?? '–'}</span>{effort.teAvgAnaerobic != null && <>, anaerob <span className="font-mono">{effort.teAvgAnaerobic}</span></>}
           {effort.hardest && <> · hårdast: {effort.hardest.label} {effort.hardest.startDate.slice(0, 10)} (aerob <span className="font-mono">{effort.hardest.aerobic ?? '–'}</span>)</>}
+          <div className="text-muted text-[11px]">Källa: {teSourceLabel(effort)}</div>
         </div>
       )}
       {sentence && <p className="text-sm text-fg leading-relaxed pt-1 border-t border-edge">{sentence}</p>}
