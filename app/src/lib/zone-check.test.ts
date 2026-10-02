@@ -121,3 +121,32 @@ describe('low zones (zon 2)', () => {
     expect(asksAboutHeartRate('är z2 rätt för mig')).toBe(true)
   })
 })
+
+describe('low zones after a zone change', () => {
+  const withZones = (zs: [number, number, number, number, number], z2: number, z3: number): ZoneCheckRow => {
+    const r = easyPass(zs)
+    r.hr_zones = zs.map((t, i) => ({ zoneNumber: i + 1, secsInZone: t, zoneLowBoundary: [89, z2, z3, 142, 160][i] }))
+    return r
+  }
+  it('ignores passes measured against the old zone limits', () => {
+    // 8 old-zone passes that look "drifty", then 2 new-zone passes: not enough to judge yet.
+    const old = Array.from({ length: 8 }, () => withZones([200, 600, 900, 100, 0], 107, 125))
+    const fresh = Array.from({ length: 2 }, () => withZones([200, 1200, 200, 0, 0], 120, 134))
+    const c = computeZoneCheck([...old, ...fresh])!
+    expect(c.lowZones).toBeNull()
+    expect(c.findings.map(f => f.code)).not.toContain('z2_drift')
+    expect(formatZoneCheckForPrompt(c)).not.toContain('LÅGA ZONER (')
+  })
+  it('judges once there are enough passes with the new zones, using the new zone 2 range', () => {
+    const old = Array.from({ length: 8 }, () => withZones([200, 600, 900, 100, 0], 107, 125))
+    const fresh = Array.from({ length: 5 }, () => withZones([200, 1200, 200, 0, 0], 120, 134))
+    const c = computeZoneCheck([...old, ...fresh])!
+    expect(c.lowZones).toMatchObject({ easyPasses: 5, z2Range: [120, 133] })
+    expect(c.findings.map(f => f.code)).not.toContain('z2_drift')
+  })
+  it('tells the coach to wait when zones just changed', () => {
+    const old = Array.from({ length: 8 }, () => withZones([200, 600, 900, 100, 0], 107, 125))
+    const fresh = Array.from({ length: 2 }, () => withZones([200, 1200, 200, 0, 0], 120, 134))
+    expect(formatZoneCheckForPrompt(computeZoneCheck([...old, ...fresh])!)).toContain('ändrades nyligen')
+  })
+})

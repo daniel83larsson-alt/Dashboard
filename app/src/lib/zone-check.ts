@@ -95,11 +95,15 @@ export function computeZoneCheck(rows: ZoneCheckRow[]): ZoneCheck | null {
   }
 
   // Zongränserna har ändrats under perioden → jämförelser över tid haltar.
-  const lows = z.map(p => p.z5Low)
-  if (Math.max(...lows) - Math.min(...lows) >= ZONES_CHANGED_BPM) {
+  const spread = (vals: (number | null)[]) => {
+    const v = vals.filter((x): x is number => x != null)
+    return v.length ? Math.max(...v) - Math.min(...v) : 0
+  }
+  if (Math.max(spread(z.map(p => p.z5Low)), spread(z.map(p => p.z2Low)), spread(z.map(p => p.z3Low))) >= ZONES_CHANGED_BPM) {
+    const l2 = z.filter(p => p.z2Low != null).map(p => p.z2Low as number)
     findings.push({
       code: 'zones_changed',
-      text: `Dina zongränser har ändrats under perioden (zon 5 började mellan ${Math.min(...lows)} och ${Math.max(...lows)} slag/min), så pass från olika tider är inte helt jämförbara i zonfördelning.`,
+      text: `Dina zongränser har ändrats under perioden (t.ex. zon 2 började mellan ${Math.min(...l2)} och ${Math.max(...l2)} slag/min), så pass från olika tider är inte helt jämförbara i zonfördelning.`,
     })
   }
 
@@ -122,7 +126,14 @@ function median(v: number[]): number {
 // Daniel: "bygg för låga zonerna — det är där de flesta användare kör".
 // Ett "lugnt pass" = ≥20 min med högst 10 % av tiden i zon 4–5. Avsikten
 // (var personen TÄNKTE köra zon 2) är okänd, så fynden är mönster, inte facit.
-function computeLowZones(z: Zoned[], latest: Zoned, findings: ZoneFinding[]): ZoneCheck['lowZones'] {
+//
+// Bara pass med SAMMA zondefinition som senaste passet räknas: om användaren
+// nyligen ändrat sina zoner (t.ex. efter ett test) skulle äldre pass annars
+// mätas mot gamla gränser och ge ett missvisande fynd. Tiden i varje zon är
+// redan uträknad av Garmin mot de gränser som gällde då, och vi har ingen
+// pulskurva att räkna om med — så vi väntar tills det finns ≥5 pass med de nya.
+function computeLowZones(all: Zoned[], latest: Zoned, findings: ZoneFinding[]): ZoneCheck['lowZones'] {
+  const z = all.filter(p => p.z2Low === latest.z2Low && p.z3Low === latest.z3Low)
   const easy = z.filter(p => {
     const tot = p.zoneSecs.reduce((s, x) => s + x, 0)
     return p.secs >= EASY_MIN_SECS && tot > 0 && (p.zoneSecs[3] + p.zoneSecs[4]) / tot <= EASY_MAX_HARD_SHARE
@@ -173,6 +184,9 @@ export function formatZoneCheckForPrompt(c: ZoneCheck): string {
   if (c.lowZones) {
     const l = c.lowZones
     lines.push(`LÅGA ZONER (${l.easyPasses} lugna pass ≥20 min med ≤10 % i zon 4–5): mitten av tiden i zon 1 ${l.z1Pct} %, zon 2 ${l.z2Pct} %, zon 3+ ${l.z3PlusPct} %; zon 2 = ${l.z2Range[0]}–${l.z2Range[1]} slag/min${l.avgHr != null ? `; snittpuls på dessa pass ${l.avgHr}` : ''}. Praktiskt prov för zon 2: man ska kunna prata hela meningar (pratprov) och pulsen bör hålla sig i zon 2:s spann.`)
+  }
+  else if (c.findings.some(f => f.code === 'zones_changed')) {
+    lines.push('LÅGA ZONER: zongränserna ändrades nyligen och det finns för få lugna pass (minst 5 krävs) med de nya zonerna för att bedöma zon 2 än. Säg det och be personen köra några lugna pass, utvärdera sedan. Bedöm INTE zon 2 mot de gamla passen.')
   }
   lines.push(TEST_SUGGESTIONS, TEST_SAFETY)
   lines.push('Svara på frågan om puls/zoner utifrån ZONKONTROLL. Säg att det är en rimlighetskontroll av mönster, inte ett facit, och att du inte kan ändra klockan åt personen.')
