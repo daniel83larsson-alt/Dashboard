@@ -73,3 +73,51 @@ describe('zoneCheckNote', () => {
     expect(zoneCheckNote(null)).toBeNull()
   })
 })
+
+// Lugna pass: tid per zon [z1..z5] i sekunder, zongränser z2=125, z3=142, z5=160.
+function easyPass(zs: [number, number, number, number, number], o: { secs?: number; avg?: number } = {}): ZoneCheckRow {
+  day++
+  return {
+    start_date: new Date(Date.UTC(2026, 8, 1 + day)).toISOString(),
+    moving_time: o.secs ?? zs.reduce((a, b) => a + b, 0),
+    max_heartrate: 150,
+    average_heartrate: o.avg ?? 130,
+    hr_zones: zs.map((t, i) => ({ zoneNumber: i + 1, secsInZone: t, zoneLowBoundary: [89, 125, 142, 150, 160][i] })),
+  }
+}
+const easyMany = (n: number, zs: [number, number, number, number, number]) => Array.from({ length: n }, () => easyPass(zs))
+
+describe('low zones (zon 2)', () => {
+  it('reports the typical split on easy passes and the zone 2 range', () => {
+    const c = computeZoneCheck(easyMany(6, [300, 1200, 300, 0, 0]))!
+    expect(c.lowZones).toMatchObject({ easyPasses: 6, z1Pct: 17, z2Pct: 67, z3PlusPct: 17, z2Range: [125, 141] })
+    expect(c.findings.map(f => f.code)).not.toContain('z2_drift')
+  })
+  it('flags drift when easy passes spend a lot of time in zone 3+', () => {
+    const c = computeZoneCheck(easyMany(6, [200, 600, 900, 100, 0]))!
+    expect(c.findings.map(f => f.code)).toContain('z2_drift')
+    expect(c.findings.find(f => f.code === 'z2_drift')!.text).toContain('zon 2 = 125–141')
+  })
+  it('flags "below zone 2" when easy passes sit mostly in zone 1', () => {
+    const c = computeZoneCheck(easyMany(6, [1500, 200, 100, 0, 0]))!
+    expect(c.findings.map(f => f.code)).toContain('z2_below')
+  })
+  it('does not count hard or short passes as easy, and needs at least 5 easy passes', () => {
+    const hard = Array.from({ length: 6 }, () => easyPass([200, 300, 400, 600, 300])) // 50 % in zone 4–5
+    expect(computeZoneCheck(hard)!.lowZones).toBeNull()
+    expect(computeZoneCheck(easyMany(4, [300, 1200, 300, 0, 0]))).toBeNull() // <5 passes at all
+    const short = Array.from({ length: 6 }, () => easyPass([60, 200, 100, 0, 0])) // 6 min
+    expect(computeZoneCheck(short)!.lowZones).toBeNull()
+  })
+  it('surfaces low-zone findings in the recap note and in the coach prompt', () => {
+    const c = computeZoneCheck(easyMany(6, [200, 600, 900, 100, 0]))!
+    expect(zoneCheckNote(c)!.text).toContain('lugna pass')
+    const prompt = formatZoneCheckForPrompt(c)
+    expect(prompt).toContain('LÅGA ZONER')
+    expect(prompt).toContain('pratprov')
+  })
+  it('recognises L2/Z2 wording as a pulse question', () => {
+    expect(asksAboutHeartRate('kör jag verkligen L2?')).toBe(true)
+    expect(asksAboutHeartRate('är z2 rätt för mig')).toBe(true)
+  })
+})

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
@@ -102,6 +103,7 @@ mental: vad säger dagsformen (sömn/Body Battery) om läge för fokus och motiv
     return NextResponse.json({ ok: true, insight: result })
   } catch (err) {
     console.error('Health insights error:', err)
+    if (isQuotaError(err)) return NextResponse.json({ error: quotaMessage(err) }, { status: 429 })
     return NextResponse.json({ error: 'Kunde inte generera hälsoinsikter' }, { status: 500 })
   }
 }

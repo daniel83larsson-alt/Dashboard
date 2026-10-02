@@ -87,7 +87,7 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
           </div>
         </div>
       ) : (
-        <p className="text-muted text-xs italic">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>
+        <p className="text-muted text-xs italic">{record.insightsIssue ?? 'Kunde inte skriva insikter just nu.'} Siffrorna nedan stämmer ändå.</p>
       )}
       {error && <p className="text-red-400 text-xs">{error}</p>}
 

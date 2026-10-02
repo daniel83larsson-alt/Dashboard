@@ -6,6 +6,7 @@
 // (that limiter protects the shared key from INTERACTIVE bursts; a bounded,
 // once-a-week-per-user scheduled job is a different kind of load and is
 // throttled separately in the cron route itself).
+import { isQuotaError, quotaMessage } from './llm-quota'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
 import { computeWeeklyKost, weekDateKeys, type WeeklyKostData } from './weekly-kost'
@@ -66,6 +67,8 @@ export type WeeklyDigestRecord = {
   effort?: EffortSummary | null
   // Rimlighetskontroll av pulszoner (lib/zone-check.ts) — bara med fynd, annars null.
   zoneCheck?: ZoneCheck | null
+  // Satt när AI-texten uteblev för att kvoten var slut — kortet visar det istället för ett generiskt fel.
+  insightsIssue?: string | null
   // null means the AI call failed — the record still holds real computed
   // numbers, so the card/email fall back to showing those without written
   // insights rather than skipping the user entirely.
@@ -364,10 +367,12 @@ export async function generateWeeklyDigestForUser(
   const zoneCheck = await fetchZoneCheck(supabase, userId, opts?.now ?? new Date())
 
   let insights: WeeklyDigestInsights | null = null
+  let insightsIssue: string | null = null
   try {
     insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit, effort)
   } catch (err) {
     console.error('Weekly digest insights failed for user', userId, err)
+    if (isQuotaError(err)) insightsIssue = quotaMessage(err)
   }
 
   const record: WeeklyDigestRecord = {
@@ -379,6 +384,7 @@ export async function generateWeeklyDigestForUser(
     deficit,
     effort,
     zoneCheck: zoneCheck && zoneCheck.findings.length ? zoneCheck : null,
+    insightsIssue,
     insights,
     viewedAt: null,
   }

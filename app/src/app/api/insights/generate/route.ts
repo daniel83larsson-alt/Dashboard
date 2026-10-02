@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
@@ -254,6 +255,7 @@ summary (Huvudcoach): Läs de sju bedömningarna du själv precis formulerat. Va
     return NextResponse.json({ ok: true, insight })
   } catch (err) {
     console.error('Insights error:', err)
+    if (isQuotaError(err)) return NextResponse.json({ error: quotaMessage(err) }, { status: 429 })
     return NextResponse.json({ error: 'Kunde inte generera insikter' }, { status: 500 })
   }
 }

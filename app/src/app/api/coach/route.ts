@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { asksAboutHeartRate, fetchZoneCheck, formatZoneCheckForPrompt } from '@/lib/zone-check'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
@@ -347,6 +348,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ reply })
   } catch (err) {
     console.error('Coach API error:', err)
+    if (isQuotaError(err)) return NextResponse.json({ blocked: true, quota: true, warning: quotaMessage(err) }, { status: 429 })
     return NextResponse.json({ error: 'Coach unavailable' }, { status: 500 })
   }
 }
