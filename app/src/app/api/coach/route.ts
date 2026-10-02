@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { asksAboutHeartRate, fetchZoneCheck, formatZoneCheckForPrompt } from '@/lib/zone-check'
 import { COACHES, getCoachById, CoachId, UserContext } from '@/lib/agents/coaches'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
@@ -267,6 +268,14 @@ export async function POST(request: NextRequest) {
       nutritionSummary = formatNutritionForPrompt(nutrition)
     }
 
+    // Pulskontroll bara när frågan gäller puls/zoner (Daniels önskemål) — andra
+    // frågor får varken extra databasfråga eller extra text i prompten.
+    let zoneCheck: string | undefined
+    if (asksAboutHeartRate(message)) {
+      const check = await fetchZoneCheck(supabase, user.id, now)
+      if (check) zoneCheck = formatZoneCheckForPrompt(check)
+    }
+
     const userContext: UserContext = {
       sport,
       name: profile?.name ?? 'Användaren',
@@ -274,6 +283,7 @@ export async function POST(request: NextRequest) {
       overviewGoal: overviewGoal || undefined,
       focusActivity,
       nutritionSummary,
+      zoneCheck,
       homeEquipment: profile?.home_equipment ?? undefined,
       activeSports: profile?.selected_sports ?? undefined,
       coachTone: profile?.coach_tone,

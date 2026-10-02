@@ -66,6 +66,9 @@ export type UserContext = {
   // (se /api/coach), de andra åtta coacherna behöver den inte och sparar
   // in databasfrågorna den kräver.
   nutritionSummary?: string
+  // Förformaterad ZONKONTROLL (lib/zone-check.ts) — bara ifylld när användarens
+  // meddelande handlar om puls/zoner, så andra frågor inte får den i kontexten.
+  zoneCheck?: string
 }
 
 function compact(ctx: UserContext, sport: string): string {
@@ -91,7 +94,7 @@ function compact(ctx: UserContext, sport: string): string {
     ? `OBS: Det aktuella passet/frågan gäller ${label}, INTE rodd. PB-raden nedan är enbart roddspecifik historik (annan sport, annan enhet) — använd den inte som referens för ${label}. Svara helt utifrån ${label}s egna mått (t.ex. km/h eller min/km för cykel/löpning), inte /500m-pace.\n`
     : ''
 
-  return `${ctx.focusActivity ? `PASSET SOM DISKUTERAS JUST NU — utgå från det här om frågan gäller passet, inte bara historiken nedan:\n${ctx.focusActivity}\n\n` : ''}${sportNote}ANVÄNDARE: ${ctx.name} | Aktuell sport: ${label}
+  return `${ctx.zoneCheck ? `${ctx.zoneCheck}\n\n` : ''}${ctx.focusActivity ? `PASSET SOM DISKUTERAS JUST NU — utgå från det här om frågan gäller passet, inte bara historiken nedan:\n${ctx.focusActivity}\n\n` : ''}${sportNote}ANVÄNDARE: ${ctx.name} | Aktuell sport: ${label}
 SPORTMIX (senaste ${ctx.recentActivities.length} pass): ${sportMix || 'okänd'}
 STATS: ${s?.totalSessions ?? '?'} pass tot | ${s?.sessionsThisWeek ?? '?'}/v | ${s?.sessionsThisMonth ?? '?'}/mån | ${s?.totalDistKm ?? '?'} km all time
 ${p ? `RODD-PB (endast rodd, ej andra sporter): 20min=${p.best20min ?? '--'} | 30min=${p.best30min ?? '--'} | 45min=${p.best45min ?? '--'} | 5k=${p.fastest5k ?? '--'}` : ''}

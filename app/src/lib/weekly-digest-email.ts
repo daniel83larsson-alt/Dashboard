@@ -4,6 +4,7 @@
 // adherence + look-ahead content model, so it gets its own render function.
 import type { WeeklyDigestRecord } from './weekly-digest-generate'
 import { effortEmailHtml } from './effort-email'
+import { zoneCheckNote } from './zone-check'
 
 function fmtDateRange(startISO: string, endISO: string) {
   const start = new Date(`${startISO}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' })
@@ -83,6 +84,14 @@ export function renderWeeklyDigestHtml({
       </div>`
     : ''
 
+  const zn = zoneCheckNote(record.zoneCheck)
+  const zoneNoteHtml = zn
+    ? `<div style="margin:0 0 16px;padding:14px 16px;background:#fff7e0;border-radius:12px;">
+        <p style="margin:0 0 6px;color:#777;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;">❤️ Kolla dina pulszoner</p>
+        <p style="margin:0 0 6px;color:#1a1a1a;line-height:1.5;font-size:13.5px;">${zn.text}</p>
+        <p style="margin:0;color:#777;font-size:12px;">${zn.tip}</p>
+      </div>`
+    : ''
   const effortHtml = effortEmailHtml(record.effort, record.insights?.effort, '💪 Intensitet denna vecka')
 
   const lookAheadHtml = lookAhead.kind === 'plan'
@@ -127,6 +136,7 @@ export function renderWeeklyDigestHtml({
           ${bestSessionHtml}
           ${newRecordsHtml}
           ${insightsHtml}
+          ${zoneNoteHtml}
           ${effortHtml}
           ${kostHtml}
           ${motivationHtml}

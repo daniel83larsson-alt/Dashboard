@@ -14,6 +14,7 @@ import { stockholmDateKey } from './dates'
 import type { KostFoodEntry, KostMeal } from './kost'
 import { compute7DayAverage, countableDays } from './deficit'
 import { fetchFirstLoggedKey } from './first-logged-day'
+import { fetchZoneCheck, type ZoneCheck } from './zone-check'
 import { computeEffortSummary, effortPromptLines, fetchEffortRows, type EffortSummary } from './effort-summary'
 import { resolveDayNutrition } from './day-nutrition-source'
 import { decryptMaybeLegacy } from './encrypt'
@@ -63,6 +64,8 @@ export type WeeklyDigestRecord = {
   // Zone distribution + training effect for the week; null when no pass has
   // that data. Older stored records don't have the field at all.
   effort?: EffortSummary | null
+  // Rimlighetskontroll av pulszoner (lib/zone-check.ts) — bara med fynd, annars null.
+  zoneCheck?: ZoneCheck | null
   // null means the AI call failed — the record still holds real computed
   // numbers, so the card/email fall back to showing those without written
   // insights rather than skipping the user entirely.
@@ -358,6 +361,8 @@ export async function generateWeeklyDigestForUser(
     thisWeekActivities.length,
   )
 
+  const zoneCheck = await fetchZoneCheck(supabase, userId, opts?.now ?? new Date())
+
   let insights: WeeklyDigestInsights | null = null
   try {
     insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit, effort)
@@ -373,6 +378,7 @@ export async function generateWeeklyDigestForUser(
     kost: weeklyKost,
     deficit,
     effort,
+    zoneCheck: zoneCheck && zoneCheck.findings.length ? zoneCheck : null,
     insights,
     viewedAt: null,
   }

@@ -1,5 +1,6 @@
 'use client'
 
+import { zoneCheckNote } from '@/lib/zone-check'
 import EffortBlock from '@/components/EffortBlock'
 import { useState } from 'react'
 import type { WeeklyDigestRecord } from '@/lib/weekly-digest-generate'
@@ -56,6 +57,7 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
   }
 
   const { thisWeek, prevWeek, adherence, lookAhead, bestSession, newRecords } = record.data
+  const zoneNote = zoneCheckNote(record.zoneCheck)
 
   return (
     <div className="bg-card border border-edge rounded-2xl p-5 space-y-4">
@@ -88,6 +90,14 @@ export default function WeeklyDigestCard({ initialRecord }: { initialRecord: Dig
         <p className="text-muted text-xs italic">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>
       )}
       {error && <p className="text-red-400 text-xs">{error}</p>}
+
+      {zoneNote && (
+        <div className="bg-bg rounded-xl p-3 space-y-1.5 border border-amber-400/30">
+          <div className="text-xs text-muted uppercase tracking-wider">❤️ Kolla dina pulszoner</div>
+          <p className="text-sm text-fg leading-relaxed">{zoneNote.text}</p>
+          <p className="text-muted text-xs">{zoneNote.tip}</p>
+        </div>
+      )}
 
       {record.effort && <EffortBlock effort={record.effort} sentence={record.insights?.effort} title="💪 Intensitet denna vecka" />}
 
