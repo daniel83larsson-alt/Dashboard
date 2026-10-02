@@ -1,5 +1,6 @@
 'use client'
 
+import { fmtActivityWhen } from '@/lib/wall-clock'
 import { useState } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
 import { sportIcon, sportLabel } from '@/lib/sport'
@@ -14,6 +15,7 @@ type FeedEntry = {
   distance: number
   moving_time: number
   start_date: string
+  source?: string | null // styr hur starttiden läses, se lib/wall-clock.ts
   kudos_count: number
   liked_by_me: boolean
   // What this pass was a personal record in (e.g. "Snabbaste 5 km") — see
@@ -28,18 +30,6 @@ function fmtDur(s: number) {
   const m = Math.floor((s % 3600) / 60)
   if (h > 0) return `${h}h ${m}m`
   return `${m} min`
-}
-
-function fmtRelative(iso: string) {
-  const d = new Date(iso)
-  const now = new Date()
-  const sameDay = d.toDateString() === now.toDateString()
-  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1)
-  const wasYesterday = d.toDateString() === yesterday.toDateString()
-  const time = d.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
-  if (sameDay) return `Idag kl. ${time}`
-  if (wasYesterday) return `Igår kl. ${time}`
-  return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'short' }) + ` kl. ${time}`
 }
 
 export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId: string }) {
@@ -91,7 +81,7 @@ export default function FriendFeed({ feed, userId }: { feed: FeedEntry[]; userId
                   >
                     <div className="flex items-center gap-2 text-sm">
                       <span className="font-medium">{e.owner_name}</span>
-                      <span className="text-muted text-xs">{fmtRelative(e.start_date)}</span>
+                      <span className="text-muted text-xs">{fmtActivityWhen(e.start_date, e.source)}</span>
                     </div>
                     <div className="text-muted text-xs mt-0.5 truncate">
                       {sportIcon(e.sport_type)} {e.activity_name} · {sportLabel(e.sport_type)}
