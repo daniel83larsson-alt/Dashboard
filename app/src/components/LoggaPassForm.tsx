@@ -9,15 +9,15 @@ const SPORT_ORDER = [
   'NordicSki', 'AlpineSki', 'WeightTraining', 'Kettlebell', 'HIIT', 'Crossfit', 'Elliptical', 'Yoga', 'Mobility', 'Workout',
 ]
 
-// The 5-6 most common movements per hemma-/gym-sport — good enough to cover
+// The most common movements per hemma-/gym-sport — good enough to cover
 // a normal session without turning this into a full exercise database. Same
 // pattern for all three: check off what you did, fill in set×reps, gets
 // compiled into the pass-namnet on save (see exerciseSummary below).
 const EXERCISES_BY_SPORT: Record<string, string[]> = {
-  Kettlebell: ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft'],
+  Kettlebell: ['Svingar', 'Goblet Squat', 'Clean and Press', 'Turkish Get-up', 'Snatch', 'Marklyft', 'Enarmsrodd', 'Axelpress', 'Rumänsk marklyft', 'Farmer\'s Walk', 'Utfallssteg', 'Halo'],
   HIIT: ['Burpees', 'Mountain Climbers', 'Jumping Jacks', 'High Knees', 'Squat Jumps', 'Armhävningar'],
   Crossfit: ['Burpees', 'Wall Balls', 'Box Jumps', 'Thrusters', 'Pull-ups', 'Kettlebell Swings'],
-  WeightTraining: ['Bänkpress', 'Knäböj', 'Marklyft', 'Axelpress', 'Rodd', 'Bicepscurl'],
+  WeightTraining: ['Bänkpress', 'Knäböj', 'Marklyft', 'Axelpress', 'Rodd', 'Bicepscurl', 'Enarmsrodd', 'Chins', 'Latsdrag', 'Utfall', 'Hip thrust', 'Tricepspress'],
   Yoga: ['Nedåtgående hund', 'Krigare I', 'Krigare II', 'Triangel', 'Katt-ko', 'Barnets position'],
 }
 
@@ -248,7 +248,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                 type="datetime-local"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
-                className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                className="w-full min-w-0 max-w-full appearance-none bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
               />
             </div>
 
