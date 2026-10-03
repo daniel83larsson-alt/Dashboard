@@ -92,7 +92,7 @@ export default function CoachPage() {
   }
 
   return (
-    <div className="fixed inset-0 md:left-56 flex flex-col pb-20 md:pb-0">
+    <div className="fixed inset-0 md:left-56 flex flex-col pt-[env(safe-area-inset-top)] md:pt-0 pb-[calc(4.75rem+env(safe-area-inset-bottom)*0.5)] md:pb-0">
       {/* Header */}
       <div className="border-b border-edge bg-bg flex-shrink-0">
         <div className="max-w-2xl mx-auto px-4 py-4 flex items-center gap-3">
