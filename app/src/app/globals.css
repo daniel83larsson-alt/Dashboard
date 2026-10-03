@@ -53,3 +53,12 @@ html, body {
     scroll-behavior: auto !important;
   }
 }
+
+/* iOS Safari zoomar in på ett fält vid fokus om texten är mindre än 16 px.
+   Tidigare dolt av maximum-scale=1 i viewport (borttagen så att man kan zooma
+   sidan för tillgänglighet) — därför 16 px på mobil istället. */
+@media (max-width: 767px) {
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    font-size: 16px !important;
+  }
+}
