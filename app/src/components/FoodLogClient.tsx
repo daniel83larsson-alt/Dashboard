@@ -1,5 +1,6 @@
 'use client'
 
+import { quickPickMacroText } from '@/lib/quick-pick-format'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import {
@@ -1168,9 +1169,12 @@ export default function FoodLogClient({
                 <button
                   onClick={() => handleQuickPickTap(p)}
                   disabled={logging}
-                  className="flex-1 text-left text-fg hover:text-accent transition-colors disabled:opacity-50 truncate"
+                  className="flex-1 min-w-0 text-left text-fg hover:text-accent transition-colors disabled:opacity-50"
                 >
-                  {p.pinned && '⭐ '}{p.name} <span className="text-muted">· {p.calories} kcal</span>
+                  <span className="block truncate">{p.pinned && '⭐ '}{p.name}</span>
+                  <span className="block text-[11px] text-muted">
+                    {quickPickMacroText(p).kcal} · <span className={quickPickMacroText(p).proteinKnown ? '' : 'italic'}>{quickPickMacroText(p).protein}</span>
+                  </span>
                 </button>
                 <button onClick={() => toggleFavorite(p.name)} className={`w-6 h-6 rounded-md border text-[11px] flex items-center justify-center flex-shrink-0 ${p.pinned ? 'border-amber-500/50 text-amber-400' : 'border-edge text-muted hover:text-fg'}`}>⭐</button>
                 <button onClick={() => removeQuickPick(p.name)} className="w-6 h-6 rounded-md border border-edge text-muted hover:border-red-400 hover:text-red-400 transition-colors text-[11px] flex items-center justify-center flex-shrink-0">✕</button>
