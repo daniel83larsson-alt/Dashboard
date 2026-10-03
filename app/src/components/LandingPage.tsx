@@ -3,14 +3,6 @@ import Link from 'next/link'
 // Ported from poc/dltrainer-landing.html (Daniel approved the mockup 2026-08-10).
 // Illustrative numbers only — no real user data, same call Daniel made for the POC.
 
-function Eyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-accent">
-      {children}
-    </span>
-  )
-}
-
 function ArrowIcon() {
   return (
     <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" stroke="currentColor" strokeWidth="1.6" fill="none" strokeLinecap="round" strokeLinejoin="round">
@@ -34,46 +26,164 @@ function PrimaryCta({ href, children, size = 'md' }: { href: string; children: R
   )
 }
 
-function FeatureCard({ icon, title, children, wide }: { icon: string; title: string; children: React.ReactNode; wide?: boolean }) {
+// ── Små "app-skärmar" som visar vad appen faktiskt gör. Exempeldata, ingen riktig användare.
+function Screen({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className={`bg-card border border-edge rounded-2xl p-5 flex flex-col gap-3 hover:border-accent/35 transition-colors ${wide ? 'sm:col-span-2' : ''}`}>
-      <div className="w-10 h-10 rounded-xl bg-bg border border-edge flex items-center justify-center text-lg">{icon}</div>
-      <h3 className="font-semibold text-[15px]">{title}</h3>
-      <p className="text-muted text-[13.5px] leading-relaxed">{children}</p>
+    <div className="bg-card border border-edge rounded-[20px] p-5 shadow-2xl" role="img" aria-label={`Exempel: ${title}`}>
+      <div className="text-[11px] text-muted mb-4">{title}</div>
+      {children}
     </div>
   )
 }
 
-function Step({ n, title, children }: { n: string; title: string; children: React.ReactNode }) {
+function TodayScreen() {
   return (
-    <div className="bg-card border border-edge rounded-2xl p-6">
-      <span className="font-mono text-xs text-lcd tracking-wider">{n}</span>
-      <h3 className="font-semibold text-[16.5px] mt-3">{title}</h3>
-      <p className="text-muted text-[13.5px] leading-relaxed mt-2.5">{children}</p>
+    <Screen title="Idag · exempel">
+      <div className="grid grid-cols-3 gap-2.5 mb-2.5" aria-hidden="true">
+        {[['🔥 12', 'Dagar i rad'], ['58', 'Vilopuls, bpm'], ['7.6 h', 'Sömn']].map(([v, l]) => (
+          <div key={l} className="bg-bg border border-edge/60 rounded-xl p-3">
+            <div className="font-mono font-bold text-lcd text-xl leading-none">{v}</div>
+            <div className="text-muted text-[10.5px] mt-1.5">{l}</div>
+          </div>
+        ))}
+      </div>
+      <div className="bg-bg border border-edge/60 rounded-xl p-3.5" aria-hidden="true">
+        <div className="flex items-baseline justify-between mb-2.5"><span className="text-[12px] text-muted">Veckans pass</span><span className="font-mono font-bold text-[15px]">4 av 5</span></div>
+        <div className="flex gap-1">{[1, 2, 3, 4, 5].map(i => <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= 4 ? 'bg-accent' : 'bg-edge/60'}`} />)}</div>
+      </div>
+      <div className="bg-bg border border-edge/60 rounded-xl p-3.5 mt-2.5 text-[13px] leading-relaxed" aria-hidden="true">
+        <span className="text-muted">Coachen:</span> Bra vecka. Tisdagens intervaller satt, och sömnen har hållit sig över 7 timmar. Håll fredagen lugn.
+      </div>
+      <div className="flex gap-2 mt-3 flex-wrap" aria-hidden="true">
+        <span className="font-mono text-[10.5px] text-muted bg-bg border border-edge/60 rounded-full px-2.5 py-1.5">🏅 Nytt rekord: 10 km</span>
+        <span className="font-mono text-[10.5px] text-muted bg-bg border border-edge/60 rounded-full px-2.5 py-1.5">👍 2 vänner hejar på</span>
+      </div>
+    </Screen>
+  )
+}
+
+function CoachScreen() {
+  return (
+    <Screen title="Pulscoachen · exempel">
+      <div className="flex flex-col gap-2.5 text-[13px] leading-relaxed" aria-hidden="true">
+        <div className="self-end max-w-[85%] bg-accent text-bg rounded-2xl rounded-br-sm px-3.5 py-2.5">Jag kör nästan allt i zon 2 — ligger jag rätt med mina zoner?</div>
+        <div className="self-start max-w-[92%] bg-bg border border-edge rounded-2xl rounded-bl-sm px-3.5 py-2.5">
+          Dina senaste fem lugna pass snittar <span className="font-mono text-lcd">134 bpm</span>, över din zon 2 (120–130). Antingen går du lite för hårt, eller så ligger zonen för lågt. Ett 30-minuterstest på jämn nivå ger svar — vill du ha upplägget?
+        </div>
+        <div className="self-start flex gap-2 flex-wrap">
+          <span className="font-mono text-[11px] border border-edge rounded-full px-3 py-1.5 text-muted">Ja, ge mig testet</span>
+          <span className="font-mono text-[11px] border border-edge rounded-full px-3 py-1.5 text-muted">Behåll zonerna</span>
+        </div>
+      </div>
+    </Screen>
+  )
+}
+
+function RecapScreen() {
+  const zones = [
+    { z: 'Z1', pct: 18, c: 'bg-lcd/50' },
+    { z: 'Z2', pct: 62, c: 'bg-lcd' },
+    { z: 'Z3', pct: 8, c: 'bg-habit/70' },
+    { z: 'Z4', pct: 10, c: 'bg-accent' },
+    { z: 'Z5', pct: 2, c: 'bg-red-400' },
+  ]
+  return (
+    <Screen title="Veckans recap · exempel">
+      <div className="flex items-baseline justify-between">
+        <span className="text-sm font-semibold">5 pass · 6 h 10 min</span>
+        <span className="font-mono text-[11px] text-lcd">träningseffekt 3.4</span>
+      </div>
+      <div className="flex h-3 rounded-full overflow-hidden gap-0.5 mt-4" aria-hidden="true">
+        {zones.map(x => <div key={x.z} className={x.c} style={{ width: `${x.pct}%` }} />)}
+      </div>
+      <div className="flex justify-between font-mono text-[10.5px] text-muted mt-2" aria-hidden="true">
+        {zones.map(x => <span key={x.z}>{x.z} {x.pct}%</span>)}
+      </div>
+      <p className="text-muted text-[13px] leading-relaxed mt-4">Ungefär 80/20: mest lugn bas och ett par hårda intervaller. Det är ett polariserat upplägg — du är på rätt spår.</p>
+    </Screen>
+  )
+}
+
+function FoodScreen() {
+  return (
+    <Screen title="Snabbval · exempel">
+      <div className="flex flex-col gap-2" aria-hidden="true">
+        {[['Havregröt med bär', '320 kcal · 14 g protein'], ['Kvarg & nötter', '280 kcal · 30 g protein']].map(([n, m]) => (
+          <div key={n} className="flex items-center justify-between bg-bg border border-edge rounded-xl px-3.5 py-2.5 text-[13px]">
+            <span>{n}</span><span className="font-mono text-[11px] text-muted">{m}</span>
+          </div>
+        ))}
+        <div className="bg-bg border border-accent/40 rounded-xl p-3.5 mt-1">
+          <div className="text-[13px] font-medium mb-2.5">Proteinshake</div>
+          <div className="grid grid-cols-3 gap-2 text-[11px] text-muted">
+            <div>Kcal<div className="mt-1 border border-edge rounded-lg px-2.5 py-1.5 text-fg font-mono">240</div></div>
+            <div>Protein<div className="mt-1 border border-edge rounded-lg px-2.5 py-1.5 text-fg font-mono">35 g</div></div>
+            <div>Portioner<div className="mt-1 border border-edge rounded-lg px-2.5 py-1.5 text-fg font-mono">1</div></div>
+          </div>
+          <div className="flex gap-2 mt-3 text-[12px]">
+            <span className="bg-accent text-bg font-semibold rounded-lg px-3 py-1.5">Logga</span>
+            <span className="border border-accent/40 text-accent rounded-lg px-3 py-1.5">Uppdatera rätten</span>
+          </div>
+        </div>
+      </div>
+    </Screen>
+  )
+}
+
+function BudgetScreen() {
+  return (
+    <Screen title="Viktmål · exempel">
+      <div className="grid grid-cols-2 gap-2.5">
+        <div className="bg-bg border border-edge/60 rounded-xl p-3.5">
+          <div className="font-mono font-bold text-lcd text-xl leading-none">2 150</div>
+          <div className="text-muted text-[11px] mt-1.5">kcal / dag i budget</div>
+        </div>
+        <div className="bg-bg border border-edge/60 rounded-xl p-3.5">
+          <div className="font-mono font-bold text-lcd text-xl leading-none">−0,4 kg</div>
+          <div className="text-muted text-[11px] mt-1.5">senaste veckan</div>
+        </div>
+      </div>
+      <div className="mt-4 text-[11px] text-muted flex justify-between"><span>Loggat denna vecka</span><span className="font-mono text-fg">6 av 6 dagar</span></div>
+      <div className="h-1.5 bg-edge/60 rounded-full overflow-hidden mt-2"><div className="h-full bg-accent rounded-full" style={{ width: '100%' }} /></div>
+      <p className="text-muted text-[13px] leading-relaxed mt-4">Budgeten räknas om varje vecka utifrån hur det faktiskt går — och dagar du inte hunnit logga än räknas aldrig som missade.</p>
+    </Screen>
+  )
+}
+
+function Showcase({ id, title, children, screen, flip }: { id?: string; title: string; children: React.ReactNode; screen: React.ReactNode; flip?: boolean }) {
+  return (
+    <div id={id} className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-center">
+      <div className={flip ? 'lg:order-2' : ''}>
+        <h3 className="text-[1.5rem] sm:text-[1.8rem] font-bold leading-tight text-balance">{title}</h3>
+        <div className="text-muted text-[15.5px] leading-relaxed mt-4 max-w-[52ch] flex flex-col gap-3">{children}</div>
+      </div>
+      <div className={flip ? 'lg:order-1' : ''}>{screen}</div>
     </div>
   )
 }
+
+export const FAQ: { q: string; a: string }[] = [
+  { q: 'Vilka klockor och appar funkar med DL Trainer?', a: 'Garmin, Concept2, Strava, Polar och YAZIO kan kopplas in. Dina pass, din sömn och din mat synkas automatiskt, så du slipper föra in något för hand.' },
+  { q: 'Vad kostar det?', a: 'Det är gratis att komma igång, du behöver inget kreditkort och det finns ingen bindningstid.' },
+  { q: 'Vad gör AI-coacherna?', a: 'Det finns nio coacher, en per område, till exempel uthållighet, styrka, rörlighet, återhämtning och nutrition. De har tillgång till din egen träning, sömn och mat och svarar utifrån dem, inte med allmänna råd.' },
+  { q: 'Kan coachen säga om mina pulszoner stämmer?', a: 'Ja. Frågar du om din puls jämför coachen dina senaste pass med dina zoner och kan föreslå ett test om det ser ut som att zonerna ligger fel. Du bestämmer själv om du ändrar något.' },
+]
 
 export default function LandingPage() {
   return (
     <div className="min-h-full">
-      {/* ── Topbar — flytande pill, alltid synlig ────────────────────────
-          position:fixed, inte sticky — appens globals.css sätter medvetet
-          overflow-x:hidden på <body> (skydd mot en mobil Safari-bugg), vilket
-          gör att sticky-positionerade element tappar sin fasta position så
-          fort man skrollar bortom sin ursprungsplats i flödet (bekräftat med
-          en riktig skrollning i headless browser, inte bara läst i koden).
-          fixed påverkas inte av förälderns overflow på samma sätt. ────── */}
+      {/* Flytande topbar — position:fixed, inte sticky: globals.css sätter overflow-x:hidden på <body>
+          (skydd mot en mobil Safari-bugg), vilket får sticky att tappa sin position vid skroll. */}
       <div className="fixed inset-x-0 top-4 z-40 flex justify-center px-4">
         <header className="w-full max-w-6xl flex items-center justify-between gap-4 bg-card/90 backdrop-blur border border-edge rounded-full pl-5 pr-2 py-2">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-accent text-bg flex items-center justify-center font-mono font-extrabold text-sm">DL</div>
+            <div className="w-8 h-8 rounded-full bg-accent text-bg flex items-center justify-center font-mono font-extrabold text-sm" aria-hidden="true">DL</div>
             <span className="font-semibold text-[15px]">DL <span className="text-accent">Trainer</span></span>
           </div>
-          <nav className="hidden sm:flex items-center gap-7 text-sm text-muted">
+          <nav aria-label="Sidans avsnitt" className="hidden sm:flex items-center gap-7 text-sm text-muted">
             <a href="#funktioner" className="hover:text-fg transition-colors">Funktioner</a>
             <a href="#sa-funkar-det" className="hover:text-fg transition-colors">Så funkar det</a>
-            <a href="#klockor" className="hover:text-fg transition-colors">Din klocka</a>
+            <a href="#fragor" className="hover:text-fg transition-colors">Frågor</a>
           </nav>
           <div className="flex items-center gap-2">
             <Link href="/login" className="font-mono text-[13px] whitespace-nowrap border border-edge rounded-full px-4 py-2 hover:border-accent hover:text-accent transition-colors">
@@ -83,27 +193,22 @@ export default function LandingPage() {
           </div>
         </header>
       </div>
-      {/* Spacer — ersätter höjden headern skulle tagit upp i flödet nu när den är fixed */}
       <div className="h-[72px]" aria-hidden="true" />
 
       <main>
-        {/* ── Hero ─────────────────────────────────────────────────────── */}
+        {/* Hero */}
         <section className="relative overflow-hidden">
           <div
             className="pointer-events-none absolute inset-0 -z-10"
             style={{ background: 'radial-gradient(ellipse 900px 500px at 15% -10%, rgba(204,212,0,.10), transparent 60%), radial-gradient(ellipse 700px 500px at 100% 5%, rgba(167,189,169,.06), transparent 55%)' }}
           />
-          <div className="max-w-6xl mx-auto px-6 pt-16 pb-10 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
+          <div className="max-w-6xl mx-auto px-6 pt-14 pb-16 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
             <div>
-              <span className="inline-flex items-center gap-2 font-mono text-[11px] uppercase tracking-[0.14em] text-lcd bg-lcd/10 border border-lcd/25 rounded-full px-3 py-1.5 mb-5">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
-                Ett dashboard, alla sporter
-              </span>
-              <h1 className="text-[2.3rem] sm:text-[2.9rem] font-bold leading-[1.08] tracking-tight text-balance">
-                Din tränare, <span className="text-accent">dygnet runt</span>. Inte bara siffror — någon som vet vad de betyder.
+              <h1 className="text-[2.3rem] sm:text-[3rem] font-bold leading-[1.08] tracking-tight text-balance">
+                Träningen, maten och sömnen i samma app — med en coach som läser av allt.
               </h1>
-              <p className="text-muted text-[17px] leading-relaxed mt-5 max-w-[46ch]">
-                DL Trainer samlar dina pass, din sömn, din mat och din puls på ett ställe. Varje sportgren har sin egen AI-coach, och planen anpassas efter din vecka — inte samma mall för alla.
+              <p className="text-muted text-[17px] leading-relaxed mt-5 max-w-[48ch]">
+                DL Trainer samlar pass, puls, sömn och kalorier från din klocka och dina appar. Coachen ser hur din vecka faktiskt ser ut och säger vad det betyder: är zonerna rätt, hänger du med i planen, räcker maten.
               </p>
               <div className="flex items-center gap-3.5 mt-8 flex-wrap">
                 <PrimaryCta href="/login?mode=signup">Skapa konto — gratis att börja</PrimaryCta>
@@ -112,152 +217,109 @@ export default function LandingPage() {
                 </Link>
               </div>
               <p className="text-muted text-xs mt-3.5">
-                <span className="text-fg font-medium">Ingen bindningstid</span> — koppla Garmin, Concept2, Strava, Polar eller YAZIO på under en minut.
+                <span className="text-fg font-medium">Ingen bindningstid.</span> Koppla Garmin, Concept2, Strava, Polar eller YAZIO på under en minut.
               </p>
             </div>
-
-            {/* Instrument mock */}
-            <div className="bg-card border border-edge rounded-[22px] p-5 shadow-2xl">
-              <div className="flex items-center justify-between mb-4">
-                <span className="text-[11px] uppercase tracking-wider text-muted">Idag</span>
-                <span className="flex items-center gap-1.5 font-mono text-[10.5px] text-lcd">
-                  <span className="w-1.5 h-1.5 rounded-full bg-lcd animate-pulse" />live
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2.5 mb-2.5">
-                <div className="bg-bg border border-edge/60 rounded-xl p-3">
-                  <div className="font-mono font-bold text-lcd text-xl leading-none">🔥 12</div>
-                  <div className="text-muted text-[10px] mt-1.5 uppercase tracking-wide">Dagar i rad</div>
-                </div>
-                <div className="bg-bg border border-edge/60 rounded-xl p-3">
-                  <div className="font-mono font-bold text-lcd text-xl leading-none">58<span className="text-[11px] text-lcd-dim font-normal"> bpm</span></div>
-                  <div className="text-muted text-[10px] mt-1.5 uppercase tracking-wide">Vilopuls</div>
-                </div>
-                <div className="bg-bg border border-edge/60 rounded-xl p-3">
-                  <div className="font-mono font-bold text-lcd text-xl leading-none">7.6<span className="text-[11px] text-lcd-dim font-normal">h</span></div>
-                  <div className="text-muted text-[10px] mt-1.5 uppercase tracking-wide">Sömn</div>
-                </div>
-              </div>
-              <div className="bg-bg border border-edge/60 rounded-xl p-3.5 mt-2.5">
-                <div className="flex items-baseline justify-between mb-2.5">
-                  <span className="text-[11px] uppercase tracking-wide text-muted">Veckobelastning</span>
-                  <span className="font-mono font-bold text-[15px]">86%</span>
-                </div>
-                <div className="h-1.5 bg-edge/60 rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-accent" style={{ width: '86%' }} />
-                </div>
-              </div>
-              <div className="bg-bg border border-edge/60 rounded-xl p-3.5 mt-2.5">
-                <div className="flex items-baseline justify-between mb-2.5">
-                  <span className="text-[11px] uppercase tracking-wide text-muted">VO2max</span>
-                  <span className="font-mono font-bold text-[15px]">47.2 <span className="text-muted font-normal text-[11px]">ml/kg/min</span></span>
-                </div>
-                <div className="flex gap-1">
-                  {[1, 2, 3, 4, 5, 6].map(i => (
-                    <div key={i} className={`h-1.5 flex-1 rounded-full ${i <= 4 ? 'bg-accent' : 'bg-edge/60'}`} />
-                  ))}
-                </div>
-                <div className="font-mono text-[10.5px] text-muted mt-2"><span className="text-fg font-semibold">Bra</span> för din ålder och ditt kön</div>
-              </div>
-              <div className="flex gap-2 mt-3 flex-wrap">
-                <span className="font-mono text-[10px] text-muted bg-bg border border-edge/60 rounded-full px-2.5 py-1.5">🏅 Nytt rekord: 10 km</span>
-                <span className="font-mono text-[10px] text-muted bg-bg border border-edge/60 rounded-full px-2.5 py-1.5">👍 2 vänner hejar på</span>
-              </div>
-            </div>
+            <TodayScreen />
           </div>
         </section>
 
-        {/* ── Stats strip ──────────────────────────────────────────────── */}
-        <section className="border-y border-edge/60">
-          <div className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div><div className="font-mono font-bold text-accent text-3xl leading-none">9</div><div className="text-muted text-[13px] mt-2">AI-coacher, en per sportgren</div></div>
-            <div><div className="font-mono font-bold text-accent text-3xl leading-none">5</div><div className="text-muted text-[13px] mt-2">Klockor &amp; appar som synkas direkt</div></div>
-            <div><div className="font-mono font-bold text-accent text-3xl leading-none">24/7</div><div className="text-muted text-[13px] mt-2">Coachning tillgänglig dygnet runt</div></div>
-            <div><div className="font-mono font-bold text-accent text-3xl leading-none">1</div><div className="text-muted text-[13px] mt-2">Dashboard för hela din träning</div></div>
-          </div>
-        </section>
-
-        {/* ── Features ─────────────────────────────────────────────────── */}
-        <section id="funktioner" className="max-w-6xl mx-auto px-6 py-20">
-          <div className="max-w-[60ch] mb-10">
-            <Eyebrow>Funktioner</Eyebrow>
-            <h2 className="text-[1.8rem] sm:text-[2.1rem] font-bold mt-3 text-balance">Allt som annars är utspritt i olika appar, samlat på ett ställe</h2>
-            <p className="text-muted text-[15.5px] leading-relaxed mt-3.5">Du väljer vad du vill använda. Allt hänger ihop på riktigt, istället för separata appar som aldrig delar data med varandra.</p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <FeatureCard icon="🏋️" title="En AI-coach per sportgren" wide>
-              Uthållighet, styrka, HIIT, rörlighet och mer — nio olika coacher, en per gren, som redan känner till din vecka innan du hinner fråga.
-            </FeatureCard>
-            <FeatureCard icon="💓" title="Hälsa & VO2max">
-              Sömn, puls, HRV, Body Battery — och en åldersnormerad VO2max-skala som visar var du faktiskt ligger.
-            </FeatureCard>
-            <FeatureCard icon="🗓️" title="Veckoplan">
-              AI-genererad plan som räknar om sig när du missar ett pass, istället för att strunta i det.
-            </FeatureCard>
-            <FeatureCard icon="🍽️" title="Mat & kalorier">
-              Fota, sök, snabbval — eller synka automatiskt från YAZIO. Se vad du ätit mot vad du bränt, utan att räkna för hand.
-            </FeatureCard>
-            <FeatureCard icon="🎯" title="Viktmål & kaloribudget">
-              Sätt en målvikt och ett datum — din dagliga kaloribudget och ditt proteinmål räknas ut åt dig och uppdateras automatiskt varje vecka utifrån hur det faktiskt går.
-            </FeatureCard>
-            <FeatureCard icon="🏅" title="Rekord & pulszoner">
-              Personbästa uppdateras automatiskt efter varje pass. Inga fler egna Excel-ark.
-            </FeatureCard>
-            <FeatureCard icon="👥" title="Community" wide>
-              Se vännernas pass, heja med en tumme upp, håll koll på gemensamma streaks — träningen blir lättare att hålla igång när någon annan ser den.
-            </FeatureCard>
-            <FeatureCard icon="🔥" title="Vanor & milstolpar">
-              Kryssa av dagliga vanor som kreatin eller stretching och bygg en streak — få en riktig eloge när du når 5 veckor, ett halvår eller ett helt år i rad.
-            </FeatureCard>
-            <FeatureCard icon="🤖" title="Fråga Claude om din träning">
-              Koppla din egen Claude direkt till din data med en personlig nyckel — kaloriunderskott, TDEE-trend, träningshistorik. Fråga precis vad du vill.
-            </FeatureCard>
-          </div>
-        </section>
-
-        {/* ── How it works ─────────────────────────────────────────────── */}
-        <section id="sa-funkar-det" className="max-w-6xl mx-auto px-6 py-20">
-          <div className="max-w-[60ch] mb-10">
-            <Eyebrow>Så funkar det</Eyebrow>
-            <h2 className="text-[1.8rem] sm:text-[2.1rem] font-bold mt-3 text-balance">Igång på tre minuter — inga krångliga inställningar i vägen</h2>
-          </div>
-          <div className="grid sm:grid-cols-3 gap-4">
-            <Step n="01 — ANSLUT" title="Koppla din klocka">
-              Garmin, Concept2, Strava, Polar eller YAZIO — dina pass, din mat och din hälsodata börjar synka direkt, ingen manuell inmatning.
-            </Step>
-            <Step n="02 — BERÄTTA" title="Sätt ett mål">
-              Ett lopp, ett antal pass i veckan, eller bara &quot;må bättre&quot; — tränarteamet planerar utifrån det du faktiskt vill.
-            </Step>
-            <Step n="03 — KÖR" title="Få en plan, dag för dag">
-              Veckoplanen justerar sig efter hur veckan faktiskt går, och tränarteamet finns där för frågor mellan passen.
-            </Step>
-          </div>
-        </section>
-
-        {/* ── Watches ──────────────────────────────────────────────────── */}
-        <section id="klockor" className="max-w-6xl mx-auto px-6 pb-16">
-          <div className="max-w-[60ch] mb-6">
-            <Eyebrow>Kopplat till din utrustning</Eyebrow>
-            <h2 className="text-[1.8rem] sm:text-[2.1rem] font-bold mt-3 text-balance">Du har redan en klocka. Nu kopplar vi ihop den med resten av din träning.</h2>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            {['Garmin', 'Concept2 PM5', 'Strava', 'Polar', 'YAZIO'].map(w => (
-              <span key={w} className="font-mono text-[13px] bg-card border border-edge rounded-full px-4 py-2.5 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-lcd" />{w}
-              </span>
+        {/* Kopplas till */}
+        <section aria-label="Kopplar till" className="border-y border-edge/60">
+          <div className="max-w-6xl mx-auto px-6 py-6 flex flex-wrap items-center gap-x-8 gap-y-3 text-muted">
+            <span className="text-[13px]">Synkar med</span>
+            {['Garmin', 'Concept2', 'Strava', 'Polar', 'YAZIO'].map(w => (
+              <span key={w} className="font-mono text-[14px] text-fg">{w}</span>
             ))}
           </div>
         </section>
 
-        {/* ── Closing CTA ──────────────────────────────────────────────── */}
+        {/* Funktioner */}
+        <section id="funktioner" className="max-w-6xl mx-auto px-6 py-20 flex flex-col gap-24">
+          <div className="max-w-[60ch]">
+            <h2 className="text-[1.8rem] sm:text-[2.2rem] font-bold text-balance">Det du annars letar efter i fem olika appar</h2>
+            <p className="text-muted text-[15.5px] leading-relaxed mt-3.5">Allt hänger ihop på riktigt: maten påverkar budgeten, passen påverkar planen och coachen känner till båda.</p>
+          </div>
+
+          <Showcase title="En coach som svarar utifrån dina egna siffror" screen={<CoachScreen />}>
+            <p>Nio coacher, en per område, från uthållighet och styrka till återhämtning och nutrition. De har dina pass, din sömn och din mat framför sig när du frågar.</p>
+            <p>Kör du mycket lugnt kan coachen kontrollera att dina pulszoner stämmer med hur du faktiskt tränar, och föreslå ett test om något ser fel ut.</p>
+          </Showcase>
+
+          <Showcase title="Veckan i ett ögonkast, med zoner och träningseffekt" screen={<RecapScreen />} flip>
+            <p>Varje vecka och månad får du en recap med hur tiden fördelades över pulszonerna och om du ligger nära 80/20 eller någon annanstans.</p>
+            <p>Pass utan träningseffekt från klockan får en uppskattad, så alla pass kan jämföras, även om din klocka inte räknar fram den.</p>
+          </Showcase>
+
+          <Showcase title="Logga mat utan att det blir ett jobb" screen={<FoodScreen />}>
+            <p>Fota, sök, skriv eller välj ett snabbval. Dina vanliga rätter sparas med kalorier och protein, och du justerar dem direkt i rutan, en gång, så blir de rätt för alltid.</p>
+            <p>Använder du YAZIO synkas maten automatiskt.</p>
+          </Showcase>
+
+          <Showcase title="En kaloribudget som följer verkligheten" screen={<BudgetScreen />} flip>
+            <p>Sätt en målvikt och ett datum så räknar appen ut din dagliga budget och ditt proteinmål, och justerar dem varje vecka utifrån hur det faktiskt går.</p>
+            <p>Veckoplanen räknar också om sig när du missar ett pass istället för att låtsas som ingenting.</p>
+          </Showcase>
+
+          <div>
+            <h3 className="text-[1.3rem] font-bold">Och dessutom</h3>
+            <dl className="grid sm:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-6 mt-6 text-[14px]">
+              {[
+                ['Hälsa och VO2max', 'Sömn, vilopuls, HRV och en åldersnormerad VO2max-skala.'],
+                ['Rekord', 'Personbästa uppdateras automatiskt efter varje pass.'],
+                ['Vänner', 'Se vännernas pass och heja med en tumme upp.'],
+                ['Vanor och milstolpar', 'Bygg streaks på vanor som stretching och få en eloge vid milstolpar.'],
+                ['Rutter', 'Se var du sprungit eller cyklat, på karta.'],
+                ['Fråga din egen Claude', 'Koppla din Claude till din träningsdata med en personlig nyckel.'],
+              ].map(([t, d]) => (
+                <div key={t} className="border-t border-edge pt-3">
+                  <dt className="font-semibold">{t}</dt>
+                  <dd className="text-muted mt-1 leading-relaxed">{d}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        </section>
+
+        {/* Så funkar det */}
+        <section id="sa-funkar-det" className="max-w-6xl mx-auto px-6 pb-20">
+          <h2 className="text-[1.8rem] sm:text-[2.2rem] font-bold text-balance max-w-[28ch]">Igång på några minuter</h2>
+          <ol className="grid sm:grid-cols-3 gap-4 mt-8 list-none">
+            {[
+              ['Koppla din klocka', 'Garmin, Concept2, Strava, Polar eller YAZIO. Pass, mat och hälsodata börjar synka direkt.'],
+              ['Sätt ett mål', 'Ett lopp, ett antal pass i veckan eller bara "må bättre". Planen utgår från det du vill.'],
+              ['Följ planen', 'Veckoplanen justerar sig efter hur veckan går, och coachen finns där mellan passen.'],
+            ].map(([t, d], i) => (
+              <li key={t} className="bg-card border border-edge rounded-2xl p-6">
+                <span className="font-mono text-xs text-lcd">Steg {i + 1}</span>
+                <h3 className="font-semibold text-[16.5px] mt-2">{t}</h3>
+                <p className="text-muted text-[13.5px] leading-relaxed mt-2">{d}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* FAQ */}
+        <section id="fragor" className="max-w-3xl mx-auto px-6 pb-20">
+          <h2 className="text-[1.8rem] sm:text-[2.2rem] font-bold">Vanliga frågor</h2>
+          <div className="mt-6 divide-y divide-edge border-y border-edge">
+            {FAQ.map(f => (
+              <details key={f.q} className="group py-4">
+                <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-semibold text-[15.5px] focus-visible:outline-2 focus-visible:outline-accent">
+                  {f.q}
+                  <span className="text-accent font-mono transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+                </summary>
+                <p className="text-muted text-[14.5px] leading-relaxed mt-3 max-w-[60ch]">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </section>
+
+        {/* Avslutande CTA */}
         <section className="max-w-6xl mx-auto px-6 pb-24">
           <div className="relative overflow-hidden rounded-[26px] border border-edge bg-card p-10 sm:p-14 text-center">
-            <div
-              className="pointer-events-none absolute inset-0"
-              style={{ background: 'radial-gradient(circle at 50% 0%, rgba(204,212,0,.12), transparent 60%)' }}
-            />
-            <h2 className="relative text-[1.7rem] sm:text-[2.1rem] font-bold text-balance">Redo att sätta igång på riktigt?</h2>
+            <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(204,212,0,.12), transparent 60%)' }} />
+            <h2 className="relative text-[1.7rem] sm:text-[2.1rem] font-bold text-balance">Redo att se hela bilden av din träning?</h2>
             <p className="relative text-muted text-[15px] mt-3">Gratis att komma igång. Inget kreditkort krävs, ingen bindningstid.</p>
             <div className="relative flex items-center justify-center gap-3.5 mt-7 flex-wrap">
               <PrimaryCta href="/login?mode=signup">Skapa konto</PrimaryCta>
@@ -271,15 +333,12 @@ export default function LandingPage() {
 
       <footer className="border-t border-edge/60">
         <div className="max-w-6xl mx-auto px-6 py-7 flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-2.5 text-muted text-[13px]">
-            <div className="w-6.5 h-6.5 rounded-md bg-accent text-bg flex items-center justify-center font-mono font-extrabold text-[10px]">DL</div>
-            DL Trainer — din personliga AI-träningsdashboard
-          </div>
-          <div className="flex gap-5 text-[13px] text-muted">
+          <div className="text-muted text-[13px]">DL Trainer — din personliga AI-träningsdashboard</div>
+          <nav aria-label="Sidfot" className="flex gap-5 text-[13px] text-muted">
             <a href="#funktioner" className="hover:text-fg transition-colors">Funktioner</a>
-            <a href="#sa-funkar-det" className="hover:text-fg transition-colors">Så funkar det</a>
+            <a href="#fragor" className="hover:text-fg transition-colors">Frågor</a>
             <Link href="/login" className="hover:text-fg transition-colors">Logga in</Link>
-          </div>
+          </nav>
         </div>
       </footer>
     </div>

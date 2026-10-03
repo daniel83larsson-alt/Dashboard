@@ -1,16 +1,16 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
-import LandingPage from '@/components/LandingPage'
+import LandingPage, { FAQ } from '@/components/LandingPage'
 
 export const metadata: Metadata = {
-  title: 'DL Trainer — Din AI-tränare, dygnet runt',
-  description: 'Samla dina pass, sömn, mat, kaloribudget och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava, Polar och YAZIO. Gratis att komma igång.',
+  title: 'DL Trainer — AI-coach för träning, mat och sömn',
+  description: 'Samla pass, puls, sömn och kalorier från Garmin, Concept2, Strava, Polar och YAZIO. En AI-coach som läser av din vecka. Gratis att börja.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'DL Trainer — Din AI-tränare, dygnet runt',
-    description: 'Samla dina pass, sömn, mat, kaloribudget och puls på ett ställe. En AI-coach per sportgren, kopplat till Garmin, Concept2, Strava, Polar och YAZIO.',
-    url: '/',
+    title: 'DL Trainer — AI-coach för träning, mat och sömn',
+    description: 'Samla pass, puls, sömn och kalorier från Garmin, Concept2, Strava, Polar och YAZIO. En AI-coach som läser av din vecka.',
+    url: 'https://dltrainer.se/',
     siteName: 'DL Trainer',
     locale: 'sv_SE',
     type: 'website',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DL Trainer — Din AI-tränare, dygnet runt',
+    title: 'DL Trainer — AI-coach för träning, mat och sömn',
     description: 'Samla dina pass, sömn, mat och puls på ett ställe. En AI-coach per sportgren.',
     images: ['https://dltrainer.se/opengraph-image'],
   },
@@ -38,6 +38,12 @@ const jsonLd = {
   offers: { '@type': 'Offer', price: '0', priceCurrency: 'SEK' },
 }
 
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQ.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
+}
+
 export default async function Home() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -50,6 +56,7 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
       <LandingPage />
     </>
   )
