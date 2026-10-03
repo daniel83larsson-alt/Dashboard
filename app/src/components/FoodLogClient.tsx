@@ -14,23 +14,22 @@ import { stockholmDateKey } from '@/lib/dates'
 import { daysMetGoal, mealLabel, fastingLabel, weightGoalLabel, currentWeekDateKeys } from '@/lib/yazio-history'
 import {
   KOST_MEALS, MULTI_ENTRY_MEALS, computeDayCompleteness, groupEntriesByMeal, kcalTotalForDay, metricTotalForDay, kostMealLabel, kostMetricLabel, guessMealForHour,
-  type KostMeal, type KostMetric, type KostFoodEntry,
+  type KostMeal,
 } from '@/lib/kost'
-import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { detectDayAnomalies, dayFlagLabel } from '@/lib/day-anomaly'
 import { estimateBurnedKcalForDay, estimateBurnedKcalForStatus } from '@/lib/burned-calories'
 import type { CalorieGoalSource } from '@/lib/calorie-goal'
 import { dayCalorieStatus, DAY_CALORIE_STATUS_TEXT_COLOR, DAY_CALORIE_STATUS_BG } from '@/lib/day-calorie-status'
 import KostSettingsCard from '@/components/KostSettingsCard'
+import EditEntryDialog from '@/components/food-log/EditEntryDialog'
+import DayDetailDialog from '@/components/food-log/DayDetailDialog'
+import QuickPickDialog from '@/components/food-log/QuickPickDialog'
+import {
+  macroSuffix, fmtDateLabel,
+  type FoodEntry, type QuickPick, type KostSettings, type DayContextTag, type DayNote, type QuickPickConfirm, type LogQuickPickOpts,
+} from '@/components/food-log/shared'
 
-// Same fix as ProfileForm.tsx's copy — native number inputs can silently
-// reject a Swedish decimal comma ("1,5"), so decimal fields here use
-// type="text" and normalize "," to "." themselves before parseFloat.
-// Duplicated rather than shared, same small-UI-helper convention already
-// used for the palette constants below.
-function normalizeDecimalInput(raw: string): string {
-  return raw.replace(',', '.')
-}
+// Types live in food-log/shared.ts; re-exported so existing imports keep working.
+export type { FoodEntry, QuickPick, KostSettings, DayContextTag, DayNote } from '@/components/food-log/shared'
 
 // Same palette/tooltip convention as the other chart components in the app
 // (WellnessCharts.tsx etc.) — kept local rather than shared, matching how
@@ -43,51 +42,6 @@ const chartTooltip = {
   contentStyle: { backgroundColor: '#161b1f', border: `1px solid ${EDGE}`, borderRadius: 12, color: '#e2e8ec', fontSize: 12 },
   cursor: { fill: 'rgba(255,255,255,0.03)' },
 }
-
-export type FoodEntry = KostFoodEntry
-
-export type QuickPick = {
-  name: string
-  calories: number
-  source: 'database' | 'ai_text' | 'photo'
-  quantity: number | null
-  unit: string | null
-  kcal_per_100g: number | null
-  off_id: string | null
-  protein_g: number | null
-  protein_per_100g: number | null
-  times_logged: number
-  last_logged: string
-  pinned: boolean
-  edited?: boolean // användaren har ändrat kcal/protein (food_quick_pick_overrides)
-}
-
-export type KostSettings = {
-  trackingEnabled: boolean
-  trackedMetrics: KostMetric[]
-  trackedMeals: KostMeal[]
-  calorieGoal: number | null
-  proteinGoalG: number | null
-  proteinGoalMode: 'auto' | 'manual'
-  carbGoalG: number | null
-  fatGoalG: number | null
-  remindersEnabled: boolean
-  eveningGuardEnabled: boolean
-  eveningGuardHour: number
-}
-
-export type DayContextTag = 'normal' | 'sick' | 'social' | 'travel' | 'stress' | 'injury' | 'other'
-export type DayNote = { date: string; tag: string | null; note: string | null }
-
-const DAY_TAGS: { value: DayContextTag; label: string }[] = [
-  { value: 'normal', label: 'Vanlig dag' },
-  { value: 'sick', label: 'Sjuk' },
-  { value: 'social', label: 'Socialt' },
-  { value: 'travel', label: 'Resa' },
-  { value: 'stress', label: 'Stress' },
-  { value: 'injury', label: 'Skada' },
-  { value: 'other', label: 'Annat' },
-]
 
 type Estimate = { name: string; kcal: number; protein_g: number; carb_g: number; fat_g: number; portion_desc: string; confidence: string; source: 'ai_text' | 'photo' }
 type PendingPhoto = { data: string; mimeType: string }
@@ -106,14 +60,8 @@ const PORTION_CHIPS: { label: string; multiplier: number }[] = [
 
 const MAX_LOG_PHOTOS = 4
 
-function macroSuffix(e: FoodEntry) {
-  return e.protein_g != null ? `${e.protein_g}g protein` : null
-}
 function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' })
-}
-function fmtDateLabel(dateKey: string) {
-  return new Date(`${dateKey}T00:00:00`).toLocaleDateString('sv-SE', { day: 'numeric', month: 'long' })
 }
 // Resizes+recompresses to JPEG before upload — a raw phone photo (often
 // several MB) times up to MAX_LOG_PHOTOS would otherwise blow past
@@ -604,10 +552,9 @@ export default function FoodLogClient({
   // eveningGuard slås fortfarande på (idé #7 — lätt att råka dubbellogga
   // ett snabbt tappat kvällsmellanmål) men visas som ett extra val INUTI
   // samma popup istället för en andra, separat dialog.
-  type QuickPickConfirm = { pick: QuickPick; meal: KostMeal; grams: string; multiplier: string; eveningGuard: boolean; kcal: string; protein: string }
   const [quickPickConfirm, setQuickPickConfirm] = useState<QuickPickConfirm | null>(null)
 
-  async function logQuickPick(pick: QuickPick, opts: { meal: KostMeal | null; grams?: number; multiplier?: number; replaceEntryId?: string; baseKcal?: number; baseProteinG?: number | null }) {
+  async function logQuickPick(pick: QuickPick, opts: LogQuickPickOpts) {
     setLogging(true)
     setError('')
     try {
@@ -1594,293 +1541,51 @@ export default function FoodLogClient({
 
       {/* Redigera-post-modal */}
       {editingId && (
-        <Modal label="Redigera post" panelClassName="flex flex-col gap-3" onClose={() => setEditingId(null)}>
-            <div className="text-sm font-semibold">Redigera post</div>
-            <div>
-              <label className="text-muted text-xs block mb-1.5">Namn</label>
-              <input type="text" value={editName} onChange={e => setEditName(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
-            </div>
-            {kostSettings.trackingEnabled && (
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Måltid</label>
-                <div className="flex flex-wrap gap-1.5">
-                  {KOST_MEALS.map(m => (
-                    <button
-                      key={m}
-                      type="button"
-                      onClick={() => setEditMeal(m)}
-                      className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${editMeal === m ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
-                    >
-                      {kostMealLabel(m)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Kalorier</label>
-                <input type="number" value={editKcal} onChange={e => setEditKcal(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
-                <input type="number" value={editProtein} onChange={e => setEditProtein(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Kolhydrater (g)</label>
-                <input type="number" value={editCarb} onChange={e => setEditCarb(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
-              </div>
-              <div>
-                <label className="text-muted text-xs block mb-1.5">Fett (g)</label>
-                <input type="number" value={editFat} onChange={e => setEditFat(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => setEditingId(null)} className="flex-1 text-xs text-muted border border-edge rounded-lg py-2.5">Avbryt</button>
-              <button onClick={saveEdit} disabled={editSaving} className="flex-1 text-xs bg-accent text-bg font-semibold py-2.5 rounded-lg disabled:opacity-50">{editSaving ? 'Sparar...' : 'Spara'}</button>
-            </div>
-        </Modal>
+        <EditEntryDialog
+          trackingEnabled={kostSettings.trackingEnabled}
+          name={editName} onNameChange={setEditName}
+          kcal={editKcal} onKcalChange={setEditKcal}
+          protein={editProtein} onProteinChange={setEditProtein}
+          carb={editCarb} onCarbChange={setEditCarb}
+          fat={editFat} onFatChange={setEditFat}
+          meal={editMeal} onMealChange={setEditMeal}
+          saving={editSaving}
+          onSave={saveEdit}
+          onClose={() => setEditingId(null)}
+        />
       )}
 
       {/* Dag-detalj-drawer (kalender/vecka) */}
       {selectedDay && (
-        <Modal label="Dagens måltider" placement="bottom" panelClassName="max-h-[80vh]" onClose={() => setSelectedDay(null)}>
-            <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
-            {(() => {
-              const dayEntries = entriesByDate.get(selectedDay) ?? []
-              const completeness = computeDayCompleteness(kostSettings.trackedMeals, dayEntries, dayOverrides.has(selectedDay))
-              const kcal = kcalTotalForDay(dayEntries)
-              return (
-                <>
-                  <div className="text-base font-bold mb-1">{fmtDateLabel(selectedDay)}</div>
-                  {completeness.status === 'no_data' && (
-                    <>
-                      <p className="text-muted text-sm mb-3">Ingen loggning den här dagen</p>
-                      <div className="flex gap-2 items-start bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5 text-xs text-red-300 mb-4">
-                        ⚠️ <span>Räknas inte med i veckans/månadens snitt förrän du fyllt i något — eller bekräftar att du åt inget.</span>
-                      </div>
-                      <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(null, d) }} className="w-full bg-accent text-bg font-semibold py-3 rounded-xl text-sm mb-2">Logga mat för den här dagen</button>
-                      <button onClick={() => markDayComplete(selectedDay)} className="w-full text-muted text-xs border border-edge rounded-xl py-2.5">Stämmer, jag åt inget den dagen</button>
-                    </>
-                  )}
-                  {completeness.status === 'incomplete' && (
-                    <>
-                      <p className="text-muted text-sm mb-3">{kcal} kcal loggat</p>
-                      <div className="flex gap-2 items-start bg-red-500/10 border border-red-500/30 rounded-xl px-3 py-2.5 text-xs text-red-300 mb-4">
-                        ⚠️ <span>Saknar: {completeness.missingMeals.map(kostMealLabel).join(', ')}. Kan bero på att du glömde logga, eller att något är loggat utan måltid nedan.</span>
-                      </div>
-                      {dayEntries.length > 0 && (
-                        <div className="flex flex-col gap-2 mb-4">
-                          {dayEntries.map(e => (
-                            <button
-                              key={e.id}
-                              type="button"
-                              onClick={() => { setSelectedDay(null); startEdit(e) }}
-                              className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2 text-left hover:border-accent/30 border border-transparent transition-colors"
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="text-fg break-words">{e.name}</div>
-                                <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
-                              </div>
-                              <span className="font-mono text-muted text-xs">{e.calories} kcal{macroSuffix(e) && ` · ${macroSuffix(e)}`}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
-                      <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(completeness.missingMeals[0], d) }} className="w-full bg-accent text-bg font-semibold py-3 rounded-xl text-sm mb-2">Logga en till för den här dagen</button>
-                      <button onClick={() => markDayComplete(selectedDay)} className="w-full text-muted text-xs border border-edge rounded-xl py-2.5">Stämmer, räkna med dagen ändå</button>
-                    </>
-                  )}
-                  {completeness.status === 'complete' && (
-                    <>
-                      <p className="text-muted text-sm mb-2 font-mono">{kcal} kcal{kostSettings.calorieGoal != null && <span> / {kostSettings.calorieGoal} kcal</span>}</p>
-                      {(() => {
-                        const yazioDay = yazioByDate.get(selectedDay)
-                        const daySource: 'yazio' | 'manual' = yazioDay?.kcalEaten != null ? 'yazio' : 'manual'
-                        const dayProteinG = daySource === 'yazio' ? (yazioDay?.proteinG ?? null) : dayEntries.reduce((s, e) => s + (e.protein_g ?? 0), 0)
-                        let baselineSum = 0
-                        let baselineCount = 0
-                        for (let i = 1; i <= 30; i++) {
-                          const d = new Date(`${todayKey}T00:00:00`)
-                          d.setDate(d.getDate() - i)
-                          const key = d.toISOString().slice(0, 10)
-                          const n = resolveDayNutrition(key, yazioByDate, entriesByDate, kostSettings.trackedMeals, dayOverrides)
-                          if (n.isComplete) { baselineSum += n.eatenKcal; baselineCount++ }
-                        }
-                        const flags = detectDayAnomalies({
-                          day: { eatenKcal: kcal, proteinG: dayProteinG, entries: dayEntries, isComplete: true, source: daySource },
-                          baselineAvgKcal: baselineCount > 0 ? baselineSum / baselineCount : null,
-                          baselineDaysLogged: baselineCount,
-                          proteinGoalG: kostSettings.proteinGoalG,
-                          budgetKcal: deficitSummary?.budgetKcal ?? null,
-                        })
-                        return flags.length > 0 ? <p className="text-amber-400 text-xs mb-4">{dayFlagLabel(flags[0])}</p> : <div className="mb-4" />
-                      })()}
-                      <div className="flex flex-col gap-2 mb-3">
-                        {dayEntries.map(e => (
-                          <button
-                            key={e.id}
-                            type="button"
-                            onClick={() => { setSelectedDay(null); startEdit(e) }}
-                            className="flex items-center justify-between text-sm bg-bg rounded-lg px-3 py-2 text-left hover:border-accent/30 border border-transparent transition-colors"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <div className="text-fg break-words">{e.name}</div>
-                              <div className={`text-[10px] ${e.meal ? 'text-muted' : 'text-amber-400'}`}>{e.meal ? kostMealLabel(e.meal) : 'Otaggat — tryck för att tagga'}</div>
-                            </div>
-                            <span className="font-mono text-muted text-xs">{e.calories} kcal{macroSuffix(e) && ` · ${macroSuffix(e)}`}</span>
-                          </button>
-                        ))}
-                      </div>
-                      <button onClick={() => { const d = selectedDay; setSelectedDay(null); openLogFlow(null, d) }} className="w-full text-muted text-xs border border-edge rounded-xl py-2.5">Lägg till fler poster för den här dagen</button>
-                    </>
-                  )}
-                </>
-              )
-            })()}
-
-            <div className="pt-3 mt-1 border-t border-edge">
-              <p className="text-muted text-[10px] uppercase tracking-wider mb-2">Kontext för dagen (valfritt)</p>
-              <div className="flex flex-wrap gap-1.5 mb-2">
-                {DAY_TAGS.map(t => {
-                  const active = dayNotes.get(selectedDay)?.tag === t.value
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      onClick={() => saveDayNote(selectedDay, active ? null : t.value, dayNotes.get(selectedDay)?.note ?? '')}
-                      className={`text-xs font-medium px-2.5 py-1.5 rounded-lg border transition-colors ${active ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
-                    >
-                      {t.label}
-                    </button>
-                  )
-                })}
-              </div>
-              <input
-                key={`${selectedDay}-note`}
-                type="text"
-                defaultValue={dayNotes.get(selectedDay)?.note ?? ''}
-                onBlur={e => saveDayNote(selectedDay, dayNotes.get(selectedDay)?.tag ?? null, e.target.value)}
-                placeholder="Kort anteckning, t.ex. vad som hände (valfritt)"
-                className="w-full bg-bg border border-edge rounded-xl px-3 py-2 text-xs text-fg placeholder-muted focus:outline-none focus:border-accent"
-              />
-            </div>
-
-            <button onClick={() => setSelectedDay(null)} className="text-muted text-xs mt-4 w-full text-center">Stäng</button>
-        </Modal>
+        <DayDetailDialog
+          day={selectedDay}
+          entriesByDate={entriesByDate}
+          kostSettings={kostSettings}
+          dayOverrides={dayOverrides}
+          yazioByDate={yazioByDate}
+          todayKey={todayKey}
+          deficitSummary={deficitSummary}
+          dayNotes={dayNotes}
+          onClose={() => setSelectedDay(null)}
+          onLogForDay={(dateKey, meal) => { setSelectedDay(null); openLogFlow(meal, dateKey) }}
+          onEditEntry={e => { setSelectedDay(null); startEdit(e) }}
+          onMarkComplete={markDayComplete}
+          onSaveNote={saveDayNote}
+        />
       )}
 
-      {quickPickConfirm && (() => {
-        const { pick, meal, grams, multiplier, eveningGuard, kcal, protein } = quickPickConfirm
-        const isDatabase = pick.source === 'database' && !!pick.off_id
-        const parsedGrams = parseFloat(normalizeDecimalInput(grams))
-        const parsedMultiplier = parseFloat(normalizeDecimalInput(multiplier))
-        const parsedKcal = parseFloat(normalizeDecimalInput(kcal))
-        const proteinTrim = protein.trim()
-        const parsedProtein: number | null = proteinTrim === '' ? null : parseFloat(normalizeDecimalInput(proteinTrim))
-        const proteinValid = parsedProtein == null || (Number.isFinite(parsedProtein) && parsedProtein >= 0)
-        const baseKcalValid = Number.isFinite(parsedKcal) && parsedKcal > 0
-        const dirty = !isDatabase && (parsedKcal !== pick.calories || (parsedProtein ?? null) !== (pick.protein_g ?? null))
-        const previewKcal = isDatabase
-          ? (pick.kcal_per_100g && parsedGrams > 0 ? Math.round(pick.kcal_per_100g * parsedGrams / 100) : pick.calories)
-          : (parsedMultiplier > 0 && baseKcalValid ? Math.round(parsedKcal * parsedMultiplier) : pick.calories)
-        const canConfirm = isDatabase ? parsedGrams > 0 : parsedMultiplier > 0 && baseKcalValid && proteinValid
-        const canUpdate = !isDatabase && dirty && baseKcalValid && proteinValid
-
-        function confirm(replaceEntryId?: string) {
-          logQuickPick(pick, {
-            meal,
-            grams: isDatabase ? parsedGrams : undefined,
-            multiplier: !isDatabase ? parsedMultiplier : undefined,
-            baseKcal: !isDatabase ? Math.round(parsedKcal) : undefined,
-            baseProteinG: !isDatabase ? parsedProtein : undefined,
-            replaceEntryId,
-          })
-        }
-
-        const updateButton = canUpdate || dirty ? (
-          <button type="button" onClick={() => updateQuickPickValues(pick, Math.round(parsedKcal), parsedProtein)} disabled={!canUpdate || logging} className="w-full text-accent border border-accent/40 rounded-xl py-2.5 text-sm disabled:opacity-50">Uppdatera rätten</button>
-        ) : null
-
-        return (
-          <Modal label={pick.name} z={70} onClose={() => setQuickPickConfirm(null)}>
-              <p className="text-fg text-sm font-medium mb-3">{pick.name} <span className="text-muted font-normal">· {previewKcal} kcal</span></p>
-
-              <label className="text-muted text-xs block mb-1.5">Måltid</label>
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {kostSettings.trackedMeals.map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setQuickPickConfirm(prev => prev ? { ...prev, meal: m } : prev)}
-                    className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${meal === m ? 'bg-accent/10 text-accent border-accent/30' : 'border-edge text-fg hover:border-accent/30'}`}
-                  >
-                    {kostMealLabel(m)}
-                  </button>
-                ))}
-              </div>
-
-              {isDatabase ? (
-                <div className="mb-3">
-                  <label className="text-muted text-xs block mb-1.5">Mängd (g)</label>
-                  <input
-                    type="text" inputMode="decimal" value={grams}
-                    onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, grams: normalizeDecimalInput(e.target.value) } : prev)}
-                    className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
-              ) : (
-                <>
-                  <div className="grid grid-cols-2 gap-2 mb-3">
-                    <div>
-                      <label className="text-muted text-xs block mb-1.5">Kcal per portion</label>
-                      <input
-                        type="text" inputMode="decimal" value={kcal}
-                        onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, kcal: normalizeDecimalInput(e.target.value) } : prev)}
-                        className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
-                      <input
-                        type="text" inputMode="decimal" value={protein} placeholder="saknas"
-                        onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, protein: normalizeDecimalInput(e.target.value) } : prev)}
-                        className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <div className="mb-3">
-                    <label className="text-muted text-xs block mb-1.5">Antal portioner</label>
-                    <input
-                      type="text" inputMode="decimal" value={multiplier}
-                      onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, multiplier: normalizeDecimalInput(e.target.value) } : prev)}
-                      className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
-                    />
-                  </div>
-                  {dirty && <p className="text-muted text-[11px] mb-3">Du har ändrat värdena. <b className="text-fg font-medium">Logga</b> använder dem bara för den här måltiden — <b className="text-fg font-medium">Uppdatera rätten</b> sparar dem på snabbvalet till nästa gång.</p>}
-                </>
-              )}
-
-              {eveningGuard ? (
-                <>
-                  <p className="text-muted text-xs mb-3">Du har redan loggat något idag och det är kväll — ersätt din senaste post eller lägg till en till?</p>
-                  <div className="flex flex-col gap-2">
-                    <button type="button" onClick={() => confirm(todayEntries[0]?.id)} disabled={!todayEntries[0] || !canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">Ersätt senaste post</button>
-                    <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full text-fg border border-edge rounded-xl py-2.5 text-sm disabled:opacity-50">Lägg till ändå</button>
-                    {updateButton}
-                    <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">{logging ? 'Loggar...' : 'Logga'}</button>
-                  {updateButton}
-                  <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
-                </div>
-              )}
-          </Modal>
-        )
-      })()}
+      {quickPickConfirm && (
+        <QuickPickDialog
+          confirmState={quickPickConfirm}
+          setConfirmState={setQuickPickConfirm}
+          trackedMeals={kostSettings.trackedMeals}
+          latestTodayEntryId={todayEntries[0]?.id}
+          logging={logging}
+          onLog={logQuickPick}
+          onUpdateValues={updateQuickPickValues}
+          onClose={() => setQuickPickConfirm(null)}
+        />
+      )}
       </>
       )}
     </div>
