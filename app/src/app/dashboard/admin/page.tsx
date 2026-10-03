@@ -1,4 +1,5 @@
 import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { summarizeUsage, fmtSek, USD_SEK_RATE, type UsageStatsRow } from '@/lib/llm-pricing'
 import AdminUserRow from '@/components/AdminUserRow'
 import FeatureShowcaseSender from '@/components/FeatureShowcaseSender'
 import MonthlyReportSender from '@/components/MonthlyReportSender'
@@ -20,7 +21,7 @@ export default async function AdminPage() {
     )
   }
 
-  const [{ data: profiles }, { data: syncStatus }, { data: yazioStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }, { data: newsletterRecipients }] = await Promise.all([
+  const [{ data: profiles }, { data: syncStatus }, { data: yazioStatus }, { data: activityStats }, { data: callStats }, { data: recentEvents }, { data: newsletterRecipients }, { data: llmUsage }] = await Promise.all([
     supabase.rpc('admin_list_profiles'),
     supabase.rpc('admin_all_sync_status'),
     supabase.rpc('admin_yazio_status'),
@@ -28,6 +29,7 @@ export default async function AdminPage() {
     supabase.rpc('admin_api_call_stats'),
     supabase.rpc('admin_recent_events'),
     supabase.rpc('admin_newsletter_recipients'),
+    supabase.rpc('admin_llm_usage_stats'),
   ])
 
   type SyncRow = { user_id: string; has_concept2: boolean; has_garmin: boolean; concept2_synced: boolean; garmin_synced: boolean }
@@ -40,6 +42,7 @@ export default async function AdminPage() {
   const yazioByUser = new Map<string, YazioRow>((yazioStatus ?? []).map((y: YazioRow) => [y.user_id, y]))
   const statsByUser = new Map<string, ActivityStatsRow>((activityStats ?? []).map((s: ActivityStatsRow) => [s.user_id, s]))
   const callsByUser = new Map<string, CallStatsRow>((callStats ?? []).map((c: CallStatsRow) => [c.user_id, c]))
+  const { byUser: costByUser, total: costTotal } = summarizeUsage((llmUsage ?? []) as UsageStatsRow[])
   const profileRows = (profiles ?? []) as ProfileRow[]
   const eventRows = (recentEvents ?? []) as EventRow[]
 
@@ -48,6 +51,15 @@ export default async function AdminPage() {
       <div className="mb-6">
         <h1 className="text-2xl font-semibold">Admin</h1>
         <p className="text-muted text-sm mt-1">{profileRows.length} registrerade användare</p>
+      </div>
+
+      <div className="bg-card border border-edge rounded-xl p-4 mb-6">
+        <div className="text-xs text-muted uppercase tracking-wider mb-1">AI-kostnad (uppskattad)</div>
+        <div className="flex items-baseline gap-x-6 gap-y-1 flex-wrap">
+          <div><span className="font-mono text-2xl font-bold text-accent">{fmtSek(costTotal.sek30d)}</span> <span className="text-muted text-xs">senaste 30 dagarna · {costTotal.calls30d} anrop</span></div>
+          <div><span className="font-mono text-fg text-sm">{fmtSek(costTotal.sekAll)}</span> <span className="text-muted text-xs">totalt sedan mätningen startade 3 okt · {costTotal.callsAll} anrop</span></div>
+        </div>
+        <p className="text-muted text-[11px] mt-2">Räknat på antal tokens × Googles listpris, {USD_SEK_RATE} kr/USD. Anrop med egen nyckel räknas inte (användaren betalar själv). Googles faktura är facit.</p>
       </div>
 
       <FeatureShowcaseSender recipientCount={(newsletterRecipients ?? []).length} />
@@ -88,6 +100,10 @@ export default async function AdminPage() {
             lastSynced={statsByUser.get(p.id)?.last_synced ?? null}
             callsToday={callsByUser.get(p.id)?.calls_today ?? 0}
             calls7d={callsByUser.get(p.id)?.calls_7d ?? 0}
+            aiCost30dSek={costByUser.get(p.id)?.sek30d ?? 0}
+            aiCostAllSek={costByUser.get(p.id)?.sekAll ?? 0}
+            aiCalls30d={costByUser.get(p.id)?.calls30d ?? 0}
+            aiOwnKeyCalls30d={costByUser.get(p.id)?.ownKeyCalls30d ?? 0}
           />
         ))}
       </div>

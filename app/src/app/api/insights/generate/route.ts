@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { recordGeminiUsage } from '@/lib/llm-usage'
 import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
@@ -26,7 +27,7 @@ type AgentInsights = { data: string; sleep: string; steps: string; mental: strin
 // Gemini calls (one per specialist + one synthesis) — same shared quota, a
 // fraction of the requests, at the cost of each perspective being generated
 // in the same pass rather than fully independently.
-async function askAgentTeam(apiKey: string, question: string, coachTone: string | null | undefined): Promise<AgentInsights> {
+async function askAgentTeam(apiKey: string, question: string, coachTone: string | null | undefined, userId: string): Promise<AgentInsights> {
   const system = `Du är hela tränarteamet för en uthållighetsidrottare (rodd m.fl.): datadriven analytiker (fokus: helhetsdata + hur upplägget/målen går), sömncoach, stegcoach, mentalcoach, styrkecoach (kompletterande träning), rörlighets-/stretchcoach och kostcoach — plus huvudcoach som sammanfattar teamets bedömningar. Svara ENDAST med JSON enligt schema, ett fält per roll. Varje enskilt fält: MAX 2 korta meningar, svenska, konkret, gå direkt på sak, inga bisatser eller utfyllnadsord — utom "summary" som är huvudcoachens syntes i MAX 3 korta meningar (fetstil/punktlistor tillåtet där). Hellre en vass mening än två urvattnade.
 ${coachToneInstruction(coachTone)}`
 
@@ -59,6 +60,7 @@ ${coachToneInstruction(coachTone)}`
     }),
   })
   const d = await res.json()
+  recordGeminiUsage(d, { userId, feature: 'insights_generate', apiKey })
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) {
     throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
@@ -238,7 +240,7 @@ kostGeneral (Kostcoach, fokusera ENBART på SENASTE 30 DAGARNA/VIKTMÅL/KROPPSM�
 
 summary (Huvudcoach): Läs de sju bedömningarna du själv precis formulerat. Vad är den ENA viktigaste prioriteringen för atleten just nu?`
 
-    const { data, sleep, steps, mental, strength, mobility, kostWeek, kostGeneral, summary } = await askAgentTeam(apiKey, question, profile?.coach_tone)
+    const { data, sleep, steps, mental, strength, mobility, kostWeek, kostGeneral, summary } = await askAgentTeam(apiKey, question, profile?.coach_tone, user.id)
 
     const insight = {
       generatedAt: now.toISOString(),

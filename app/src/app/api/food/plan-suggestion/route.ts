@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { recordGeminiUsage } from '@/lib/llm-usage'
 import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
@@ -34,7 +35,7 @@ Regler:
 type PlanItem = { name: string; portion: string; kcal: number; proteinG: number }
 type PlanOption = { note: string; items: PlanItem[]; totalKcal: number; totalProteinG: number }
 
-async function callGeminiForPlan(apiKey: string, question: string): Promise<{ minimal: PlanOption; maxed: PlanOption }> {
+async function callGeminiForPlan(apiKey: string, question: string, userId: string): Promise<{ minimal: PlanOption; maxed: PlanOption }> {
   const planOptionSchema = {
     type: 'OBJECT',
     properties: {
@@ -77,6 +78,7 @@ async function callGeminiForPlan(apiKey: string, question: string): Promise<{ mi
     }),
   })
   const d = await res.json()
+  recordGeminiUsage(d, { userId, feature: 'food_plan_suggestion', apiKey })
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!text) throw new Error('Tomt svar från Gemini')
   return JSON.parse(text)
@@ -153,7 +155,7 @@ export async function POST() {
       }
     }
 
-    const plan = await callGeminiForPlan(userApiKey ?? process.env.GEMINI_API_KEY!, question)
+    const plan = await callGeminiForPlan(userApiKey ?? process.env.GEMINI_API_KEY!, question, user.id)
     return NextResponse.json({ ...plan, remainingKcal, remainingProteinG })
   } catch (err) {
     console.error('Food plan suggestion error:', err)

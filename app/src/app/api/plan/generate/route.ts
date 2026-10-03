@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recordGeminiUsage } from '@/lib/llm-usage'
 import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
@@ -181,6 +182,7 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
       }
     )
     const geminiData = await res.json()
+    recordGeminiUsage(geminiData, { userId: user.id, feature: 'plan_generate', apiKey: geminiKey })
     const rawPlan = geminiData.candidates?.[0]?.content?.parts?.[0]?.text ?? ''
 
     let plan: { philosophy: string; focusAreas: string[]; sessions: Array<{ day: string; isRest: boolean; sportType?: string | null; title: string; description: string }> } | null = null

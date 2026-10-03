@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     const history = (sessionData?.messages ?? []) as Message[]
     const precedingMessage = history.length ? history[history.length - 1].content : undefined
 
-    const moderation = await moderateMessage(moderationKey, message, precedingMessage)
+    const moderation = await moderateMessage(moderationKey, message, precedingMessage, user.id)
 
     if (moderation.blocked) {
       const flaggedAttempts = (profile?.flagged_attempts ?? 0) + 1
@@ -329,7 +329,7 @@ export async function POST(request: NextRequest) {
     if (userApiKey && userProvider === 'anthropic') {
       reply = await callAnthropic(userApiKey, systemPrompt, history, message)
     } else {
-      reply = await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, systemPrompt, history, message)
+      reply = await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, systemPrompt, history, message, { userId: user.id, feature: 'coach' })
     }
 
     const updatedMessages = [

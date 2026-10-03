@@ -35,7 +35,7 @@ async function generateCheckinNarrative(
     const system = `${NARRATIVE_SYSTEM}\n${coachToneInstruction(coachTone)}`
     const narrative = userApiKey && profile?.llm_provider === 'anthropic'
       ? await callAnthropic(userApiKey, system, [], summary)
-      : await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, system, [], summary)
+      : await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, system, [], summary, { userId, feature: 'deficit_checkin' })
     return narrative
   } catch (err) {
     console.error('Deficit checkin narrative failed:', err)

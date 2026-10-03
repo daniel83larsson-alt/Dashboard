@@ -64,7 +64,7 @@ Dag-för-dag (nyast först): ${weekDays.map(d => `${d.date}: ${d.kcalEaten ?? '�
 
     const feedback = userApiKey && profile?.llm_provider === 'anthropic'
       ? await callAnthropic(userApiKey, SYSTEM_PROMPT, [], dataSummary)
-      : await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, SYSTEM_PROMPT, [], dataSummary)
+      : await callGemini(userApiKey ?? process.env.GEMINI_API_KEY!, SYSTEM_PROMPT, [], dataSummary, { userId: user.id, feature: 'food_feedback' })
 
     return NextResponse.json({ feedback })
   } catch (err) {

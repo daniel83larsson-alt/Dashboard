@@ -7,6 +7,7 @@
 // once-a-week-per-user scheduled job is a different kind of load and is
 // throttled separately in the cron route itself).
 import { geminiUrl, GEMINI_THINKING } from './llm-model'
+import { recordGeminiUsage } from './llm-usage'
 import { isQuotaError, quotaMessage } from './llm-quota'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
@@ -194,7 +195,7 @@ wellness: Ett konkret, användbart tips utifrån steg- och sömnmönstret ovan (
 motivation: En peppig, personlig mening om vad nästa vecka handlar om — koppla tydligt till MÅL ovan om ett finns, annars till att bygga en vana. MAX 2 meningar.${effortInstruction}${nutritionInstruction}`
 }
 
-async function generateInsights(apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, effort: EffortSummary | null): Promise<WeeklyDigestInsights> {
+async function generateInsights(userId: string, apiKey: string, data: WeeklyDigestData, thisWeekActivities: ActivityRow[], planSessionsThisWeek: PlanSessionRow[], goalTitle: string | null, coachTone: string | null | undefined, kost: WeeklyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, effort: EffortSummary | null): Promise<WeeklyDigestInsights> {
   const system = `Du är atletens huvudcoach som skriver veckans personliga sammanfattning i tre korta delar. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -227,6 +228,7 @@ ${coachToneInstruction(coachTone)}`
     }),
   })
   const d = await res.json()
+  recordGeminiUsage(d, { userId, feature: 'weekly_digest', apiKey })
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
   const parsed = JSON.parse(text) as WeeklyDigestInsights
@@ -370,7 +372,7 @@ export async function generateWeeklyDigestForUser(
   let insights: WeeklyDigestInsights | null = null
   let insightsIssue: string | null = null
   try {
-    insights = await generateInsights(apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit, effort)
+    insights = await generateInsights(userId, apiKey, digestData, thisWeekActivities, planSessionsThisWeek, goalTitle, profile?.coach_tone, weeklyKost, deficit, effort)
   } catch (err) {
     console.error('Weekly digest insights failed for user', userId, err)
     if (isQuotaError(err)) insightsIssue = quotaMessage(err)

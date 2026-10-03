@@ -24,4 +24,10 @@ describe('llm-model', () => {
       .filter(f => /models\/gemini-|thinkingBudget/.test(readFileSync(f, 'utf8')))
     expect(offenders).toEqual([])
   })
+  it('every file that calls Gemini also records token usage (cost per user in admin)', () => {
+    const offenders = walk(join(__dirname, '..'))
+      .filter(f => !f.endsWith('llm-model.ts'))
+      .filter(f => { const c = readFileSync(f, 'utf8'); return /geminiUrl\s*\(/.test(c) && !c.includes('recordGeminiUsage') })
+    expect(offenders).toEqual([])
+  })
 })

@@ -1,3 +1,4 @@
+import { recordGeminiUsage } from './llm-usage'
 import { geminiUrl, GEMINI_THINKING } from './llm-model'
 export type LlmMessage = { role: string; content: string }
 
@@ -7,7 +8,7 @@ export type LlmMessage = { role: string; content: string }
 const MAX_REPLY_TOKENS = 500
 const MAX_HISTORY_TURNS = 16
 
-export async function callGemini(apiKey: string, systemPrompt: string, history: LlmMessage[], message: string): Promise<string> {
+export async function callGemini(apiKey: string, systemPrompt: string, history: LlmMessage[], message: string, usage?: { userId: string; feature: string }): Promise<string> {
   const contents = [
     ...history.slice(-MAX_HISTORY_TURNS).map(m => ({
       role: m.role === 'assistant' ? 'model' : 'user',
@@ -28,6 +29,7 @@ export async function callGemini(apiKey: string, systemPrompt: string, history: 
     }
   )
   const data = await res.json()
+  if (usage) recordGeminiUsage(data, { ...usage, apiKey })
   const text = data.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) {
     throw new Error(`Gemini call failed: ${data.error?.message ?? res.status}`)

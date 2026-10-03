@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { recordGeminiUsage } from '@/lib/llm-usage'
 import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
@@ -100,6 +101,7 @@ export async function POST(request: NextRequest) {
       }),
     })
     const data = await res.json()
+    recordGeminiUsage(data, { userId: user.id, feature: 'food_estimate', apiKey })
     const raw = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!res.ok || !raw) {
       console.error('Gemini food estimate error:', data.error ?? res.status)

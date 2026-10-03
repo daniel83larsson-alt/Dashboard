@@ -1654,3 +1654,55 @@ alter table public.profiles add column if not exists mcp_api_key_encrypted text;
 alter table public.profiles add column if not exists mcp_api_key_created_at timestamptz;
 create unique index if not exists profiles_mcp_api_key_hash_unique
   on public.profiles(mcp_api_key_hash) where mcp_api_key_hash is not null;
+
+-- AI-förbrukning per anrop (Daniel: "ha en kostnadskolumn i admin, per person
+-- och totalt"). Sparar ALDRIG frågornas/svarens innehåll, bara antal tokens.
+-- Inga RLS-policys: varken inloggade användare eller anon kan läsa/skriva;
+-- servern skriver med service-role (lib/llm-usage.ts), admin läser via
+-- admin_llm_usage_stats(). Kronor räknas i lib/llm-pricing.ts, inte här.
+-- Kör vid uppdatering av en befintlig databas (redan körd i prod 3 okt 2026):
+create table if not exists public.llm_usage (
+  id bigint generated always as identity primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  feature text not null,
+  model text not null,
+  input_tokens integer not null default 0,
+  output_tokens integer not null default 0,
+  thinking_tokens integer not null default 0,
+  own_key boolean not null default false,
+  created_at timestamptz not null default now()
+);
+create index if not exists llm_usage_user_created_idx on public.llm_usage (user_id, created_at desc);
+alter table public.llm_usage enable row level security;
+
+create or replace function public.admin_llm_usage_stats()
+returns table(
+  user_id uuid, model text, own_key boolean,
+  calls_30d bigint, input_30d bigint, output_30d bigint,
+  calls_all bigint, input_all bigint, output_all bigint
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if lower(auth.jwt() ->> 'email') != lower('daniel83larsson@gmail.com') then
+    raise exception 'not authorized';
+  end if;
+
+  return query
+  select
+    u.user_id, u.model, u.own_key,
+    count(*) filter (where u.created_at >= now() - interval '30 days')::bigint,
+    coalesce(sum(u.input_tokens) filter (where u.created_at >= now() - interval '30 days'), 0)::bigint,
+    coalesce(sum(u.output_tokens + u.thinking_tokens) filter (where u.created_at >= now() - interval '30 days'), 0)::bigint,
+    count(*)::bigint,
+    coalesce(sum(u.input_tokens), 0)::bigint,
+    coalesce(sum(u.output_tokens + u.thinking_tokens), 0)::bigint
+  from public.llm_usage u
+  group by u.user_id, u.model, u.own_key;
+end;
+$$;
+revoke all on function public.admin_llm_usage_stats() from public;
+revoke execute on function public.admin_llm_usage_stats() from anon;
+grant execute on function public.admin_llm_usage_stats() to authenticated;

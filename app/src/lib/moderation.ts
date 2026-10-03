@@ -1,3 +1,4 @@
+import { recordGeminiUsage } from './llm-usage'
 import { geminiUrl, GEMINI_THINKING } from './llm-model'
 export const FLAG_THRESHOLD = 3
 
@@ -48,7 +49,7 @@ export function checkPatterns(message: string): string | null {
 // on-topic as a reply to a coach message about adjusting the training plan.
 // Without this, only messages under SHORT_MESSAGE_LIMIT got that benefit of
 // the doubt; anything slightly longer was judged on the bare string alone.
-export async function checkTopicRelevance(apiKey: string, message: string, precedingMessage?: string): Promise<boolean> {
+export async function checkTopicRelevance(apiKey: string, message: string, precedingMessage?: string, userId?: string): Promise<boolean> {
   try {
     const contextLine = precedingMessage
       ? `Coachens föregående meddelande (för sammanhang, bedöm INTE detta i sig): "${precedingMessage.slice(0, 500)}"\n\n`
@@ -83,6 +84,7 @@ onTopic=false: meddelandet handlar om programmering/kod, allmänna kunskapsfråg
       }
     )
     const data = await res.json()
+    recordGeminiUsage(data, { userId, feature: 'moderation', apiKey })
     const text = data.candidates?.[0]?.content?.parts?.[0]?.text
     if (!text) return true
     const parsed = JSON.parse(text)
@@ -96,7 +98,7 @@ export type ModerationResult = { blocked: boolean; reason?: string }
 
 const SHORT_MESSAGE_LIMIT = 24 // chars
 
-export async function moderateMessage(apiKey: string, message: string, precedingMessage?: string): Promise<ModerationResult> {
+export async function moderateMessage(apiKey: string, message: string, precedingMessage?: string, userId?: string): Promise<ModerationResult> {
   const patternHit = checkPatterns(message)
   if (patternHit) return { blocked: true, reason: patternHit }
 
@@ -106,7 +108,7 @@ export async function moderateMessage(apiKey: string, message: string, preceding
   // rather than spending a Gemini request confirming the obvious.
   if (message.trim().length <= SHORT_MESSAGE_LIMIT) return { blocked: false }
 
-  const onTopic = await checkTopicRelevance(apiKey, message, precedingMessage)
+  const onTopic = await checkTopicRelevance(apiKey, message, precedingMessage, userId)
   if (!onTopic) return { blocked: true, reason: 'Orelaterat ämne' }
 
   return { blocked: false }

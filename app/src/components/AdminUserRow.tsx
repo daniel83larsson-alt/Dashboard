@@ -1,5 +1,6 @@
 'use client'
 
+import { fmtSek } from '@/lib/llm-pricing'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
@@ -49,6 +50,10 @@ export default function AdminUserRow({
   lastSynced,
   callsToday,
   calls7d,
+  aiCost30dSek,
+  aiCostAllSek,
+  aiCalls30d,
+  aiOwnKeyCalls30d,
 }: {
   profile: Profile
   isSelf: boolean
@@ -63,6 +68,10 @@ export default function AdminUserRow({
   lastSynced: string | null
   callsToday: number
   calls7d: number
+  aiCost30dSek: number
+  aiCostAllSek: number
+  aiCalls30d: number
+  aiOwnKeyCalls30d: number
 }) {
   const [busy, setBusy] = useState(false)
   const [testing, setTesting] = useState(false)
@@ -163,6 +172,12 @@ export default function AdminUserRow({
             <div className={`text-[11px] mt-1 ${callsToday >= 20 ? 'text-amber-400' : 'text-muted'}`}>
               {callsToday} anrop idag · {calls7d} senaste 7 dagarna
               {callsToday >= 20 && ' — ovanligt högt'}
+            </div>
+          )}
+          {(aiCalls30d > 0) && (
+            <div className="text-[11px] mt-1 text-muted">
+              AI ≈ <span className="font-mono text-fg">{fmtSek(aiCost30dSek)}</span> senaste 30 dagarna ({aiCalls30d} anrop) · totalt {fmtSek(aiCostAllSek)}
+              {aiOwnKeyCalls30d > 0 && ` · ${aiOwnKeyCalls30d} med egen nyckel (ej räknade)`}
             </div>
           )}
           {hasGarmin && (

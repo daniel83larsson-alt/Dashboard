@@ -5,6 +5,7 @@
 // only called from the admin test-send route (Daniel: "vill testa på mig
 // själv först" — no cron wired up yet, see STATUS.md).
 import { geminiUrl, GEMINI_THINKING } from './llm-model'
+import { recordGeminiUsage } from './llm-usage'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   computeMonthlyReport, recapMonthStart, monthDateKeys, summarizeMonthlyKost, activitiesInMonth,
@@ -97,7 +98,7 @@ funFact: EN rolig, konkret jämförelse byggd på FUNFACTS-siffrorna ovan (t.ex.
 ${coachToneInstruction(undefined)}`
 }
 
-async function generateInsights(apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined, effort: EffortSummary | null): Promise<MonthlyReportInsights> {
+async function generateInsights(userId: string, apiKey: string, data: MonthlyReportData, kost: MonthlyKostData | null, deficit: { avgDiffKcal: number; budgetKcal: number; completeDays: number; countedDays: number } | null, goalTitle: string | null, coachTone: string | null | undefined, effort: EffortSummary | null): Promise<MonthlyReportInsights> {
   const system = `Du är atletens huvudcoach som skriver en större månadssammanfattning. Svara ENDAST med JSON enligt schema.
 ${coachToneInstruction(coachTone)}`
   const properties: Record<string, { type: string }> = {
@@ -126,6 +127,7 @@ ${coachToneInstruction(coachTone)}`
     }),
   })
   const d = await res.json()
+  recordGeminiUsage(d, { userId, feature: 'monthly_report', apiKey })
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
   const parsed = JSON.parse(text) as MonthlyReportInsights
@@ -240,7 +242,7 @@ export async function generateMonthlyReportForUser(
 
   let insights: MonthlyReportInsights | null = null
   try {
-    insights = await generateInsights(apiKey, reportData, kost, deficit, goalTitle, profile?.coach_tone, effort)
+    insights = await generateInsights(userId, apiKey, reportData, kost, deficit, goalTitle, profile?.coach_tone, effort)
   } catch (err) {
     console.error('Monthly report insights failed for user', userId, err)
   }

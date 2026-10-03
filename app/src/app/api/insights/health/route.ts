@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { recordGeminiUsage } from '@/lib/llm-usage'
 import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
@@ -16,7 +17,7 @@ type HealthInsight = { recovery: string; mental: string }
 // at wellness data (sleep/HR/HRV/steps/Body Battery) for the Hälsa page,
 // while the Insikter page's team analysis covers the full training picture.
 // Two short fields instead of six — kept intentionally brief.
-async function askHealthTeam(apiKey: string, question: string, coachTone: string | null | undefined): Promise<HealthInsight> {
+async function askHealthTeam(apiKey: string, question: string, coachTone: string | null | undefined, userId: string): Promise<HealthInsight> {
   const system = `Du är återhämtnings- och mentalcoach för en uthållighetsidrottare. Svara ENDAST med JSON enligt schema. Fokusera BARA på hälsodata (sömn, vilopuls, HRV, steg, Body Battery) — inte träningspass eller personbästa. Varje fält: 2-3 meningar, svenska, konkret.
 ${coachToneInstruction(coachTone)}`
 
@@ -42,6 +43,7 @@ ${coachToneInstruction(coachTone)}`
     }),
   })
   const d = await res.json()
+  recordGeminiUsage(d, { userId, feature: 'insights_health', apiKey })
   const text = d.candidates?.[0]?.content?.parts?.[0]?.text
   if (!res.ok || !text) {
     throw new Error(`Gemini call failed: ${d.error?.message ?? res.status}`)
@@ -91,7 +93,7 @@ export async function POST() {
 recovery: bedöm återhämtningsstatus utifrån vilopuls/sömn/HRV — trend, obalans eller allt ser bra ut?
 mental: vad säger dagsformen (sömn/Body Battery) om läge för fokus och motivation just nu — ge ett kort konkret tips.`
 
-    const insight = await askHealthTeam(apiKey, question, profile?.coach_tone)
+    const insight = await askHealthTeam(apiKey, question, profile?.coach_tone, user.id)
     const result = { generatedAt: new Date().toISOString(), ...insight }
 
     await supabase.from('coach_sessions').upsert({
