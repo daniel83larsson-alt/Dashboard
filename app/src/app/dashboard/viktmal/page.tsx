@@ -1,10 +1,10 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import ViktmalClient, { type DayEntry, type Measurement, type CheckinHistoryRow, type ActiveMilestone, type BudgetEvent } from '@/components/ViktmalClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { computeDayCompleteness, kcalTotalForDay, KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { budgetInForceOn, tdeeInForceOn } from '@/lib/deficit'
-import { fetchFirstLoggedKey } from '@/lib/first-logged-day'
+import { earliestLoggedKey, fetchFirstFoodLogIso } from '@/lib/first-logged-day'
 import { dedupeForStats, type ActivityRow } from '@/lib/duplicates'
 import { TRAINING_LOOKBACK_DAYS, MIN_TRAINING_HISTORY_DAYS } from '@/lib/deficit-budget-refreeze'
 
@@ -27,8 +27,7 @@ function dateKeysEndingToday(todayKey: string, count: number): string[] {
 }
 
 export default async function ViktmalPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
   const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 
@@ -64,16 +63,6 @@ export default async function ViktmalPage() {
   // along with the rest of the Viktmål settings.
   const trainingLookbackStart = new Date()
   trainingLookbackStart.setDate(trainingLookbackStart.getDate() - TRAINING_LOOKBACK_DAYS)
-  const { data: recentActs } = await supabase
-    .from('activities')
-    .select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
-    .eq('user_id', user.id)
-    .gte('start_date', trainingLookbackStart.toISOString())
-  const dedupedRecentActs = dedupeForStats((recentActs ?? []) as (ActivityRow & { calories?: number | null })[])
-  const trainingDaysWithActivity = new Set(dedupedRecentActs.map(a => a.start_date.slice(0, 10))).size
-  const avgTrainingKcalRaw = trainingDaysWithActivity >= MIN_TRAINING_HISTORY_DAYS
-    ? dedupedRecentActs.reduce((s, a) => s + (a.calories ?? 0), 0) / TRAINING_LOOKBACK_DAYS
-    : null
 
   // Fetched wide enough to cover the trend window — the 7-day window used
   // everywhere else below is just the most recent slice of the same data,
@@ -91,6 +80,7 @@ export default async function ViktmalPage() {
   const [
     { data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: measurementRows }, { data: todayActs }, { data: wellnessRow },
     { data: checkinRows }, { data: activeMilestoneRow }, { data: budgetEventRows }, { data: allBudgetEventRows }, { data: recentlyResolvedRow }, { data: todayNoteRow },
+    { data: recentActs }, firstFoodLogIso,
   ] = await Promise.all([
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
       .eq('user_id', user.id).gte('logged_at', sinceIso),
@@ -134,7 +124,17 @@ export default async function ViktmalPage() {
       .gte('resolved_at', new Date(new Date().getTime() - 3 * 86400000).toISOString())
       .order('resolved_at', { ascending: false }).limit(1).maybeSingle(),
     supabase.from('day_context_notes').select('tag, note').eq('user_id', user.id).eq('date', todayKey).maybeSingle(),
+    supabase.from('activities')
+      .select('id, strava_id, source, start_date, distance, moving_time, sport_type, calories')
+      .eq('user_id', user.id)
+      .gte('start_date', trainingLookbackStart.toISOString()),
+    fetchFirstFoodLogIso(supabase, user.id),
   ])
+  const dedupedRecentActs = dedupeForStats((recentActs ?? []) as (ActivityRow & { calories?: number | null })[])
+  const trainingDaysWithActivity = new Set(dedupedRecentActs.map(a => a.start_date.slice(0, 10))).size
+  const avgTrainingKcalRaw = trainingDaysWithActivity >= MIN_TRAINING_HISTORY_DAYS
+    ? dedupedRecentActs.reduce((s, a) => s + (a.calories ?? 0), 0) / TRAINING_LOOKBACK_DAYS
+    : null
   const todayTrainingKcalRaw = (todayActs ?? []).reduce((s, a) => s + (a.calories ?? 0), 0)
 
   const wellnessRaw = (wellnessRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -154,7 +154,7 @@ export default async function ViktmalPage() {
     } catch { return [] }
   })() : []
   const yazioByDate = new Map(yazioHistory.map(d => [d.date, d]))
-  const firstLoggedKey = await fetchFirstLoggedKey(supabase, user.id, yazioHistory)
+  const firstLoggedKey = earliestLoggedKey(firstFoodLogIso, yazioHistory)
 
   const manualByDate = new Map<string, KostFoodEntry[]>()
   for (const e of (foodLog ?? []) as KostFoodEntry[]) {

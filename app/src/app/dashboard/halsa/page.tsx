@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessChartsLoader'
 import HealthInsightCard from '@/components/HealthInsightCard'
 import InsightsPanel from '@/components/InsightsPanel'
@@ -79,8 +79,7 @@ function longestStreak(acts: RecordActivity[]): Streak | null {
 // slå ihop några sidor?" One combined server fetch instead of three
 // separate page loads.
 export default async function HalsaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const initialTab = (await searchParams).tab

@@ -1,9 +1,9 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { resolveDayNutrition } from '@/lib/day-nutrition-source'
-import { fetchFirstLoggedKey } from '@/lib/first-logged-day'
+import { earliestLoggedKey, fetchFirstFoodLogIso } from '@/lib/first-logged-day'
 import { compute7DayAverage, computeAvgDiffVsTdee, countableDays, budgetInForceOn, tdeeInForceOn, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 
 const ROLLING_WINDOW_DAYS = 7
@@ -15,8 +15,7 @@ const ROLLING_WINDOW_DAYS = 7
 // route-invariants.test.ts mechanically prove dashboard/page.tsx itself
 // never touches the Garmin correction factor or anything deficit-related.
 export default async function ViktmalOverviewCard() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const { data: profile } = await supabase
@@ -46,7 +45,7 @@ export default async function ViktmalOverviewCard() {
   })
   const sinceIso = new Date(`${days[0]}T00:00:00`).toISOString()
 
-  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: budgetEventRows }] = await Promise.all([
+  const [{ data: foodLog }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: budgetEventRows }, firstFoodLogIso] = await Promise.all([
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
       .eq('user_id', user.id).gte('logged_at', sinceIso),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
@@ -58,6 +57,7 @@ export default async function ViktmalOverviewCard() {
     supabase.from('deficit_budget_events')
       .select('created_at, new_budget_kcal, new_tdee_kcal')
       .eq('user_id', user.id).order('created_at', { ascending: true }),
+    fetchFirstFoodLogIso(supabase, user.id),
   ])
   const budgetEvents = (budgetEventRows ?? []).map(r => ({
     createdAt: r.created_at as string,
@@ -83,7 +83,7 @@ export default async function ViktmalOverviewCard() {
   const dayOverrides = new Set((dayStatusRows ?? []).map(r => r.date as string))
   const trackedMeals = ((profile.kost_tracked_meals as string[] | null) ?? ['breakfast', 'lunch', 'dinner']).filter((m): m is KostMeal => (KOST_MEALS as string[]).includes(m))
 
-  const firstLoggedKey = await fetchFirstLoggedKey(supabase, user.id, yazioHistory)
+  const firstLoggedKey = earliestLoggedKey(firstFoodLogIso, yazioHistory)
   const allDayEntries = days.map(dateKey => {
     const day = resolveDayNutrition(dateKey, yazioByDate, manualByDate, trackedMeals, dayOverrides)
     return {

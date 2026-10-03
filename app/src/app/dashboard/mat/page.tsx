@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import FoodLogClient, { type QuickPick, type FoodEntry, type KostSettings } from '@/components/FoodLogClient'
 import { stockholmDateKey } from '@/lib/dates'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
@@ -14,8 +14,7 @@ import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 const ENTRY_LOOKBACK_DAYS = 90
 
 export default async function MatPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const sinceIso = new Date(new Date().getTime() - ENTRY_LOOKBACK_DAYS * 86400000).toISOString()

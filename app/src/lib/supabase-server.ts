@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
@@ -32,3 +33,12 @@ export async function createSupabaseServerClient() {
     }
   )
 }
+
+// One auth check + client per request. The layout, the page and any
+// Suspense-wrapped server component all need the user; React's cache() makes
+// them share a single Supabase auth round-trip instead of one each.
+export const getServerSession = cache(async () => {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  return { supabase, user }
+})

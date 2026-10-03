@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import { summarizeUsage, fmtSek, USD_SEK_RATE, type UsageStatsRow } from '@/lib/llm-pricing'
 import AdminUserRow from '@/components/AdminUserRow'
 import FeatureShowcaseSender from '@/components/FeatureShowcaseSender'
@@ -6,8 +6,7 @@ import MonthlyReportSender from '@/components/MonthlyReportSender'
 import DemoResetButton from '@/components/DemoResetButton'
 
 export default async function AdminPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const isAdmin = process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL

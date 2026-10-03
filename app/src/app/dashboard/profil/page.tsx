@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import ProfileForm from '@/components/ProfileForm'
 import GoalsCard from '@/components/GoalsCard'
 import FriendsCard from '@/components/FriendsCard'
@@ -11,8 +11,7 @@ export default async function ProfilPage({
   searchParams: Promise<{ error?: string }>
 }) {
   const { error } = await searchParams
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
   const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 

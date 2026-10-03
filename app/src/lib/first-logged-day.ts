@@ -13,8 +13,14 @@ export function earliestLoggedKey(foodLogFirstIso: string | null, yazioHistory: 
   return keys.length > 0 ? keys.reduce((a, b) => (a < b ? a : b)) : null
 }
 
-export async function fetchFirstLoggedKey(supabase: SupabaseClient, userId: string, yazioHistory: YazioDay[]): Promise<string | null> {
-  const { data } = await supabase.from('food_log').select('logged_at')
+// Split from fetchFirstLoggedKey so callers can run this query inside their
+// existing Promise.all and combine with earliestLoggedKey afterwards.
+export function fetchFirstFoodLogIso(supabase: SupabaseClient, userId: string) {
+  return supabase.from('food_log').select('logged_at')
     .eq('user_id', userId).order('logged_at', { ascending: true }).limit(1)
-  return earliestLoggedKey((data?.[0]?.logged_at as string | undefined) ?? null, yazioHistory)
+    .then(({ data }) => (data?.[0]?.logged_at as string | undefined) ?? null)
+}
+
+export async function fetchFirstLoggedKey(supabase: SupabaseClient, userId: string, yazioHistory: YazioDay[]): Promise<string | null> {
+  return earliestLoggedKey(await fetchFirstFoodLogIso(supabase, userId), yazioHistory)
 }

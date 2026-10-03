@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import { estimateAerobicTE } from '@/lib/effort-summary'
 import Link from 'next/link'
 import ActivityMapLoader from '@/components/ActivityMapLoader'
@@ -65,8 +65,7 @@ function hasMeaningfulPause(movingTime: number, elapsedTime: number | null): ela
 
 export default async function ActivityDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const { data: activity } = await supabase

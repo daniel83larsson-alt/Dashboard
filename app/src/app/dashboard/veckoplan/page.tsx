@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import WeeklyPlanCard from '@/components/WeeklyPlanCard'
 import WeeklyDigestCard from '@/components/WeeklyDigestCard'
 import { startOfWeek } from '@/lib/dates'
@@ -9,8 +9,7 @@ type PlanSessionRow = {
 }
 
 export default async function VeckoplanPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const weekStart = startOfWeek(new Date())

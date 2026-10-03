@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import BottomNav from '@/components/BottomNav'
 import SideNav from '@/components/SideNav'
 import { isDemoAccount } from '@/lib/demo'
@@ -25,8 +25,7 @@ function DashboardBootSplash() {
 // heavier data fetch. Moving it into its own async component under an
 // explicit <Suspense> here lets the boot splash stream immediately instead.
 async function AuthedShell({ children }: { children: React.ReactNode }) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
 
   if (!user) redirect('/login')
 

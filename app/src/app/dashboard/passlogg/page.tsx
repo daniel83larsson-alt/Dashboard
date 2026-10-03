@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import DuplicateCleanup from '@/components/DuplicateCleanup'
 import CopyTrainingLogButton from '@/components/CopyTrainingLogButton'
 import Link from 'next/link'
@@ -28,8 +28,7 @@ export default async function PassloggPage({
 }: {
   searchParams: Promise<{ sida?: string }>
 }) {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
   const isAdmin = !!process.env.ADMIN_EMAIL && user.email === process.env.ADMIN_EMAIL
 

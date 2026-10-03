@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { after } from 'next/server'
+import { getServerSession } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
 import ViktmalOverviewCard from '@/components/ViktmalOverviewCard'
 import WeeklyPlanSummaryCard from '@/components/WeeklyPlanSummaryCard'
@@ -107,8 +108,7 @@ type Activity = {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function DashboardPage() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   // Computed up front (pure — doesn't depend on any fetched data) so the
@@ -207,10 +207,11 @@ export default async function DashboardPage() {
   // when a pair is found.
   const activities: Activity[] = dedupeForStats(allActivities ?? [])
   const latest = activities[0] ?? null
-  const { data: latestKudosRow } = latest
-    ? await supabase.rpc('kudos_received', { target_activity_id: latest.id }).single()
-    : { data: null }
-  const latestKudos = (latestKudosRow as { kudos_count: number; giver_names: string[] } | null) ?? { kudos_count: 0, giver_names: [] }
+  // Started now, awaited together with the milestone writes further down —
+  // the two never depended on each other, so they share one round-trip.
+  const latestKudosPromise = latest
+    ? Promise.resolve(supabase.rpc('kudos_received', { target_activity_id: latest.id }).single())
+    : Promise.resolve({ data: null })
   const latestSpeedOrPace = latest ? fmtSpeedOrPace(latest.sport_type, latest.distance, latest.moving_time) : null
   const latestRecords = latest ? newRecordsForLatest(latest, activities.slice(1)) : []
 
@@ -407,7 +408,10 @@ export default async function DashboardPage() {
     : false
   const showInterview = needsOnboarding && accountAgeDays >= 30 && !promptedRecently
   if (showInterview) {
-    await supabase.from('profiles').update({ last_onboarding_prompt_at: now.toISOString() }).eq('id', user.id)
+    // Nothing below reads this write, so it runs after the response is sent.
+    after(async () => {
+      await supabase.from('profiles').update({ last_onboarding_prompt_at: now.toISOString() }).eq('id', user.id)
+    })
   }
 
   type PlanSessionRow = {
@@ -446,7 +450,11 @@ export default async function DashboardPage() {
       label: h.title,
     })),
   ]
-  const newMilestones = user ? await recordNewMilestones(supabase, user.id, milestoneCandidates) : []
+  const [newMilestones, { data: latestKudosRow }] = await Promise.all([
+    user ? recordNewMilestones(supabase, user.id, milestoneCandidates) : Promise.resolve([]),
+    latestKudosPromise,
+  ])
+  const latestKudos = (latestKudosRow as { kudos_count: number; giver_names: string[] } | null) ?? { kudos_count: 0, giver_names: [] }
 
   return (
     <div className="p-4 md:p-8 max-w-2xl lg:max-w-6xl w-full mx-auto space-y-6">

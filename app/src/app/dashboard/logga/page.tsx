@@ -1,12 +1,11 @@
-import { createSupabaseServerClient } from '@/lib/supabase-server'
+import { getServerSession } from '@/lib/supabase-server'
 import LoggaPassForm from '@/components/LoggaPassForm'
 import RorlighetPanel from '@/components/RorlighetPanel'
 import TopTabs from '@/components/TopTabs'
 
 export default async function LoggaPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
   const { tab: initialTab } = await searchParams
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { supabase, user } = await getServerSession()
   if (!user) return null
 
   const { data: profile } = await supabase.from('profiles').select('weight_kg').eq('id', user.id).single()
