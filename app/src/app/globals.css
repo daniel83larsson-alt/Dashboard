@@ -70,7 +70,8 @@ html, body {
 /* iPhone: viewport-fit=cover (layout.tsx) låter appen ligga under statusfältet
    och hemindikatorn, så vi lägger själva marginalen. 0 i vanlig webbläsare. */
 body { padding-top: env(safe-area-inset-top); }
-.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+/* Halva hemindikator-höjden räcker: strecket är lågt och själva knapparna ligger ovanför. */
+.safe-area-pb { padding-bottom: calc(env(safe-area-inset-bottom) * 0.5); }
 
 /* Ingen dubbeltryckszoom-fördröjning på knappar/länkar/fält, och sidan bakom en
    ruta scrollar inte med när man når slutet av rutan. */
