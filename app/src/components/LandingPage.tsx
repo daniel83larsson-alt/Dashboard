@@ -68,7 +68,7 @@ function CoachScreen() {
       <div className="flex flex-col gap-2.5 text-[13px] leading-relaxed" aria-hidden="true">
         <div className="self-end max-w-[85%] bg-accent text-bg rounded-2xl rounded-br-sm px-3.5 py-2.5">Jag kör nästan allt i zon 2 — ligger jag rätt med mina zoner?</div>
         <div className="self-start max-w-[92%] bg-bg border border-edge rounded-2xl rounded-bl-sm px-3.5 py-2.5">
-          Dina senaste fem lugna pass snittar <span className="font-mono text-lcd">134 bpm</span>, över din zon 2 (120–130). Antingen går du lite för hårt, eller så ligger zonen för lågt. Ett 30-minuterstest på jämn nivå ger svar — vill du ha upplägget?
+          Dina senaste fem lugna pass snittar <span className="font-mono text-lcd">134 bpm</span>, över din zon 2 (120–130). Antingen går du lite för hårt, eller så ligger zonen för lågt. Ett 30-minuterstest på jämn nivå ger svar. Vill du ha upplägget?
         </div>
         <div className="self-start flex gap-2 flex-wrap">
           <span className="font-mono text-[11px] border border-edge rounded-full px-3 py-1.5 text-muted">Ja, ge mig testet</span>
@@ -99,7 +99,7 @@ function RecapScreen() {
       <div className="flex justify-between font-mono text-[10.5px] text-muted mt-2" aria-hidden="true">
         {zones.map(x => <span key={x.z}>{x.z} {x.pct}%</span>)}
       </div>
-      <p className="text-muted text-[13px] leading-relaxed mt-4">Ungefär 80/20: mest lugn bas och ett par hårda intervaller. Det är ett polariserat upplägg — du är på rätt spår.</p>
+      <p className="text-muted text-[13px] leading-relaxed mt-4">Ungefär 80/20: mest lugn bas och ett par hårda intervaller. Det är ett polariserat upplägg, och du är på rätt spår.</p>
     </Screen>
   )
 }
@@ -165,7 +165,7 @@ function Showcase({ id, title, children, screen, flip }: { id?: string; title: s
 export const FAQ: { q: string; a: string }[] = [
   { q: 'Vilka klockor och appar funkar med DL Trainer?', a: 'Garmin, Concept2, Strava, Polar och YAZIO kan kopplas in. Dina pass, din sömn och din mat synkas automatiskt, så du slipper föra in något för hand.' },
   { q: 'Vad kostar det?', a: 'Det är gratis att komma igång, du behöver inget kreditkort och det finns ingen bindningstid.' },
-  { q: 'Vad gör AI-coacherna?', a: 'Det finns nio coacher, en per område, till exempel uthållighet, styrka, rörlighet, återhämtning och nutrition. De har tillgång till din egen träning, sömn och mat och svarar utifrån dem, inte med allmänna råd.' },
+  { q: 'Vad gör AI-coacherna?', a: 'Det finns nio coacher, en per område, till exempel uthållighet, styrka, rörlighet, återhämtning och nutrition. De ser din egen träning, sömn och mat och svarar utifrån den.' },
   { q: 'Kan coachen säga om mina pulszoner stämmer?', a: 'Ja. Frågar du om din puls jämför coachen dina senaste pass med dina zoner och kan föreslå ett test om det ser ut som att zonerna ligger fel. Du bestämmer själv om du ändrar något.' },
 ]
 
@@ -205,19 +205,19 @@ export default function LandingPage() {
           <div className="max-w-6xl mx-auto px-6 pt-14 pb-16 grid lg:grid-cols-[1.05fr_.95fr] gap-12 items-center">
             <div>
               <h1 className="text-[2.3rem] sm:text-[3rem] font-bold leading-[1.08] tracking-tight text-balance">
-                Träningen, maten och sömnen i samma app — med en coach som läser av allt.
+                Träningen, maten och sömnen i samma app, med en coach som läser av allt.
               </h1>
               <p className="text-muted text-[17px] leading-relaxed mt-5 max-w-[48ch]">
                 DL Trainer samlar pass, puls, sömn och kalorier från din klocka och dina appar. Coachen ser hur din vecka faktiskt ser ut och säger vad det betyder: är zonerna rätt, hänger du med i planen, räcker maten.
               </p>
               <div className="flex items-center gap-3.5 mt-8 flex-wrap">
-                <PrimaryCta href="/login?mode=signup">Skapa konto — gratis att börja</PrimaryCta>
+                <PrimaryCta href="/login?mode=signup">Skapa konto gratis</PrimaryCta>
                 <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">
                   Logga in
                 </Link>
               </div>
               <p className="text-muted text-xs mt-3.5">
-                <span className="text-fg font-medium">Ingen bindningstid.</span> Koppla Garmin, Concept2, Strava, Polar eller YAZIO på under en minut.
+                Ingen bindningstid. Koppla Garmin, Concept2, Strava, Polar eller YAZIO på under en minut.
               </p>
             </div>
             <TodayScreen />
@@ -237,8 +237,8 @@ export default function LandingPage() {
         {/* Funktioner */}
         <section id="funktioner" className="max-w-6xl mx-auto px-6 py-20 flex flex-col gap-24">
           <div className="max-w-[60ch]">
-            <h2 className="text-[1.8rem] sm:text-[2.2rem] font-bold text-balance">Det du annars letar efter i fem olika appar</h2>
-            <p className="text-muted text-[15.5px] leading-relaxed mt-3.5">Allt hänger ihop på riktigt: maten påverkar budgeten, passen påverkar planen och coachen känner till båda.</p>
+            <h2 className="text-[1.8rem] sm:text-[2.2rem] font-bold text-balance">Allt du letar efter i fem olika appar, samlat</h2>
+            <p className="text-muted text-[15.5px] leading-relaxed mt-3.5">Maten styr budgeten, passen styr planen och coachen känner till båda.</p>
           </div>
 
           <Showcase title="En coach som svarar utifrån dina egna siffror" screen={<CoachScreen />}>
@@ -320,7 +320,7 @@ export default function LandingPage() {
           <div className="relative overflow-hidden rounded-[26px] border border-edge bg-card p-10 sm:p-14 text-center">
             <div className="pointer-events-none absolute inset-0" style={{ background: 'radial-gradient(circle at 50% 0%, rgba(204,212,0,.12), transparent 60%)' }} />
             <h2 className="relative text-[1.7rem] sm:text-[2.1rem] font-bold text-balance">Redo att se hela bilden av din träning?</h2>
-            <p className="relative text-muted text-[15px] mt-3">Gratis att komma igång. Inget kreditkort krävs, ingen bindningstid.</p>
+            <p className="relative text-muted text-[15px] mt-3">Gratis att börja, utan kreditkort.</p>
             <div className="relative flex items-center justify-center gap-3.5 mt-7 flex-wrap">
               <PrimaryCta href="/login?mode=signup">Skapa konto</PrimaryCta>
               <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">

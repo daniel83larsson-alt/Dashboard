@@ -4,11 +4,11 @@ import { createSupabaseServerClient } from '@/lib/supabase-server'
 import LandingPage, { FAQ } from '@/components/LandingPage'
 
 export const metadata: Metadata = {
-  title: 'DL Trainer — AI-coach för träning, mat och sömn',
+  title: 'DL Trainer: AI-coach för träning, mat och sömn',
   description: 'Samla pass, puls, sömn och kalorier från Garmin, Concept2, Strava, Polar och YAZIO. En AI-coach som läser av din vecka. Gratis att börja.',
   alternates: { canonical: '/' },
   openGraph: {
-    title: 'DL Trainer — AI-coach för träning, mat och sömn',
+    title: 'DL Trainer: AI-coach för träning, mat och sömn',
     description: 'Samla pass, puls, sömn och kalorier från Garmin, Concept2, Strava, Polar och YAZIO. En AI-coach som läser av din vecka.',
     url: 'https://dltrainer.se/',
     siteName: 'DL Trainer',
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'DL Trainer — AI-coach för träning, mat och sömn',
+    title: 'DL Trainer: AI-coach för träning, mat och sömn',
     description: 'Samla dina pass, sömn, mat och puls på ett ställe. En AI-coach per sportgren.',
     images: ['https://dltrainer.se/opengraph-image'],
   },

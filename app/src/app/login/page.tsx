@@ -111,7 +111,7 @@ export default function LoginPage() {
         <div className="text-center mb-10">
           <div className="font-mono text-accent text-4xl font-bold tracking-tight leading-none">DL</div>
           <div className="text-fg text-xl font-semibold tracking-wide mt-1">Trainer</div>
-          <div className="text-muted text-sm mt-1">Din personliga AI-träningsdashboard</div>
+          <div className="text-muted text-sm mt-1">Träning, mat och sömn med en AI-coach</div>
         </div>
 
         {mode === 'forgot' ? (
@@ -201,9 +201,11 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-accent text-bg font-semibold py-3 rounded-xl mt-2 disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed transition-opacity text-sm"
           >
-            {loading ? '...' : mode === 'login' ? 'Logga in' : mode === 'signup' ? 'Skapa konto' : 'Skicka återställningslänk'}
+            {loading ? '…' : mode === 'login' ? 'Logga in' : mode === 'signup' ? 'Skapa konto' : 'Skicka återställningslänk'}
           </button>
         </form>
+
+        {mode === 'signup' && <p className="text-muted text-xs text-center mt-3">Gratis att börja, utan kreditkort.</p>}
 
         {mode !== 'forgot' && process.env.NEXT_PUBLIC_DEMO_EMAIL && (
           <button
@@ -211,7 +213,7 @@ export default function LoginPage() {
             disabled={loading}
             className="w-full bg-card border border-edge text-fg font-medium py-3 rounded-xl mt-3 disabled:opacity-50 hover:border-accent transition-colors text-sm"
           >
-            🔍 Prova demo (ingen inloggning behövs)
+            🔍 Prova demo utan att skapa konto
           </button>
         )}
       </div>

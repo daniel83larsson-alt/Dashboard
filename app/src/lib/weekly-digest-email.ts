@@ -12,6 +12,19 @@ function fmtDateRange(startISO: string, endISO: string) {
   return `${start}–${end}`
 }
 
+// Ämnesrad med veckans faktiska siffror (öppnas oftare än ett datumintervall).
+// Veckor utan pass får datumintervallet som förut.
+export function weeklyDigestSubject(record: WeeklyDigestRecord, prefix = ''): string {
+  const { count, totalMinutes } = record.data.thisWeek.sessions
+  if (count > 0) {
+    const h = Math.floor(totalMinutes / 60)
+    const m = totalMinutes % 60
+    const time = h > 0 ? `${h} h${m > 0 ? ` ${m} min` : ''}` : `${m} min`
+    return `${prefix}Veckans recap: ${count} pass, ${time}`
+  }
+  return `${prefix}Veckans recap: ${fmtDateRange(record.weekStartISO, record.weekEndISO)}`
+}
+
 function statBox(value: string, label: string, width = '33%') {
   return `<td style="padding:12px;background:#f4f4f2;border-radius:12px;text-align:center;" width="${width}">
     <div style="color:#0e1113;font-size:18px;font-weight:700;font-family:monospace;">${value}</div>
@@ -182,7 +195,7 @@ export async function sendWeeklyDigestEmail({
     body: JSON.stringify({
       from: process.env.NEWSLETTER_FROM_EMAIL ?? 'DL Trainer <onboarding@resend.dev>',
       to: toEmail,
-      subject: `${subjectPrefix}Veckans Recap: ${fmtDateRange(record.weekStartISO, record.weekEndISO)}`,
+      subject: weeklyDigestSubject(record, subjectPrefix),
       html,
     }),
   })
