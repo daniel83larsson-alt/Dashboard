@@ -97,7 +97,7 @@ export async function POST() {
 
     const [{ data: profile }, { data: quickPicksRaw }, { data: todayLog }, { data: yazioHistoryRow }] = await Promise.all([
       supabase.from('profiles').select('llm_api_key_encrypted, llm_provider, daily_calorie_goal, deficit_tracking_enabled, deficit_budget_kcal, protein_goal_g').eq('id', user.id).single(),
-      supabase.rpc('food_quick_picks'),
+      supabase.rpc('food_quick_picks_v2'),
       supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).gte('logged_at', todayStartIso),
       supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
     ])

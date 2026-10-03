@@ -58,6 +58,7 @@ export type QuickPick = {
   times_logged: number
   last_logged: string
   pinned: boolean
+  edited?: boolean // användaren har ändrat kcal/protein (food_quick_pick_overrides)
 }
 
 export type KostSettings = {
@@ -602,10 +603,10 @@ export default function FoodLogClient({
   // eveningGuard slås fortfarande på (idé #7 — lätt att råka dubbellogga
   // ett snabbt tappat kvällsmellanmål) men visas som ett extra val INUTI
   // samma popup istället för en andra, separat dialog.
-  type QuickPickConfirm = { pick: QuickPick; meal: KostMeal; grams: string; multiplier: string; eveningGuard: boolean }
+  type QuickPickConfirm = { pick: QuickPick; meal: KostMeal; grams: string; multiplier: string; eveningGuard: boolean; kcal: string; protein: string }
   const [quickPickConfirm, setQuickPickConfirm] = useState<QuickPickConfirm | null>(null)
 
-  async function logQuickPick(pick: QuickPick, opts: { meal: KostMeal | null; grams?: number; multiplier?: number; replaceEntryId?: string }) {
+  async function logQuickPick(pick: QuickPick, opts: { meal: KostMeal | null; grams?: number; multiplier?: number; replaceEntryId?: string; baseKcal?: number; baseProteinG?: number | null }) {
     setLogging(true)
     setError('')
     try {
@@ -613,7 +614,7 @@ export default function FoodLogClient({
       const isDatabase = pick.source === 'database' && !!pick.off_id
       const body = isDatabase
         ? { name: pick.name, source: 'database', offId: pick.off_id, grams: opts.grams ?? pick.quantity, meal: opts.meal }
-        : { name: pick.name, source: pick.source, baseKcal: pick.calories, baseProteinG: pick.protein_g, multiplier: opts.multiplier ?? 1, meal: opts.meal }
+        : { name: pick.name, source: pick.source, baseKcal: opts.baseKcal ?? pick.calories, baseProteinG: opts.baseProteinG !== undefined ? opts.baseProteinG : pick.protein_g, multiplier: opts.multiplier ?? 1, meal: opts.meal }
       const res = await fetch('/api/food/log', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -637,7 +638,35 @@ export default function FoodLogClient({
       grams: pick.source === 'database' && pick.quantity ? String(pick.quantity) : '',
       multiplier: '1',
       eveningGuard,
+      kcal: String(pick.calories),
+      protein: pick.protein_g != null ? String(pick.protein_g) : '',
     })
+  }
+
+  // Daniel: tryck på en rätt → samma ruta som "Logga", men med kcal och protein
+  // redigerbara. "Logga" loggar med de värden som står i rutan (engångs om de
+  // ändrats); "Uppdatera rätten" sparar dem på snabbvalet för framtida
+  // loggningar. Redan loggade måltider rörs aldrig.
+  async function updateQuickPickValues(pick: QuickPick, kcal: number, proteinG: number | null) {
+    setLogging(true)
+    setError('')
+    try {
+      const res = await fetch('/api/food/quick-pick-override', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: pick.name, calories: kcal, proteinG }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (res.ok) {
+        setQuickPicks(prev => prev.map(q => q.name === pick.name ? { ...q, calories: kcal, protein_g: proteinG, edited: true } : q))
+        setQuickPickConfirm(null)
+      } else {
+        setError(data.error ?? 'Kunde inte spara')
+      }
+    } catch {
+      setError('Nätverksfel')
+    }
+    setLogging(false)
   }
 
   const previewKcal = selectedCandidate
@@ -1747,23 +1776,36 @@ export default function FoodLogClient({
       )}
 
       {quickPickConfirm && (() => {
-        const { pick, meal, grams, multiplier, eveningGuard } = quickPickConfirm
+        const { pick, meal, grams, multiplier, eveningGuard, kcal, protein } = quickPickConfirm
         const isDatabase = pick.source === 'database' && !!pick.off_id
         const parsedGrams = parseFloat(normalizeDecimalInput(grams))
         const parsedMultiplier = parseFloat(normalizeDecimalInput(multiplier))
+        const parsedKcal = parseFloat(normalizeDecimalInput(kcal))
+        const proteinTrim = protein.trim()
+        const parsedProtein: number | null = proteinTrim === '' ? null : parseFloat(normalizeDecimalInput(proteinTrim))
+        const proteinValid = parsedProtein == null || (Number.isFinite(parsedProtein) && parsedProtein >= 0)
+        const baseKcalValid = Number.isFinite(parsedKcal) && parsedKcal > 0
+        const dirty = !isDatabase && (parsedKcal !== pick.calories || (parsedProtein ?? null) !== (pick.protein_g ?? null))
         const previewKcal = isDatabase
           ? (pick.kcal_per_100g && parsedGrams > 0 ? Math.round(pick.kcal_per_100g * parsedGrams / 100) : pick.calories)
-          : (parsedMultiplier > 0 ? Math.round(pick.calories * parsedMultiplier) : pick.calories)
-        const canConfirm = isDatabase ? parsedGrams > 0 : parsedMultiplier > 0
+          : (parsedMultiplier > 0 && baseKcalValid ? Math.round(parsedKcal * parsedMultiplier) : pick.calories)
+        const canConfirm = isDatabase ? parsedGrams > 0 : parsedMultiplier > 0 && baseKcalValid && proteinValid
+        const canUpdate = !isDatabase && dirty && baseKcalValid && proteinValid
 
         function confirm(replaceEntryId?: string) {
           logQuickPick(pick, {
             meal,
             grams: isDatabase ? parsedGrams : undefined,
             multiplier: !isDatabase ? parsedMultiplier : undefined,
+            baseKcal: !isDatabase ? Math.round(parsedKcal) : undefined,
+            baseProteinG: !isDatabase ? parsedProtein : undefined,
             replaceEntryId,
           })
         }
+
+        const updateButton = canUpdate || dirty ? (
+          <button type="button" onClick={() => updateQuickPickValues(pick, Math.round(parsedKcal), parsedProtein)} disabled={!canUpdate || logging} className="w-full text-accent border border-accent/40 rounded-xl py-2.5 text-sm disabled:opacity-50">Uppdatera rätten</button>
+        ) : null
 
         return (
           <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setQuickPickConfirm(null)}>
@@ -1794,14 +1836,35 @@ export default function FoodLogClient({
                   />
                 </div>
               ) : (
-                <div className="mb-3">
-                  <label className="text-muted text-xs block mb-1.5">Portion (× {pick.calories} kcal)</label>
-                  <input
-                    type="text" inputMode="decimal" value={multiplier}
-                    onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, multiplier: normalizeDecimalInput(e.target.value) } : prev)}
-                    className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
-                  />
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    <div>
+                      <label className="text-muted text-xs block mb-1.5">Kcal per portion</label>
+                      <input
+                        type="text" inputMode="decimal" value={kcal}
+                        onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, kcal: normalizeDecimalInput(e.target.value) } : prev)}
+                        className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
+                      <input
+                        type="text" inputMode="decimal" value={protein} placeholder="saknas"
+                        onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, protein: normalizeDecimalInput(e.target.value) } : prev)}
+                        className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                      />
+                    </div>
+                  </div>
+                  <div className="mb-3">
+                    <label className="text-muted text-xs block mb-1.5">Antal portioner</label>
+                    <input
+                      type="text" inputMode="decimal" value={multiplier}
+                      onChange={e => setQuickPickConfirm(prev => prev ? { ...prev, multiplier: normalizeDecimalInput(e.target.value) } : prev)}
+                      className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
+                    />
+                  </div>
+                  {dirty && <p className="text-muted text-[11px] mb-3">Du har ändrat värdena. <b className="text-fg font-medium">Logga</b> använder dem bara för den här måltiden — <b className="text-fg font-medium">Uppdatera rätten</b> sparar dem på snabbvalet till nästa gång.</p>}
+                </>
               )}
 
               {eveningGuard ? (
@@ -1810,12 +1873,14 @@ export default function FoodLogClient({
                   <div className="flex flex-col gap-2">
                     <button type="button" onClick={() => confirm(todayEntries[0]?.id)} disabled={!todayEntries[0] || !canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">Ersätt senaste post</button>
                     <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full text-fg border border-edge rounded-xl py-2.5 text-sm disabled:opacity-50">Lägg till ändå</button>
+                    {updateButton}
                     <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
                   </div>
                 </>
               ) : (
                 <div className="flex flex-col gap-2">
                   <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">{logging ? 'Loggar...' : 'Logga'}</button>
+                  {updateButton}
                   <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
                 </div>
               )}

@@ -23,7 +23,7 @@ export default async function MatPage() {
   const [{ data: profile }, { data: recentLog }, { data: quickPicksRaw }, { data: yazioHistoryRow }, { data: dayStatusRows }, { data: dayNoteRows }, { data: recentActivitiesRaw }, { data: wellnessRow }, { data: budgetEventRows }] = await Promise.all([
     supabase.from('profiles').select('daily_calorie_goal, kost_tracking_enabled, kost_tracked_metrics, kost_tracked_meals, kost_reminders_enabled, protein_goal_g, protein_goal_mode, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal, deficit_garmin_correction, kost_evening_guard_enabled, kost_evening_guard_hour, weight_kg, height_cm, birth_year, biological_sex').eq('id', user.id).single(),
     supabase.from('food_log').select('*').eq('user_id', user.id).gte('logged_at', sinceIso).order('logged_at', { ascending: false }),
-    supabase.rpc('food_quick_picks'),
+    supabase.rpc('food_quick_picks_v2'),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'yazio_history').single(),
     supabase.from('kost_day_status').select('date').eq('user_id', user.id).eq('status', 'complete'),
     supabase.from('day_context_notes').select('date, tag, note').eq('user_id', user.id).gte('date', sinceIso.slice(0, 10)),

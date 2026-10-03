@@ -1706,3 +1706,49 @@ $$;
 revoke all on function public.admin_llm_usage_stats() from public;
 revoke execute on function public.admin_llm_usage_stats() from anon;
 grant execute on function public.admin_llm_usage_stats() to authenticated;
+
+-- Egna kcal/protein-värden per rätt i Snabbval (Daniel: "redigera kcal och
+-- protein på en sparad rätt ... uppdatera innehållet och spara den"). Snabbvalen
+-- härleds ur food_log, så en redigering skrivs HÄR och gäller bara framtida
+-- loggningar — gamla loggade måltider rörs aldrig. Nyckel = lower(name).
+-- Redan körd i prod 3 okt 2026. Obs: gamla food_quick_picks() ligger kvar
+-- orörd (en DROP kräver manuell bekräftelse i Supabase-verktyget) — appen
+-- använder food_quick_picks_v2() som lägger till override + `edited`.
+create table if not exists public.food_quick_pick_overrides (
+  user_id uuid references public.profiles(id) on delete cascade not null,
+  food_name_key text not null,
+  calories integer not null check (calories > 0 and calories <= 4000),
+  protein_g numeric check (protein_g >= 0 and protein_g <= 400),
+  updated_at timestamptz default now(),
+  primary key (user_id, food_name_key)
+);
+alter table public.food_quick_pick_overrides enable row level security;
+create policy "Users manage own quick pick overrides" on public.food_quick_pick_overrides
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
+create or replace function public.food_quick_picks_v2()
+returns table(name text, calories integer, source text, quantity numeric, unit text, kcal_per_100g numeric, off_id text, protein_g numeric, protein_per_100g numeric, times_logged bigint, last_logged timestamptz, pinned boolean, edited boolean)
+language sql
+security definer
+set search_path = public
+as $$
+  select distinct on (lower(f.name))
+    f.name,
+    case when o.food_name_key is not null and f.source <> 'database' then o.calories else f.calories end,
+    f.source, f.quantity, f.unit, f.kcal_per_100g, f.off_id,
+    case when o.food_name_key is not null and f.source <> 'database' then o.protein_g else f.protein_g end,
+    f.protein_per_100g,
+    count(*) over (partition by lower(f.name)) as times_logged,
+    max(f.logged_at) over (partition by lower(f.name)) as last_logged,
+    coalesce(p.pinned, false) as pinned,
+    (o.food_name_key is not null and f.source <> 'database') as edited
+  from public.food_log f
+  left join public.food_quick_pick_prefs p on p.user_id = f.user_id and p.food_name_key = lower(f.name)
+  left join public.food_quick_pick_overrides o on o.user_id = f.user_id and o.food_name_key = lower(f.name)
+  where f.user_id = auth.uid()
+    and coalesce(p.hidden, false) = false
+  order by lower(f.name), f.logged_at desc
+$$;
+revoke all on function public.food_quick_picks_v2() from public;
+revoke execute on function public.food_quick_picks_v2() from anon;
+grant execute on function public.food_quick_picks_v2() to authenticated;
