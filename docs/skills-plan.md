@@ -61,3 +61,16 @@ Mätt mot Web Interface Guidelines över hela appen:
 2. **Prestanda med `vercel-react-best-practices`:** gå igenom `dashboard/page.tsx`, `viktmal/page.tsx`, `mat/page.tsx` (databasfrågor parallella redan; kontrollera klientbunt och vad som skickas till klienten) och mät med verklig laddtid.
 3. **Dela upp `FoodLogClient.tsx`** (1 900 rader) — kandidat nummer ett för `improve-codebase-architecture`.
 4. **Välkomstsida v2** med två varianter (Maya) + `seo-audit`.
+
+
+## Tillägg 2026-10-03 — luckor stängda
+
+Genomgång av vilka områden som saknade skill. Alla externa granskades (läst igenom, inga dolda kommandon; `supabase` hämtar dokumentation från supabase.com vid körning — behandlas som data) innan installation:
+
+| Område | Skill | Källa | Används av |
+|---|---|---|---|
+| Databas, RLS, Supabase-säkerhet | `supabase`, `supabase-postgres-best-practices` | supabase/agent-skills (officiell) | Riley, Chris, Sam |
+| Webbläsartester | `webapp-testing` | anthropics/skills (officiell) | Riley, Maya |
+| Säljande text | `copywriting`, `cro` | coreyhaines31/marketingskills | Viktor, Nova, Maya |
+| Integritet/GDPR för hälsodata | `halsodata-integritet` | egen (ingen bra extern hittades) | Riley, Sam |
+| PWA | — ingen PWA-specifik skill finns; `web-design-guidelines` täcker mobilgranskningen | | Maya |
