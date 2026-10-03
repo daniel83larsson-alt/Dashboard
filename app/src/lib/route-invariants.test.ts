@@ -180,7 +180,7 @@ describe('every route that calls Gemini directly is rate-limited (or is a cron r
 
   it('the hardcoded call-site list still matches what actually calls Gemini in route.ts files (no drift)', () => {
     const actual = allRouteFiles
-      .filter(f => { const c = read(f); return c.includes('generativelanguage.googleapis.com') || /callGemini\s*\(/.test(c) })
+      .filter(f => { const c = read(f); return c.includes('generativelanguage.googleapis.com') || /geminiUrl\s*\(/.test(c) || /callGemini\s*\(/.test(c) })
       .map(relToSrc)
       .sort()
     expect(actual).toEqual([...GEMINI_CALL_SITES].sort())

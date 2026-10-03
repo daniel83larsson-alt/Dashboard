@@ -1,3 +1,4 @@
+import { geminiUrl, GEMINI_THINKING } from './llm-model'
 export type LlmMessage = { role: string; content: string }
 
 // Shared by every place in the app that talks to an LLM (sport coaches,
@@ -15,14 +16,14 @@ export async function callGemini(apiKey: string, systemPrompt: string, history: 
     { role: 'user', parts: [{ text: message }] },
   ]
   const res = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+    `${geminiUrl()}?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         contents,
         systemInstruction: { parts: [{ text: systemPrompt }] },
-        generationConfig: { maxOutputTokens: MAX_REPLY_TOKENS, thinkingConfig: { thinkingBudget: 0 } },
+        generationConfig: { maxOutputTokens: MAX_REPLY_TOKENS, thinkingConfig: GEMINI_THINKING },
       }),
     }
   )

@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
@@ -16,7 +17,7 @@ import { KOST_MEALS, type KostMeal, type KostFoodEntry } from '@/lib/kost'
 import { buildNutritionSummary, formatNutritionForPrompt } from '@/lib/nutrition-summary'
 import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 type AgentInsights = { data: string; sleep: string; steps: string; mental: string; strength: string; mobility: string; kostWeek: string; kostGeneral: string; summary: string }
 
@@ -37,7 +38,7 @@ ${coachToneInstruction(coachTone)}`
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
         maxOutputTokens: 1100,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: GEMINI_THINKING,
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'OBJECT',

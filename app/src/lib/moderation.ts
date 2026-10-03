@@ -1,3 +1,4 @@
+import { geminiUrl, GEMINI_THINKING } from './llm-model'
 export const FLAG_THRESHOLD = 3
 
 // Fast, zero-cost pattern checks for obvious abuse — code requests, prompt
@@ -53,7 +54,7 @@ export async function checkTopicRelevance(apiKey: string, message: string, prece
       ? `Coachens föregående meddelande (för sammanhang, bedöm INTE detta i sig): "${precedingMessage.slice(0, 500)}"\n\n`
       : ''
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+      `${geminiUrl()}?key=${apiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -70,7 +71,7 @@ onTopic=false: meddelandet handlar om programmering/kod, allmänna kunskapsfråg
           },
           generationConfig: {
             maxOutputTokens: 20,
-            thinkingConfig: { thinkingBudget: 0 },
+            thinkingConfig: GEMINI_THINKING,
             responseMimeType: 'application/json',
             responseSchema: {
               type: 'OBJECT',

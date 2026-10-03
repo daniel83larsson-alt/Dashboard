@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { isQuotaError, quotaMessage } from '@/lib/llm-quota'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
@@ -7,7 +8,7 @@ import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 import { coachToneInstruction } from '@/lib/coach-tone'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 type HealthInsight = { recovery: string; mental: string }
 
@@ -27,7 +28,7 @@ ${coachToneInstruction(coachTone)}`
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
         maxOutputTokens: 500,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: GEMINI_THINKING,
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'OBJECT',

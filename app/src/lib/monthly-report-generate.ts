@@ -4,6 +4,7 @@
 // pattern is expected once a real monthly cron exists, this is currently
 // only called from the admin test-send route (Daniel: "vill testa på mig
 // själv först" — no cron wired up yet, see STATUS.md).
+import { geminiUrl, GEMINI_THINKING } from './llm-model'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import {
   computeMonthlyReport, recapMonthStart, monthDateKeys, summarizeMonthlyKost, activitiesInMonth,
@@ -22,7 +23,7 @@ import type { DayWellness } from './garmin-sync'
 import type { KostFoodEntry, KostMeal } from './kost'
 import { resolveEffectiveCalorieGoal } from './calorie-goal'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 export type MonthlyReportInsights = {
   headline: string // en mening som sammanfattar hela månaden
@@ -118,7 +119,7 @@ ${coachToneInstruction(coachTone)}`
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
         maxOutputTokens: 900,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: GEMINI_THINKING,
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT', properties, required },
       },

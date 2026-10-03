@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
 import { decryptMaybeLegacy } from '@/lib/encrypt'
 import { isDemoAccount, DEMO_BLOCKED_MESSAGE } from '@/lib/demo'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 const ESTIMATE_SCHEMA = {
   type: 'OBJECT',
@@ -92,7 +93,7 @@ export async function POST(request: NextRequest) {
         systemInstruction: { parts: [{ text: systemInstruction }] },
         generationConfig: {
           maxOutputTokens: 250,
-          thinkingConfig: { thinkingBudget: 0 },
+          thinkingConfig: GEMINI_THINKING,
           responseMimeType: 'application/json',
           responseSchema: ESTIMATE_SCHEMA,
         },

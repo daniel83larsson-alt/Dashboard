@@ -6,6 +6,7 @@
 // (that limiter protects the shared key from INTERACTIVE bursts; a bounded,
 // once-a-week-per-user scheduled job is a different kind of load and is
 // throttled separately in the cron route itself).
+import { geminiUrl, GEMINI_THINKING } from './llm-model'
 import { isQuotaError, quotaMessage } from './llm-quota'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { computeWeeklyDigest, recapWeekStart, activitiesInWeek, type WeeklyDigestData, type PlanSessionRow } from './weekly-digest'
@@ -25,7 +26,7 @@ import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 import { resolveEffectiveCalorieGoal } from './calorie-goal'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 // Three short, distinct coach perspectives instead of one blended paragraph
 // — Daniel's own feedback on the first real send: "inte så kul... hade velat
@@ -219,7 +220,7 @@ ${coachToneInstruction(coachTone)}`
       systemInstruction: { parts: [{ text: system }] },
       generationConfig: {
         maxOutputTokens: 700,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: GEMINI_THINKING,
         responseMimeType: 'application/json',
         responseSchema: { type: 'OBJECT', properties, required },
       },

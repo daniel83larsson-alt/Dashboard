@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { checkAndConsumeRateLimit, rateLimitMessage } from '@/lib/rate-limit'
@@ -8,7 +9,7 @@ import { stockholmDateKey } from '@/lib/dates'
 import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 import { normalizeYazioDay, type YazioDay } from '@/lib/yazio-history'
 
-const GEMINI_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent'
+const GEMINI_URL = geminiUrl()
 
 // Minsta rimliga kvarvarande utrymme att bygga ett förslag kring — under
 // det är svaret ändå bara "ät nästan inget", inte värt ett AI-anrop.
@@ -65,7 +66,7 @@ async function callGeminiForPlan(apiKey: string, question: string): Promise<{ mi
       systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
       generationConfig: {
         maxOutputTokens: 900,
-        thinkingConfig: { thinkingBudget: 0 },
+        thinkingConfig: GEMINI_THINKING,
         responseMimeType: 'application/json',
         responseSchema: {
           type: 'OBJECT',

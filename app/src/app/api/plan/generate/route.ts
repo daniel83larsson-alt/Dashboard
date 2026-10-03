@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { geminiUrl, GEMINI_THINKING } from '@/lib/llm-model'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { logApiCall } from '@/lib/log-api-call'
 import { startOfWeek } from '@/lib/dates'
@@ -143,7 +144,7 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
 
     const geminiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
     const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${geminiKey}`,
+      `${geminiUrl()}?key=${geminiKey}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -151,7 +152,7 @@ Svara ENDAST med JSON i detta exakta format (inga kommentarer, ingen extra text)
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 1536,
-            thinkingConfig: { thinkingBudget: 0 },
+            thinkingConfig: GEMINI_THINKING,
             responseMimeType: 'application/json',
             responseSchema: {
               type: 'OBJECT',
