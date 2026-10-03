@@ -1,6 +1,6 @@
 'use client'
 
-import { useEscapeKey } from '@/lib/use-escape-key'
+import Modal from '@/components/Modal'
 import { quickPickMacroText } from '@/lib/quick-pick-format'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -680,10 +680,6 @@ export default function FoodLogClient({
   const [kostView, setKostView] = useState<'week' | 'calendar'>('week')
   const [calMonthOffset, setCalMonthOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
-  useEscapeKey(logOpen, closeLogFlow)
-  useEscapeKey(!!editingId, () => setEditingId(null))
-  useEscapeKey(!!selectedDay, () => setSelectedDay(null))
-  useEscapeKey(!!quickPickConfirm, () => setQuickPickConfirm(null))
 
   const calBase = useMemo(() => {
     const [y, m] = todayKey.split('-').map(Number)
@@ -1375,8 +1371,7 @@ export default function FoodLogClient({
 
       {/* Logga mat-drawer */}
       {logOpen && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={closeLogFlow}>
-          <div role="dialog" aria-modal="true" aria-label="Logga mat" className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <Modal label="Logga mat" placement="bottom" panelClassName="max-h-[85vh]" onClose={closeLogFlow}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             <div className="text-base font-bold mb-0.5">Logga mat</div>
             <p className="text-muted text-xs mb-4">{fmtDateLabel(logDate)}</p>
@@ -1594,14 +1589,12 @@ export default function FoodLogClient({
 
             {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
             <button onClick={closeLogFlow} className="text-muted text-xs mt-4 w-full text-center">Stäng</button>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Redigera-post-modal */}
       {editingId && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
-          <div role="dialog" aria-modal="true" aria-label="Redigera post" className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+        <Modal label="Redigera post" panelClassName="flex flex-col gap-3" onClose={() => setEditingId(null)}>
             <div className="text-sm font-semibold">Redigera post</div>
             <div>
               <label className="text-muted text-xs block mb-1.5">Namn</label>
@@ -1646,14 +1639,12 @@ export default function FoodLogClient({
               <button onClick={() => setEditingId(null)} className="flex-1 text-xs text-muted border border-edge rounded-lg py-2.5">Avbryt</button>
               <button onClick={saveEdit} disabled={editSaving} className="flex-1 text-xs bg-accent text-bg font-semibold py-2.5 rounded-lg disabled:opacity-50">{editSaving ? 'Sparar...' : 'Spara'}</button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {/* Dag-detalj-drawer (kalender/vecka) */}
       {selectedDay && (
-        <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={() => setSelectedDay(null)}>
-          <div role="dialog" aria-modal="true" aria-label="Dagens måltider" className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <Modal label="Dagens måltider" placement="bottom" panelClassName="max-h-[80vh]" onClose={() => setSelectedDay(null)}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             {(() => {
               const dayEntries = entriesByDate.get(selectedDay) ?? []
@@ -1776,8 +1767,7 @@ export default function FoodLogClient({
             </div>
 
             <button onClick={() => setSelectedDay(null)} className="text-muted text-xs mt-4 w-full text-center">Stäng</button>
-          </div>
-        </div>
+        </Modal>
       )}
 
       {quickPickConfirm && (() => {
@@ -1813,8 +1803,7 @@ export default function FoodLogClient({
         ) : null
 
         return (
-          <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setQuickPickConfirm(null)}>
-            <div role="dialog" aria-modal="true" aria-label={pick.name} className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+          <Modal label={pick.name} z={70} onClose={() => setQuickPickConfirm(null)}>
               <p className="text-fg text-sm font-medium mb-3">{pick.name} <span className="text-muted font-normal">· {previewKcal} kcal</span></p>
 
               <label className="text-muted text-xs block mb-1.5">Måltid</label>
@@ -1889,8 +1878,7 @@ export default function FoodLogClient({
                   <button type="button" onClick={() => setQuickPickConfirm(null)} className="text-muted text-xs mt-1">Avbryt</button>
                 </div>
               )}
-            </div>
-          </div>
+          </Modal>
         )
       })()}
       </>
