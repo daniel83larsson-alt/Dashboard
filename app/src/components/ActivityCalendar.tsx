@@ -1,5 +1,6 @@
 'use client'
 
+import { useEscapeKey } from '@/lib/use-escape-key'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { startOfWeek, stockholmDateKey } from '@/lib/dates'
@@ -29,6 +30,7 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
   const [viewYear, setViewYear] = useState(today.getFullYear())
   const [viewMonth, setViewMonth] = useState(today.getMonth())
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null)
+  useEscapeKey(!!selectedDateKey, () => setSelectedDateKey(null))
   const [pending, setPending] = useState<string | null>(null)
 
   const earliestEditableKey = new Date(new Date(`${todayKey}T00:00:00`).getTime() - (HABIT_BACKDATE_DAYS - 1) * 86400000).toISOString().slice(0, 10)
@@ -227,7 +229,7 @@ export default function ActivityCalendar({ trainedDates, mobilityDates = [], pla
           api/habits/toggle redan sätter server-side). */}
       {selectedDateKey && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={() => setSelectedDateKey(null)}>
-          <div className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Vanor för dagen" className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             <div className="text-base font-bold mb-3">
               {new Date(`${selectedDateKey}T00:00:00`).toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long' })}

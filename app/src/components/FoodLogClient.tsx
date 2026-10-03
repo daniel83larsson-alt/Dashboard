@@ -1,5 +1,6 @@
 'use client'
 
+import { useEscapeKey } from '@/lib/use-escape-key'
 import { quickPickMacroText } from '@/lib/quick-pick-format'
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
@@ -679,6 +680,10 @@ export default function FoodLogClient({
   const [kostView, setKostView] = useState<'week' | 'calendar'>('week')
   const [calMonthOffset, setCalMonthOffset] = useState(0)
   const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  useEscapeKey(logOpen, closeLogFlow)
+  useEscapeKey(!!editingId, () => setEditingId(null))
+  useEscapeKey(!!selectedDay, () => setSelectedDay(null))
+  useEscapeKey(!!quickPickConfirm, () => setQuickPickConfirm(null))
 
   const calBase = useMemo(() => {
     const [y, m] = todayKey.split('-').map(Number)
@@ -846,7 +851,7 @@ export default function FoodLogClient({
           </div>
           {yazioToday.kcalGoal != null && (
             <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden -mt-1.5">
-              <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(100, Math.round(((yazioToday.kcalEaten ?? 0) / yazioToday.kcalGoal) * 100))}%` }} />
+              <div className="h-full bg-accent rounded-full transition-[width]" style={{ width: `${Math.min(100, Math.round(((yazioToday.kcalEaten ?? 0) / yazioToday.kcalGoal) * 100))}%` }} />
             </div>
           )}
           <div className="grid grid-cols-3 gap-2 text-center">
@@ -1013,7 +1018,7 @@ export default function FoodLogClient({
         </div>
         {goalPct != null && (
           <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden mb-1">
-            <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${goalPct}%` }} />
+            <div className="h-full bg-accent rounded-full transition-[width]" style={{ width: `${goalPct}%` }} />
           </div>
         )}
         {!dailyCalorieGoal && (
@@ -1035,7 +1040,7 @@ export default function FoodLogClient({
             </div>
             {kostSettings.proteinGoalG && (
               <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden mt-1">
-                <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${Math.min(100, Math.round((todayProtein / kostSettings.proteinGoalG) * 100))}%` }} />
+                <div className="h-full bg-accent rounded-full transition-[width]" style={{ width: `${Math.min(100, Math.round((todayProtein / kostSettings.proteinGoalG) * 100))}%` }} />
               </div>
             )}
           </div>
@@ -1371,7 +1376,7 @@ export default function FoodLogClient({
       {/* Logga mat-drawer */}
       {logOpen && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={closeLogFlow}>
-          <div className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Logga mat" className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             <div className="text-base font-bold mb-0.5">Logga mat</div>
             <p className="text-muted text-xs mb-4">{fmtDateLabel(logDate)}</p>
@@ -1596,7 +1601,7 @@ export default function FoodLogClient({
       {/* Redigera-post-modal */}
       {editingId && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-center justify-center p-4" onClick={() => setEditingId(null)}>
-          <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Redigera post" className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm flex flex-col gap-3" onClick={e => e.stopPropagation()}>
             <div className="text-sm font-semibold">Redigera post</div>
             <div>
               <label className="text-muted text-xs block mb-1.5">Namn</label>
@@ -1648,7 +1653,7 @@ export default function FoodLogClient({
       {/* Dag-detalj-drawer (kalender/vecka) */}
       {selectedDay && (
         <div className="fixed inset-0 bg-black/60 z-[60] flex items-end justify-center" onClick={() => setSelectedDay(null)}>
-          <div className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div role="dialog" aria-modal="true" aria-label="Dagens måltider" className="bg-card border border-edge border-b-0 rounded-t-2xl p-4 w-full max-w-2xl max-h-[80vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="w-9 h-1 bg-edge rounded-full mx-auto mb-4" />
             {(() => {
               const dayEntries = entriesByDate.get(selectedDay) ?? []
@@ -1809,7 +1814,7 @@ export default function FoodLogClient({
 
         return (
           <div className="fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4" onClick={() => setQuickPickConfirm(null)}>
-            <div className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
+            <div role="dialog" aria-modal="true" aria-label={pick.name} className="bg-card border border-edge rounded-2xl p-4 w-full max-w-sm" onClick={e => e.stopPropagation()}>
               <p className="text-fg text-sm font-medium mb-3">{pick.name} <span className="text-muted font-normal">· {previewKcal} kcal</span></p>
 
               <label className="text-muted text-xs block mb-1.5">Måltid</label>

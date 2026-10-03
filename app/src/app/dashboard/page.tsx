@@ -846,7 +846,7 @@ export default async function DashboardPage() {
                 <div className="text-muted text-xs mt-1">Steg idag</div>
                 <div className="mt-2 h-1.5 bg-bg rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-accent rounded-full transition-all"
+                    className="h-full bg-accent rounded-full transition-[width]"
                     style={{ width: `${Math.min((wellness.steps / stepGoal) * 100, 100)}%` }}
                   />
                 </div>

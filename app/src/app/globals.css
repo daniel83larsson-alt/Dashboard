@@ -41,3 +41,15 @@ html, body {
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Respekterar användarens val "minska rörelse" i telefonen/datorn (Web Interface
+   Guidelines): animationer och övergångar blir i praktiken omedelbara. Gäller
+   hela appen på ett ställe i stället för per komponent. */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -150,7 +150,7 @@ export default function RorlighetPanel() {
             </div>
             <div className="h-1.5 bg-edge rounded-full mt-2 overflow-hidden">
               <div
-                className="h-full bg-accent transition-all duration-300"
+                className="h-full bg-accent transition-[width] duration-300"
                 style={{ width: `${generated.length ? (checked.size / generated.length) * 100 : 0}%` }}
               />
             </div>

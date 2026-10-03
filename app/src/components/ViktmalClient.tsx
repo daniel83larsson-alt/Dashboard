@@ -659,7 +659,7 @@ export default function ViktmalClient({
             </div>
             {progressPct != null && (
               <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden mb-1">
-                <div className="h-full bg-accent rounded-full transition-all" style={{ width: `${progressPct}%` }} />
+                <div className="h-full bg-accent rounded-full transition-[width]" style={{ width: `${progressPct}%` }} />
               </div>
             )}
             {progressPct != null && <p className="text-muted text-xs">{progressPct}% mot målet</p>}
@@ -770,7 +770,7 @@ export default function ViktmalClient({
               </div>
               {milestoneProgressPct != null && (
                 <div className="w-full h-1.5 bg-bg rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all" style={{ width: `${milestoneProgressPct}%`, backgroundColor: '#f59e0b' }} />
+                  <div className="h-full rounded-full transition-[width]" style={{ width: `${milestoneProgressPct}%`, backgroundColor: '#f59e0b' }} />
                 </div>
               )}
               {milestoneProgressPct != null && <p className="text-muted text-xs">{milestoneProgressPct}% mot delmålet</p>}
