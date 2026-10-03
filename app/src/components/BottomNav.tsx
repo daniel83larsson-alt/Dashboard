@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
 import { navItems } from '@/lib/nav'
 import NavIcon from '@/components/NavIcon'
+import Modal from '@/components/Modal'
 
 const PINNED = ['/dashboard', '/dashboard/coach']
 
@@ -36,6 +37,7 @@ export default function BottomNav({ isAdmin, deficitEnabled }: { isAdmin?: boole
             <Link
               key={item.href}
               href={item.href}
+              aria-current={active ? 'page' : undefined}
               className={`flex-1 flex flex-col items-center py-3 gap-1 transition-colors ${
                 active ? 'text-accent' : 'text-muted'
               }`}
@@ -57,15 +59,13 @@ export default function BottomNav({ isAdmin, deficitEnabled }: { isAdmin?: boole
       </nav>
 
       {open && (
-        <div className="fixed inset-0 z-[60] md:hidden flex flex-col justify-end">
-          <div className="flex-1 bg-black/60" onClick={() => setOpen(false)} />
-          <div className="bg-card border-t border-edge rounded-t-3xl safe-area-pb">
+        <Modal label="Meny" placement="bottom" panelClassName="p-0! rounded-t-3xl! safe-area-pb md:hidden" onClose={() => setOpen(false)}>
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 bg-edge rounded-full" />
             </div>
             <div className="flex items-center justify-between px-5 py-3 border-b border-edge">
               <div className="font-semibold text-fg text-sm">Meny</div>
-              <button onClick={() => setOpen(false)} className="w-8 h-8 flex items-center justify-center text-muted hover:text-fg">
+              <button onClick={() => setOpen(false)} aria-label="Stäng menyn" className="w-8 h-8 flex items-center justify-center text-muted hover:text-fg">
                 <NavIcon icon="close" className="w-5 h-5" />
               </button>
             </div>
@@ -76,6 +76,7 @@ export default function BottomNav({ isAdmin, deficitEnabled }: { isAdmin?: boole
                   <Link
                     key={item.href}
                     href={item.href}
+                    aria-current={active ? 'page' : undefined}
                     onClick={() => setOpen(false)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors text-sm font-medium ${
                       active ? 'bg-accent/10 text-accent' : 'text-fg hover:bg-edge'
@@ -93,8 +94,7 @@ export default function BottomNav({ isAdmin, deficitEnabled }: { isAdmin?: boole
                 Logga ut
               </button>
             </div>
-          </div>
-        </div>
+        </Modal>
       )}
     </>
   )

@@ -737,8 +737,8 @@ export default function FoodLogClient({
               </button>
             )}
           </div>
-          {planLoading && <p className="text-muted text-xs">Tar fram förslag...</p>}
-          {planError && <p className="text-red-400 text-xs">{planError}</p>}
+          {planLoading && <p role="status" className="text-muted text-xs">Tar fram förslag…</p>}
+          {planError && <p role="alert" className="text-red-400 text-xs">{planError}</p>}
           {!planLoading && !planError && !planSuggestion && (
             <p className="text-muted text-xs">Två färdiga förslag för resten av dagen, byggda av dina egna vanligaste rätter — ett minimalt och ett som maxar ut det du har kvar.</p>
           )}
@@ -782,10 +782,10 @@ export default function FoodLogClient({
               disabled={yazioSyncing}
               className="text-xs bg-bg border border-edge px-3 py-1.5 rounded-lg text-fg disabled:opacity-50 hover:border-accent transition-colors"
             >
-              {yazioSyncing ? 'Synkar...' : 'Synka nu'}
+              {yazioSyncing ? 'Synkar…' : 'Synka nu'}
             </button>
           </div>
-          {yazioSyncMsg && <div className="text-xs text-lcd">{yazioSyncMsg}</div>}
+          {yazioSyncMsg && <div role="status" className="text-xs text-lcd">{yazioSyncMsg}</div>}
           <div className="flex items-baseline justify-between">
             <span className="font-mono text-accent text-2xl font-bold">
               {yazioToday.kcalEaten ?? 0}
@@ -930,10 +930,10 @@ export default function FoodLogClient({
                 disabled={feedbackLoading}
                 className="text-xs bg-accent text-bg font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
               >
-                {feedbackLoading ? 'Tänker...' : '✨ Få feedback på dagens mat & veckans progress'}
+                {feedbackLoading ? 'Tänker…' : '✨ Få feedback på dagens mat & veckans progress'}
               </button>
             )}
-            {feedbackError && <p className="text-red-400 text-xs mt-2">{feedbackError}</p>}
+            {feedbackError && <p role="alert" className="text-red-400 text-xs mt-2">{feedbackError}</p>}
           </div>
         </div>
       )}
@@ -1376,7 +1376,7 @@ export default function FoodLogClient({
                 />
                 <input
                   type="text"
-                  value={logPhotoNote}
+                  aria-label="Extra info till AI:n" value={logPhotoNote}
                   onChange={e => setLogPhotoNote(e.target.value)}
                   placeholder="Extra info till AI:n (valfritt), t.ex. &quot;dubbel portion pasta&quot;"
                   className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
@@ -1386,7 +1386,7 @@ export default function FoodLogClient({
                   disabled={logPhotos.length === 0 || estimating}
                   className="bg-accent text-bg font-semibold py-3 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {estimating ? 'Analyserar...' : `✨ Analysera${logPhotos.length > 1 ? ` (${logPhotos.length} bilder)` : ''}`}
+                  {estimating ? 'Analyserar…' : `✨ Analysera${logPhotos.length > 1 ? ` (${logPhotos.length} bilder)` : ''}`}
                 </button>
               </div>
             )}
@@ -1395,12 +1395,12 @@ export default function FoodLogClient({
               <div className="flex flex-col gap-2">
                 <input
                   type="text"
-                  value={query}
+                  aria-label="Sök livsmedel" value={query}
                   onChange={e => { setQuery(e.target.value); setSelectedCandidate(null); setEstimate(null) }}
-                  placeholder="Sök t.ex. hamburgare..."
+                  placeholder="Sök t.ex. hamburgare…"
                   className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
                 />
-                {searching && <p className="text-muted text-xs">Söker...</p>}
+                {searching && <p role="status" className="text-muted text-xs">Söker…</p>}
                 {visibleCandidates && visibleCandidates.length > 0 && (
                   <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto">
                     {visibleCandidates.map(c => (
@@ -1425,7 +1425,7 @@ export default function FoodLogClient({
               <div className="flex flex-col gap-2">
                 <input
                   type="text"
-                  value={query}
+                  aria-label="Beskriv vad du åt" value={query}
                   onChange={e => setQuery(e.target.value)}
                   placeholder="T.ex. 'två skivor rostat bröd med ost och skinka'"
                   className="w-full bg-bg border border-edge rounded-xl px-4 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent transition-colors"
@@ -1435,7 +1435,7 @@ export default function FoodLogClient({
                   disabled={estimating || !query.trim()}
                   className="bg-accent text-bg font-semibold py-3 rounded-xl text-sm disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  {estimating ? 'Uppskattar...' : '✨ Uppskatta'}
+                  {estimating ? 'Uppskattar…' : '✨ Uppskatta'}
                 </button>
               </div>
             )}
@@ -1444,8 +1444,8 @@ export default function FoodLogClient({
               <div className="flex flex-col gap-3">
                 <div className="text-sm text-fg">{selectedCandidate.name}</div>
                 <div>
-                  <label className="text-muted text-xs block mb-1.5">Mängd (gram)</label>
-                  <input
+                  <label htmlFor="foodlogclient-f1" className="text-muted text-xs block mb-1.5">Mängd (gram)</label>
+                  <input id="foodlogclient-f1"
                     type="number"
                     min={1}
                     inputMode="numeric"
@@ -1474,7 +1474,7 @@ export default function FoodLogClient({
                       disabled={logging}
                       className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
                     >
-                      {logging ? 'Loggar...' : 'Logga'}
+                      {logging ? 'Loggar…' : 'Logga'}
                     </button>
                   </div>
                 </div>
@@ -1500,25 +1500,25 @@ export default function FoodLogClient({
                   ✨ {logMethod === 'label' ? 'Läst från etikett' : estimate.source === 'photo' ? 'AI-uppskattat från bild' : 'AI-uppskattat'} — redigera gärna innan du sparar
                 </span>
                 <div>
-                  <label className="text-muted text-xs block mb-1.5">Namn</label>
-                  <input value={resultName} onChange={e => setResultName(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+                  <label htmlFor="foodlogclient-f2" className="text-muted text-xs block mb-1.5">Namn</label>
+                  <input id="foodlogclient-f2" value={resultName} onChange={e => setResultName(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="text-muted text-xs block mb-1.5">Kalorier (kcal)</label>
-                    <input type="number" value={resultKcal} onChange={e => setResultKcal(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+                    <label htmlFor="foodlogclient-f3" className="text-muted text-xs block mb-1.5">Kalorier (kcal)</label>
+                    <input id="foodlogclient-f3" type="number" value={resultKcal} onChange={e => setResultKcal(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
                   </div>
                   <div>
-                    <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
-                    <input type="number" value={resultProtein} onChange={e => setResultProtein(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+                    <label htmlFor="foodlogclient-f4" className="text-muted text-xs block mb-1.5">Protein (g)</label>
+                    <input id="foodlogclient-f4" type="number" value={resultProtein} onChange={e => setResultProtein(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
                   </div>
                   <div>
-                    <label className="text-muted text-xs block mb-1.5">Kolhydrater (g)</label>
-                    <input type="number" value={resultCarb} onChange={e => setResultCarb(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+                    <label htmlFor="foodlogclient-f5" className="text-muted text-xs block mb-1.5">Kolhydrater (g)</label>
+                    <input id="foodlogclient-f5" type="number" value={resultCarb} onChange={e => setResultCarb(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
                   </div>
                   <div>
-                    <label className="text-muted text-xs block mb-1.5">Fett (g)</label>
-                    <input type="number" value={resultFat} onChange={e => setResultFat(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+                    <label htmlFor="foodlogclient-f6" className="text-muted text-xs block mb-1.5">Fett (g)</label>
+                    <input id="foodlogclient-f6" type="number" value={resultFat} onChange={e => setResultFat(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
                   </div>
                 </div>
                 <div className="flex gap-2">
@@ -1528,13 +1528,13 @@ export default function FoodLogClient({
                     disabled={logging}
                     className="flex-1 text-xs bg-accent text-bg font-semibold py-2.5 rounded-lg disabled:opacity-50"
                   >
-                    {logging ? 'Sparar...' : 'Spara i loggen'}
+                    {logging ? 'Sparar…' : 'Spara i loggen'}
                   </button>
                 </div>
               </div>
             )}
 
-            {error && <p className="text-red-400 text-xs mt-3">{error}</p>}
+            {error && <p role="alert" className="text-red-400 text-xs mt-3">{error}</p>}
             <button onClick={closeLogFlow} className="text-muted text-xs mt-4 w-full text-center">Stäng</button>
         </Modal>
       )}

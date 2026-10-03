@@ -76,6 +76,7 @@ export default function Modal({
         aria-modal="true"
         aria-label={label}
         tabIndex={-1}
+        style={bottom ? { paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' } : undefined}
         className={`bg-card border border-edge p-4 w-full focus:outline-none ${bottom ? 'border-b-0 rounded-t-2xl max-w-2xl overflow-y-auto' : 'rounded-2xl max-w-sm'} ${panelClassName}`}
       >
         {children}

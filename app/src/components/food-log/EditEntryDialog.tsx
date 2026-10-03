@@ -22,8 +22,8 @@ export default function EditEntryDialog({
     <Modal label="Redigera post" panelClassName="flex flex-col gap-3" onClose={onClose}>
     <div className="text-sm font-semibold">Redigera post</div>
     <div>
-      <label className="text-muted text-xs block mb-1.5">Namn</label>
-      <input type="text" value={name} onChange={e => onNameChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
+      <label htmlFor="editentrydialog-f1" className="text-muted text-xs block mb-1.5">Namn</label>
+      <input id="editentrydialog-f1" type="text" value={name} onChange={e => onNameChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent" />
     </div>
     {trackingEnabled && (
       <div>
@@ -44,25 +44,25 @@ export default function EditEntryDialog({
     )}
     <div className="grid grid-cols-2 gap-2">
       <div>
-        <label className="text-muted text-xs block mb-1.5">Kalorier</label>
-        <input type="number" value={kcal} onChange={e => onKcalChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+        <label htmlFor="editentrydialog-f2" className="text-muted text-xs block mb-1.5">Kalorier</label>
+        <input id="editentrydialog-f2" type="number" value={kcal} onChange={e => onKcalChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
       </div>
       <div>
-        <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
-        <input type="number" value={protein} onChange={e => onProteinChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+        <label htmlFor="editentrydialog-f3" className="text-muted text-xs block mb-1.5">Protein (g)</label>
+        <input id="editentrydialog-f3" type="number" value={protein} onChange={e => onProteinChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
       </div>
       <div>
-        <label className="text-muted text-xs block mb-1.5">Kolhydrater (g)</label>
-        <input type="number" value={carb} onChange={e => onCarbChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+        <label htmlFor="editentrydialog-f4" className="text-muted text-xs block mb-1.5">Kolhydrater (g)</label>
+        <input id="editentrydialog-f4" type="number" value={carb} onChange={e => onCarbChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
       </div>
       <div>
-        <label className="text-muted text-xs block mb-1.5">Fett (g)</label>
-        <input type="number" value={fat} onChange={e => onFatChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
+        <label htmlFor="editentrydialog-f5" className="text-muted text-xs block mb-1.5">Fett (g)</label>
+        <input id="editentrydialog-f5" type="number" value={fat} onChange={e => onFatChange(e.target.value)} className="w-full bg-bg border border-edge rounded-lg px-3 py-2 text-sm text-fg font-mono focus:outline-none focus:border-accent" />
       </div>
     </div>
     <div className="flex gap-2">
       <button onClick={onClose} className="flex-1 text-xs text-muted border border-edge rounded-lg py-2.5">Avbryt</button>
-      <button onClick={onSave} disabled={saving} className="flex-1 text-xs bg-accent text-bg font-semibold py-2.5 rounded-lg disabled:opacity-50">{saving ? 'Sparar...' : 'Spara'}</button>
+      <button onClick={onSave} disabled={saving} className="flex-1 text-xs bg-accent text-bg font-semibold py-2.5 rounded-lg disabled:opacity-50">{saving ? 'Sparar…' : 'Spara'}</button>
     </div>
     </Modal>
   )

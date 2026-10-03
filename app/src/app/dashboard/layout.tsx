@@ -43,7 +43,7 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-bg flex">
       <SideNav userName={userName} isAdmin={isAdmin} deficitEnabled={deficitEnabled} />
-      <main className="flex-1 min-w-0 flex flex-col pb-20 md:pb-0 md:ml-56 min-h-screen">
+      <main className="flex-1 min-w-0 flex flex-col pb-[calc(5rem+env(safe-area-inset-bottom))] md:pb-0 md:ml-56 min-h-screen">
         {isDemo && (
           <div className="bg-accent text-bg text-xs font-semibold px-4 py-2 flex items-center justify-center gap-2 flex-wrap text-center">
             <span>🔍 DEMO-DATA — det här är inte riktig data</span>

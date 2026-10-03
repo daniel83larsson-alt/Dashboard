@@ -24,6 +24,10 @@
   --font-mono: var(--font-jb);
 }
 
+html {
+  color-scheme: dark;
+}
+
 html, body {
   background: var(--bg);
   color: var(--fg);
@@ -62,3 +66,16 @@ html, body {
     font-size: 16px !important;
   }
 }
+
+/* iPhone: viewport-fit=cover (layout.tsx) låter appen ligga under statusfältet
+   och hemindikatorn, så vi lägger själva marginalen. 0 i vanlig webbläsare. */
+body { padding-top: env(safe-area-inset-top); }
+.safe-area-pb { padding-bottom: env(safe-area-inset-bottom); }
+
+/* Ingen dubbeltryckszoom-fördröjning på knappar/länkar/fält, och sidan bakom en
+   ruta scrollar inte med när man når slutet av rutan. */
+a, button, input, select, textarea, summary, label { touch-action: manipulation; }
+[role="dialog"] { overscroll-behavior: contain; }
+
+/* Siffror i monospace-teckensnittet (kcal, tider, värden) ska inte hoppa i bredd. */
+.font-mono { font-variant-numeric: tabular-nums; }

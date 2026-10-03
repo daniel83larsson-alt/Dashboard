@@ -141,7 +141,7 @@ export default function DayDetailDialog({
         })}
       </div>
       <input
-        key={`${day}-note`}
+        aria-label="Anteckning för dagen" key={`${day}-note`}
         type="text"
         defaultValue={dayNotes.get(day)?.note ?? ''}
         onBlur={e => onSaveNote(day, dayNotes.get(day)?.tag ?? null, e.target.value)}

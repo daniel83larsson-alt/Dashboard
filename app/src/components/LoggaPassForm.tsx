@@ -171,7 +171,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                           type="number"
                           min={1}
                           inputMode="numeric"
-                          value={picked.sets}
+                          aria-label={`Antal set, ${name}`} value={picked.sets}
                           onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], sets: e.target.value } }))}
                           className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
                         />
@@ -180,7 +180,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                           type="number"
                           min={1}
                           inputMode="numeric"
-                          value={picked.reps}
+                          aria-label={`Antal repetitioner, ${name}`} value={picked.reps}
                           onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], reps: e.target.value } }))}
                           className="w-16 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center focus:outline-none focus:border-accent"
                         />
@@ -192,7 +192,7 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
                               min={0}
                               step={0.5}
                               inputMode="decimal"
-                              value={picked.weightKg}
+                              aria-label={`Vikt i kilo, ${name}`} value={picked.weightKg}
                               onChange={e => setExercises(prev => ({ ...prev, [name]: { ...prev[name], weightKg: e.target.value } }))}
                               placeholder="vikt"
                               className="w-20 bg-bg border border-edge rounded-lg px-2 py-1.5 text-sm text-fg text-center placeholder:text-[10px] focus:outline-none focus:border-accent"
@@ -214,8 +214,8 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
           <>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-muted text-xs block mb-1.5">Tid (minuter)</label>
-                <input
+                <label htmlFor="loggapassform-f1" className="text-muted text-xs block mb-1.5">Tid (minuter)</label>
+                <input id="loggapassform-f1"
                   type="number"
                   min={1}
                   inputMode="numeric"
@@ -227,8 +227,8 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
               </div>
               {usesDistance(sport) && (
                 <div>
-                  <label className="text-muted text-xs block mb-1.5">Sträcka (km)</label>
-                  <input
+                  <label htmlFor="loggapassform-f2" className="text-muted text-xs block mb-1.5">Sträcka (km)</label>
+                  <input id="loggapassform-f2"
                     type="number"
                     min={0}
                     step={0.1}
@@ -243,8 +243,8 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
             </div>
 
             <div>
-              <label className="text-muted text-xs block mb-1.5">Datum &amp; tid</label>
-              <input
+              <label htmlFor="loggapassform-f3" className="text-muted text-xs block mb-1.5">Datum &amp; tid</label>
+              <input id="loggapassform-f3"
                 type="datetime-local"
                 value={startDate}
                 onChange={e => setStartDate(e.target.value)}
@@ -269,9 +269,9 @@ export default function LoggaPassForm({ weightKg }: { weightKg?: number | null }
               disabled={saving || movingTime <= 0}
               className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
             >
-              {saving ? 'Sparar...' : 'Logga pass'}
+              {saving ? 'Sparar…' : 'Logga pass'}
             </button>
-            {error && <div className="text-red-400 text-xs text-center">{error}</div>}
+            {error && <div role="alert" className="text-red-400 text-xs text-center">{error}</div>}
           </>
         )}
       </div>

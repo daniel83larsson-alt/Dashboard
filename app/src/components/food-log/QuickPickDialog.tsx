@@ -69,8 +69,8 @@ export default function QuickPickDialog({
 
       {isDatabase ? (
         <div className="mb-3">
-          <label className="text-muted text-xs block mb-1.5">Mängd (g)</label>
-          <input
+          <label htmlFor="quickpickdialog-f1" className="text-muted text-xs block mb-1.5">Mängd (g)</label>
+          <input id="quickpickdialog-f1"
             type="text" inputMode="decimal" value={grams}
             onChange={e => setConfirmState(prev => prev ? { ...prev, grams: normalizeDecimalInput(e.target.value) } : prev)}
             className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
@@ -80,16 +80,16 @@ export default function QuickPickDialog({
         <>
           <div className="grid grid-cols-2 gap-2 mb-3">
             <div>
-              <label className="text-muted text-xs block mb-1.5">Kcal per portion</label>
-              <input
+              <label htmlFor="quickpickdialog-f2" className="text-muted text-xs block mb-1.5">Kcal per portion</label>
+              <input id="quickpickdialog-f2"
                 type="text" inputMode="decimal" value={kcal}
                 onChange={e => setConfirmState(prev => prev ? { ...prev, kcal: normalizeDecimalInput(e.target.value) } : prev)}
                 className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
               />
             </div>
             <div>
-              <label className="text-muted text-xs block mb-1.5">Protein (g)</label>
-              <input
+              <label htmlFor="quickpickdialog-f3" className="text-muted text-xs block mb-1.5">Protein (g)</label>
+              <input id="quickpickdialog-f3"
                 type="text" inputMode="decimal" value={protein} placeholder="saknas"
                 onChange={e => setConfirmState(prev => prev ? { ...prev, protein: normalizeDecimalInput(e.target.value) } : prev)}
                 className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
@@ -97,8 +97,8 @@ export default function QuickPickDialog({
             </div>
           </div>
           <div className="mb-3">
-            <label className="text-muted text-xs block mb-1.5">Antal portioner</label>
-            <input
+            <label htmlFor="quickpickdialog-f4" className="text-muted text-xs block mb-1.5">Antal portioner</label>
+            <input id="quickpickdialog-f4"
               type="text" inputMode="decimal" value={multiplier}
               onChange={e => setConfirmState(prev => prev ? { ...prev, multiplier: normalizeDecimalInput(e.target.value) } : prev)}
               className="w-full bg-bg border border-edge rounded-xl px-4 py-2 text-sm text-fg focus:outline-none focus:border-accent transition-colors"
@@ -120,7 +120,7 @@ export default function QuickPickDialog({
         </>
       ) : (
         <div className="flex flex-col gap-2">
-          <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">{logging ? 'Loggar...' : 'Logga'}</button>
+          <button type="button" onClick={() => confirm()} disabled={!canConfirm || logging} className="w-full bg-accent text-bg font-semibold py-2.5 rounded-xl text-sm disabled:opacity-50">{logging ? 'Loggar…' : 'Logga'}</button>
           {updateButton}
           <button type="button" onClick={onClose} className="text-muted text-xs mt-1">Avbryt</button>
         </div>
