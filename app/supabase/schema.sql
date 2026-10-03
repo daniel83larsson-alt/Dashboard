@@ -1752,3 +1752,35 @@ $$;
 revoke all on function public.food_quick_picks_v2() from public;
 revoke execute on function public.food_quick_picks_v2() from anon;
 grant execute on function public.food_quick_picks_v2() to authenticated;
+
+-- ── Säkerhetsskärpning 2026-10-03 (migration harden_security_definer_grants_and_signup_secret) ──
+-- Granskning med supabase-skillen. Signup-hemligheten ligger nu i vault
+-- (namn: signup_webhook_secret, skapad manuellt — värdet ska aldrig stå här).
+create or replace function public.notify_new_signup() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare secret text;
+begin
+  select decrypted_secret into secret from vault.decrypted_secrets where name = 'signup_webhook_secret';
+  if secret is null then
+    raise warning 'signup_webhook_secret saknas i vault — ingen signup-notis skickad';
+    return new;
+  end if;
+  perform net.http_post(
+    url := 'https://dl-trainer.vercel.app/api/webhooks/new-signup',
+    headers := jsonb_build_object('Content-Type', 'application/json', 'x-webhook-secret', secret),
+    body := jsonb_build_object('record', jsonb_build_object('email', new.email, 'name', new.name, 'created_at', new.created_at))
+  );
+  return new;
+end;
+$$;
+-- Triggerfunktioner ska inte kunna anropas som API:
+revoke execute on function public.notify_new_signup() from public, anon, authenticated;
+revoke execute on function public.handle_new_user() from public, anon, authenticated;
+revoke execute on function public.protect_profile_moderation_columns() from public, anon, authenticated;
+-- Funktioner för inloggade — inte anropbara utan inloggning (unsubscribe_* är öppna med flit: mejllänken har ingen session):
+revoke execute on function public.activity_owner(uuid), public.claim_connected_account(text, text), public.food_quick_picks(),
+  public.friend_activity_feed(), public.friend_roster(), public.friend_weekly_activities(timestamptz, timestamptz),
+  public.kudos_received(uuid), public.my_follows(), public.pending_follow_requests(), public.search_profiles(text) from public, anon;
+grant execute on function public.activity_owner(uuid), public.claim_connected_account(text, text), public.food_quick_picks(),
+  public.friend_activity_feed(), public.friend_roster(), public.friend_weekly_activities(timestamptz, timestamptz),
+  public.kudos_received(uuid), public.my_follows(), public.pending_follow_requests(), public.search_profiles(text) to authenticated;
