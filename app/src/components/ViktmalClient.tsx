@@ -1,12 +1,14 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useSyncExternalStore } from 'react'
 import { useRouter } from 'next/navigation'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
+import { LineChart, Line, ComposedChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts'
 import { dailyDiffStatus, compute7DayAverage, computeAvgDiffVsTdee, countableDays, explainBudgetChange, computeRollingWeightAverage, computeDeficitBudget, safetyBreachLabel, computeWeightTrendProjection, MAX_SAFE_DEFICIT_KCAL } from '@/lib/deficit'
 import { explainProteinGoalChange } from '@/lib/kost'
 import { computeRestingHrSignal, computeSleepContext } from '@/lib/wellness-signals'
 import { detectBodyTrendNote, bodyTrendNoteLabel } from '@/lib/body-trend'
+import { estimateBMR } from '@/lib/bmr'
+import { measurePace, buildForecast, suggestLowerMilestone } from '@/lib/weight-forecast'
 import ViktmalSettingsCard from '@/components/ViktmalSettingsCard'
 
 const ACCENT = '#ccd400'
@@ -359,7 +361,100 @@ export default function ViktmalClient({
     [projectionTarget?.kg, projectionTarget?.dateISO, weightHistory, rollingWeight.avgKg, currentWeightKg, todayKey]
   )
 
-  const chartData = weightHistory.map(m => ({ date: fmtDate(m.date), Vikt: m.weightKg }))
+  // Samma indata som serverns omräkning (deficit-budget-refreeze.ts): riktig BMR (Mifflin-St Jeor)
+  // + egen NEAT-faktor + träningstillägg. Tidigare förhandsvisades delmål med TDEE som BMR, vilket
+  // gav falska "under golvet"-varningar; serverns tal är fortfarande det som gäller vid sparning.
+  function previewBudget(targetKg: number, targetDateISO: string, allowUnsafe: boolean) {
+    const startKg = rollingWeight.avgKg ?? currentWeightKg
+    if (startKg == null || tdeeKcal == null) return null
+    const bmr = estimateBMR({ weightKg: currentProfileWeightKg ?? startKg, heightCm: bmrHeightCm, birthYear: bmrBirthYear, biologicalSex: bmrBiologicalSex }).bmr
+    return computeDeficitBudget({
+      bmr,
+      goal: { startWeightKg: startKg, targetWeightKg: targetKg, targetDateISO, neatFactor, garminCorrection },
+      avgTrainingKcalRaw,
+      activityFallbackKcal,
+      now: new Date(),
+      allowUnsafe,
+    })
+  }
+
+  // ── Förväntad kurva (spann) + förslag på lägre delmål ────────────────────
+  // Se lib/weight-forecast.ts. Rör aldrig kaloribudgeten; ett lägre delmål införs
+  // bara om användaren godkänner det själv.
+  const [showForecast, setShowForecast] = useState(true)
+  const pace = useMemo(
+    () => measurePace(weightHistory.map(m => ({ date: m.date, weightKg: m.weightKg })), todayKey),
+    [weightHistory, todayKey]
+  )
+  const forecast = useMemo(() => buildForecast(pace, todayKey, targetWeightKg), [pace, todayKey, targetWeightKg])
+  const suggestionRaw = useMemo(
+    () => activeMilestone
+      ? suggestLowerMilestone(forecast, { targetKg: activeMilestone.target_weight_kg, targetDateISO: activeMilestone.target_date }, targetWeightKg, todayKey)
+      : null,
+    [forecast, activeMilestone, targetWeightKg, todayKey]
+  )
+  const suggestionKey = suggestionRaw ? `dl-milestone-suggest-${suggestionRaw.oldTargetKg}-${suggestionRaw.newTargetKg}-${suggestionRaw.targetDateISO}` : null
+  // "Inte nu" sparas i webbläsaren i 14 dagar; useSyncExternalStore ger server=false (ingen hydreringskrock).
+  const snoozedStored = useSyncExternalStore(
+    () => () => {},
+    () => { try { return !!suggestionKey && Number(localStorage.getItem(suggestionKey) ?? 0) > Date.now() } catch { return false } },
+    () => false,
+  )
+  const [snoozedNow, setSnoozedNow] = useState(false)
+  const suggestionSnoozed = snoozedStored || snoozedNow
+  const [suggestionBusy, setSuggestionBusy] = useState(false)
+  const [suggestionError, setSuggestionError] = useState('')
+  // Ungefärlig budget för det föreslagna delmålet — samma förenkling som i delmålsformuläret;
+  // föreslås bara om det inte bryter mot säkerhetsgränserna.
+  const suggestionPreview = (() => {
+    if (!suggestionRaw) return null
+    const preview = previewBudget(suggestionRaw.newTargetKg, suggestionRaw.targetDateISO, false)
+    return preview && preview.safety.breaches.length === 0 ? preview : null
+  })()
+  const suggestion = suggestionRaw && suggestionPreview && !suggestionSnoozed ? suggestionRaw : null
+
+  function snoozeSuggestion() {
+    if (suggestionKey) { try { localStorage.setItem(suggestionKey, String(Date.now() + 14 * 86400000)) } catch {} }
+    setSnoozedNow(true)
+  }
+
+  async function approveSuggestion() {
+    if (!suggestion) return
+    setSuggestionBusy(true)
+    setSuggestionError('')
+    try {
+      // Ett aktivt delmål åt gången: avbryt det gamla och sätt det nya med samma datum.
+      const del = await fetch('/api/deficit/milestone', { method: 'DELETE' })
+      if (!del.ok) { setSuggestionError('Kunde inte byta delmål'); setSuggestionBusy(false); return }
+      const res = await fetch('/api/deficit/milestone', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ targetWeightKg: suggestion.newTargetKg, targetDateISO: suggestion.targetDateISO, overrideAcknowledged: false }),
+      })
+      if (res.ok) {
+        router.refresh()
+      } else {
+        const data = await res.json().catch(() => ({}))
+        setSuggestionError((data as { error?: string }).error ?? 'Kunde inte spara det nya delmålet — det gamla är avbrutet, sätt ett nytt under "Delmål".')
+      }
+    } catch {
+      setSuggestionError('Nätverksfel')
+    }
+    setSuggestionBusy(false)
+  }
+
+  // Historik + framtida veckopunkter i samma rad-lista; "Spann" ritas som yta mellan snabbaste och försiktigaste linjen.
+  type ChartRow = { date: string; Vikt?: number; Förväntad?: number; Spann?: [number, number] }
+  const chartData: ChartRow[] = weightHistory.map(m => ({ date: fmtDate(m.date), Vikt: m.weightKg }))
+  if (showForecast && forecast) {
+    const lastRow = chartData[chartData.length - 1]
+    const lastIsToday = weightHistory.length > 0 && weightHistory[weightHistory.length - 1].date === todayKey
+    forecast.points.forEach((p, i) => {
+      const fields = { Förväntad: p.main, Spann: [p.fastest, p.slowest] as [number, number] }
+      if (i === 0 && lastIsToday && lastRow) Object.assign(lastRow, fields)
+      else chartData.push({ date: fmtDate(p.dateISO), ...fields })
+    })
+  }
   const modelBKcal = budgetKcal != null ? Math.round(budgetKcal + todayTrainingKcalRaw * garminCorrection) : null
 
   const weekdayLabels = ['Sön', 'Mån', 'Tis', 'Ons', 'Tors', 'Fre', 'Lör']
@@ -709,17 +804,75 @@ export default function ViktmalClient({
 
         {chartData.length > 2 && (
           <div className="mt-4 pt-3 border-t border-edge">
-            <ResponsiveContainer width="100%" height={140}>
-              <LineChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+            <ResponsiveContainer width="100%" height={showForecast && forecast ? 180 : 140}>
+              <ComposedChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
                 <CartesianGrid vertical={false} stroke={EDGE} />
                 <XAxis dataKey="date" tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: MUTED, fontSize: 10 }} tickLine={false} axisLine={false} domain={['auto', 'auto']} />
-                <Tooltip {...chartTooltip} formatter={(v) => [`${v} kg`, 'Vikt']} />
+                <Tooltip {...chartTooltip} formatter={(v, name) => Array.isArray(v) ? [`${v[0]}–${v[1]} kg`, 'Spann'] : [`${v} kg`, String(name)]} />
                 {targetWeightKg != null && <ReferenceLine y={targetWeightKg} stroke={MUTED} strokeDasharray="3 3" />}
                 {activeMilestone && <ReferenceLine y={activeMilestone.target_weight_kg} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: 'Delmål', position: 'insideTopRight', fill: '#f59e0b', fontSize: 10 }} />}
+                {showForecast && forecast && <Area type="monotone" dataKey="Spann" stroke="none" fill={ACCENT} fillOpacity={0.12} connectNulls isAnimationActive={false} />}
+                {showForecast && forecast && <Line type="monotone" dataKey="Förväntad" stroke={ACCENT} strokeWidth={1.5} strokeDasharray="5 4" dot={false} connectNulls isAnimationActive={false} />}
                 <Line type="monotone" dataKey="Vikt" stroke={ACCENT} strokeWidth={2} dot={{ r: 3 }} connectNulls />
-              </LineChart>
+              </ComposedChart>
             </ResponsiveContainer>
+
+            {forecast ? (
+              <div className="mt-3 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowForecast(v => !v)}
+                  aria-pressed={showForecast}
+                  className="text-xs text-accent border border-accent/30 rounded-lg px-3 py-1.5 self-start"
+                >
+                  {showForecast ? 'Dölj förväntad kurva' : 'Visa förväntad kurva i din takt'}
+                </button>
+                {showForecast && (
+                  <div className="text-xs flex flex-col gap-1">
+                    <p className="text-fg">
+                      Din takt senaste veckorna: <span className="font-mono">{forecast.lossKgPerWeek.toFixed(2).replace('.', ',')} kg/vecka</span>.
+                    </p>
+                    {(() => {
+                      const rows: { label: string; kg: number }[] = []
+                      if (activeMilestone) rows.push({ label: 'Delmålet', kg: activeMilestone.target_weight_kg })
+                      if (targetWeightKg != null) rows.push({ label: 'Målet', kg: targetWeightKg })
+                      return rows.map(r => {
+                        const reach = forecast.reach(r.kg)
+                        if (!reach.main) return null
+                        const range = reach.fastest && reach.slowest && reach.fastest !== reach.slowest ? ` (spann ${fmtDate(reach.fastest)}–${fmtDate(reach.slowest)})` : ''
+                        return <p key={r.label} className="text-muted">{r.label} {r.kg.toFixed(1).replace('.', ',')} kg nås ca <span className="text-fg">{fmtDate(reach.main)}</span>{range}</p>
+                      })
+                    })()}
+                    <p className="text-muted text-[11px] mt-1">Uppskattning från dina vägningar de senaste veckorna. Viktminskning brukar avta över tid, därför visas ett spann. Din kaloribudget påverkas inte.</p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-muted text-[11px] mt-3">
+                {pace.reason === 'not_losing'
+                  ? 'Vikten har legat still eller gått upp de senaste veckorna, så vi visar ingen förväntad kurva än.'
+                  : `Förväntad kurva dyker upp när du har minst fyra vägningar under två veckor eller mer (${pace.weighIns} hittills de senaste sex veckorna).`}
+              </p>
+            )}
+
+            {suggestion && suggestionPreview && (
+              <div className="mt-3 bg-accent/5 border border-accent/25 rounded-xl p-3 flex flex-col gap-2">
+                <p className="text-fg text-sm font-medium">Du ligger före ✨</p>
+                <p className="text-muted text-xs">
+                  I din takt når du delmålet på {suggestion.oldTargetKg.toFixed(1).replace('.', ',')} kg ungefär {suggestion.daysAheadMain >= 7 ? `${Math.round(suggestion.daysAheadMain / 7)} veckor` : 'en vecka'} före datumet ({fmtDate(suggestion.targetDateISO)}).
+                  Förslag: sänk delmålet till <span className="text-fg font-medium">{suggestion.newTargetKg.toFixed(1).replace('.', ',')} kg</span> (samma datum).
+                  Det ger en budget på ungefär {suggestionPreview.budgetKcal} kcal/dag{activeMilestone?.segment_budget_kcal != null ? ` (nu ${activeMilestone.segment_budget_kcal})` : ''} — du bestämmer, och inget ändras förrän du godkänner.
+                </p>
+                {suggestionError && <p className="text-red-400 text-xs">{suggestionError}</p>}
+                <div className="flex gap-2">
+                  <button type="button" onClick={approveSuggestion} disabled={suggestionBusy} className="text-xs bg-accent text-bg font-semibold px-4 py-2 rounded-lg disabled:opacity-50">
+                    {suggestionBusy ? 'Sparar…' : 'Godkänn nytt delmål'}
+                  </button>
+                  <button type="button" onClick={snoozeSuggestion} disabled={suggestionBusy} className="text-xs text-muted border border-edge rounded-lg px-4 py-2 disabled:opacity-50">Inte nu</button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -798,19 +951,9 @@ export default function ViktmalClient({
 
               {(() => {
                 const targetW = parseFloat(milestoneTargetWeightKg)
-                const previewStartKg = rollingWeight.avgKg ?? currentWeightKg
-                if (Number.isNaN(targetW) || !milestoneTargetDate || tdeeKcal == null || previewStartKg == null) return null
-                // Reuses the current overall TDEE as an approximation (bmr=tdeeKcal,
-                // neatFactor 1, no training term) so the preview needs no extra
-                // BMR inputs — the authoritative number is recomputed server-side.
-                const preview = computeDeficitBudget({
-                  bmr: tdeeKcal,
-                  goal: { startWeightKg: previewStartKg, targetWeightKg: targetW, targetDateISO: milestoneTargetDate, neatFactor: 1, garminCorrection: 0 },
-                  avgTrainingKcalRaw: 0,
-                  activityFallbackKcal: 0,
-                  now: new Date(),
-                  allowUnsafe: milestoneOverrideConfirmed,
-                })
+                if (Number.isNaN(targetW) || !milestoneTargetDate) return null
+                const preview = previewBudget(targetW, milestoneTargetDate, milestoneOverrideConfirmed)
+                if (!preview) return null
                 if (preview.safety.breaches.length === 0) {
                   return <p className="text-muted text-xs">Ungefärlig budget under delmålet: ~{preview.budgetKcal} kcal/dag (underskott ~{preview.dailyDeficitKcal} kcal) — exakt tal räknas ut när du sparar.</p>
                 }
