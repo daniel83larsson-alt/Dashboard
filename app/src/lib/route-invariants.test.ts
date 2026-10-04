@@ -51,6 +51,7 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     'app/api/cron/body-reminders/route.ts',
     'app/api/cron/weekly-tdee-recompute/route.ts',
     'app/api/cron/monthly-report/route.ts',
+    'app/api/cron/cron-health/route.ts',
     'app/api/weekly-digest/unsubscribe/route.ts',
     'app/api/monthly-report/unsubscribe/route.ts',
     'app/api/webhooks/new-signup/route.ts',
@@ -93,8 +94,9 @@ describe('every cron route requires CRON_SECRET', () => {
   })
 
   for (const file of cronFiles) {
-    it(`${relToSrc(file).replace(/^app\//, '')} contains CRON_SECRET`, () => {
-      expect(read(file)).toContain('CRON_SECRET')
+    it(`${relToSrc(file).replace(/^app\//, '')} checks CRON_SECRET (directly or via isCronAuthorized)`, () => {
+      const src = read(file)
+      expect(src.includes('CRON_SECRET') || src.includes('isCronAuthorized(request)')).toBe(true)
     })
   }
 })

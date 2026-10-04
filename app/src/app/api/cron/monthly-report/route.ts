@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { recapMonthStart } from '@/lib/monthly-report'
 import { generateMonthlyReportForUser, type MonthlyReportRecord } from '@/lib/monthly-report-generate'
@@ -24,8 +25,8 @@ function sleep(ms: number) {
 }
 
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Giltiga nycklar: CRON_SECRET eller SCHEDULER_SECRET (pg_cron) — se lib/cron-auth.ts
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

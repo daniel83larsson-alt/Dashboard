@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
 import { syncGarminForUser, GarminNotConfiguredError } from '@/lib/garmin-sync'
 import { withGarminLock } from '@/lib/garmin'
@@ -26,8 +27,8 @@ export const maxDuration = 60 // Vercel Hobby plan's hard cap — every user's s
 // this must never be reachable without that secret since it uses the
 // service-role client and touches every user's data.
 export async function GET(request: NextRequest) {
-  const authHeader = request.headers.get('authorization')
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  // Giltiga nycklar: CRON_SECRET eller SCHEDULER_SECRET (pg_cron) — se lib/cron-auth.ts
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
