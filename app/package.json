@@ -16,6 +16,7 @@
     "@sentry/nextjs": "^10.65.0",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.108.2",
+    "@vercel/analytics": "^2.0.1",
     "garmin-connect": "^1.6.2",
     "leaflet": "^1.9.4",
     "mcp-handler": "^2.1.1",

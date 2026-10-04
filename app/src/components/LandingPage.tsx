@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import TrackedLink from '@/components/TrackedLink'
 
 // Ported from poc/dltrainer-landing.html (Daniel approved the mockup 2026-08-10).
 // Illustrative numbers only — no real user data, same call Daniel made for the POC.
@@ -13,16 +14,16 @@ function ArrowIcon() {
 
 // Rounded pill CTA with the nested "button-in-button" arrow — the detail
 // Daniel pointed at from the high-end design comparison specifically.
-function PrimaryCta({ href, children, size = 'md' }: { href: string; children: React.ReactNode; size?: 'sm' | 'md' }) {
+function PrimaryCta({ href, children, size = 'md', where }: { href: string; children: React.ReactNode; size?: 'sm' | 'md'; where: string }) {
   const pad = size === 'sm' ? 'pl-4 pr-1.5 py-1.5 gap-2 text-sm' : 'pl-6 pr-2 py-2 gap-3 text-[15px]'
   const isle = size === 'sm' ? 'w-7 h-7' : 'w-9 h-9'
   return (
-    <Link href={href} className={`inline-flex items-center whitespace-nowrap bg-accent text-bg font-semibold rounded-full hover:opacity-90 transition-opacity group ${pad}`}>
+    <TrackedLink href={href} event="signup_click" where={where} className={`inline-flex items-center whitespace-nowrap bg-accent text-bg font-semibold rounded-full hover:opacity-90 transition-opacity group ${pad}`}>
       {children}
       <span className={`rounded-full bg-bg/15 flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 ${isle}`}>
         <ArrowIcon />
       </span>
-    </Link>
+    </TrackedLink>
   )
 }
 
@@ -189,7 +190,7 @@ export default function LandingPage() {
             <Link href="/login" className="font-mono text-[13px] whitespace-nowrap border border-edge rounded-full px-4 py-2 hover:border-accent hover:text-accent transition-colors">
               Logga in
             </Link>
-            <PrimaryCta href="/login?mode=signup" size="sm">Skapa konto</PrimaryCta>
+            <PrimaryCta href="/login?mode=signup" size="sm" where="header">Skapa konto</PrimaryCta>
           </div>
         </header>
       </div>
@@ -211,7 +212,7 @@ export default function LandingPage() {
                 DL Trainer samlar pass, puls, sömn och kalorier från din klocka och dina appar. Coachen ser hur din vecka faktiskt ser ut och säger vad det betyder: är zonerna rätt, hänger du med i planen, räcker maten.
               </p>
               <div className="flex items-center gap-3.5 mt-8 flex-wrap">
-                <PrimaryCta href="/login?mode=signup">Skapa konto gratis</PrimaryCta>
+                <PrimaryCta href="/login?mode=signup" where="hero">Skapa konto gratis</PrimaryCta>
                 <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">
                   Logga in
                 </Link>
@@ -322,7 +323,7 @@ export default function LandingPage() {
             <h2 className="relative text-[1.7rem] sm:text-[2.1rem] font-bold text-balance">Redo att se hela bilden av din träning?</h2>
             <p className="relative text-muted text-[15px] mt-3">Gratis att börja, utan kreditkort.</p>
             <div className="relative flex items-center justify-center gap-3.5 mt-7 flex-wrap">
-              <PrimaryCta href="/login?mode=signup">Skapa konto</PrimaryCta>
+              <PrimaryCta href="/login?mode=signup" where="closing">Skapa konto</PrimaryCta>
               <Link href="/login" className="border border-edge rounded-full px-5.5 py-3.5 text-[15px] font-semibold whitespace-nowrap hover:border-lcd-dim transition-colors">
                 Logga in
               </Link>

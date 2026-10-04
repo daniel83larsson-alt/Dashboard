@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { createSupabaseClient } from '@/lib/supabase'
+import { trackEvent } from '@/components/AnalyticsClient'
 
 export default function LoginPage() {
   const [mode, setMode] = useState<'login' | 'signup' | 'forgot'>('login')
@@ -28,6 +29,7 @@ export default function LoginPage() {
   }, [])
 
   async function tryDemo() {
+    trackEvent('demo_click', 'login')
     const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL
     const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD
     if (!demoEmail || !demoPassword) return
@@ -87,7 +89,7 @@ export default function LoginPage() {
         },
       })
       if (error) setError(error.message)
-      else setMessage('Kolla din e-post och klicka på länken för att aktivera kontot.')
+      else { trackEvent('signup_submitted'); setMessage('Kolla din e-post och klicka på länken för att aktivera kontot.') }
     } else {
       const { error } = await supabase.auth.signInWithPassword({ email, password })
       if (error) {

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Space_Grotesk, JetBrains_Mono } from 'next/font/google'
 import ServiceWorkerRegister from '@/components/ServiceWorkerRegister'
+import AnalyticsClient from '@/components/AnalyticsClient'
 import './globals.css'
 
 const spaceGrotesk = Space_Grotesk({ subsets: ['latin'], variable: '--font-space' })
@@ -34,6 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full bg-bg text-fg antialiased">
         <ServiceWorkerRegister />
         {children}
+        <AnalyticsClient />
       </body>
     </html>
   )
