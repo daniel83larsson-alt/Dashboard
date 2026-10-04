@@ -57,17 +57,45 @@ self.addEventListener('fetch', (event) => {
   )
 })
 
+// iOS/Safari kräver att VARJE push visar en notis — tyst push (ingen notis) gör
+// att prenumerationen återkallas. Därför visas alltid något, även om innehållet
+// saknas eller inte går att läsa som JSON.
 self.addEventListener('push', (event) => {
-  if (!event.data) return
-  const data = event.data.json()
+  let data = {}
+  try {
+    data = event.data ? event.data.json() : {}
+  } catch {
+    try { data = { body: event.data.text() } } catch { data = {} }
+  }
   event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
+    self.registration.showNotification(data.title || 'DL Trainer', {
+      body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
       data: { url: data.url || '/dashboard' },
     })
   )
+})
+
+// Webbläsaren bytte eller tappade prenumerationen — skapa en ny och berätta för
+// servern, annars skickar vi till en död adress och inget kommer fram.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  event.waitUntil((async () => {
+    try {
+      const old = event.oldSubscription
+      const sub = event.newSubscription || await self.registration.pushManager.subscribe(
+        old ? old.options : { userVisibleOnly: true }
+      )
+      await fetch('/api/push/subscribe', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscription: sub.toJSON(), replaceEndpoint: old ? old.endpoint : undefined }),
+      })
+    } catch {
+      // PushSelfHeal i appen försöker igen nästa gång den öppnas.
+    }
+  })())
 })
 
 self.addEventListener('notificationclick', (event) => {

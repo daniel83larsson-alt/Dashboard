@@ -1784,3 +1784,11 @@ revoke execute on function public.activity_owner(uuid), public.claim_connected_a
 grant execute on function public.activity_owner(uuid), public.claim_connected_account(text, text), public.food_quick_picks(),
   public.friend_activity_feed(), public.friend_roster(), public.friend_weekly_activities(timestamptz, timestamptz),
   public.kudos_received(uuid), public.my_follows(), public.pending_follow_requests(), public.search_profiles(text) to authenticated;
+
+-- ── Push-leveransspårning 2026-10-04 (migration push_subscriptions_delivery_tracking) ──
+alter table public.push_subscriptions
+  add column if not exists last_success_at timestamptz,
+  add column if not exists last_error_at timestamptz,
+  add column if not exists last_error_status integer,
+  add column if not exists last_error_body text,
+  add column if not exists last_seen_at timestamptz;

@@ -2,6 +2,7 @@ import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { getServerSession } from '@/lib/supabase-server'
 import BottomNav from '@/components/BottomNav'
+import PushSelfHeal from '@/components/PushSelfHeal'
 import SideNav from '@/components/SideNav'
 import { isDemoAccount } from '@/lib/demo'
 
@@ -52,6 +53,7 @@ async function AuthedShell({ children }: { children: React.ReactNode }) {
         )}
         {children}
       </main>
+      <PushSelfHeal />
       <BottomNav isAdmin={isAdmin} deficitEnabled={deficitEnabled} />
     </div>
   )

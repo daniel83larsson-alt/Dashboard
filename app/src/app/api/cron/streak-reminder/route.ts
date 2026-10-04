@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
-import { sendPushToUser } from '@/lib/push'
+import { sendPushToUser, summarizePush } from '@/lib/push'
 import { currentDailyStreak } from '@/lib/streaks'
 import { isDoneInCurrentPeriod, type Habit, type HabitLog } from '@/lib/habits'
 import { startOfWeek } from '@/lib/dates'
@@ -38,7 +38,7 @@ async function remindPendingPlanSessions(supabase: SupabaseClient, now: Date) {
     countByUser.set(s.user_id, (countByUser.get(s.user_id) ?? 0) + 1)
   }
 
-  await Promise.allSettled(
+  const planSettled = await Promise.allSettled(
     [...countByUser.entries()].map(([userId, count]) =>
       sendPushToUser(supabase, userId, {
         title: count === 1 ? 'Ett pass kvar i veckan' : `${count} pass kvar i veckan`,
@@ -50,7 +50,7 @@ async function remindPendingPlanSessions(supabase: SupabaseClient, now: Date) {
     )
   )
 
-  return countByUser.size
+  return summarizePush(planSettled)
 }
 
 // Daniel: "gör det på samma kvällspåminnelse" — one push per user per
@@ -64,7 +64,7 @@ async function remindUnfinishedHabits(supabase: SupabaseClient, now: Date) {
     .from('habits')
     .select('id, user_id, title, interval_days, created_at, active')
     .eq('active', true)
-  if (!habits?.length) return 0
+  if (!habits?.length) return summarizePush([])
 
   const { data: logs } = await supabase
     .from('habit_logs')
@@ -86,7 +86,7 @@ async function remindUnfinishedHabits(supabase: SupabaseClient, now: Date) {
     unfinishedByUser.set(h.user_id, list)
   }
 
-  await Promise.allSettled(
+  const habitSettled = await Promise.allSettled(
     [...unfinishedByUser.entries()].map(([userId, titles]) =>
       sendPushToUser(supabase, userId, {
         title: titles.length === 1 ? 'En vana kvar idag' : `${titles.length} vanor kvar idag`,
@@ -96,7 +96,7 @@ async function remindUnfinishedHabits(supabase: SupabaseClient, now: Date) {
     )
   )
 
-  return unfinishedByUser.size
+  return summarizePush(habitSettled)
 }
 
 // Runs once in the evening (see vercel.json) — only pings someone who
@@ -118,7 +118,7 @@ export async function GET(request: NextRequest) {
   const now = new Date()
 
   const isSaturday = now.getDay() === 6
-  const planRemindersSent = isSaturday ? await remindPendingPlanSessions(supabase, now) : 0
+  const planRemindersSent = isSaturday ? await remindPendingPlanSessions(supabase, now) : null
   const habitRemindersSent = await remindUnfinishedHabits(supabase, now)
 
   const since = new Date()
@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
     notified.push(userId)
   }
 
-  await Promise.allSettled(
+  const streakSettled = await Promise.allSettled(
     notified.map(userId =>
       sendPushToUser(supabase, userId, {
         title: 'Din streak är i fara',
@@ -156,5 +156,5 @@ export async function GET(request: NextRequest) {
     )
   )
 
-  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length, planRemindersSent, habitRemindersSent })
+  return NextResponse.json({ ranAt: now.toISOString(), checked: byUser.size, notified: notified.length, streakPush: summarizePush(streakSettled), planPush: planRemindersSent, habitPush: habitRemindersSent, planRemindersSent: planRemindersSent?.delivered ?? 0, habitRemindersSent: habitRemindersSent.delivered })
 }

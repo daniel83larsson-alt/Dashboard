@@ -1,24 +1,17 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-
-// Standard VAPID applicationServerKey conversion (browsers want a raw
-// Uint8Array, the key is handed out as URL-safe base64).
-function urlBase64ToUint8Array(base64: string): BufferSource {
-  const padding = '='.repeat((4 - (base64.length % 4)) % 4)
-  const base64Safe = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/')
-  const raw = atob(base64Safe)
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0))).buffer as ArrayBuffer
-}
+import { ensureSubscribedAndSynced, pushSupported } from '@/lib/push-client'
 
 type Status = 'unsupported' | 'default' | 'denied' | 'subscribing' | 'subscribed' | 'error'
+type TestResult = { devices: number; sent: number; failed: number; errors: { status: number | null; body: string }[] }
 
 export default function NotificationSettings() {
   const [status, setStatus] = useState<Status>('default')
 
   useEffect(() => {
     async function check() {
-      if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (!pushSupported()) {
         setStatus('unsupported')
         return
       }
@@ -26,9 +19,19 @@ export default function NotificationSettings() {
         setStatus('denied')
         return
       }
-      const reg = await navigator.serviceWorker.ready
-      const existing = await reg.pushManager.getSubscription()
-      setStatus(existing ? 'subscribed' : 'default')
+      // Tillstånd redan givet men prenumerationen försvunnit (iOS gör så) →
+      // skapa om den tyst och synka med servern i stället för att visa "av".
+      if (Notification.permission === 'granted') {
+        try {
+          const r = await ensureSubscribedAndSynced()
+          setStatus(r.ok ? 'subscribed' : 'error')
+          return
+        } catch {
+          setStatus('error')
+          return
+        }
+      }
+      setStatus('default')
     }
     check()
   }, [])
@@ -36,29 +39,36 @@ export default function NotificationSettings() {
   async function enable() {
     setStatus('subscribing')
     try {
-      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-      if (!publicKey) throw new Error('missing key')
-
       const permission = await Notification.requestPermission()
       if (permission !== 'granted') {
         setStatus(permission === 'denied' ? 'denied' : 'default')
         return
       }
-
-      const reg = await navigator.serviceWorker.ready
-      const subscription = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey),
-      })
-
-      const res = await fetch('/api/push/subscribe', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription: subscription.toJSON() }),
-      })
-      setStatus(res.ok ? 'subscribed' : 'error')
+      const r = await ensureSubscribedAndSynced()
+      setStatus(r.ok ? 'subscribed' : 'error')
     } catch {
       setStatus('error')
+    }
+  }
+
+  const [test, setTest] = useState<{ state: 'idle' | 'sending' | 'done' | 'error'; result?: TestResult }>({ state: 'idle' })
+
+  async function sendTest() {
+    setTest({ state: 'sending' })
+    try {
+      let res = await fetch('/api/push/test', { method: 'POST' })
+      let data = await res.json() as TestResult
+      // Inga enheter hos servern men tillstånd finns → synka om och försök en gång till.
+      if (res.ok && data.devices === 0) {
+        const r = await ensureSubscribedAndSynced()
+        if (r.ok) {
+          res = await fetch('/api/push/test', { method: 'POST' })
+          data = await res.json() as TestResult
+        }
+      }
+      setTest(res.ok ? { state: 'done', result: data } : { state: 'error' })
+    } catch {
+      setTest({ state: 'error' })
     }
   }
 
@@ -76,7 +86,26 @@ export default function NotificationSettings() {
         <p className="text-muted text-xs">Notiser är blockerade för DL Trainer i din webbläsare — ändra det i webbläsarens inställningar för att slå på.</p>
       )}
       {status === 'subscribed' && (
-        <div className="text-accent text-sm">✓ Notiser aktiverade på den här enheten</div>
+        <div className="flex flex-col gap-2">
+          <div className="text-accent text-sm">✓ Notiser aktiverade på den här enheten</div>
+          <button
+            onClick={sendTest}
+            disabled={test.state === 'sending'}
+            className="text-xs border border-edge rounded-xl px-3 py-2 text-fg hover:border-accent/40 transition-colors disabled:opacity-50 self-start"
+          >
+            {test.state === 'sending' ? 'Skickar…' : 'Skicka testnotis'}
+          </button>
+          <div role="status" className="text-xs text-muted">
+            {test.state === 'done' && test.result && (
+              test.result.devices === 0
+                ? 'Servern känner inte till någon enhet än — öppna sidan igen och försök på nytt.'
+                : test.result.sent > 0
+                  ? `Skickad till ${test.result.sent} av ${test.result.devices} enhet${test.result.devices > 1 ? 'er' : ''}. Kommer den inte fram inom en minut, kolla att notiser är tillåtna för DL Trainer i telefonens inställningar.`
+                  : `Push-tjänsten avvisade den (${test.result.errors.map(e => e.status ?? 'okänt fel').join(', ')}). Slå av och på notiser här och prova igen.`
+            )}
+            {test.state === 'error' && 'Kunde inte skicka testet. Försök igen.'}
+          </div>
+        </div>
       )}
       {(status === 'default' || status === 'subscribing' || status === 'error') && (
         <>
@@ -85,7 +114,7 @@ export default function NotificationSettings() {
             disabled={status === 'subscribing'}
             className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed hover:opacity-90 transition-opacity w-full"
           >
-            {status === 'subscribing' ? 'Aktiverar...' : 'Aktivera notiser'}
+            {status === 'subscribing' ? 'Aktiverar…' : 'Aktivera notiser'}
           </button>
           {status === 'error' && <p className="text-red-400 text-xs">Något gick fel — försök igen.</p>}
         </>

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseAdminClient } from '@/lib/supabase-admin'
-import { sendPushToUser } from '@/lib/push'
+import { sendPushToUser, summarizePush } from '@/lib/push'
 import { stockholmDateKey } from '@/lib/dates'
 import { KOST_MEALS, kostMealLabel, type KostMeal } from '@/lib/kost'
 
@@ -75,13 +75,15 @@ export async function GET(request: NextRequest) {
       url: '/dashboard/mat',
     }))
   )
-  const reminded = settled.filter(r => r.status === 'fulfilled').length
+  const push = summarizePush(settled)
 
   return NextResponse.json({
     ranAt: new Date().toISOString(),
     meal,
     candidates: userIds.length,
     alreadyLogged: alreadyLogged.size,
-    reminded,
+    reminded: push.delivered, // faktiskt levererat, inte bara försökt
+    pushFailedUsers: push.failedUsers,
+    pushErrors: push.errorStatuses,
   })
 }
