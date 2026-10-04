@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createSupabaseClient } from '@/lib/supabase'
+import Modal from '@/components/Modal'
 import { ChipPicker, COMMON_EQUIPMENT, COMMON_SPORTS } from '@/components/ChipPicker'
 
 type Step = 'intro' | 'goals' | 'context' | 'equipment'
@@ -132,22 +133,20 @@ export default function OnboardingWizard({
   }
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4">
-      <div className="bg-card border border-edge rounded-t-3xl sm:rounded-2xl w-full sm:max-w-md max-h-[90vh] overflow-y-auto p-5">
+    <Modal label="Snabbstart" z={100} panelClassName="sm:max-w-md! max-h-[90vh] overflow-y-auto p-5!" onClose={closeWizard}>
         {step === 'intro' && (
           <div className="flex flex-col gap-3">
-            <div className="text-lg font-semibold">Hjälp coachen hjälpa dig</div>
+            <div className="text-lg font-semibold">Få råd som passar just dig</div>
             <p className="text-muted text-sm leading-relaxed">
-              Det har gått en månad utan att mål, bakgrund eller utrustning är ifyllt. Utan det gissar coach-teamet
-              — en användare fick nyligen ett träningstips baserat på utrustning hen inte hade hemma. Tre snabba
-              steg (under en minut) gör att råden faktiskt passar din situation.
+              Coachen kan inte se vad du vill uppnå, hur din vardag ser ut eller vilken utrustning du har hemma
+              förrän du berättar. Tre korta steg tar under en minut, och du kan hoppa över varje steg.
             </p>
             <button
               type="button"
               onClick={() => setStep('goals')}
               className="bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity"
             >
-              Kör igång
+              Börja
             </button>
             <button type="button" onClick={closeWizard} className="text-muted text-xs hover:text-fg transition-colors self-center">
               Inte nu
@@ -168,14 +167,16 @@ export default function OnboardingWizard({
               <div className="flex flex-col gap-3">
                 <div className="text-sm font-medium">Vad är ditt mål?</div>
                 <textarea
+                  aria-label="Vad är ditt mål?"
                   value={overview}
                   onChange={e => setOverview(e.target.value)}
-                  placeholder="T.ex. hållbar träning, undvika skador, ett specifikt resultat..."
+                  placeholder="T.ex. hållbar träning, undvika skador, ett specifikt resultat…"
                   rows={3}
                   className="w-full bg-bg border border-edge rounded-xl px-3 py-2.5 text-sm text-fg placeholder-muted focus:outline-none focus:border-accent resize-none"
                 />
                 <div className="text-xs text-muted">Vill du sätta ett konkret mål också? (valfritt)</div>
                 <input
+                  aria-label="Konkret mål (valfritt)"
                   value={goalTitle}
                   onChange={e => setGoalTitle(e.target.value)}
                   placeholder="T.ex. 5000m under 22 min"
@@ -184,6 +185,7 @@ export default function OnboardingWizard({
                 {goalTitle.trim() && (
                   <div className="grid grid-cols-2 gap-2">
                     <select
+                      aria-label="Typ av mål"
                       value={goalType}
                       onChange={e => setGoalType(e.target.value as typeof goalType)}
                       className="w-full bg-bg border border-edge rounded-xl px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent"
@@ -194,6 +196,7 @@ export default function OnboardingWizard({
                     </select>
                     <input
                       type="date"
+                      aria-label="Datum för målet"
                       value={goalDate}
                       onChange={e => setGoalDate(e.target.value)}
                       className="w-full bg-bg border border-edge rounded-xl px-3 py-2 text-sm text-fg focus:outline-none focus:border-accent"
@@ -206,8 +209,9 @@ export default function OnboardingWizard({
             {step === 'context' && (
               <div className="flex flex-col gap-3">
                 <div className="text-sm font-medium">Berätta lite om dig</div>
-                <p className="text-muted text-xs">Jobb, livssituation, personlighet, skador — allt som hjälper AI:n förstå helheten.</p>
+                <p className="text-muted text-xs">Jobb, livssituation, skador: allt som hjälper coachen ge råd som passar dig.</p>
                 <textarea
+                  aria-label="Berätta lite om dig"
                   value={context}
                   onChange={e => setContext(e.target.value)}
                   placeholder={CONTEXT_PLACEHOLDER}
@@ -252,12 +256,11 @@ export default function OnboardingWizard({
                 disabled={saving}
                 className="flex-1 bg-accent text-bg text-sm font-semibold px-4 py-2.5 rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:bg-edge disabled:text-muted disabled:cursor-not-allowed"
               >
-                {saving ? 'Sparar...' : (step === 'equipment' ? 'Klar' : 'Nästa')}
+                {saving ? 'Sparar…' : (step === 'equipment' ? 'Klar' : 'Nästa')}
               </button>
             </div>
           </div>
         )}
-      </div>
-    </div>
+    </Modal>
   )
 }

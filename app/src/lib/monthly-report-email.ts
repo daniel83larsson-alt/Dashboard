@@ -5,6 +5,21 @@
 import type { MonthlyReportRecord } from './monthly-report-generate'
 import { effortEmailHtml } from './effort-email'
 
+// Ämnesrad med månadens faktiska siffror; månader utan pass behåller bara månaden.
+export function monthlyReportSubject(record: MonthlyReportRecord, prefix = ''): string {
+  const { count, totalKm } = record.data.thisMonth.sessions
+  const month = record.data.monthLabel
+  if (count > 0) {
+    const km = totalKm > 0 ? `, ${totalKm} km` : ''
+    return `${prefix}Din månad (${month}): ${count} pass${km}`
+  }
+  return `${prefix}Din månad: ${month}`
+}
+
+function escapeHtml(t: string) {
+  return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function statBox(value: string, label: string, width = '33%') {
   return `<td style="padding:12px;background:#f4f4f2;border-radius:12px;text-align:center;" width="${width}">
     <div style="color:#0e1113;font-size:18px;font-weight:700;font-family:monospace;">${value}</div>
@@ -80,7 +95,7 @@ export function renderMonthlyReportHtml({
 
   const insightsHtml = insights
     ? insightBlock('Träningsmånaden', insights.training) + insightBlock('Sömn & steg', insights.wellnessAndSleep)
-    : `<p style="margin:0 0 16px;color:#999;font-size:13px;font-style:italic;">Kunde inte skriva insikter just nu — siffrorna nedan stämmer ändå.</p>`
+    : `<p style="margin:0 0 16px;color:#999;font-size:13px;font-style:italic;">Insikterna kunde inte skrivas just nu. Siffrorna stämmer ändå.</p>`
 
   const funFactHtml = insights
     ? `<div style="margin:0 0 16px;padding:14px 16px;background:#0e1113;border-radius:12px;">
@@ -97,6 +112,7 @@ export function renderMonthlyReportHtml({
 <meta name="supported-color-schemes" content="light">
 </head>
 <body style="margin:0;padding:0;background:#f4f4f2;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${escapeHtml(insights?.headline ?? `${data.thisMonth.sessions.count} pass i ${data.monthLabel}. Så gick månaden.`)}</div>
   <table width="100%" cellpadding="0" cellspacing="0" style="padding:24px 0;">
     <tr><td align="center">
       <table width="480" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:16px;overflow:hidden;">
@@ -173,7 +189,7 @@ export async function sendMonthlyReportEmail({
     body: JSON.stringify({
       from: process.env.NEWSLETTER_FROM_EMAIL ?? 'DL Trainer <onboarding@resend.dev>',
       to: toEmail,
-      subject: `${subjectPrefix}Din månad: ${record.data.monthLabel}`,
+      subject: monthlyReportSubject(record, subjectPrefix),
       html,
     }),
   })
