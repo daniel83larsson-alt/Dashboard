@@ -1792,3 +1792,10 @@ alter table public.push_subscriptions
   add column if not exists last_error_status integer,
   add column if not exists last_error_body text,
   add column if not exists last_seen_at timestamptz;
+
+-- ── Schemaläggning flyttad från GitHub Actions till pg_cron 2026-10-04 ──
+-- (migrations cron_long_route_and_health_snapshot + pg_cron_digest_monthly_syncall_health)
+-- call_scheduled_cron_route_long: som call_scheduled_cron_route men väntar upp till 65 s på svaret.
+-- cron_health_snapshot(): misslyckade pg_cron-körningar/avstängda jobb till /api/cron/cron-health.
+-- Jobb: cron-weekly-digest (sön 16:00 UTC, var 3:e min x8), cron-monthly-report (1:a 06:00 UTC, x8),
+-- cron-sync-all-1..6 (05:00–05:05 UTC, Garmin i grupper om 2), cron-health (07:30 UTC dagligen).
