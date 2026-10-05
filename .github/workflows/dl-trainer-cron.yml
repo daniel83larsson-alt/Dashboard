@@ -1,35 +1,20 @@
 name: DL Trainer scheduled sync
 
-# Vercel Cron only registers jobs from Production-target deployments, and
-# this project's Git connection ("sourceless" link, set up outside the
-# normal GitHub App flow) doesn't expose a way to make our actual deploy
-# branch count as Production — confirmed both via the Vercel API (every
-# attempt to change link.productionBranch is rejected) and the dashboard UI
-# (the Production Branch setting isn't present). vercel.json's three cron
-# definitions have therefore likely never fired automatically since they
-# were written. GitHub Actions' own scheduler was set up as a substitute —
-# but it turned out to have NO timing guarantee either: confirmed live
-# running 3-6 hours late throughout a single day (see STATUS.md), which is
-# actively harmful for things like a "breakfast" reminder arriving at
-# lunchtime. The 9 single-call, non-batched routes below (no deliberate
-# pacing between requests) have therefore moved to Supabase pg_cron+pg_net
-# instead (runs inside Postgres's own scheduler, not a shared external
-# queue — see the `add_pg_cron_scheduler_for_low_risk_crons` migration).
-# Only the 3 routes that need several sequential, DELIBERATELY-PACED calls
-# stay here: sync-all's 25s gaps between Garmin login batches exist
-# specifically to avoid re-tripping a real Cloudflare rate-limit incident,
-# and weekly-digest/monthly-report's batching exists for Vercel's 60s cap —
-# reproducing that pacing safely in pg_cron is a separate, more careful
-# follow-up, not done in the same sitting as the 9 simple ones.
-# workflow_dispatch below still lists all 12 routes (including the 9 that
-# moved) as a manual-testing/backup path — the routes accept either
-# CRON_SECRET (this workflow) or SCHEDULER_SECRET (Supabase), so both keep
-# working side by side.
+# MANUELL reserv — inga schemalagda körningar här längre (2026-10-05).
+#
+# Alla schemalagda jobb körs i Supabase pg_cron + pg_net (se app/supabase/schema.sql och
+# STATUS.md): nio enkla rutter sedan tidigare, och sedan 2026-10-04 även veckorecap
+# (cron-weekly-digest), månadsrapport (cron-monthly-report) och den dagliga synken
+# (cron-sync-all-1..6, Garmin i grupper om två med en minut emellan) samt den dagliga
+# kontrollen /api/cron/cron-health. Anledningen: GitHub Actions schema har ingen
+# tidsgaranti (körde 3–6 timmar sent; veckorecap kom 16:26–19:41 i stället för 16:00)
+# och Vercel Cron registreras inte för vår deploygren. Verifierat live: recap klar 16:03,
+# synk 05:00–05:05 utan timeout eller 429.
+#
+# Filen finns kvar för manuell körning (workflow_dispatch nedan) av vilken rutt som helst,
+# t.ex. för att provköra eller köra om ett jobb. Rutterna godtar CRON_SECRET (den här
+# workflowen) eller SCHEDULER_SECRET (pg_cron).
 on:
-  schedule:
-    - cron: '0 5 * * *'    # sync-all — matches vercel.json
-    - cron: '0 16 * * 0'   # weekly-digest, Sunday only — matches vercel.json (18:00 svensk sommartid)
-    - cron: '0 6 1 * *'    # monthly-report, den 1:a varje månad (08:00 svensk sommartid) — matches vercel.json
   workflow_dispatch:
     inputs:
       route:
