@@ -27,6 +27,8 @@ import { friendRecordBadges } from '@/lib/friend-records'
 import { fetchFriendHistory } from '@/lib/friend-history'
 import { weeklyLoad, rollingBaselineLoad, weeklyMinutes, rollingBaselineMinutes } from '@/lib/load'
 import FriendFeed from '@/components/FriendFeed'
+import FriendPeriodCard from '@/components/FriendPeriodCard'
+import { buildPersonPeriods } from '@/lib/friend-period'
 import { summarizeFriendWeek } from '@/lib/friend-week'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
@@ -274,6 +276,19 @@ export default async function DashboardPage() {
     { ownerId: user.id, ownerName: 'Du', totalMovingTimeSec: wk.time, totalDistanceM: wk.dist, activityCount: wk.count, isSelf: true },
     ...friendWeekSummary.map(f => ({ ...f, isSelf: false })),
   ].sort((a, b) => b.totalMovingTimeSec - a.totalMovingTimeSec)
+
+  // Månads-/årssummering för vänkortet (Daniel: "vecka, månad, år"). Allt underlag finns redan
+  // på sidan: egna pass (activities) och vännernas hela historik (friendHistory). Skickas som små
+  // summor per person och månad. Vid ofullständig vänhistorik visas bara veckan, aldrig för låga siffror.
+  const friendPeople = [
+    { ownerId: user.id, ownerName: 'Du', isSelf: true },
+    ...((friendRoster ?? []) as { owner_id: string; owner_name: string }[]).map(r => ({ ownerId: r.owner_id, ownerName: r.owner_name, isSelf: false })),
+  ]
+  const periodRows = [
+    ...activities.map(a => ({ id: a.id, strava_id: a.strava_id, start_date: a.start_date, distance: a.distance, moving_time: a.moving_time, sport_type: a.sport_type, source: a.source ?? undefined, owner_id: user.id })),
+    ...(friendHistoryComplete ? (friendHistory ?? []).map(h => ({ id: h.activity_id, strava_id: h.strava_id ?? 0, start_date: h.start_date, distance: h.distance, moving_time: h.moving_time, sport_type: h.sport_type, source: h.source ?? undefined, owner_id: h.owner_id })) : []),
+  ]
+  const friendPeriods = friendHistoryComplete ? buildPersonPeriods(periodRows, friendPeople) : null
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -952,19 +967,11 @@ export default async function DashboardPage() {
           lite om hur aktiva de är") — activityCount fanns redan uträknad
           i summarizeFriendWeek, bara inte visad. */}
       {friendWeekSummary.length > 0 && (
-        <div className="bg-card border border-edge rounded-2xl p-4">
-          <div className="text-xs text-muted uppercase tracking-wider mb-3">Vänner denna vecka</div>
-          <div className="flex flex-col gap-2">
-            {friendWeekSummaryWithSelf.map(f => (
-              <div key={f.ownerId} className="flex items-center justify-between text-sm">
-                <span className={f.isSelf ? 'text-accent font-semibold' : 'text-fg'}>{f.ownerName}</span>
-                <span className={`font-mono text-xs ${f.isSelf ? 'text-accent' : 'text-muted'}`}>
-                  {f.activityCount} pass · {fmtDur(f.totalMovingTimeSec)}{f.totalDistanceM > 0 ? ` · ${fmtKm(f.totalDistanceM)}` : ''}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
+        <FriendPeriodCard
+          weekRows={friendWeekSummaryWithSelf.map(f => ({ ownerId: f.ownerId, ownerName: f.ownerName, isSelf: f.isSelf, activityCount: f.activityCount, totalMovingTimeSec: f.totalMovingTimeSec, totalDistanceM: f.totalDistanceM }))}
+          people={friendPeriods}
+          todayKey={stockholmDateKey()}
+        />
       )}
     </div>
   )
