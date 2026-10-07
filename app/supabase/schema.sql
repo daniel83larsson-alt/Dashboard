@@ -1838,3 +1838,10 @@ using ((select auth.uid()) = user_id or exists (select 1 from public.follows f w
     or (f.followee_id = (select auth.uid()) and f.follower_id = activity_monthly.user_id))));
 create index if not exists follows_followee_status_idx on public.follows (followee_id, status);
 -- mark_records_dirty() + triggers activities_mark_dirty_ins/_del/_upd: se migrationen (SECURITY DEFINER, ingen exekvering för anon/authenticated).
+
+-- 2026-10-07 advisor_fixes_initplan_and_fk_indexes + profiles_update_policy_initplan_jwt (applied in prod via migrations):
+--   RLS-regler på profiles/food_quick_pick_overrides använder (select auth.uid()) / (select auth.jwt()) så de
+--   inte räknas om per rad; index på främmande nycklar: activity_kudos(giver_id), connected_accounts(user_id),
+--   deficit_budget_events(milestone_id), goals(user_id), plan_sessions(matched_activity_id), training_plans(goal_id).
+-- 2026-10-07 schedule_records_refresh_jobs (applied in prod): pg_cron cron-records-dirty (*/15) och
+--   cron-records-reconcile (05:20 UTC) → /api/cron/records-refresh.

@@ -1,5 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { findDuplicateGroups, suggestKeepId, isCleanCrossSourceGroup } from '@/lib/duplicates'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 
@@ -23,12 +24,14 @@ type RawData = { hrZones?: unknown; split?: unknown; [key: string]: unknown }
 // match, which the display merge doesn't handle and which really are just
 // redundant rows.
 export async function autoCleanupDuplicates(supabase: SupabaseClient, userId: string): Promise<number> {
-  const { data: activities } = await supabase
+  const { data: activities } = await fetchAllPages(async (from, to) => await supabase
     .from('activities')
     .select('id, strava_id, source, start_date, distance, moving_time, sport_type, name, average_heartrate, description, created_at')
     .eq('user_id', userId)
+    .order('start_date').order('id')
+    .range(from, to))
 
-  if (!activities?.length) return 0
+  if (!activities.length) return 0
 
   const groups = findDuplicateGroups(activities).filter(group => !isCleanCrossSourceGroup(group))
   if (!groups.length) return 0

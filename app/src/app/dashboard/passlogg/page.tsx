@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { sportIcon, sportLabel, fmtSpeedOrPace, usesDistance } from '@/lib/sport'
 import { splitMergedPairs, dedupeForStats, preferredHr, rowSource, type KnownSource, type ActivityRow } from '@/lib/duplicates'
 import { relativeDateLabel } from '@/lib/dates'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 const PAGE_SIZE = 20
 
@@ -36,7 +37,7 @@ export default async function PassloggPage({
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  const [{ data: activities, count: totalRows }, { data: allForTotals }] = await Promise.all([
+  const [{ data: activities, count: totalRows }, allForTotalsResult] = await Promise.all([
     // Den faktiska sidan att visa — narrowed men behåller hr_zones/strava_id/
     // source som dedupeForStats()/splitMergedPairs() behöver för att slå
     // ihop en grupp av samma pass från flera källor korrekt (Garmin, Concept2,
@@ -56,14 +57,16 @@ export default async function PassloggPage({
     // raw_data (bara vilka rader hör ihop, inte deras pulszondata), så det
     // är en mycket lättare fråga än man kan tro trots att den täcker allt.
     // `source` behövs av samma anledning som ovan.
-    supabase
+    fetchAllPages(async (from, to) => await supabase
       .from('activities')
       .select('id, strava_id, source, sport_type, distance, moving_time, start_date, calories')
-      .eq('user_id', user.id),
+      .eq('user_id', user.id)
+      .order('start_date', { ascending: false }).order('id')
+      .range(from, to)),
   ])
 
   const rows = activities ?? []
-  const statRows = dedupeForStats(allForTotals ?? [])
+  const statRows = dedupeForStats(allForTotalsResult.data)
   const totalDist = statRows.reduce((s, a) => s + (a.distance ?? 0), 0)
   const totalSessions = statRows.length
   const totalPages = Math.max(1, Math.ceil((totalRows ?? 0) / PAGE_SIZE))

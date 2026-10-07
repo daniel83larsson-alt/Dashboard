@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { buildTrainingLogText } from '@/lib/training-log-text'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 // A generous ceiling, not a real limit — just guards against a garbage
 // query param. Real activity history can run back several years (accounts
@@ -19,14 +20,15 @@ export async function GET(request: NextRequest) {
   const weeksParam = parseInt(request.nextUrl.searchParams.get('weeks') ?? '', 10)
   const weeks = Math.min(MAX_WEEKS, Math.max(1, Number.isFinite(weeksParam) ? weeksParam : 12))
 
-  const { data: activities, error } = await supabase
+  const { data: activities, complete } = await fetchAllPages(async (from, to) => await supabase
     .from('activities')
     .select('id, strava_id, sport_type, name, distance, moving_time, start_date')
     .eq('user_id', user.id)
-    .order('start_date', { ascending: true })
+    .order('start_date', { ascending: true }).order('id')
+    .range(from, to))
 
-  if (error) return NextResponse.json({ error: 'Kunde inte hämta aktiviteter' }, { status: 500 })
+  if (!complete) return NextResponse.json({ error: 'Kunde inte hämta aktiviteter' }, { status: 500 })
 
-  const text = buildTrainingLogText(activities ?? [], weeks)
+  const text = buildTrainingLogText(activities, weeks)
   return NextResponse.json({ text })
 }

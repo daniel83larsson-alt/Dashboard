@@ -1,6 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { currentDailyStreak, currentWeeklyStreak } from './streaks'
 import { sendPushToUser } from './push'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 // Rundade OCH kalendermässigt meningsfulla tal — Daniel nämnde uttryckligen
 // "5 veckor" och "52 veckor, 1 år!!!" som exempel, så listan är kurerad för
@@ -70,11 +71,13 @@ export async function recordNewMilestones(
 // that user's own activities and pushes immediately if a new milestone was
 // just crossed, instead of waiting for the evening streak-reminder cron.
 export async function checkAndPushMilestones(supabase: SupabaseClient, userId: string): Promise<void> {
-  const { data: activities } = await supabase
+  const { data: activities } = await fetchAllPages(async (from, to) => await supabase
     .from('activities')
     .select('start_date')
     .eq('user_id', userId)
-  if (!activities?.length) return
+    .order('start_date').order('id')
+    .range(from, to))
+  if (!activities.length) return
 
   const candidates: StreakCandidate[] = [
     { kind: 'daily_streak', streakKey: 'daily', value: currentDailyStreak(activities), label: 'Träningsstreak' },

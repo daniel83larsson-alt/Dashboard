@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase-server'
 import { findDuplicateGroups, suggestKeepId, isCleanCrossSourceGroup } from '@/lib/duplicates'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 export async function GET() {
   try {
@@ -8,11 +9,12 @@ export async function GET() {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-    const { data: activities } = await supabase
+    const { data: activities } = await fetchAllPages(async (from, to) => await supabase
       .from('activities')
       .select('id, strava_id, source, start_date, distance, moving_time, sport_type, name, average_heartrate, description, created_at')
       .eq('user_id', user.id)
-      .order('start_date', { ascending: false })
+      .order('start_date', { ascending: false }).order('id')
+      .range(from, to))
 
     // A clean cross-source group (one row per distinct sync source — Garmin,
     // Concept2, Strava, Polar — all pairwise a valid merge match) is now
@@ -20,7 +22,7 @@ export async function GET() {
     // being a delete-one choice — only flag groups that AREN'T that
     // (same-source double-syncs, ties where only some pairs match), where
     // deletion is still the right call.
-    const groups = findDuplicateGroups(activities ?? []).filter(group => !isCleanCrossSourceGroup(group))
+    const groups = findDuplicateGroups(activities).filter(group => !isCleanCrossSourceGroup(group))
     const result = groups.map(group => ({ activities: group, suggestedKeepId: suggestKeepId(group) }))
 
     return NextResponse.json({ groups: result })

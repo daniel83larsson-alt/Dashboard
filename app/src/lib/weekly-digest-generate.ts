@@ -26,6 +26,7 @@ import { coachToneInstruction } from './coach-tone'
 import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 import { resolveEffectiveCalorieGoal } from './calorie-goal'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 const GEMINI_URL = geminiUrl()
 
@@ -254,13 +255,13 @@ export async function generateWeeklyDigestForUser(
   // counts as a "best" load or a broken personal record, same as the
   // Översikt/Rekord pages already fetch full history for the same reason.
   const [
-    { data: profile }, { data: goals }, { data: acts }, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan },
+    { data: profile }, { data: goals }, actsResult, { data: wellnessRow }, { data: thisPlan }, { data: nextPlan },
     { data: yazioHistoryRow }, { data: manualFoodLog }, { data: dayStatusRows },
   ] = await Promise.all([
     supabase.from('profiles').select('llm_api_key_encrypted, coach_tone, kost_tracked_meals, daily_calorie_goal, protein_goal_g, carb_goal_g, fat_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
-    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate, calories')
-      .eq('user_id', userId).lt('start_date', nextWeekStart.toISOString()),
+    fetchAllPages(async (from, to) => await supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate, calories')
+      .eq('user_id', userId).lt('start_date', nextWeekStart.toISOString()).order('start_date').order('id').range(from, to)),
     supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('training_plans').select('id, plan_sessions(planned_date, is_rest, sport_type, title)')
       .eq('user_id', userId).eq('week_start', weekStart.toISOString().slice(0, 10)).maybeSingle(),
@@ -278,7 +279,7 @@ export async function generateWeeklyDigestForUser(
   const wellnessHistory: DayWellness[] = wellnessStore?.history ?? []
 
   const planSessionsThisWeek = (thisPlan?.plan_sessions ?? []) as PlanSessionRow[]
-  const activities = (acts ?? []) as ActivityRow[]
+  const activities = actsResult.data as ActivityRow[]
   // Same source as the front page's own weekly load card (dashboard/page.tsx):
   // most recent known resting HR from wellness, personal max HR derived from
   // the user's own logged activities rather than a guessed constant.
@@ -297,7 +298,7 @@ export async function generateWeeklyDigestForUser(
 
   const apiKey = profile?.llm_api_key_encrypted ? decryptMaybeLegacy(profile.llm_api_key_encrypted) : process.env.GEMINI_API_KEY!
   const goalTitle = (goals?.[0]?.title as string | undefined) ?? null
-  const thisWeekActivities = activitiesInWeek((acts ?? []) as ActivityRow[], weekStart)
+  const thisWeekActivities = activitiesInWeek(actsResult.data as ActivityRow[], weekStart)
 
   // normalizeYazioDay backfills fields an older stored row might not have —
   // same defensive parse as the Kost page's own read of this row (see

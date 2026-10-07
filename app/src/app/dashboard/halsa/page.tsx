@@ -1,3 +1,4 @@
+import { fetchAllPages } from '@/lib/fetch-all'
 import { getServerSession } from '@/lib/supabase-server'
 import WellnessCharts from '@/components/WellnessChartsLoader'
 import HealthInsightCard from '@/components/HealthInsightCard'
@@ -103,7 +104,7 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     { count: activityCount },
     { data: zoneRangeActivities },
     { data: chartActivities },
-    { data: recordActivities },
+    recordActivitiesResult,
     { data: habits },
     { data: habitLogs },
     { data: trainingTrendActivities },
@@ -122,8 +123,8 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     // Rekord-fliken behöver HELA historiken (all-time PR/streak/största
     // veckan), till skillnad från Grafer-fliken ovan som medvetet begränsar
     // sig till 200 senaste för trendkurvorna — därför en egen, smalare fråga.
-    supabase.from('activities').select('id, strava_id, sport_type, distance, moving_time, start_date, calories')
-      .eq('user_id', user.id).order('start_date', { ascending: false }),
+    fetchAllPages(async (from, to) => await supabase.from('activities').select('id, strava_id, sport_type, distance, moving_time, start_date, calories')
+      .eq('user_id', user.id).order('start_date', { ascending: false }).order('id').range(from, to)),
     supabase.from('habits').select('id, title, interval_days, created_at, active').eq('user_id', user.id).eq('active', true).order('created_at', { ascending: true }),
     supabase.from('habit_logs').select('habit_id, done_date').eq('user_id', user.id),
     // Fetched unconditionally (profile isn't loaded yet to gate on it here,
@@ -418,7 +419,7 @@ export default async function HalsaPage({ searchParams }: { searchParams: Promis
     </div>
   )
 
-  const rekordActs: RecordActivity[] = dedupeForStats(recordActivities ?? []) as RecordActivity[]
+  const rekordActs: RecordActivity[] = dedupeForStats(recordActivitiesResult.data) as RecordActivity[]
   const sportPRs = computeAllSportPRs(rekordActs)
   const biggestWeekRecord = biggestWeek(rekordActs)
   const longestSessionRecord = longestSession(rekordActs)

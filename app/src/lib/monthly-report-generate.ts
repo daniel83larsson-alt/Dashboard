@@ -23,6 +23,7 @@ import type { ActivityRow } from './duplicates'
 import type { DayWellness } from './garmin-sync'
 import type { KostFoodEntry, KostMeal } from './kost'
 import { resolveEffectiveCalorieGoal } from './calorie-goal'
+import { fetchAllPages } from '@/lib/fetch-all'
 
 const GEMINI_URL = geminiUrl()
 
@@ -154,14 +155,14 @@ export async function generateMonthlyReportForUser(
   // everything before this month to know what counts as a "best" or a
   // broken record, same reasoning as weekly-digest-generate.ts.
   const [
-    { data: profile }, { data: goals }, { data: acts }, { data: wellnessRow },
+    { data: profile }, { data: goals }, actsResult, { data: wellnessRow },
     { data: yazioHistoryRow }, { data: manualFoodLog }, { data: dayStatusRows },
     { data: weightRows }, { data: habitsRows }, { data: habitLogRows },
   ] = await Promise.all([
     supabase.from('profiles').select('name, llm_api_key_encrypted, coach_tone, kost_tracked_meals, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', userId).single(),
     supabase.from('goals').select('title').eq('user_id', userId).eq('status', 'active').limit(1),
-    supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate, calories')
-      .eq('user_id', userId).lt('start_date', monthEndExclusive.toISOString()),
+    fetchAllPages(async (from, to) => await supabase.from('activities').select('id, strava_id, source, start_date, distance, moving_time, sport_type, average_heartrate, max_heartrate, calories')
+      .eq('user_id', userId).lt('start_date', monthEndExclusive.toISOString()).order('start_date').order('id').range(from, to)),
     supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', userId).eq('coach_id', 'yazio_history').single(),
     supabase.from('food_log').select('id, name, calories, protein_g, carb_g, fat_g, meal, source, logged_at')
@@ -179,7 +180,7 @@ export async function generateMonthlyReportForUser(
   const wellnessStore = wellnessRaw ? (() => { try { return JSON.parse(wellnessRaw) } catch { return null } })() : null
   const wellnessHistory: DayWellness[] = wellnessStore?.history ?? []
 
-  const activities = (acts ?? []) as ActivityRow[]
+  const activities = actsResult.data as ActivityRow[]
   const restingHR = wellnessHistory[0]?.restingHR ?? null
   const maxHR = activities.reduce((m, a) => (a.max_heartrate && a.max_heartrate > m ? a.max_heartrate : m), 0) || null
 

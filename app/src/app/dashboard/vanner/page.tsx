@@ -25,8 +25,8 @@ export default async function VannerPage() {
     supabase.rpc('friend_weekly_activities', { week_start: weekStart.toISOString(), week_end: nextWeekStart.toISOString() }),
     // Förberäknade månadssummor (egna + vänners via RLS) — inte hela historiken. Se lib/records-store.ts.
     supabase.from('activity_monthly').select('user_id, month, moving_time_sec, distance_m, sessions'),
-    // Egna pass, bara de kolumner som veckosummeringen behöver (inte hela raden).
-    supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, sport_type, source').eq('user_id', user.id),
+    // Egna pass, bara veckans (med ett dygns marginal för klocktid-som-UTC) och bara de kolumner som veckosummeringen behöver.
+    supabase.from('activities').select('id, strava_id, start_date, distance, moving_time, sport_type, source, calories').eq('user_id', user.id).gte('start_date', new Date(weekStart.getTime() - 24 * 3600 * 1000).toISOString()),
   ])
 
   const roster = (friendRoster ?? []) as { owner_id: string; owner_name: string }[]

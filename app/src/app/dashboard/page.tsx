@@ -16,6 +16,8 @@ import { sportLabel, sportIcon, fmtSpeedOrPace } from '@/lib/sport'
 import { aggregateZones, zoneCoverageCount } from '@/lib/zones'
 import ZoneBar from '@/components/ZoneBar'
 import { dedupeForStats } from '@/lib/duplicates'
+import { fetchAllPages } from '@/lib/fetch-all'
+import { OVERVIEW_LIGHT_COLUMNS, OVERVIEW_DETAIL_COLUMNS, DETAIL_WINDOW_MARGIN_MS, mergeActivityDetails } from '@/lib/overview-activities'
 import { resolveEffectiveCalorieGoal } from '@/lib/calorie-goal'
 import { currentDailyStreak, currentWeeklyStreak, averageSessionsPerWeek } from '@/lib/streaks'
 import HabitsCard from '@/components/HabitsCard'
@@ -87,20 +89,15 @@ export default async function DashboardPage() {
   const nextWeekStartDate = new Date(weekStartDate)
   nextWeekStartDate.setDate(nextWeekStartDate.getDate() + 7)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }] = await Promise.all([
+  const [{ data: profile }, lightActivitiesResult, { data: recentDetails }, { data: latestDetails }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
-    // Narrowed from select('*') — this fetches every activity ever logged
-    // (grows without bound) so dropping unused columns matters. strava_id
-    // stays: dedupeForStats() needs it for Concept2/Garmin pair matching.
-    // hr_zones is selected as a JSON-path projection (`hr_zones:raw_data->
-    // hrZones`) rather than the full raw_data column — dedupeForStats/
-    // aggregateZones only ever read that one field, and raw_data (the whole
-    // cached Garmin/Concept2 API response per pass) made this query several
-    // MB for an account with 800+ activities, which was the dominant cost
-    // in the reported cold-start delay (measured: ~3MB → ~290KB for this
-    // query alone after narrowing). PR/streak detection genuinely needs the
-    // full history, not just a recent slice, so no date/row limit here.
-    supabase.from('activities').select('id, strava_id, source, sport_type, name, distance, moving_time, average_heartrate, max_heartrate, average_watts, start_date, hr_zones:raw_data->hrZones, calories, description').eq('user_id', user.id).order('start_date', { ascending: false }),
+    // Hela historiken i LÄTT form (streaks, belastning, kalender, rekord behöver den) — utan de
+    // tunga kolumnerna. Pulszoner (raw_data), namn, beskrivning och watt hämtas bara för veckans
+    // pass och det senaste passet i de två frågorna nedanför och läggs på med
+    // mergeActivityDetails. strava_id behövs för dubblettmatchning (Concept2/Garmin).
+    fetchAllPages(async (from, to) => await supabase.from('activities').select(OVERVIEW_LIGHT_COLUMNS).eq('user_id', user.id).order('start_date', { ascending: false }).order('id').range(from, to)),
+    supabase.from('activities').select(OVERVIEW_DETAIL_COLUMNS).eq('user_id', user.id).gte('start_date', new Date(weekStartDate.getTime() - DETAIL_WINDOW_MARGIN_MS).toISOString()),
+    supabase.from('activities').select(OVERVIEW_DETAIL_COLUMNS).eq('user_id', user.id).order('start_date', { ascending: false }).limit(1),
     // Only .length is read on this page now (the read-only goals list moved
     // to just linking to Profil, where GoalsCard already owns the full
     // set/edit/delete UI) — narrowed from select('*').
@@ -160,7 +157,8 @@ export default async function DashboardPage() {
   // Concept2 + Garmin can both sync the same real session — count it once
   // in every stat/PR below, not twice, using the more precise Concept2 row
   // when a pair is found.
-  const activities: Activity[] = dedupeForStats(allActivities ?? [])
+  const allActivities = mergeActivityDetails(lightActivitiesResult.data, recentDetails, latestDetails)
+  const activities = dedupeForStats(allActivities) as Activity[]
   const latest = activities[0] ?? null
   // Started now, awaited together with the milestone writes further down —
   // the two never depended on each other, so they share one round-trip.
