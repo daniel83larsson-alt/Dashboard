@@ -2,7 +2,7 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { SYNC_STORAGE_KEY, MIN_SYNC_INTERVAL_MS } from '@/lib/sync'
+import { SYNC_STORAGE_KEY, MIN_SYNC_INTERVAL_MS, syncChangedData } from '@/lib/sync'
 
 const CATCHUP_DELAY_MS = 3 * 60 * 1000 // 3 min between backfill rounds
 const CATCHUP_MAX_ROUNDS = 20 // 20 × 20 days ≈ covers a full year
@@ -32,7 +32,7 @@ export default function AutoSync() {
         try {
           const res = await fetch('/api/activities/sync-garmin', { method: 'POST' })
           const data = await res.json()
-          if (!cancelled) router.refresh()
+          if (!cancelled && syncChangedData(data)) router.refresh()
           if (!cancelled && needsMoreCatchup(data)) scheduleCatchup(round + 1)
         } catch {
           // Network hiccup — next normal sync (or next tab visit) will retry
@@ -45,12 +45,14 @@ export default function AutoSync() {
 
     localStorage.setItem(SYNC_STORAGE_KEY, String(Date.now()))
     Promise.allSettled([
-      fetch('/api/activities/sync', { method: 'POST' }),
+      fetch('/api/activities/sync', { method: 'POST' }).then(r => r.json()),
       fetch('/api/activities/sync-garmin', { method: 'POST' }).then(r => r.json()),
-    ]).then(([, garminResult]) => {
+    ]).then(([concept2Result, garminResult]) => {
       if (cancelled) return
-      router.refresh()
+      const concept2 = concept2Result.status === 'fulfilled' ? concept2Result.value : undefined
       const data = garminResult.status === 'fulfilled' ? garminResult.value : undefined
+      // Ladda bara om sidan om synken faktiskt gav något nytt — annars räknas hela Översikt om i onödan.
+      if (syncChangedData(concept2) || syncChangedData(data)) router.refresh()
       if (needsMoreCatchup(data)) scheduleCatchup(1)
     })
 

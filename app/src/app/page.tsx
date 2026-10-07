@@ -1,6 +1,4 @@
-import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
-import { createSupabaseServerClient } from '@/lib/supabase-server'
 import LandingPage, { FAQ } from '@/components/LandingPage'
 
 export const metadata: Metadata = {
@@ -44,15 +42,9 @@ const faqJsonLd = {
   mainEntity: FAQ.map(f => ({ '@type': 'Question', name: f.q, acceptedAnswer: { '@type': 'Answer', text: f.a } })),
 }
 
-export default async function Home() {
-  const supabase = await createSupabaseServerClient()
-  const { data: { user } } = await supabase.auth.getUser()
-
-  // Inloggade ska rakt in i appen som tidigare — bara utloggade besökare
-  // möts nu av reklamsidan istället för att kastas till inloggningsrutan
-  // direkt (Daniel: "bör vi ha en reklamsida... hade varit snyggt").
-  if (user) redirect('/dashboard')
-
+// Statisk sida (inga cookies/headers läses här): inloggade omdirigeras av proxy.ts innan sidan
+// serveras, så besökare och robotar får en cachad sida i stället för en ny server-rendering.
+export default function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />

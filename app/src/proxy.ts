@@ -42,6 +42,13 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL('/dashboard', request.url))
   }
 
+  // Startsidan (/) är en publik, statisk reklamsida — den får cachas av CDN:et och ska inte
+  // räknas fram per besökare (robotar och besökare kostade server-CPU varje gång förut).
+  // Inloggade skickas vidare hit i stället för inne i sidan.
+  if (request.nextUrl.pathname === '/') {
+    return session ? NextResponse.redirect(new URL('/dashboard', request.url)) : response
+  }
+
   // Every authenticated page carries another user's private data if it's
   // ever served to the wrong person — belt-and-braces on top of the
   // per-request Supabase queries: no browser, proxy, or CDN layer is
@@ -52,5 +59,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/login'],
+  matcher: ['/', '/dashboard/:path*', '/login'],
 }
