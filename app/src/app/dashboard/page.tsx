@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import Link from 'next/link'
 import { after } from 'next/server'
 import { getServerSession } from '@/lib/supabase-server'
 import FeedbackDrawer from '@/components/FeedbackDrawer'
@@ -23,12 +24,7 @@ import StreakBadge from '@/components/StreakBadge'
 import { currentHabitStreak } from '@/lib/habits'
 import { recordNewMilestones, type StreakCandidate } from '@/lib/milestones'
 import { newRecordsForLatest } from '@/lib/records'
-import { friendRecordBadges } from '@/lib/friend-records'
-import { fetchFriendHistory } from '@/lib/friend-history'
 import { weeklyLoad, rollingBaselineLoad, weeklyMinutes, rollingBaselineMinutes } from '@/lib/load'
-import FriendFeed from '@/components/FriendFeed'
-import FriendPeriodCard from '@/components/FriendPeriodCard'
-import { buildPersonPeriods } from '@/lib/friend-period'
 import { summarizeFriendWeek } from '@/lib/friend-week'
 import FriendRequestBadge from '@/components/FriendRequestBadge'
 import WeeklyDigestBadge from '@/components/WeeklyDigestBadge'
@@ -37,43 +33,6 @@ import { hrvStatusLabel } from '@/lib/wellness'
 import { estimateBurnedKcalForDay } from '@/lib/burned-calories'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
-
-// Egna pass som synkas från flera källor (t.ex. Garmin + Concept2) visade
-// sig dubblerade i "Mina vänners träningspass" (Daniel: "Nackdel när mina 2
-// pass synkas. Att de visas som 2 i väntlistan.") eftersom friend_activity_
-// feed() bara returnerade råa rader utan att slå ihop dem, till skillnad
-// från Passlogg/dashboard-statistik/Rekord som redan gör det via
-// dedupeForStats. Grupperar per owner_id (två olika vänners pass ska
-// aldrig kunna matcha varandra) innan dedup, slår sen ihop och klipper till
-// de 10 senaste — RPC:n hämtar redan upp till 40 råa rader så att dedupen
-// inte tränger ut äldre, redan unika pass.
-type FriendFeedRow = {
-  activity_id: string
-  owner_id: string
-  owner_name: string
-  sport_type: string
-  activity_name: string
-  distance: number
-  moving_time: number
-  start_date: string
-  kudos_count: number
-  liked_by_me: boolean
-  source?: string
-  strava_id?: number
-}
-
-function dedupeFriendFeed(rawFeed: FriendFeedRow[] | null): FriendFeedRow[] {
-  const byOwner = new Map<string, FriendFeedRow[]>()
-  for (const row of rawFeed ?? []) {
-    const list = byOwner.get(row.owner_id) ?? []
-    list.push(row)
-    byOwner.set(row.owner_id, list)
-  }
-  return Array.from(byOwner.values())
-    .flatMap(rows => dedupeForStats(rows.map(r => ({ ...r, id: r.activity_id, strava_id: r.strava_id ?? 0 }))))
-    .sort((a, b) => b.start_date.localeCompare(a.start_date))
-    .slice(0, 10)
-}
 
 function fmtKm(m: number) { return (m / 1000).toFixed(1) + ' km' }
 
@@ -128,7 +87,7 @@ export default async function DashboardPage() {
   const nextWeekStartDate = new Date(weekStartDate)
   nextWeekStartDate.setDate(nextWeekStartDate.getDate() + 7)
 
-  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: friendFeed }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }, { data: friendHistory, complete: friendHistoryComplete }] = await Promise.all([
+  const [{ data: profile }, { data: allActivities }, { data: goals }, { data: planRow }, { data: prevPlanRow }, { data: wellnessRow }, { data: ctxRow }, { data: overviewRow }, { data: pendingRequests }, { data: recentFoodLog }, { data: digestRow }, { data: habits }, { data: habitLogs }, { data: yazioHistoryRow }, { data: friendRoster }, { data: friendWeekActivities }] = await Promise.all([
     supabase.from('profiles').select('name, created_at, home_equipment, selected_sports, onboarding_dismissed_at, last_onboarding_prompt_at, daily_step_goal, weekly_load_goal, weight_kg, height_cm, birth_year, biological_sex, daily_calorie_goal, protein_goal_g, deficit_tracking_enabled, deficit_budget_kcal').eq('id', user.id).single(),
     // Narrowed from select('*') — this fetches every activity ever logged
     // (grows without bound) so dropping unused columns matters. strava_id
@@ -156,7 +115,6 @@ export default async function DashboardPage() {
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'garmin_wellness').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'user_context').single(),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'goals_overview').single(),
-    supabase.rpc('friend_activity_feed'),
     supabase.rpc('pending_follow_requests'),
     supabase.from('food_log').select('calories, protein_g, logged_at').eq('user_id', user.id).order('logged_at', { ascending: false }).limit(50),
     supabase.from('coach_sessions').select('messages').eq('user_id', user.id).eq('coach_id', 'weekly_digest').maybeSingle(),
@@ -170,11 +128,6 @@ export default async function DashboardPage() {
     // raw activity rows) rather than one SQL-side aggregate.
     supabase.rpc('friend_roster'),
     supabase.rpc('friend_weekly_activities', { week_start: weekStartDate.toISOString(), week_end: nextWeekStartDate.toISOString() }),
-    // Daniel: rekordmärke på en väns pass i vänlistan — needs each friend's
-    // EARLIER passes to know whether a pass broke their own record. Same RPC
-    // as the line above with an unbounded range, run in this same batch so
-    // it adds no extra round-trip; see lib/friend-history.ts.
-    fetchFriendHistory(supabase),
   ])
 
   const digestRaw = (digestRow?.messages as Array<{ role: string; content: string }> | null)?.[0]?.content
@@ -255,40 +208,13 @@ export default async function DashboardPage() {
   }))
   const friendWeekSummary = summarizeFriendWeek(friendWeekActivityRows, (friendRoster ?? []) as { owner_id: string; owner_name: string }[])
 
-  // Daniel: "När en använder slår rekord, ska dens pass taggas med en
-  // rekordmärke i 'vän' listan ... Så att man ännu mer kan peppa och lika
-  // någons prestation." Only computed from a COMPLETE history — a truncated
-  // one would make a mediocre pass look like a personal best, so on any
-  // fetch problem no badges show at all (see lib/friend-history.ts).
-  const friendFeedDeduped = dedupeFriendFeed(friendFeed)
-  const friendRecords = friendHistoryComplete
-    ? friendRecordBadges(friendHistory, friendFeedDeduped)
-    : new Map<string, string[]>()
-  const friendFeedWithRecords = friendFeedDeduped.map(e => ({ ...e, records: friendRecords.get(e.activity_id) ?? [] }))
-  // Daniel: "skulle vilja att ens egna siffror (Du) syns med som referens."
-  // wk (from totals(thisWeek) above) is already deduped — thisWeek is
-  // filtered straight from `activities`, which ran through dedupeForStats
-  // at the top of this function — so this reuses the exact same numbers
-  // the rest of the page already shows, not a second computation. Sorted
-  // into the same ranked list (not pinned to the top) so "how do I compare"
-  // is visible at a glance — highlighted in the JSX below instead.
-  const friendWeekSummaryWithSelf = [
-    { ownerId: user.id, ownerName: 'Du', totalMovingTimeSec: wk.time, totalDistanceM: wk.dist, activityCount: wk.count, isSelf: true },
-    ...friendWeekSummary.map(f => ({ ...f, isSelf: false })),
-  ].sort((a, b) => b.totalMovingTimeSec - a.totalMovingTimeSec)
-
-  // Månads-/årssummering för vänkortet (Daniel: "vecka, månad, år"). Allt underlag finns redan
-  // på sidan: egna pass (activities) och vännernas hela historik (friendHistory). Skickas som små
-  // summor per person och månad. Vid ofullständig vänhistorik visas bara veckan, aldrig för låga siffror.
-  const friendPeople = [
-    { ownerId: user.id, ownerName: 'Du', isSelf: true },
-    ...((friendRoster ?? []) as { owner_id: string; owner_name: string }[]).map(r => ({ ownerId: r.owner_id, ownerName: r.owner_name, isSelf: false })),
-  ]
-  const periodRows = [
-    ...activities.map(a => ({ id: a.id, strava_id: a.strava_id, start_date: a.start_date, distance: a.distance, moving_time: a.moving_time, sport_type: a.sport_type, source: a.source ?? undefined, owner_id: user.id })),
-    ...(friendHistoryComplete ? (friendHistory ?? []).map(h => ({ id: h.activity_id, strava_id: h.strava_id ?? 0, start_date: h.start_date, distance: h.distance, moving_time: h.moving_time, sport_type: h.sport_type, source: h.source ?? undefined, owner_id: h.owner_id })) : []),
-  ]
-  const friendPeriods = friendHistoryComplete ? buildPersonPeriods(periodRows, friendPeople) : null
+  // Vänner har egen sida (/dashboard/vanner). Här bara en liten förhandsvisning: din plats den här
+  // veckan (billiga veckofrågor — vännernas hela historik och flöde läses inte här längre).
+  const friendWeekRanked = [
+    { ownerId: user.id, isSelf: true, time: wk.time },
+    ...friendWeekSummary.map(f => ({ ownerId: f.ownerId, isSelf: false, time: f.totalMovingTimeSec })),
+  ].sort((a, b) => b.time - a.time)
+  const myFriendRank = friendWeekRanked.findIndex(f => f.isSelf) + 1
 
   const weekZones = aggregateZones(thisWeek)
   const weekZoneCoverage = zoneCoverageCount(thisWeek)
@@ -948,30 +874,17 @@ export default async function DashboardPage() {
 
       </div>
 
-      {/* ── Vänners träningspass ──────────────────────────────────────────────── */}
-      <FriendFeed feed={friendFeedWithRecords} userId={user.id} />
-
-      {/* ── Vänner denna vecka ─────────────────────────────────────────────────
-          Daniel: "vänner total tid och km vecka. Så man kan matcha mot sitt
-          egna... liten per vän. Så man kan se, hur länge och långt, någon
-          tränat." Zero-filled (a friend with no activity this week still
-          shows 0 min, see summarizeFriendWeek) rather than just omitted —
-          the point is seeing who's active, not just who happened to log
-          something. Gated on having any FRIENDS, not on the always-present
-          "Du" row — no friends yet means nothing to compare against. Own
-          row ("skulle vilja att ens egna siffror (Du)... syns med som
-          referens") sorted into the same ranked list rather than pinned to
-          the top, so where you actually land is visible at a glance.
-
-          Antal pass tillagt (Daniel: "Per persons [antal pass] säger ju
-          lite om hur aktiva de är") — activityCount fanns redan uträknad
-          i summarizeFriendWeek, bara inte visad. */}
+      {/* ── Vänner (förhandsvisning) — resten på /dashboard/vanner ─────────────── */}
       {friendWeekSummary.length > 0 && (
-        <FriendPeriodCard
-          weekRows={friendWeekSummaryWithSelf.map(f => ({ ownerId: f.ownerId, ownerName: f.ownerName, isSelf: f.isSelf, activityCount: f.activityCount, totalMovingTimeSec: f.totalMovingTimeSec, totalDistanceM: f.totalDistanceM }))}
-          people={friendPeriods}
-          todayKey={stockholmDateKey()}
-        />
+        <Link href="/dashboard/vanner" className="bg-card border border-edge rounded-2xl p-4 flex items-center justify-between gap-3 hover:border-accent/30 transition-colors">
+          <div>
+            <div className="text-xs text-muted uppercase tracking-wider mb-1">Vänner denna vecka</div>
+            <div className="text-sm text-fg">
+              Du ligger på plats <span className="font-mono text-accent font-semibold">{myFriendRank}</span> av {friendWeekRanked.length} · {wk.count} pass · {fmtDur(wk.time)}
+            </div>
+          </div>
+          <span className="text-accent text-xs whitespace-nowrap">Se alla →</span>
+        </Link>
       )}
     </div>
   )
