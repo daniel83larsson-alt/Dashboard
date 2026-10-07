@@ -1799,3 +1799,42 @@ alter table public.push_subscriptions
 -- cron_health_snapshot(): misslyckade pg_cron-körningar/avstängda jobb till /api/cron/cron-health.
 -- Jobb: cron-weekly-digest (sön 16:00 UTC, var 3:e min x8), cron-monthly-report (1:a 06:00 UTC, x8),
 -- cron-sync-all-1..6 (05:00–05:05 UTC, Garmin i grupper om 2), cron-health (07:30 UTC dagligen).
+
+-- ── Rekord och månadssummor som sparade resultat 2026-10-07 (migration records_and_monthly_tables) ──
+-- activity_records: vilka pass som slog vilka rekord (en rad per pass+etikett). activity_monthly: summa per
+-- person och månad. records_dirty: användare vars pass ändrats (satt av trigger på activities) och som ska
+-- räknas om av /api/cron/records-refresh. RLS: egna + accepterade vänners rader läsbara, skrivning bara tjänsteroll.
+create table public.activity_records (
+  activity_id uuid not null references public.activities(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  label text not null,
+  achieved_at timestamptz not null,
+  primary key (activity_id, label)
+);
+create index activity_records_user_idx on public.activity_records (user_id, achieved_at desc);
+create table public.activity_monthly (
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  month text not null check (month ~ '^[0-9]{4}-[0-9]{2}$'),
+  moving_time_sec bigint not null default 0,
+  distance_m numeric not null default 0,
+  sessions integer not null default 0,
+  updated_at timestamptz not null default now(),
+  primary key (user_id, month)
+);
+create table public.records_dirty (
+  user_id uuid primary key references public.profiles(id) on delete cascade,
+  dirty_since timestamptz not null default now()
+);
+alter table public.activity_records enable row level security;
+alter table public.activity_monthly enable row level security;
+alter table public.records_dirty enable row level security;
+create policy "Read own and friends records" on public.activity_records for select to authenticated
+using ((select auth.uid()) = user_id or exists (select 1 from public.follows f where f.status = 'accepted'
+  and ((f.follower_id = (select auth.uid()) and f.followee_id = activity_records.user_id)
+    or (f.followee_id = (select auth.uid()) and f.follower_id = activity_records.user_id))));
+create policy "Read own and friends monthly" on public.activity_monthly for select to authenticated
+using ((select auth.uid()) = user_id or exists (select 1 from public.follows f where f.status = 'accepted'
+  and ((f.follower_id = (select auth.uid()) and f.followee_id = activity_monthly.user_id)
+    or (f.followee_id = (select auth.uid()) and f.follower_id = activity_monthly.user_id))));
+create index if not exists follows_followee_status_idx on public.follows (followee_id, status);
+-- mark_records_dirty() + triggers activities_mark_dirty_ins/_del/_upd: se migrationen (SECURITY DEFINER, ingen exekvering för anon/authenticated).

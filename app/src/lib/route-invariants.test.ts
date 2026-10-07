@@ -52,6 +52,7 @@ describe('every API route requires auth unless explicitly allowlisted', () => {
     'app/api/cron/weekly-tdee-recompute/route.ts',
     'app/api/cron/monthly-report/route.ts',
     'app/api/cron/cron-health/route.ts',
+    'app/api/cron/records-refresh/route.ts',
     'app/api/weekly-digest/unsubscribe/route.ts',
     'app/api/monthly-report/unsubscribe/route.ts',
     'app/api/webhooks/new-signup/route.ts',
