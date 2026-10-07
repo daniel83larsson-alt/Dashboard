@@ -202,7 +202,11 @@ export async function GET(request: NextRequest) {
     await alertDiscord([{ name: 'crash', ok: false, detail: message }], runId)
     return NextResponse.json({ ranAt: new Date().toISOString(), runId, ok: false, error: message }, { status: 500 })
   } finally {
-    if (userIdA) await admin.auth.admin.deleteUser(userIdA).catch(() => {})
-    if (userIdB) await admin.auth.admin.deleteUser(userIdB).catch(() => {})
+    // deleteUser kastar inte vid fel — det returnerar { error } (se isolation-check).
+    for (const id of [userIdA, userIdB]) {
+      if (!id) continue
+      const { error } = await admin.auth.admin.deleteUser(id).catch((e: unknown) => ({ error: e instanceof Error ? e : new Error(String(e)) }))
+      if (error) await alertDiscord([{ name: 'cleanup', ok: false, detail: `kunde inte radera testkonto ${id}: ${error.message}` }], runId)
+    }
   }
 }

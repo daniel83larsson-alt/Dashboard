@@ -172,7 +172,12 @@ export async function GET(request: NextRequest) {
     // Always clean up the disposable accounts, whether the check passed,
     // failed, or crashed — cascade deletes their profiles/activities/
     // connected_accounts/coach_sessions rows automatically (on delete cascade).
-    if (userIdA) await admin.auth.admin.deleteUser(userIdA).catch(() => {})
-    if (userIdB) await admin.auth.admin.deleteUser(userIdB).catch(() => {})
+    // deleteUser kastar inte vid fel — det returnerar { error }. Ett tyst misslyckande lämnar kvar
+    // testkonton (hände 2026-10-07 när en trigger blockerade raderingen), så larma i stället.
+    for (const id of [userIdA, userIdB]) {
+      if (!id) continue
+      const { error } = await admin.auth.admin.deleteUser(id).catch((e: unknown) => ({ error: e instanceof Error ? e : new Error(String(e)) }))
+      if (error) await alertDiscord([{ table: 'n/a', queriedBy: 'A', foundForeignMarker: `kunde inte radera testkonto ${id}: ${error.message}` }], runId)
+    }
   }
 }

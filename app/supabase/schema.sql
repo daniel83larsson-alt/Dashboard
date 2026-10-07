@@ -1845,3 +1845,7 @@ create index if not exists follows_followee_status_idx on public.follows (follow
 --   deficit_budget_events(milestone_id), goals(user_id), plan_sessions(matched_activity_id), training_plans(goal_id).
 -- 2026-10-07 schedule_records_refresh_jobs (applied in prod): pg_cron cron-records-dirty (*/15) och
 --   cron-records-reconcile (05:20 UTC) → /api/cron/records-refresh.
+
+-- 2026-10-07 fix_mark_records_dirty_on_account_delete (applied in prod): mark_records_dirty() hoppar över
+--   användare vars profil redan är borttagen, annars bröt records_dirty-FK kontoradering (cascade tar profilen
+--   före passen).
