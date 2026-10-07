@@ -73,3 +73,20 @@ export function availablePeriods(people: PersonPeriods[], todayKey: string): { m
   const years = [...new Set(sorted.map(m => m.slice(0, 4)))]
   return { months: sorted, years }
 }
+
+// Förberäknade månadssummor (tabellen activity_monthly, se lib/records-store.ts) → samma form som
+// buildPersonPeriods ger. Ersätter att läsa hela historiken för varje sidvisning.
+export type MonthlyRow = { user_id: string; month: string; moving_time_sec: number; distance_m: number; sessions: number }
+
+export function periodsFromMonthly(
+  rows: MonthlyRow[],
+  people: { ownerId: string; ownerName: string; isSelf: boolean }[],
+): PersonPeriods[] {
+  const byPerson = new Map<string, Record<string, PeriodBucket>>()
+  for (const r of rows) {
+    const months = byPerson.get(r.user_id) ?? {}
+    months[r.month] = { sec: r.moving_time_sec, m: r.distance_m, n: r.sessions }
+    byPerson.set(r.user_id, months)
+  }
+  return people.map(p => ({ ...p, months: byPerson.get(p.ownerId) ?? {} }))
+}
